@@ -29,18 +29,23 @@ import * as XLSX from "xlsx";
 
 interface GameRow {
   id: string;
-  team_id: string;
-  opponent_name: string;
-  game_date: string;
-  is_home: boolean;
-  location: string | null;
+  fixture_date: string;
   status: string;
+  home_team_id: string;
+  away_team_id: string;
+  venue_id: string | null;
+  home_team: { id: string; name: string } | null;
+  away_team: { id: string; name: string } | null;
+  venue: { id: string; name: string } | null;
   home_score: number | null;
   away_score: number | null;
   notes: string | null;
   round_number: number | null;
   season_id: string | null;
 }
+
+const FIXTURE_SELECT =
+  "id, fixture_date, status, home_score, away_score, notes, round_number, season_id, venue_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
 
 interface Season {
   id: string;
@@ -87,10 +92,10 @@ const Games = () => {
       }
       setLoading(true);
       let query = supabase
-        .from("games")
-        .select("*")
-        .eq("team_id", selectedTeamId)
-        .order("game_date", { ascending: true });
+        .from("fixtures")
+        .select(FIXTURE_SELECT)
+        .or(`home_team_id.eq.${selectedTeamId},away_team_id.eq.${selectedTeamId}`)
+        .order("fixture_date", { ascending: true });
 
       if (selectedSeasonId && selectedSeasonId !== "all") {
         query = query.eq("season_id", selectedSeasonId);
@@ -104,8 +109,8 @@ const Games = () => {
   }, [selectedTeamId, selectedSeasonId]);
 
   const now = new Date();
-  const upcomingGames = games.filter((g) => new Date(g.game_date) >= now);
-  const pastGames = games.filter((g) => new Date(g.game_date) < now);
+  const upcomingGames = games.filter((g) => new Date(g.fixture_date) >= now);
+  const pastGames = games.filter((g) => new Date(g.fixture_date) < now);
 
   const teamName = selectedTeam ? getTeamDisplayName(selectedTeam) : "Team";
   const clubName = selectedClub?.name || "";
@@ -114,15 +119,15 @@ const Games = () => {
     if (games.length === 0) return;
 
     const rows = games.map((g) => {
-      const d = new Date(g.game_date);
+      const d = new Date(g.fixture_date);
       return {
         Round: g.round_number ?? "",
         Date: d.toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" }),
         Day: d.toLocaleDateString("en-AU", { weekday: "short" }),
         Time: d.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }),
-        "Home/Away": g.is_home ? "Home" : "Away",
-        Opponent: g.opponent_name,
-        Location: g.location || "",
+        "Home Team": g.home_team?.name ?? "Unknown",
+        "Away Team": g.away_team?.name ?? "Unknown",
+        Venue: g.venue?.name ?? "TBD",
         Status: g.status,
         "Home Score": g.home_score ?? "",
         "Away Score": g.away_score ?? "",
@@ -217,7 +222,7 @@ const Games = () => {
             ) : (
               <div className="space-y-3">
                 {upcomingGames.map((game, index) => (
-                  <GameCard key={game.id} game={game} index={index} teamName={teamName} />
+                  <GameCard key={game.id} game={game} index={index} />
                 ))}
               </div>
             )}
@@ -229,7 +234,7 @@ const Games = () => {
             ) : (
               <div className="space-y-3">
                 {pastGames.map((game, index) => (
-                  <GameCard key={game.id} game={game} index={index} isPast teamName={teamName} />
+                  <GameCard key={game.id} game={game} index={index} isPast />
                 ))}
               </div>
             )}
@@ -244,13 +249,13 @@ interface GameCardProps {
   game: GameRow;
   index: number;
   isPast?: boolean;
-  teamName: string;
 }
 
-const GameCard = ({ game, index, isPast, teamName }: GameCardProps) => {
-  const homeTeam = game.is_home ? teamName : game.opponent_name;
-  const awayTeam = game.is_home ? game.opponent_name : teamName;
-  const gameDate = new Date(game.game_date);
+const GameCard = ({ game, index, isPast }: GameCardProps) => {
+  const homeTeam = game.home_team?.name ?? "Unknown";
+  const awayTeam = game.away_team?.name ?? "Unknown";
+  const venueName = game.venue?.name ?? "TBD";
+  const gameDate = new Date(game.fixture_date);
 
   return (
     <Link to={`/games/${game.id}`}>
@@ -281,9 +286,6 @@ const GameCard = ({ game, index, isPast, teamName }: GameCardProps) => {
                       Rd {game.round_number}
                     </Badge>
                   )}
-                  <Badge variant={game.is_home ? "default" : "outline"} className="text-xs">
-                    {game.is_home ? "Home" : "Away"}
-                  </Badge>
                   {isPast && game.status === "finalised" && (
                     <Badge variant="finalised" className="text-xs">
                       Finalised
@@ -300,12 +302,10 @@ const GameCard = ({ game, index, isPast, teamName }: GameCardProps) => {
                     <Clock className="h-3.5 w-3.5" />
                     {gameDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
                   </span>
-                  {game.location && (
-                    <span className="flex items-center gap-1 truncate">
-                      <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="truncate">{game.location}</span>
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1 truncate">
+                    <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="truncate">{venueName}</span>
+                  </span>
                 </div>
               </div>
             </div>

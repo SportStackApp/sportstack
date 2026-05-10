@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, Calendar, Clock, MapPin } from "lucide-react";
+import { ChevronLeft, Calendar, Clock } from "lucide-react";
 import { LineupView } from "@/components/lineup/LineupView";
 import { useState, useEffect } from "react";
 import { cn, getTeamDisplayName } from "@/lib/utils";
@@ -11,13 +11,18 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface GameRow {
   id: string;
-  team_id: string;
-  opponent_name: string;
-  game_date: string;
-  is_home: boolean;
-  location: string | null;
+  fixture_date: string;
   status: string;
+  home_team_id: string;
+  away_team_id: string;
+  venue_id: string | null;
+  home_team: { id: string; name: string } | null;
+  away_team: { id: string; name: string } | null;
+  venue: { id: string; name: string } | null;
 }
+
+const FIXTURE_SELECT =
+  "id, fixture_date, status, venue_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
 
 const Lineup = () => {
   const { id } = useParams();
@@ -30,8 +35,8 @@ const Lineup = () => {
     const fetchGame = async () => {
       if (!id) return;
       setLoading(true);
-      const { data } = await supabase.from("games").select("*").eq("id", id).single();
-      setGame(data);
+      const { data } = await supabase.from("fixtures").select(FIXTURE_SELECT).eq("id", id).single();
+      setGame((data as GameRow) || null);
       setLoading(false);
     };
     fetchGame();
@@ -59,7 +64,10 @@ const Lineup = () => {
   }
 
   const teamName = selectedTeam ? getTeamDisplayName(selectedTeam) : "Team";
-  const gameDate = new Date(game.game_date);
+  const homeTeam = game.home_team?.name ?? "Unknown";
+  const awayTeam = game.away_team?.name ?? "Unknown";
+  const opponentName = selectedTeam?.id === game.away_team_id ? homeTeam : awayTeam;
+  const gameDate = new Date(game.fixture_date);
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -99,7 +107,7 @@ const Lineup = () => {
       <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
         <div>
           <p className="font-semibold text-sm">
-            {game.is_home ? teamName : game.opponent_name} vs {game.is_home ? game.opponent_name : teamName}
+            {homeTeam} vs {awayTeam}
           </p>
           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
             <span className="flex items-center gap-1">
@@ -112,13 +120,13 @@ const Lineup = () => {
             </span>
           </div>
         </div>
-        <Badge variant="default">{game.is_home ? "Home" : "Away"}</Badge>
+        <Badge variant="default">{game.status}</Badge>
       </div>
 
       <LineupView
         gameId={game.id}
         teamName={teamName}
-        opponentName={game.opponent_name}
+        opponentName={opponentName}
         isCoach={isCoachView}
       />
 

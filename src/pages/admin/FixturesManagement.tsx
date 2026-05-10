@@ -20,78 +20,84 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useAdminScope } from "@/hooks/useAdminScope";
-import { getTeamDisplayName } from "@/lib/utils";
 import * as XLSX from "xlsx";
 
-interface GameWithTeam {
+interface FixtureRow {
   id: string;
-  team_id: string;
-  opponent_name: string;
-  game_date: string;
-  is_home: boolean;
-  location: string | null;
+  fixture_date: string | null;
   status: string;
   home_score: number | null;
   away_score: number | null;
   notes: string | null;
-  round_number: number | null;
-  season_id: string | null;
+  home_team_id: string;
+  away_team_id: string;
+  venue_id: string | null;
+  pitch_id: string | null;
+  home_team: { id: string; name: string } | null;
+  away_team: { id: string; name: string } | null;
+  venue: { id: string; name: string } | null;
 }
+
+interface FixtureForm {
+  home_team_id: string;
+  away_team_id: string;
+  fixture_date: string;
+  game_time: string;
+  venue_id: string;
+  pitch_id: string;
+  status: string;
+  home_score: number | null;
+  away_score: number | null;
+  notes: string;
+}
+
+const emptyForm: FixtureForm = {
+  home_team_id: "",
+  away_team_id: "",
+  fixture_date: "",
+  game_time: "",
+  venue_id: "",
+  pitch_id: "",
+  status: "scheduled",
+  home_score: null,
+  away_score: null,
+  notes: "",
+};
+
+const FIXTURE_SELECT =
+  "id, fixture_date, status, home_score, away_score, notes, venue_id, pitch_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
+
+const splitDateTime = (value: string | null) => {
+  if (!value) return { fixture_date: "", game_time: "" };
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return { fixture_date: "", game_time: "" };
+  return {
+    fixture_date: date.toISOString().slice(0, 10),
+    game_time: date.toTimeString().slice(0, 5),
+  };
+};
+
+const combineDateTime = (date: string, time: string) =>
+  time ? `${date}T${time}:00` : `${date}T00:00:00`;
 
 const FixturesManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { teams, selectedTeamId, selectedClubId, selectedAssociationId } = useTeamContext();
+  const { selectedTeamId, selectedAssociationId } = useTeamContext();
   const { scopedTeamIds } = useAdminScope();
-  const [games, setGames] = useState<GameWithTeam[]>([]);
+  const [fixtures, setFixtures] = useState<FixtureRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<GameWithTeam>>({});
+  const [editForm, setEditForm] = useState<FixtureForm>(emptyForm);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addForm, setAddForm] = useState<FixtureForm>(emptyForm);
   const [allAssocTeams, setAllAssocTeams] = useState<{ id: string; name: string; club_id: string }[]>([]);
-  const uniqueAssocTeamNames = [...new Set(allAssocTeams.map(t => t.name.trim()))].sort();
   const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
   const [pitches, setPitches] = useState<{ id: string; name: string; venue_id: string }[]>([]);
-  const [clubs, setClubs] = useState<{ id: string; name: string }[]>([]);
-
-  useEffect(() => {
-    const loadRefData = async () => {
-      if (!selectedAssociationId) return;
-      const [cRes, vRes] = await Promise.all([
-        supabase.from("clubs").select("id, name").eq("association_id", selectedAssociationId),
-        supabase.from("venues").select("id, name").eq("association_id", selectedAssociationId),
-      ]);
-      const loadedClubs = cRes.data || [];
-      const loadedVenues = vRes.data || [];
-      setClubs(loadedClubs);
-      setVenues(loadedVenues);
-
-      if (loadedClubs.length > 0) {
-        const { data: tRes } = await supabase.from("teams").select("id, name, club_id").in("club_id", loadedClubs.map(c => c.id));
-        setAllAssocTeams(tRes || []);
-      } else {
-        setAllAssocTeams([]);
-      }
-
-      if (loadedVenues.length > 0) {
-        const { data: pRes } = await supabase.from("pitches").select("id, name, venue_id").in("venue_id", loadedVenues.map(v => v.id));
-        setPitches(pRes || []);
-      } else {
-        setPitches([]);
-      }
-    };
-    loadRefData();
-  }, [selectedAssociationId]);
-
-  const [addForm, setAddForm] = useState({
-    team_id: "", opponent_name: "", game_date: "", game_time: "",
-    venue_id: "", pitch_id: "", round_number: "", status: "scheduled",
-    umpire_club_1: "", umpire_club_2: "", is_bye: false
-  });
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterRound, setFilterRound] = useState("");
+  const [assocTeamIds, setAssocTeamIds] = useState<string[]>([]);
 
   const teamIds = selectedTeamId
     ? [selectedTeamId]
@@ -99,19 +105,46 @@ const FixturesManagement = () => {
     ? scopedTeamIds
     : [];
 
-  const [assocTeamIds, setAssocTeamIds] = useState<string[]>([]);
-  
+  useEffect(() => {
+    const loadRefData = async () => {
+      if (!selectedAssociationId) return;
+      const [clubRes, venueRes] = await Promise.all([
+        supabase.from("clubs").select("id").eq("association_id", selectedAssociationId),
+        supabase.from("venues").select("id, name").eq("association_id", selectedAssociationId).order("name"),
+      ]);
+
+      const clubIds = (clubRes.data || []).map((club) => club.id);
+      const loadedVenues = venueRes.data || [];
+      setVenues(loadedVenues);
+
+      if (clubIds.length > 0) {
+        const { data: teamData } = await supabase.from("teams").select("id, name, club_id").in("club_id", clubIds).order("name");
+        setAllAssocTeams(teamData || []);
+      } else {
+        setAllAssocTeams([]);
+      }
+
+      if (loadedVenues.length > 0) {
+        const { data: pitchData } = await supabase.from("pitches").select("id, name, venue_id").in("venue_id", loadedVenues.map((venue) => venue.id)).order("name");
+        setPitches(pitchData || []);
+      } else {
+        setPitches([]);
+      }
+    };
+    loadRefData();
+  }, [selectedAssociationId]);
+
   useEffect(() => {
     if (selectedAssociationId && teamIds.length === 0) {
       const fetchAssocTeams = async () => {
         const { data: clubs } = await supabase.from("clubs").select("id").eq("association_id", selectedAssociationId);
-        if (clubs && clubs.length > 0) {
-          const clubIds = clubs.map(c => c.id);
-          const { data: teams } = await supabase.from("teams").select("id").in("club_id", clubIds);
-          if (teams) setAssocTeamIds(teams.map(t => t.id));
-        } else {
+        const clubIds = (clubs || []).map((club) => club.id);
+        if (clubIds.length === 0) {
           setAssocTeamIds([]);
+          return;
         }
+        const { data: teams } = await supabase.from("teams").select("id").in("club_id", clubIds);
+        setAssocTeamIds((teams || []).map((team) => team.id));
       };
       fetchAssocTeams();
     } else {
@@ -119,149 +152,156 @@ const FixturesManagement = () => {
     }
   }, [selectedAssociationId, teamIds.join(",")]);
 
-  const fetchGames = async () => {
+  const fetchFixtures = async () => {
     const idsToUse = teamIds.length > 0 ? teamIds : assocTeamIds;
     if (idsToUse.length === 0) {
-      setGames([]);
+      setFixtures([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    const { data } = await supabase
-      .from("games")
-      .select("*")
-      .in("team_id", idsToUse)
-      .order("game_date", { ascending: true });
-    setGames((data as GameWithTeam[]) || []);
+    const idList = idsToUse.join(",");
+    const { data, error } = await supabase
+      .from("fixtures")
+      .select(FIXTURE_SELECT)
+      .or(`home_team_id.in.(${idList}),away_team_id.in.(${idList})`)
+      .order("fixture_date", { ascending: true });
+
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    setFixtures((data as FixtureRow[]) || []);
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchGames();
+    fetchFixtures();
   }, [teamIds.join(","), assocTeamIds.join(",")]);
 
-  const teamMap = new Map(teams.map((t) => [t.id, t]));
-
   const handleExport = () => {
-    if (games.length === 0) return;
-    const rows = games.map((g) => {
-      const d = new Date(g.game_date);
-      const team = teamMap.get(g.team_id);
+    if (fixtures.length === 0) return;
+    const rows = fixtures.map((fixture) => {
+      const date = fixture.fixture_date ? new Date(fixture.fixture_date) : null;
       return {
-        Team: team ? getTeamDisplayName(team) : g.team_id,
-        Round: g.round_number ?? "",
-        Date: d.toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" }),
-        Day: d.toLocaleDateString("en-AU", { weekday: "short" }),
-        Time: d.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }),
-        "Home/Away": g.is_home ? "Home" : "Away",
-        Opponent: g.opponent_name,
-        Location: g.location || "",
-        Status: g.status,
-        "Home Score": g.home_score ?? "",
-        "Away Score": g.away_score ?? "",
-        Notes: g.notes || "",
+        Date: date ? date.toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" }) : "",
+        Day: date ? date.toLocaleDateString("en-AU", { weekday: "short" }) : "",
+        Time: date ? date.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }) : "",
+        "Home Team": fixture.home_team?.name ?? "Unknown",
+        "Away Team": fixture.away_team?.name ?? "Unknown",
+        Venue: fixture.venue?.name ?? "TBD",
+        Status: fixture.status,
+        "Home Score": fixture.home_score ?? "",
+        "Away Score": fixture.away_score ?? "",
+        Notes: fixture.notes || "",
       };
     });
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Fixtures");
     XLSX.writeFile(wb, `fixtures-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
-    toast({ title: "Exported", description: `${games.length} fixtures exported.` });
+    toast({ title: "Exported", description: `${fixtures.length} fixtures exported.` });
   };
 
-  const startEdit = (g: GameWithTeam) => {
-    setEditingId(g.id);
+  const startEdit = (fixture: FixtureRow) => {
+    const dateParts = splitDateTime(fixture.fixture_date);
+    setEditingId(fixture.id);
     setEditForm({
-      opponent_name: g.opponent_name,
-      location: g.location,
-      status: g.status,
-      home_score: g.home_score,
-      away_score: g.away_score,
-      round_number: g.round_number,
-      notes: g.notes,
+      home_team_id: fixture.home_team_id,
+      away_team_id: fixture.away_team_id,
+      fixture_date: dateParts.fixture_date,
+      game_time: dateParts.game_time,
+      venue_id: fixture.venue_id || "",
+      pitch_id: fixture.pitch_id || "",
+      status: fixture.status,
+      home_score: fixture.home_score,
+      away_score: fixture.away_score,
+      notes: fixture.notes || "",
     });
   };
 
   const saveEdit = async () => {
     if (!editingId) return;
-    const { error } = await supabase.from("games").update({
-      opponent_name: editForm.opponent_name,
-      location: editForm.location || null,
+    if (!editForm.home_team_id || !editForm.away_team_id || !editForm.fixture_date) {
+      toast({ title: "Error", description: "Home team, away team and date are required.", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase.from("fixtures").update({
+      home_team_id: editForm.home_team_id,
+      away_team_id: editForm.away_team_id,
+      fixture_date: combineDateTime(editForm.fixture_date, editForm.game_time),
+      venue_id: editForm.venue_id || null,
+      pitch_id: editForm.pitch_id || null,
       status: editForm.status,
-      home_score: editForm.home_score ?? null,
-      away_score: editForm.away_score ?? null,
-      round_number: editForm.round_number ?? null,
+      home_score: editForm.home_score,
+      away_score: editForm.away_score,
       notes: editForm.notes || null,
     }).eq("id", editingId);
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Updated", description: "Fixture updated successfully." });
-      setEditingId(null);
-      fetchGames();
+      return;
     }
+
+    toast({ title: "Updated", description: "Fixture updated successfully." });
+    setEditingId(null);
+    fetchFixtures();
   };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    const { error } = await supabase.from("games").delete().eq("id", deleteTarget);
+    const { error } = await supabase.from("fixtures").delete().eq("id", deleteTarget);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Deleted", description: "Fixture deleted." });
-      fetchGames();
+      fetchFixtures();
     }
     setDeleteDialogOpen(false);
     setDeleteTarget(null);
   };
 
   const handleAddFixture = async () => {
-    if (!addForm.team_id || (!addForm.is_bye && !addForm.opponent_name) || !addForm.game_date) {
-      toast({ title: "Error", description: "Team, opponent and date are required.", variant: "destructive" });
+    if (!addForm.home_team_id || !addForm.away_team_id || !addForm.fixture_date) {
+      toast({ title: "Error", description: "Home team, away team and date are required.", variant: "destructive" });
       return;
     }
 
-    if (addForm.round_number) {
-      const { data: existing } = await supabase.from("games")
-        .select("id").eq("team_id", addForm.team_id)
-        .eq("round_number", parseInt(addForm.round_number)).limit(1);
-      if (existing && existing.length > 0) {
-        const confirmed = window.confirm(`A fixture for this team in Round ${addForm.round_number} already exists. Are you sure you want to add another?`);
-        if (!confirmed) return;
-      }
+    const { error } = await supabase.from("fixtures").insert({
+      home_team_id: addForm.home_team_id,
+      away_team_id: addForm.away_team_id,
+      fixture_date: combineDateTime(addForm.fixture_date, addForm.game_time),
+      venue_id: addForm.venue_id || null,
+      pitch_id: addForm.pitch_id || null,
+      status: addForm.status,
+      home_score: addForm.home_score,
+      away_score: addForm.away_score,
+      notes: addForm.notes || null,
+    });
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
     }
 
-    const gameDate = addForm.game_time ? `${addForm.game_date}T${addForm.game_time}:00` : `${addForm.game_date}T00:00:00`;
-    const { error } = await supabase.from("games").insert({
-      team_id: addForm.team_id,
-      opponent_name: addForm.is_bye ? "BYE" : addForm.opponent_name,
-      game_date: gameDate,
-      is_home: true,
-      location: addForm.venue_id
-        ? `${venues.find(v => v.id === addForm.venue_id)?.name ?? ""}${addForm.pitch_id ? ` – ${pitches.find(p => p.id === addForm.pitch_id)?.name ?? ""}` : ""}`
-        : null,
-      round_number: addForm.round_number ? parseInt(addForm.round_number) : null,
-      status: addForm.status,
-      umpire_club_1: addForm.umpire_club_1 || null,
-      umpire_club_2: addForm.umpire_club_2 || null,
-      is_bye: addForm.is_bye,
-    });
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Created", description: "Fixture added." });
     setAddDialogOpen(false);
-    setAddForm({ 
-      team_id: "", opponent_name: "", game_date: "", game_time: "", 
-      venue_id: "", pitch_id: "", round_number: "", status: "scheduled",
-      umpire_club_1: "", umpire_club_2: "", is_bye: false
-    });
-    fetchGames();
+    setAddForm(emptyForm);
+    fetchFixtures();
   };
 
-  // Filter games
-  let displayGames = games;
-  if (filterStatus !== "all") displayGames = displayGames.filter((g) => g.status === filterStatus);
-  if (filterRound) displayGames = displayGames.filter((g) => g.round_number !== null && String(g.round_number) === filterRound);
+  const renderTeamSelect = (value: string, onChange: (value: string) => void, placeholder: string) => (
+    <Select value={value || "__none__"} onValueChange={(value) => onChange(value === "__none__" ? "" : value)}>
+      <SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__none__">None</SelectItem>
+        {allAssocTeams.map((team) => (
+          <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  const displayFixtures = filterStatus === "all"
+    ? fixtures
+    : fixtures.filter((fixture) => fixture.status === filterStatus);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -279,9 +319,9 @@ const FixturesManagement = () => {
             <Upload className="h-4 w-4" />
             Import
           </Button>
-          <Button variant="outline" onClick={handleExport} disabled={games.length === 0} className="gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={fixtures.length === 0} className="gap-2">
             <Download className="h-4 w-4" />
-            Export ({games.length})
+            Export ({fixtures.length})
           </Button>
           <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
@@ -290,32 +330,25 @@ const FixturesManagement = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Label>Status:</Label>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="scheduled">Scheduled</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-              <SelectItem value="postponed">Postponed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label>Round:</Label>
-          <Input className="w-20 h-9" type="number" placeholder="All" value={filterRound} onChange={(e) => setFilterRound(e.target.value)} />
-        </div>
+      <div className="flex items-center gap-2">
+        <Label>Status:</Label>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="scheduled">Scheduled</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectItem value="postponed">Postponed</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
+          {[1, 2, 3].map((item) => <Skeleton key={item} className="h-20 w-full" />)}
         </div>
-      ) : displayGames.length === 0 ? (
+      ) : displayFixtures.length === 0 ? (
         <Card variant="ghost" className="text-center py-12">
           <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
@@ -328,7 +361,7 @@ const FixturesManagement = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              {displayGames.length} Fixture{displayGames.length !== 1 ? "s" : ""}
+              {displayFixtures.length} Fixture{displayFixtures.length !== 1 ? "s" : ""}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -336,61 +369,56 @@ const FixturesManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Team</TableHead>
-                    <TableHead>Rd</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead>H/A</TableHead>
-                    <TableHead>Opponent</TableHead>
-                    <TableHead>Location</TableHead>
+                    <TableHead>Home Team</TableHead>
+                    <TableHead>Away Team</TableHead>
+                    <TableHead>Venue</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Score</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayGames.map((g) => {
-                    const d = new Date(g.game_date);
-                    const team = teamMap.get(g.team_id);
-                    const isEditing = editingId === g.id;
+                  {displayFixtures.map((fixture) => {
+                    const date = fixture.fixture_date ? new Date(fixture.fixture_date) : null;
+                    const isEditing = editingId === fixture.id;
+                    const venueName = fixture.venue?.name ?? "TBD";
 
                     return (
-                      <TableRow key={g.id}>
-                        <TableCell className="text-foreground">
-                          {team ? getTeamDisplayName(team) : "—"}
-                        </TableCell>
-                        <TableCell>
-                          {isEditing ? (
-                            <Input className="h-7 w-14 text-xs" type="number" value={editForm.round_number ?? ""} onChange={(e) => setEditForm((p) => ({ ...p, round_number: e.target.value ? parseInt(e.target.value) : null }))} />
-                          ) : (
-                            g.round_number ?? "—"
-                          )}
-                        </TableCell>
+                      <TableRow key={fixture.id}>
                         <TableCell className="whitespace-nowrap text-foreground">
-                          {d.toLocaleDateString("en-AU", { day: "2-digit", month: "short" })}
+                          {isEditing ? (
+                            <div className="flex gap-2">
+                              <Input className="h-8 w-36 text-xs" type="date" value={editForm.fixture_date} onChange={(event) => setEditForm((form) => ({ ...form, fixture_date: event.target.value }))} />
+                              <Input className="h-8 w-24 text-xs" type="time" value={editForm.game_time} onChange={(event) => setEditForm((form) => ({ ...form, game_time: event.target.value }))} />
+                            </div>
+                          ) : (
+                            date ? date.toLocaleDateString("en-AU", { day: "2-digit", month: "short" }) : "TBD"
+                          )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={g.is_home ? "default" : "outline"} className="text-xs">
-                            {g.is_home ? "H" : "A"}
-                          </Badge>
+                          {isEditing ? renderTeamSelect(editForm.home_team_id, (value) => setEditForm((form) => ({ ...form, home_team_id: value })), "Home team") : fixture.home_team?.name ?? "Unknown"}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? renderTeamSelect(editForm.away_team_id, (value) => setEditForm((form) => ({ ...form, away_team_id: value })), "Away team") : fixture.away_team?.name ?? "Unknown"}
                         </TableCell>
                         <TableCell>
                           {isEditing ? (
-                            <Input className="h-7 w-32 text-xs" value={editForm.opponent_name || ""} onChange={(e) => setEditForm((p) => ({ ...p, opponent_name: e.target.value }))} />
+                            <Select value={editForm.venue_id || "__none__"} onValueChange={(value) => setEditForm((form) => ({ ...form, venue_id: value === "__none__" ? "" : value, pitch_id: "" }))}>
+                              <SelectTrigger className="h-8 w-40 text-xs"><SelectValue placeholder="Venue" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">None</SelectItem>
+                                {venues.map((venue) => <SelectItem key={venue.id} value={venue.id}>{venue.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
                           ) : (
-                            g.opponent_name
+                            <span className="text-muted-foreground truncate max-w-[150px] block">{venueName}</span>
                           )}
                         </TableCell>
                         <TableCell>
                           {isEditing ? (
-                            <Input className="h-7 w-32 text-xs" value={editForm.location || ""} onChange={(e) => setEditForm((p) => ({ ...p, location: e.target.value }))} />
-                          ) : (
-                            <span className="text-muted-foreground truncate max-w-[150px] block">{g.location || "—"}</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {isEditing ? (
-                            <Select value={editForm.status} onValueChange={(v) => setEditForm((p) => ({ ...p, status: v }))}>
-                              <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
+                            <Select value={editForm.status} onValueChange={(value) => setEditForm((form) => ({ ...form, status: value }))}>
+                              <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="scheduled">Scheduled</SelectItem>
                                 <SelectItem value="completed">Completed</SelectItem>
@@ -399,18 +427,18 @@ const FixturesManagement = () => {
                               </SelectContent>
                             </Select>
                           ) : (
-                            <Badge variant="secondary" className="text-xs capitalize">{g.status}</Badge>
+                            <Badge variant="secondary" className="text-xs capitalize">{fixture.status}</Badge>
                           )}
                         </TableCell>
                         <TableCell>
                           {isEditing ? (
                             <div className="flex items-center gap-1">
-                              <Input className="h-7 w-12 text-xs" type="number" value={editForm.home_score ?? ""} onChange={(e) => setEditForm((p) => ({ ...p, home_score: e.target.value ? parseInt(e.target.value) : null }))} />
+                              <Input className="h-8 w-14 text-xs" type="number" value={editForm.home_score ?? ""} onChange={(event) => setEditForm((form) => ({ ...form, home_score: event.target.value ? parseInt(event.target.value) : null }))} />
                               <span>-</span>
-                              <Input className="h-7 w-12 text-xs" type="number" value={editForm.away_score ?? ""} onChange={(e) => setEditForm((p) => ({ ...p, away_score: e.target.value ? parseInt(e.target.value) : null }))} />
+                              <Input className="h-8 w-14 text-xs" type="number" value={editForm.away_score ?? ""} onChange={(event) => setEditForm((form) => ({ ...form, away_score: event.target.value ? parseInt(event.target.value) : null }))} />
                             </div>
                           ) : (
-                            g.home_score !== null && g.away_score !== null ? `${g.home_score}-${g.away_score}` : "—"
+                            fixture.home_score !== null && fixture.away_score !== null ? `${fixture.home_score}-${fixture.away_score}` : "-"
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -421,8 +449,8 @@ const FixturesManagement = () => {
                             </div>
                           ) : (
                             <div className="flex items-center gap-1 justify-end">
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(g)}><Pencil className="h-3 w-3" /></Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setDeleteTarget(g.id); setDeleteDialogOpen(true); }}><Trash2 className="h-3 w-3" /></Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(fixture)}><Pencil className="h-3 w-3" /></Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setDeleteTarget(fixture.id); setDeleteDialogOpen(true); }}><Trash2 className="h-3 w-3" /></Button>
                             </div>
                           )}
                         </TableCell>
@@ -449,7 +477,6 @@ const FixturesManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Add Fixture Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -457,99 +484,50 @@ const FixturesManagement = () => {
             <DialogDescription>Manually create a single fixture.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Team *</Label>
-              <Select value={addForm.team_id || "__none__"} onValueChange={(v) => { if (v === "__none__") setAddForm((p) => ({ ...p, team_id: "" })); else setAddForm((p) => ({ ...p, team_id: v })); }}>
-                <SelectTrigger><SelectValue placeholder="Select team" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— None —</SelectItem>
-                  {allAssocTeams
-                    .filter((t, idx, arr) => arr.findIndex(x => x.name.trim() === t.name.trim()) === idx)
-                    .map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Opponent *</Label>
-              <Select value={addForm.is_bye ? "BYE" : (addForm.opponent_name || "__none__")} onValueChange={(v) => { if (v === "__none__") setAddForm(p => ({ ...p, opponent_name: "", is_bye: false })); else if (v === "BYE") setAddForm(p => ({ ...p, opponent_name: "", is_bye: true })); else setAddForm(p => ({ ...p, opponent_name: v, is_bye: false })); }}>
-                <SelectTrigger><SelectValue placeholder="Select opponent" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— None —</SelectItem>
-                  <SelectItem value="BYE">BYE</SelectItem>
-                  {uniqueAssocTeamNames.map((name) => (
-                    <SelectItem key={name} value={name}>{name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Home Team *</Label>
+                {renderTeamSelect(addForm.home_team_id, (value) => setAddForm((form) => ({ ...form, home_team_id: value })), "Select home team")}
+              </div>
+              <div className="space-y-2">
+                <Label>Away Team *</Label>
+                {renderTeamSelect(addForm.away_team_id, (value) => setAddForm((form) => ({ ...form, away_team_id: value })), "Select away team")}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Date *</Label>
-                <Input type="date" value={addForm.game_date} onChange={(e) => setAddForm((p) => ({ ...p, game_date: e.target.value }))} />
+                <Input type="date" value={addForm.fixture_date} onChange={(event) => setAddForm((form) => ({ ...form, fixture_date: event.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label>Time</Label>
-                <Input type="time" value={addForm.game_time} onChange={(e) => setAddForm((p) => ({ ...p, game_time: e.target.value }))} />
+                <Input type="time" value={addForm.game_time} onChange={(event) => setAddForm((form) => ({ ...form, game_time: event.target.value }))} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Venue</Label>
-                <Select value={addForm.venue_id || "__none__"} onValueChange={(v) => { if (v === "__none__") setAddForm(p => ({ ...p, venue_id: "", pitch_id: "" })); else setAddForm(p => ({ ...p, venue_id: v, pitch_id: "" })); }}>
+                <Select value={addForm.venue_id || "__none__"} onValueChange={(value) => setAddForm((form) => ({ ...form, venue_id: value === "__none__" ? "" : value, pitch_id: "" }))}>
                   <SelectTrigger><SelectValue placeholder="Select venue" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">— None —</SelectItem>
-                    {venues.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-                    ))}
+                    <SelectItem value="__none__">None</SelectItem>
+                    {venues.map((venue) => <SelectItem key={venue.id} value={venue.id}>{venue.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Pitch</Label>
-                <Select disabled={!addForm.venue_id} value={addForm.pitch_id || "__none__"} onValueChange={(v) => { if (v === "__none__") setAddForm(p => ({ ...p, pitch_id: "" })); else setAddForm(p => ({ ...p, pitch_id: v })); }}>
+                <Select disabled={!addForm.venue_id} value={addForm.pitch_id || "__none__"} onValueChange={(value) => setAddForm((form) => ({ ...form, pitch_id: value === "__none__" ? "" : value }))}>
                   <SelectTrigger><SelectValue placeholder="Select pitch" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">— None —</SelectItem>
-                    {pitches.filter(p => p.venue_id === addForm.venue_id).map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {pitches.filter((pitch) => pitch.venue_id === addForm.venue_id).map((pitch) => (
+                      <SelectItem key={pitch.id} value={pitch.id}>{pitch.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Round</Label>
-              <Input type="number" value={addForm.round_number} onChange={(e) => setAddForm((p) => ({ ...p, round_number: e.target.value }))} placeholder="#" />
-            </div>
-            {!addForm.is_bye && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Umpire 1 (Club)</Label>
-                  <Select value={addForm.umpire_club_1 || "__none__"} onValueChange={(v) => { if (v === "__none__") setAddForm(p => ({ ...p, umpire_club_1: "" })); else setAddForm(p => ({ ...p, umpire_club_1: v })); }}>
-                    <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">— None —</SelectItem>
-                      {clubs.map((c) => (
-                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Umpire 2 (Club)</Label>
-                  <Select value={addForm.umpire_club_2 || "__none__"} onValueChange={(v) => { if (v === "__none__") setAddForm(p => ({ ...p, umpire_club_2: "" })); else setAddForm(p => ({ ...p, umpire_club_2: v })); }}>
-                    <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">— None —</SelectItem>
-                      {clubs.map((c) => (
-                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>

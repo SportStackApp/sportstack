@@ -2,19 +2,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Trophy, Target, Megaphone, MapPin, Home, Plane } from "lucide-react";
+import { Calendar, Trophy, Target, Megaphone, MapPin } from "lucide-react";
 import { format } from "date-fns";
 
 interface GameSummary {
   id: string;
-  game_date: string;
-  opponent_name: string;
-  location: string | null;
-  is_home: boolean;
+  fixture_date: string;
   status: string;
   home_score: number | null;
   away_score: number | null;
-  team_name?: string;
+  home_team: { id: string; name: string } | null;
+  away_team: { id: string; name: string } | null;
+  venue: { id: string; name: string } | null;
 }
 
 interface EntityDashboardProps {
@@ -150,6 +149,11 @@ const EntityDashboard = ({
           ) : (
             <div className="space-y-3">
               {upcomingGames.map((game) => (
+                (() => {
+                  const homeTeam = game.home_team?.name ?? "Unknown";
+                  const awayTeam = game.away_team?.name ?? "Unknown";
+                  const venueName = game.venue?.name ?? "TBD";
+                  return (
                 <div
                   key={game.id}
                   className="flex items-center justify-between p-3 rounded-lg border bg-card"
@@ -157,33 +161,26 @@ const EntityDashboard = ({
                   <div className="flex items-center gap-3">
                     <div className="text-center min-w-[60px]">
                       <div className="text-xs text-muted-foreground">
-                        {format(new Date(game.game_date), "MMM d")}
+                        {format(new Date(game.fixture_date), "MMM d")}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {format(new Date(game.game_date), "h:mm a")}
+                        {format(new Date(game.fixture_date), "h:mm a")}
                       </div>
                     </div>
                     <div>
-                      <div className="font-medium">vs {game.opponent_name}</div>
-                      {game.team_name && (
-                        <div className="text-xs text-muted-foreground">{game.team_name}</div>
-                      )}
-                      {game.location && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <MapPin className="h-3 w-3" />
-                          {game.location}
-                        </div>
-                      )}
+                      <div className="font-medium">{homeTeam} vs {awayTeam}</div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        {venueName}
+                      </div>
                     </div>
                   </div>
-                  <Badge variant={game.is_home ? "default" : "outline"} className="shrink-0">
-                    {game.is_home ? (
-                      <><Home className="h-3 w-3 mr-1" /> Home</>
-                    ) : (
-                      <><Plane className="h-3 w-3 mr-1" /> Away</>
-                    )}
+                  <Badge variant="secondary" className="shrink-0">
+                    {game.status}
                   </Badge>
                 </div>
+                  );
+                })()
               ))}
             </div>
           )}

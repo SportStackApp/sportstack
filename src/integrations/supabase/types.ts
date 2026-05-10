@@ -91,10 +91,10 @@ export type Database = {
           },
         ]
       }
-      game_availability: {
+      fixture_availability: {
         Row: {
           created_at: string
-          game_id: string
+          fixture_id: string
           id: string
           note: string | null
           status: string
@@ -103,7 +103,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          game_id: string
+          fixture_id: string
           id?: string
           note?: string | null
           status?: string
@@ -112,7 +112,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          game_id?: string
+          fixture_id?: string
           id?: string
           note?: string | null
           status?: string
@@ -121,100 +121,104 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "game_availability_game_id_fkey"
-            columns: ["game_id"]
+            foreignKeyName: "fixture_availability_fixture_id_fkey"
+            columns: ["fixture_id"]
             isOneToOne: false
-            referencedRelation: "games"
+            referencedRelation: "fixtures"
             referencedColumns: ["id"]
           },
         ]
       }
-      games: {
+      fixtures: {
         Row: {
+          away_team_id: string
           away_score: number | null
-          bye_team_id: string | null
           created_at: string
-          game_date: string
+          division_id: string | null
+          fixture_date: string
+          home_team_id: string
           home_score: number | null
-          host_club_id: string | null
           id: string
-          is_bye: boolean
-          is_home: boolean
-          location: string | null
           notes: string | null
-          opponent_name: string
           pitch_id: string | null
-          round_number: number | null
           season_id: string | null
-          special_round_name: string | null
           status: string
-          team_id: string
-          umpire_club_1_id: string | null
-          umpire_club_2_id: string | null
           updated_at: string
           venue_id: string | null
         }
         Insert: {
+          away_team_id: string
           away_score?: number | null
-          bye_team_id?: string | null
           created_at?: string
-          game_date: string
+          division_id?: string | null
+          fixture_date: string
+          home_team_id: string
           home_score?: number | null
-          host_club_id?: string | null
           id?: string
-          is_bye?: boolean
-          is_home?: boolean
-          location?: string | null
           notes?: string | null
-          opponent_name: string
           pitch_id?: string | null
-          round_number?: number | null
           season_id?: string | null
-          special_round_name?: string | null
           status?: string
-          team_id: string
-          umpire_club_1_id?: string | null
-          umpire_club_2_id?: string | null
           updated_at?: string
           venue_id?: string | null
         }
         Update: {
+          away_team_id?: string
           away_score?: number | null
-          bye_team_id?: string | null
           created_at?: string
-          game_date?: string
+          division_id?: string | null
+          fixture_date?: string
+          home_team_id?: string
           home_score?: number | null
-          host_club_id?: string | null
           id?: string
-          is_bye?: boolean
-          is_home?: boolean
-          location?: string | null
           notes?: string | null
-          opponent_name?: string
           pitch_id?: string | null
-          round_number?: number | null
           season_id?: string | null
-          special_round_name?: string | null
           status?: string
-          team_id?: string
-          umpire_club_1_id?: string | null
-          umpire_club_2_id?: string | null
           updated_at?: string
           venue_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "games_season_id_fkey"
+            foreignKeyName: "fixtures_away_team_id_fkey"
+            columns: ["away_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixtures_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixtures_home_team_id_fkey"
+            columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixtures_pitch_id_fkey"
+            columns: ["pitch_id"]
+            isOneToOne: false
+            referencedRelation: "pitches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixtures_season_id_fkey"
             columns: ["season_id"]
             isOneToOne: false
             referencedRelation: "seasons"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "games_team_id_fkey"
-            columns: ["team_id"]
+            foreignKeyName: "fixtures_venue_id_fkey"
+            columns: ["venue_id"]
             isOneToOne: false
-            referencedRelation: "teams"
+            referencedRelation: "venues"
             referencedColumns: ["id"]
           },
         ]
@@ -252,7 +256,7 @@ export type Database = {
             foreignKeyName: "lineups_game_id_fkey"
             columns: ["game_id"]
             isOneToOne: false
-            referencedRelation: "games"
+            referencedRelation: "fixtures"
             referencedColumns: ["id"]
           },
         ]
@@ -326,7 +330,7 @@ export type Database = {
             foreignKeyName: "notifications_game_id_fkey"
             columns: ["game_id"]
             isOneToOne: false
-            referencedRelation: "games"
+            referencedRelation: "fixtures"
             referencedColumns: ["id"]
           },
           {

@@ -14,7 +14,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { cn, getTeamDisplayName } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeamContext } from "@/contexts/TeamContext";
@@ -24,15 +24,20 @@ type AvailabilityStatus = "AVAILABLE" | "UNAVAILABLE" | "UNSURE" | "PENDING";
 
 interface GameRow {
   id: string;
-  team_id: string;
-  opponent_name: string;
-  game_date: string;
-  is_home: boolean;
-  location: string | null;
+  fixture_date: string;
   status: string;
+  home_team_id: string;
+  away_team_id: string;
+  venue_id: string | null;
+  home_team: { id: string; name: string } | null;
+  away_team: { id: string; name: string } | null;
+  venue: { id: string; name: string } | null;
   home_score: number | null;
   away_score: number | null;
 }
+
+const FIXTURE_SELECT =
+  "id, fixture_date, status, home_score, away_score, venue_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
 
 interface TeamMember {
   user_id: string;
@@ -59,30 +64,35 @@ const GameDetail = () => {
       setLoading(true);
 
       const { data: gameData } = await supabase
-        .from("games")
-        .select("*")
+        .from("fixtures")
+        .select(FIXTURE_SELECT)
         .eq("id", id)
         .single();
 
       if (gameData) {
-        setGame(gameData);
+        const fixture = gameData as GameRow;
+        setGame(fixture);
 
         // Fetch current user's availability
         if (user) {
           const { data: avail } = await supabase
-            .from("game_availability")
+            .from("fixture_availability")
             .select("status")
-            .eq("game_id", id)
+            .eq("fixture_id", id)
             .eq("user_id", user.id)
             .maybeSingle();
           if (avail) setAvailability(avail.status as AvailabilityStatus);
         }
 
         // Fetch team members with their availability for this game
+        const membershipTeamId =
+          selectedTeam?.id === fixture.home_team_id || selectedTeam?.id === fixture.away_team_id
+            ? selectedTeam.id
+            : fixture.home_team_id;
         const { data: members } = await supabase
           .from("team_memberships")
           .select("user_id, position, jersey_number")
-          .eq("team_id", gameData.team_id)
+          .eq("team_id", membershipTeamId)
           .eq("status", "APPROVED");
 
         if (members && members.length > 0) {
@@ -90,7 +100,7 @@ const GameDetail = () => {
 
           const [profilesRes, availRes] = await Promise.all([
             supabase.from("teammate_profiles").select("id, first_name, last_name").in("id", userIds),
-            supabase.from("game_availability").select("user_id, status").eq("game_id", id).in("user_id", userIds),
+            supabase.from("fixture_availability").select("user_id, status").eq("fixture_id", id).in("user_id", userIds),
           ]);
 
           const profiles = profilesRes.data || [];
@@ -114,16 +124,16 @@ const GameDetail = () => {
       setLoading(false);
     };
     fetchGame();
-  }, [id, user]);
+  }, [id, user, selectedTeam?.id]);
 
   const handleAvailability = async (status: AvailabilityStatus) => {
     if (!user || !id) return;
 
     const { error } = await supabase
-      .from("game_availability")
+      .from("fixture_availability")
       .upsert(
-        { game_id: id, user_id: user.id, status },
-        { onConflict: "game_id,user_id" }
+        { fixture_id: id, user_id: user.id, status },
+        { onConflict: "fixture_id,user_id" }
       );
 
     if (error) {
@@ -162,10 +172,10 @@ const GameDetail = () => {
     );
   }
 
-  const teamName = selectedTeam ? getTeamDisplayName(selectedTeam) : "Team";
-  const homeTeam = game.is_home ? teamName : game.opponent_name;
-  const awayTeam = game.is_home ? game.opponent_name : teamName;
-  const gameDate = new Date(game.game_date);
+  const homeTeam = game.home_team?.name ?? "Unknown";
+  const awayTeam = game.away_team?.name ?? "Unknown";
+  const venueName = game.venue?.name ?? "TBD";
+  const gameDate = new Date(game.fixture_date);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -180,9 +190,7 @@ const GameDetail = () => {
       <Card variant="gradient">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <Badge variant={game.is_home ? "default" : "outline"} className="text-sm">
-              {game.is_home ? "Home" : "Away"}
-            </Badge>
+            <span />
             <Badge variant={game.status === "scheduled" ? "scheduled" : "finalised"}>
               {game.status}
             </Badge>
@@ -210,7 +218,7 @@ const GameDetail = () => {
             <div>
               <MapPin className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
               <p className="text-sm font-medium text-foreground truncate px-2">
-                {game.location || "TBD"}
+                {venueName}
               </p>
             </div>
           </div>

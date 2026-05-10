@@ -14,6 +14,9 @@ const TeamDashboard = () => {
   const [stats, setStats] = useState({ gamesPlayed: 0, goalsScored: 0 });
   const [upcomingGames, setUpcomingGames] = useState<any[]>([]);
 
+  const fixtureSelect =
+    "id, fixture_date, status, home_score, away_score, venue_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
+
   useEffect(() => {
     if (!id) return;
     const load = async () => {
@@ -37,25 +40,25 @@ const TeamDashboard = () => {
 
       // Stats
       const { data: completed } = await supabase
-        .from("games")
-        .select("home_score, away_score, is_home")
-        .eq("team_id", id)
+        .from("fixtures")
+        .select("home_team_id, away_team_id, home_score, away_score")
+        .or(`home_team_id.eq.${id},away_team_id.eq.${id}`)
         .eq("status", "completed");
 
       const gamesPlayed = completed?.length || 0;
       const goalsScored = (completed || []).reduce((sum, g) => {
-        return sum + (g.is_home ? (g.home_score || 0) : (g.away_score || 0));
+        return sum + (g.home_team_id === id ? (g.home_score || 0) : (g.away_score || 0));
       }, 0);
       setStats({ gamesPlayed, goalsScored });
 
       // Upcoming
       const { data: upcoming } = await supabase
-        .from("games")
-        .select("id, game_date, opponent_name, location, is_home, status, home_score, away_score")
-        .eq("team_id", id)
+        .from("fixtures")
+        .select(fixtureSelect)
+        .or(`home_team_id.eq.${id},away_team_id.eq.${id}`)
         .eq("status", "scheduled")
-        .gte("game_date", new Date().toISOString())
-        .order("game_date", { ascending: true })
+        .gte("fixture_date", new Date().toISOString())
+        .order("fixture_date", { ascending: true })
         .limit(5);
 
       setUpcomingGames(upcoming || []);

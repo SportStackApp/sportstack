@@ -23,13 +23,18 @@ type AvailabilityStatus = "AVAILABLE" | "UNAVAILABLE" | "UNSURE" | "PENDING";
 
 interface GameRow {
   id: string;
-  team_id: string;
-  opponent_name: string;
-  game_date: string;
-  is_home: boolean;
-  location: string | null;
+  fixture_date: string;
   status: string;
+  home_team_id: string;
+  away_team_id: string;
+  venue_id: string | null;
+  home_team: { id: string; name: string } | null;
+  away_team: { id: string; name: string } | null;
+  venue: { id: string; name: string } | null;
 }
+
+const FIXTURE_SELECT =
+  "id, fixture_date, status, home_team_id, away_team_id, venue_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
 
 const Dashboard = () => {
   const { selectedTeamId, selectedTeam, selectedClub } = useTeamContext();
@@ -63,28 +68,28 @@ const Dashboard = () => {
       setLoading(true);
 
       const { data: gamesData } = await supabase
-        .from("games")
-        .select("*")
-        .eq("team_id", selectedTeamId)
-        .gte("game_date", new Date().toISOString())
-        .order("game_date", { ascending: true })
+        .from("fixtures")
+        .select(FIXTURE_SELECT)
+        .or(`home_team_id.eq.${selectedTeamId},away_team_id.eq.${selectedTeamId}`)
+        .gte("fixture_date", new Date().toISOString())
+        .order("fixture_date", { ascending: true })
         .limit(8);
 
-      const gamesList = gamesData || [];
+      const gamesList = (gamesData as GameRow[]) || [];
       setGames(gamesList);
 
       // Fetch availability for these games
       if (user && gamesList.length > 0) {
         const gameIds = gamesList.map((g) => g.id);
         const { data: availData } = await supabase
-          .from("game_availability")
-          .select("game_id, status")
+          .from("fixture_availability")
+          .select("fixture_id, status")
           .eq("user_id", user.id)
-          .in("game_id", gameIds);
+          .in("fixture_id", gameIds);
 
         const availMap: Record<string, AvailabilityStatus> = {};
         availData?.forEach((a) => {
-          availMap[a.game_id] = a.status as AvailabilityStatus;
+          availMap[a.fixture_id] = a.status as AvailabilityStatus;
         });
         setAvailability(availMap);
       }
@@ -99,8 +104,8 @@ const Dashboard = () => {
     setAvailability((prev) => ({ ...prev, [gameId]: status }));
 
     await supabase
-      .from("game_availability")
-      .upsert({ game_id: gameId, user_id: user.id, status }, { onConflict: "game_id,user_id" });
+      .from("fixture_availability")
+      .upsert({ fixture_id: gameId, user_id: user.id, status }, { onConflict: "fixture_id,user_id" });
   };
 
   const navigateMonth = (direction: "prev" | "next") => {
@@ -129,10 +134,10 @@ const Dashboard = () => {
 
     const gameDays = games
       .filter((g) => {
-        const d = new Date(g.game_date);
+        const d = new Date(g.fixture_date);
         return d.getMonth() === month && d.getFullYear() === year;
       })
-      .map((g) => new Date(g.game_date).getDate());
+      .map((g) => new Date(g.fixture_date).getDate());
 
     for (let i = 1; i <= daysInMonth; i++) {
       const isToday = i === today.getDate() && month === today.getMonth() && year === today.getFullYear();
@@ -220,9 +225,10 @@ const Dashboard = () => {
                 <p className="text-primary-foreground/70 text-sm">No upcoming games</p>
               ) : (
                 games.slice(0, 4).map((game) => {
-                  const gameDate = new Date(game.game_date);
-                  const homeTeam = game.is_home ? teamName : game.opponent_name;
-                  const awayTeam = game.is_home ? game.opponent_name : teamName;
+                  const gameDate = new Date(game.fixture_date);
+                  const homeTeam = game.home_team?.name ?? "Unknown";
+                  const awayTeam = game.away_team?.name ?? "Unknown";
+                  const venueName = game.venue?.name ?? "TBD";
                   const avail = availability[game.id];
 
                   return (
@@ -246,12 +252,10 @@ const Dashboard = () => {
                           <Clock className="h-3 w-3" />
                           {gameDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
                         </span>
-                        {game.location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {game.location}
-                          </span>
-                        )}
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {venueName}
+                        </span>
                       </div>
 
                       {/* Availability buttons */}

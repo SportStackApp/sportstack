@@ -14,6 +14,9 @@ const ClubDashboard = () => {
   const [stats, setStats] = useState({ gamesPlayed: 0, goalsScored: 0 });
   const [upcomingGames, setUpcomingGames] = useState<any[]>([]);
 
+  const fixtureSelect =
+    "id, fixture_date, status, home_score, away_score, venue_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
+
   useEffect(() => {
     if (!id) return;
     const load = async () => {
@@ -39,7 +42,6 @@ const ClubDashboard = () => {
       // Teams for this club
       const { data: teams } = await supabase.from("teams").select("id, name").eq("club_id", id);
       const teamIds = teams?.map((t) => t.id) || [];
-      const teamMap = Object.fromEntries((teams || []).map((t) => [t.id, t.name]));
 
       if (teamIds.length === 0) {
         setStats({ gamesPlayed: 0, goalsScored: 0 });
@@ -49,29 +51,30 @@ const ClubDashboard = () => {
       }
 
       const { data: completed } = await supabase
-        .from("games")
-        .select("home_score, away_score, is_home")
-        .in("team_id", teamIds)
+        .from("fixtures")
+        .select("id, home_team_id, away_team_id, home_score, away_score")
+        .or(`home_team_id.in.(${teamIds.join(",")}),away_team_id.in.(${teamIds.join(",")})`)
         .eq("status", "completed");
 
       const gamesPlayed = completed?.length || 0;
+      const teamIdSet = new Set(teamIds);
       const goalsScored = (completed || []).reduce((sum, g) => {
-        return sum + (g.is_home ? (g.home_score || 0) : (g.away_score || 0));
+        const homeGoals = teamIdSet.has(g.home_team_id) ? (g.home_score || 0) : 0;
+        const awayGoals = teamIdSet.has(g.away_team_id) ? (g.away_score || 0) : 0;
+        return sum + homeGoals + awayGoals;
       }, 0);
       setStats({ gamesPlayed, goalsScored });
 
       const { data: upcoming } = await supabase
-        .from("games")
-        .select("id, game_date, opponent_name, location, is_home, status, home_score, away_score, team_id")
-        .in("team_id", teamIds)
+        .from("fixtures")
+        .select(fixtureSelect)
+        .or(`home_team_id.in.(${teamIds.join(",")}),away_team_id.in.(${teamIds.join(",")})`)
         .eq("status", "scheduled")
-        .gte("game_date", new Date().toISOString())
-        .order("game_date", { ascending: true })
+        .gte("fixture_date", new Date().toISOString())
+        .order("fixture_date", { ascending: true })
         .limit(5);
 
-      setUpcomingGames(
-        (upcoming || []).map((g) => ({ ...g, team_name: teamMap[g.team_id] }))
-      );
+      setUpcomingGames(upcoming || []);
       setLoading(false);
     };
     load();
