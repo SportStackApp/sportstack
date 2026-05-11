@@ -29,8 +29,9 @@ interface FixtureRow {
   home_score: number | null;
   away_score: number | null;
   notes: string | null;
+  round_number: number | null;
   home_team_id: string;
-  away_team_id: string;
+  away_team_id: string | null;
   venue_id: string | null;
   pitch_id: string | null;
   home_team: { id: string; name: string } | null;
@@ -41,6 +42,7 @@ interface FixtureRow {
 interface FixtureForm {
   home_team_id: string;
   away_team_id: string;
+  round_number: string;
   fixture_date: string;
   game_time: string;
   venue_id: string;
@@ -54,18 +56,19 @@ interface FixtureForm {
 const emptyForm: FixtureForm = {
   home_team_id: "",
   away_team_id: "",
+  round_number: "",
   fixture_date: "",
   game_time: "",
   venue_id: "",
   pitch_id: "",
-  status: "scheduled",
+  status: "SCHEDULED",
   home_score: null,
   away_score: null,
   notes: "",
 };
 
 const FIXTURE_SELECT =
-  "id, fixture_date, status, home_score, away_score, notes, venue_id, pitch_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
+  "id, fixture_date, status, home_score, away_score, notes, round_number, venue_id, pitch_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
 
 const splitDateTime = (value: string | null) => {
   if (!value) return { fixture_date: "", game_time: "" };
@@ -79,6 +82,9 @@ const splitDateTime = (value: string | null) => {
 
 const combineDateTime = (date: string, time: string) =>
   time ? `${date}T${time}:00` : `${date}T00:00:00`;
+
+const normaliseStatus = (status: string) => status.toLowerCase();
+const toDbStatus = (status: string) => status.toUpperCase();
 
 const FixturesManagement = () => {
   const navigate = useNavigate();
@@ -97,6 +103,7 @@ const FixturesManagement = () => {
   const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
   const [pitches, setPitches] = useState<{ id: string; name: string; venue_id: string }[]>([]);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterRound, setFilterRound] = useState("");
   const [assocTeamIds, setAssocTeamIds] = useState<string[]>([]);
 
   const teamIds = selectedTeamId
@@ -187,7 +194,8 @@ const FixturesManagement = () => {
         "Home Team": fixture.home_team?.name ?? "Unknown",
         "Away Team": fixture.away_team?.name ?? "Unknown",
         Venue: fixture.venue?.name ?? "TBD",
-        Status: fixture.status,
+        Round: fixture.round_number ?? "",
+        Status: normaliseStatus(fixture.status),
         "Home Score": fixture.home_score ?? "",
         "Away Score": fixture.away_score ?? "",
         Notes: fixture.notes || "",
@@ -205,7 +213,8 @@ const FixturesManagement = () => {
     setEditingId(fixture.id);
     setEditForm({
       home_team_id: fixture.home_team_id,
-      away_team_id: fixture.away_team_id,
+      away_team_id: fixture.away_team_id || "",
+      round_number: fixture.round_number?.toString() ?? "",
       fixture_date: dateParts.fixture_date,
       game_time: dateParts.game_time,
       venue_id: fixture.venue_id || "",
@@ -226,10 +235,11 @@ const FixturesManagement = () => {
     const { error } = await supabase.from("fixtures").update({
       home_team_id: editForm.home_team_id,
       away_team_id: editForm.away_team_id,
+      round_number: editForm.round_number ? parseInt(editForm.round_number, 10) : null,
       fixture_date: combineDateTime(editForm.fixture_date, editForm.game_time),
       venue_id: editForm.venue_id || null,
       pitch_id: editForm.pitch_id || null,
-      status: editForm.status,
+      status: toDbStatus(editForm.status),
       home_score: editForm.home_score,
       away_score: editForm.away_score,
       notes: editForm.notes || null,
@@ -267,10 +277,11 @@ const FixturesManagement = () => {
     const { error } = await supabase.from("fixtures").insert({
       home_team_id: addForm.home_team_id,
       away_team_id: addForm.away_team_id,
+      round_number: addForm.round_number ? parseInt(addForm.round_number, 10) : null,
       fixture_date: combineDateTime(addForm.fixture_date, addForm.game_time),
       venue_id: addForm.venue_id || null,
       pitch_id: addForm.pitch_id || null,
-      status: addForm.status,
+      status: toDbStatus(addForm.status),
       home_score: addForm.home_score,
       away_score: addForm.away_score,
       notes: addForm.notes || null,
@@ -299,9 +310,11 @@ const FixturesManagement = () => {
     </Select>
   );
 
-  const displayFixtures = filterStatus === "all"
-    ? fixtures
-    : fixtures.filter((fixture) => fixture.status === filterStatus);
+  const displayFixtures = fixtures.filter((fixture) => {
+    const matchesStatus = filterStatus === "all" || normaliseStatus(fixture.status) === filterStatus;
+    const matchesRound = !filterRound || fixture.round_number?.toString() === filterRound;
+    return matchesStatus && matchesRound;
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -330,18 +343,30 @@ const FixturesManagement = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Label>Status:</Label>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="scheduled">Scheduled</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-            <SelectItem value="postponed">Postponed</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Label>Status:</Label>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="scheduled">Scheduled</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="postponed">Postponed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label>Round:</Label>
+          <Input
+            className="h-9 w-20"
+            type="number"
+            placeholder="All"
+            value={filterRound}
+            onChange={(event) => setFilterRound(event.target.value)}
+          />
+        </div>
       </div>
 
       {loading ? (
@@ -372,6 +397,7 @@ const FixturesManagement = () => {
                     <TableHead>Date</TableHead>
                     <TableHead>Home Team</TableHead>
                     <TableHead>Away Team</TableHead>
+                    <TableHead>Round</TableHead>
                     <TableHead>Venue</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Score</TableHead>
@@ -383,6 +409,7 @@ const FixturesManagement = () => {
                     const date = fixture.fixture_date ? new Date(fixture.fixture_date) : null;
                     const isEditing = editingId === fixture.id;
                     const venueName = fixture.venue?.name ?? "TBD";
+                    const statusLabel = normaliseStatus(fixture.status);
 
                     return (
                       <TableRow key={fixture.id}>
@@ -404,6 +431,13 @@ const FixturesManagement = () => {
                         </TableCell>
                         <TableCell>
                           {isEditing ? (
+                            <Input className="h-8 w-20 text-xs" type="number" value={editForm.round_number} onChange={(event) => setEditForm((form) => ({ ...form, round_number: event.target.value }))} />
+                          ) : (
+                            fixture.round_number ?? "-"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
                             <Select value={editForm.venue_id || "__none__"} onValueChange={(value) => setEditForm((form) => ({ ...form, venue_id: value === "__none__" ? "" : value, pitch_id: "" }))}>
                               <SelectTrigger className="h-8 w-40 text-xs"><SelectValue placeholder="Venue" /></SelectTrigger>
                               <SelectContent>
@@ -417,7 +451,7 @@ const FixturesManagement = () => {
                         </TableCell>
                         <TableCell>
                           {isEditing ? (
-                            <Select value={editForm.status} onValueChange={(value) => setEditForm((form) => ({ ...form, status: value }))}>
+                            <Select value={normaliseStatus(editForm.status)} onValueChange={(value) => setEditForm((form) => ({ ...form, status: value }))}>
                               <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="scheduled">Scheduled</SelectItem>
@@ -427,7 +461,7 @@ const FixturesManagement = () => {
                               </SelectContent>
                             </Select>
                           ) : (
-                            <Badge variant="secondary" className="text-xs capitalize">{fixture.status}</Badge>
+                            <Badge variant="secondary" className="text-xs capitalize">{statusLabel}</Badge>
                           )}
                         </TableCell>
                         <TableCell>
@@ -503,6 +537,10 @@ const FixturesManagement = () => {
                 <Label>Time</Label>
                 <Input type="time" value={addForm.game_time} onChange={(event) => setAddForm((form) => ({ ...form, game_time: event.target.value }))} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Round</Label>
+              <Input type="number" value={addForm.round_number} onChange={(event) => setAddForm((form) => ({ ...form, round_number: event.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
