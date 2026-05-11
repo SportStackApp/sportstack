@@ -207,11 +207,11 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Upcoming Games */}
+          {/* Upcoming Fixtures */}
           <Card style={brandStyle} className={!brandStyle ? "bg-primary text-primary-foreground" : ""}>
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold text-primary-foreground">
-                Upcoming games
+                Upcoming fixtures
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -222,7 +222,7 @@ const Dashboard = () => {
                   ))}
                 </div>
               ) : games.length === 0 ? (
-                <p className="text-primary-foreground/70 text-sm">No upcoming games</p>
+                <p className="text-primary-foreground/70 text-sm">No upcoming fixtures</p>
               ) : (
                 games.slice(0, 4).map((game) => {
                   const gameDate = new Date(game.fixture_date);
