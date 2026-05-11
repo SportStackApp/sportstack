@@ -394,7 +394,7 @@ const Signup = () => {
                     <div className="space-y-2">
                       <Label htmlFor="association">Association</Label>
                       <Select
-                        value={formData.associationId}
+                        value={formData.associationId || undefined}
                         onValueChange={(value) =>
                           setFormData({
                             ...formData,
@@ -420,7 +420,7 @@ const Signup = () => {
                     <div className="space-y-2">
                       <Label htmlFor="club">Club</Label>
                       <Select
-                        value={formData.clubId}
+                        value={formData.clubId || undefined}
                         onValueChange={(value) =>
                           setFormData({
                             ...formData,
@@ -446,7 +446,7 @@ const Signup = () => {
                     <div className="space-y-2">
                       <Label htmlFor="team">Team</Label>
                       <Select
-                        value={formData.teamId}
+                        value={formData.teamId || undefined}
                         onValueChange={(value) =>
                           setFormData({ ...formData, teamId: value })
                         }
