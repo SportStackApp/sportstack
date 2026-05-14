@@ -97,31 +97,6 @@ const UsersManagement = () => {
   const [assignMembershipType, setAssignMembershipType] = useState<MembershipType>("PRIMARY");
   const [assignSaving, setAssignSaving] = useState(false);
 
-  useEffect(() => {
-    if (!assignClubId) {
-      setAssignDivision("");
-      setAssignDivisionOptions([]);
-      setAssignTeamOptions([]);
-      setAssignTeamId("");
-      return;
-    }
-    const fetchClubTeams = async () => {
-      const { data } = await supabase
-        .from("teams")
-        .select("id, name, club_id, division")
-        .eq("club_id", assignClubId)
-        .order("name");
-      const result = data || [];
-      const divs = Array.from(
-        new Set(result.map((t) => t.division).filter(Boolean))
-      ).sort() as string[];
-      setAssignDivisionOptions(divs);
-      setAssignDivision("");
-      setAssignTeamOptions(result);
-      setAssignTeamId("");
-    };
-    fetchClubTeams();
-  }, [assignClubId]);
 
   useEffect(() => {
     if (!scopeLoading && !isAnyAdmin) {
@@ -988,10 +963,31 @@ const UsersManagement = () => {
                       <Label className="text-xs">Club</Label>
                       <Select
                         value={assignClubId}
-                        onValueChange={(v) => {
+                        onValueChange={async (v) => {
                           setAssignClubId(v);
                           setAssignDivision("");
                           setAssignTeamId("");
+                          setAssignTeamOptions([]);
+                          setAssignDivisionOptions([]);
+
+                          if (!v) return;
+
+                          // Fetch teams for this club directly
+                          const { data } = await supabase
+                            .from("teams")
+                            .select("id, name, club_id, division")
+                            .eq("club_id", v)
+                            .order("name");
+
+                          const result = data || [];
+
+                          // Extract unique non-null divisions
+                          const divs = Array.from(
+                            new Set(result.map((t) => t.division).filter(Boolean))
+                          ).sort() as string[];
+
+                          setAssignDivisionOptions(divs);
+                          setAssignTeamOptions(result);
                         }}
                         disabled={!assignAssociationId}
                       >
@@ -1015,7 +1011,7 @@ const UsersManagement = () => {
                           setAssignDivision(v);
                           setAssignTeamId("");
                         }}
-                        disabled={!assignClubId || assignDivisionOptions.length === 0}
+                        disabled={!assignClubId}
                       >
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue placeholder="All divisions" />
