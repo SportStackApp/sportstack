@@ -30,10 +30,23 @@ interface Team {
   division: string | null;
 }
 
+interface Division {
+  id: string;
+  association_id: string;
+  name: string;
+}
+
+interface TeamDivision {
+  team_id: string;
+  division_id: string;
+}
+
 interface TeamContextType {
   associations: Association[];
   clubs: Club[];
   teams: Team[];
+  divisions: Division[];
+  teamDivisions: TeamDivision[];
   selectedAssociationId: string;
   selectedClubId: string;
   selectedTeamId: string;
@@ -44,7 +57,7 @@ interface TeamContextType {
   setSelectedDivision: (d: string) => void;
   filteredClubs: Club[];
   filteredTeams: Team[];
-  filteredDivisions: string[];
+  filteredDivisions: Division[];
   selectedAssociation: Association | undefined;
   selectedClub: Club | undefined;
   selectedTeam: Team | undefined;
@@ -58,6 +71,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const [associations, setAssociations] = useState<Association[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>([]);
+  const [teamDivisions, setTeamDivisions] = useState<TeamDivision[]>([]);
   const [selectedAssociationId, setSelectedAssociationId] = useState(() => localStorage.getItem("selectedAssociationId") || "");
   const [selectedClubId, setSelectedClubId] = useState(() => localStorage.getItem("selectedClubId") || "");
   const [selectedTeamId, setSelectedTeamId] = useState(() => localStorage.getItem("selectedTeamId") || "");
@@ -67,19 +82,25 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const [assocRes, clubRes, teamRes] = await Promise.all([
+      const [assocRes, clubRes, teamRes, divRes, teamDivRes] = await Promise.all([
         supabase.from("associations").select("*").order("name"),
         supabase.from("clubs").select("*").order("name"),
         supabase.from("teams").select("*").order("name"),
+        supabase.from("divisions").select("*").order("name"),
+        supabase.from("team_divisions").select("*"),
       ]);
 
       const assocs = assocRes.data || [];
       const allClubs = clubRes.data || [];
       const allTeams = teamRes.data || [];
+      const allDivs = divRes.data || [];
+      const allTeamDivs = teamDivRes.data || [];
 
       setAssociations(assocs);
       setClubs(allClubs);
       setTeams(allTeams);
+      setDivisions(allDivs);
+      setTeamDivisions(allTeamDivs);
 
       // No auto-select - selectors start empty, mode determines what's shown
 
@@ -91,19 +112,20 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const filteredClubs = clubs.filter(c => c.association_id === selectedAssociationId);
   
-  // Derive unique divisions from teams of selected club
-  const filteredDivisions = Array.from(
-    new Set(
-      teams
-        .filter(t => t.club_id === selectedClubId && t.division)
-        .map(t => t.division as string)
-    )
-  ).sort();
+  // Divisions that contain at least one team from the selected club
+  const clubTeamIds = teams.filter(t => t.club_id === selectedClubId).map(t => t.id);
+  const activeDivisionIds = new Set(
+    teamDivisions.filter(td => clubTeamIds.includes(td.team_id)).map(td => td.division_id)
+  );
+  const filteredDivisions = divisions.filter(d => activeDivisionIds.has(d.id));
 
-  // Filter teams by club AND division (if selected)
+  // Filter teams by club AND verify they belong to the selected division via team_divisions
   const filteredTeams = teams.filter(t => {
     if (t.club_id !== selectedClubId) return false;
-    if (selectedDivision && t.division !== selectedDivision) return false;
+    if (selectedDivision) {
+      const isInDivision = teamDivisions.some(td => td.team_id === t.id && td.division_id === selectedDivision);
+      if (!isInDivision) return false;
+    }
     return true;
   });
 
@@ -154,6 +176,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         associations,
         clubs,
         teams,
+        divisions,
+        teamDivisions,
         selectedAssociationId,
         selectedClubId,
         selectedTeamId,

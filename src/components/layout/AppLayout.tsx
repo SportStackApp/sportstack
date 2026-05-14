@@ -193,9 +193,18 @@ const AppLayout = () => {
   const handleAssociationChange = (associationId: string) => {
     setSelectedAssociationId(associationId);
     setIsAssociationPopoverOpen(false);
+    navigate(`/associations/${associationId}`);
   };
 
   const navItems = NAV_SETS[mode];
+  
+  // Hide nav items that are redundant based on cascade selection
+  const visibleNavItems = navItems.filter((item) => {
+    if (selectedAssociationId && item.path === "/admin/associations") return false;
+    if (selectedClubId && item.path === "/admin/clubs") return false;
+    if (selectedTeamId && item.path === "/admin/teams") return false;
+    return true;
+  });
   const mobileNavItems = MOBILE_NAV[mode];
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -218,7 +227,7 @@ const AppLayout = () => {
   const renderSidebar = (isMobile: boolean) => (
     <>
       <nav className="flex-1 py-2">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive =
             (item.path === "/admin" && location.pathname === "/admin") ||
             (item.path !== "/admin" && (
@@ -326,7 +335,7 @@ const AppLayout = () => {
                         className="object-cover"
                       />
                       <AvatarFallback className="rounded-none bg-accent text-accent-foreground text-xs font-semibold">
-                        {selectedAssociation?.abbreviation || selectedAssociation?.name?.substring(0, 2).toUpperCase() || "HA"}
+                        {selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "Admin"}
                       </AvatarFallback>
                     </Avatar>
                   </button>
@@ -381,7 +390,7 @@ const AppLayout = () => {
                     className="object-cover"
                   />
                   <AvatarFallback className="rounded-none bg-accent text-accent-foreground text-xs font-semibold">
-                    {selectedAssociation?.abbreviation || selectedAssociation?.name?.substring(0, 2).toUpperCase() || "HA"}
+                    {selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "Admin"}
                   </AvatarFallback>
                 </Avatar>
               </div>
@@ -390,16 +399,13 @@ const AppLayout = () => {
             {/* Club Selector */}
             {showClubSelector && selectedAssociationId && filteredClubs.length > 0 && (
               <Select key={selectedAssociationId} value={selectedClubId || undefined} onValueChange={(v) => {
-                if (v === "__clear__") { setSelectedClubId(""); }
-                else { setSelectedClubId(v); navigate("/admin/clubs"); }
+                setSelectedClubId(v); 
+                navigate(`/clubs/${v}`);
               }}>
                 <SelectTrigger className="w-[140px] lg:w-[180px] bg-accent text-accent-foreground border-0 font-medium">
                   <SelectValue placeholder="Select Club" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border-border">
-                  {selectedClubId && (
-                    <SelectItem value="__clear__" className="text-muted-foreground italic">All Clubs</SelectItem>
-                  )}
                   {filteredClubs.map((club) => (
                     <SelectItem key={club.id} value={club.id}>
                       {club.name}
@@ -412,19 +418,15 @@ const AppLayout = () => {
             {/* Division Selector */}
             {selectedClubId && filteredDivisions.length > 0 && (
               <Select key={selectedClubId} value={selectedDivision || undefined} onValueChange={(v) => {
-                if (v === "__clear__") { setSelectedDivision(""); }
-                else { setSelectedDivision(v); navigate("/admin/teams"); }
+                setSelectedDivision(v); 
               }}>
                 <SelectTrigger className="w-[120px] lg:w-[160px] bg-accent text-accent-foreground border-0 font-medium">
                   <SelectValue placeholder="Division" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border-border">
-                  {selectedDivision && (
-                    <SelectItem value="__clear__" className="text-muted-foreground italic">All Divisions</SelectItem>
-                  )}
                   {filteredDivisions.map((div) => (
-                    <SelectItem key={div} value={div}>
-                      {div}
+                    <SelectItem key={div.id} value={div.id}>
+                      {div.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -432,15 +434,15 @@ const AppLayout = () => {
             )}
 
             {/* Team Selector */}
-            {selectedClubId && (filteredDivisions.length === 0 || selectedDivision) && filteredTeams.length > 0 && (
-              <Select key={selectedClubId + selectedDivision} value={selectedTeamId || undefined} onValueChange={(v) => v === "__clear__" ? setSelectedTeamId("") : setSelectedTeamId(v)}>
+            {selectedClubId && selectedDivision && filteredTeams.length > 0 && (
+              <Select key={selectedClubId + selectedDivision} value={selectedTeamId || undefined} onValueChange={(v) => {
+                setSelectedTeamId(v);
+                navigate(`/teams/${v}`);
+              }}>
                 <SelectTrigger className="w-[120px] lg:w-[160px] bg-accent text-accent-foreground border-0 font-medium">
                   <SelectValue placeholder="Select Team" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border-border">
-                  {selectedTeamId && (
-                    <SelectItem value="__clear__" className="text-muted-foreground italic">All Teams</SelectItem>
-                  )}
                   {filteredTeams.map((team) => (
                     <SelectItem key={team.id} value={team.id}>
                       {getTeamDisplayName(team)}

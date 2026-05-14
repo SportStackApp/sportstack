@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getTeamDisplayName } from "@/lib/utils";
 import { useAdminScope } from "@/hooks/useAdminScope";
+import { useTeamContext } from "@/contexts/TeamContext";
 import type { Database } from "@/integrations/supabase/types";
 
 type Team = Database["public"]["Tables"]["teams"]["Row"];
@@ -38,13 +39,12 @@ const TeamsManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { loading: scopeLoading, isSuperAdmin, isAnyAdmin, scopedTeamIds, scopedClubIds, scopedAssociationIds, canManageTeam } = useAdminScope();
+  const { selectedAssociationId, selectedClubId, selectedDivision } = useTeamContext();
 
   const [teams, setTeams] = useState<TeamWithClub[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
   const [associations, setAssociations] = useState<Association[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterAssociation, setFilterAssociation] = useState<string>("all");
-  const [filterClub, setFilterClub] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<TeamWithClub | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -60,7 +60,7 @@ const TeamsManagement = () => {
   const fetchData = async () => {
     setLoading(true);
 
-    let teamsQuery = supabase.from("teams").select("*, clubs:club_id(name, association_id), divisions:division_id(name), team_divisions(divisions(name))" as any).order("name");
+    let teamsQuery = supabase.from("teams").select("*, clubs:club_id(name, association_id), divisions:division_id(id, name), team_divisions(division_id, divisions(id, name))" as any).order("name");
     if (!isSuperAdmin && scopedTeamIds.length > 0) {
       teamsQuery = teamsQuery.in("id", scopedTeamIds);
     } else if (!isSuperAdmin && scopedClubIds.length > 0) {
@@ -91,16 +91,19 @@ const TeamsManagement = () => {
     ? clubs
     : clubs.filter((c) => scopedClubIds.includes(c.id) || scopedAssociationIds.includes(c.association_id));
 
-  // Filter logic
-  const filteredClubsForDropdown = filterAssociation === "all"
-    ? (isSuperAdmin ? clubs : formClubs)
-    : (isSuperAdmin ? clubs : formClubs).filter((c) => c.association_id === filterAssociation);
-
   let filteredTeams = teams;
-  if (filterAssociation !== "all") filteredTeams = filteredTeams.filter((t) => t.clubs?.association_id === filterAssociation);
-  if (filterClub !== "all") filteredTeams = filteredTeams.filter((t) => t.club_id === filterClub);
-
-  useEffect(() => { setFilterClub("all"); }, [filterAssociation]);
+  if (selectedAssociationId) {
+    filteredTeams = filteredTeams.filter((t) => t.clubs?.association_id === selectedAssociationId);
+  }
+  if (selectedClubId) {
+    filteredTeams = filteredTeams.filter((t) => t.club_id === selectedClubId);
+  }
+  if (selectedDivision) {
+    filteredTeams = filteredTeams.filter((t) => 
+      t.divisions?.id === selectedDivision || 
+      t.team_divisions?.some(td => td.divisions?.id === selectedDivision || td.division_id === selectedDivision)
+    );
+  }
 
   const canAdd = isSuperAdmin || scopedAssociationIds.length > 0 || scopedClubIds.length > 0;
   const canDelete = isSuperAdmin || scopedAssociationIds.length > 0 || scopedClubIds.length > 0;
@@ -242,33 +245,7 @@ const TeamsManagement = () => {
         )}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4">
-        {(isSuperAdmin || scopedAssociationIds.length > 0) && (
-          <div className="flex items-center gap-2">
-            <Label>Association:</Label>
-            <Select value={filterAssociation} onValueChange={setFilterAssociation}>
-              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {(isSuperAdmin ? associations : associations.filter((a) => scopedAssociationIds.includes(a.id))).map((a) => (
-                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <Label>Club:</Label>
-          <Select value={filterClub} onValueChange={setFilterClub}>
-            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              {filteredClubsForDropdown.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      {/* Page-level filters have been removed in favor of the global cascade bar context */}
 
       <Card>
         <CardHeader>

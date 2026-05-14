@@ -90,9 +90,38 @@ const UsersManagement = () => {
   const [showTeamAssign, setShowTeamAssign] = useState(false);
   const [assignAssociationId, setAssignAssociationId] = useState("");
   const [assignClubId, setAssignClubId] = useState("");
+  const [assignDivision, setAssignDivision] = useState("");
+  const [assignDivisionOptions, setAssignDivisionOptions] = useState<string[]>([]);
+  const [assignTeamOptions, setAssignTeamOptions] = useState<{ id: string; name: string; division: string | null }[]>([]);
   const [assignTeamId, setAssignTeamId] = useState("");
   const [assignMembershipType, setAssignMembershipType] = useState<MembershipType>("PRIMARY");
   const [assignSaving, setAssignSaving] = useState(false);
+
+  useEffect(() => {
+    if (!assignClubId) {
+      setAssignDivision("");
+      setAssignDivisionOptions([]);
+      setAssignTeamOptions([]);
+      setAssignTeamId("");
+      return;
+    }
+    const fetchClubTeams = async () => {
+      const { data } = await supabase
+        .from("teams")
+        .select("id, name, club_id, division")
+        .eq("club_id", assignClubId)
+        .order("name");
+      const result = data || [];
+      const divs = Array.from(
+        new Set(result.map((t) => t.division).filter(Boolean))
+      ).sort() as string[];
+      setAssignDivisionOptions(divs);
+      setAssignDivision("");
+      setAssignTeamOptions(result);
+      setAssignTeamId("");
+    };
+    fetchClubTeams();
+  }, [assignClubId]);
 
   useEffect(() => {
     if (!scopeLoading && !isAnyAdmin) {
@@ -346,6 +375,7 @@ const UsersManagement = () => {
     setShowTeamAssign(false);
     setAssignAssociationId("");
     setAssignClubId("");
+    setAssignDivision("");
     setAssignTeamId("");
     setAssignMembershipType("PRIMARY");
     setRoleDialogOpen(true);
@@ -447,6 +477,51 @@ const UsersManagement = () => {
     setAssignSaving(false);
   };
 
+  const handleMakePrimary = async (membershipId: string) => {
+    if (!selectedUser) return;
+
+    // Downgrade any existing PRIMARY to PERMANENT first
+    const { error: downgradeError } = await supabase
+      .from("team_memberships")
+      .update({ membership_type: "PERMANENT" })
+      .eq("user_id", selectedUser.id)
+      .eq("membership_type", "PRIMARY");
+
+    if (downgradeError) {
+      toast({ title: "Error", description: downgradeError.message, variant: "destructive" });
+      return;
+    }
+
+    // Upgrade the chosen membership to PRIMARY
+    const { error: upgradeError } = await supabase
+      .from("team_memberships")
+      .update({ membership_type: "PRIMARY" })
+      .eq("id", membershipId);
+
+    if (upgradeError) {
+      toast({ title: "Error", description: upgradeError.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Primary team updated" });
+    fetchUsers();
+  };
+
+  const handleRemoveMembership = async (membershipId: string) => {
+    const { error } = await supabase
+      .from("team_memberships")
+      .delete()
+      .eq("id", membershipId);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Membership removed" });
+    fetchUsers();
+  };
+
   const getClubsForAssociation = (assocId: string | null) => {
     if (!assocId) return clubs;
     return clubs.filter((c) => c.association_id === assocId);
@@ -460,9 +535,9 @@ const UsersManagement = () => {
   const assignAvailableClubs = assignAssociationId
     ? clubs.filter((c) => c.association_id === assignAssociationId)
     : clubs;
-  const assignAvailableTeams = assignClubId
-    ? teams.filter((t) => t.club_id === assignClubId)
-    : [];
+  const assignAvailableTeams = assignDivision
+    ? assignTeamOptions.filter((t) => t.division === assignDivision)
+    : assignTeamOptions;
 
   if (scopeLoading) {
     return (
@@ -839,21 +914,42 @@ const UsersManagement = () => {
               {selectedUser && selectedUser.memberships.length > 0 ? (
                 <div className="space-y-1">
                   {selectedUser.memberships.map((m) => (
-                    <div key={m.id} className="flex items-center gap-2 text-sm py-1">
-                      <Badge variant="outline" className="text-xs">{m.team_name || "Unknown"}</Badge>
-                      <span className="text-muted-foreground text-xs">{m.membership_type}</span>
-                      <Badge
-                        variant="secondary"
-                        className={
-                          m.status === "APPROVED"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs"
-                            : m.status === "PENDING"
-                            ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300 text-xs"
-                            : "text-xs"
-                        }
-                      >
-                        {m.status}
-                      </Badge>
+                    <div key={m.id} className="flex items-center justify-between gap-2 text-sm py-1 border-b border-border/40 last:border-0">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          {m.team_name || "Unknown"}
+                        </Badge>
+                        <Badge
+                          className={`text-xs shrink-0 ${
+                            m.membership_type === "PRIMARY"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                          variant="secondary"
+                        >
+                          {m.membership_type}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {m.membership_type !== "PRIMARY" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs px-2"
+                            onClick={() => handleMakePrimary(m.id)}
+                          >
+                            Make Primary
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs px-2 text-destructive hover:text-destructive"
+                          onClick={() => handleRemoveMembership(m.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -864,6 +960,7 @@ const UsersManagement = () => {
               {showTeamAssign && (
                 <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
                   <div className="grid gap-2 sm:grid-cols-2">
+                    {/* Association */}
                     <div className="space-y-1">
                       <Label className="text-xs">Association</Label>
                       <Select
@@ -871,6 +968,7 @@ const UsersManagement = () => {
                         onValueChange={(v) => {
                           setAssignAssociationId(v);
                           setAssignClubId("");
+                          setAssignDivision("");
                           setAssignTeamId("");
                         }}
                       >
@@ -884,12 +982,15 @@ const UsersManagement = () => {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Club */}
                     <div className="space-y-1">
                       <Label className="text-xs">Club</Label>
                       <Select
                         value={assignClubId}
                         onValueChange={(v) => {
                           setAssignClubId(v);
+                          setAssignDivision("");
                           setAssignTeamId("");
                         }}
                         disabled={!assignAssociationId}
@@ -904,6 +1005,30 @@ const UsersManagement = () => {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Division */}
+                    <div className="space-y-1">
+                      <Label className="text-xs">Division</Label>
+                      <Select
+                        value={assignDivision}
+                        onValueChange={(v) => {
+                          setAssignDivision(v);
+                          setAssignTeamId("");
+                        }}
+                        disabled={!assignClubId || assignDivisionOptions.length === 0}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="All divisions" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assignDivisionOptions.map((d) => (
+                            <SelectItem key={d} value={d}>{d}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Team */}
                     <div className="space-y-1">
                       <Label className="text-xs">Team</Label>
                       <Select
@@ -921,6 +1046,8 @@ const UsersManagement = () => {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Membership Type */}
                     <div className="space-y-1">
                       <Label className="text-xs">Membership Type</Label>
                       <Select
@@ -932,7 +1059,7 @@ const UsersManagement = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="PRIMARY">Primary</SelectItem>
-                          <SelectItem value="PERMANENT">Permanent</SelectItem>
+                          <SelectItem value="PERMANENT">Secondary (Permanent)</SelectItem>
                           <SelectItem value="FILL_IN">Fill-in</SelectItem>
                         </SelectContent>
                       </Select>
