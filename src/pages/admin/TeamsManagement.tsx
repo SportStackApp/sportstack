@@ -30,6 +30,8 @@ type Association = Database["public"]["Tables"]["associations"]["Row"];
 
 interface TeamWithClub extends Team {
   clubs: { name: string; association_id: string } | null;
+  divisions?: { name: string } | null;
+  team_divisions?: { divisions?: { name: string } | null }[] | null;
 }
 
 const TeamsManagement = () => {
@@ -47,7 +49,7 @@ const TeamsManagement = () => {
   const [editingTeam, setEditingTeam] = useState<TeamWithClub | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingTeam, setDeletingTeam] = useState<TeamWithClub | null>(null);
-  const [formData, setFormData] = useState({ name: "", club_id: "", age_group: "", division: "", gender: "", team_type: "", home_venue_id: "" });
+  const [formData, setFormData] = useState({ name: "", club_id: "", age_group: "", division: "", gender: "", home_venue_id: "" });
   const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -58,7 +60,7 @@ const TeamsManagement = () => {
   const fetchData = async () => {
     setLoading(true);
 
-    let teamsQuery = supabase.from("teams").select("*, clubs:club_id(name, association_id)").order("name");
+    let teamsQuery = supabase.from("teams").select("*, clubs:club_id(name, association_id), divisions:division_id(name), team_divisions(divisions(name))" as any).order("name");
     if (!isSuperAdmin && scopedTeamIds.length > 0) {
       teamsQuery = teamsQuery.in("id", scopedTeamIds);
     } else if (!isSuperAdmin && scopedClubIds.length > 0) {
@@ -106,12 +108,12 @@ const TeamsManagement = () => {
   const handleOpenDialog = (team?: TeamWithClub) => {
     if (team) {
       setEditingTeam(team);
-      setFormData({ name: team.name, club_id: team.club_id, age_group: team.age_group || "", division: team.division || "", gender: team.gender || "", team_type: (team as any).team_type || "", home_venue_id: (team as any).home_venue_id || "" });
+      setFormData({ name: team.name, club_id: team.club_id, age_group: team.age_group || "", division: team.division || "", gender: team.gender || "", home_venue_id: (team as any).home_venue_id || "" });
     } else {
       setEditingTeam(null);
       const defaultClubId = formClubs.length === 1 ? formClubs[0].id : "";
       const defaultName = defaultClubId ? formClubs.find(c => c.id === defaultClubId)?.name || "" : "";
-      setFormData({ name: defaultName, club_id: defaultClubId, age_group: "", division: "", gender: "", team_type: "", home_venue_id: "" });
+      setFormData({ name: defaultName, club_id: defaultClubId, age_group: "", division: "", gender: "", home_venue_id: "" });
     }
     setDialogOpen(true);
   };
@@ -123,7 +125,7 @@ const TeamsManagement = () => {
     }
     setSaving(true);
     const autoName = formData.division && formData.gender ? `${formData.division} ${formData.gender}` : formData.name.trim();
-    const teamData = { name: autoName, club_id: formData.club_id, age_group: formData.age_group.trim() || null, division: formData.division.trim() || null, gender: formData.gender || null, team_type: formData.team_type || null, home_venue_id: formData.home_venue_id || null } as any;
+    const teamData = { name: autoName, club_id: formData.club_id, age_group: formData.age_group || null, division: formData.division.trim() || null, gender: formData.gender || null, home_venue_id: formData.home_venue_id || null } as any;
 
     if (editingTeam) {
       const { error } = await supabase.from("teams").update(teamData).eq("id", editingTeam.id);
@@ -184,9 +186,9 @@ const TeamsManagement = () => {
                   {!editingTeam && <p className="text-xs text-muted-foreground">Tip: Rename this team after saving.</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label>Team Type</Label>
-                  <Select value={formData.team_type} onValueChange={(v) => setFormData({ ...formData, team_type: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                  <Label>Age Group</Label>
+                  <Select value={formData.age_group} onValueChange={(v) => setFormData({ ...formData, age_group: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select age group" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Senior">Senior</SelectItem>
                       <SelectItem value="Junior">Junior</SelectItem>
@@ -284,7 +286,6 @@ const TeamsManagement = () => {
                 <TableRow>
                  <TableHead>Name</TableHead>
                   <TableHead>Club</TableHead>
-                  <TableHead>Type</TableHead>
                   <TableHead>Age Group</TableHead>
                   <TableHead>Division</TableHead>
                   <TableHead>Gender</TableHead>
@@ -300,9 +301,10 @@ const TeamsManagement = () => {
                       </Link>
                     </TableCell>
                     <TableCell>{team.clubs?.name || "-"}</TableCell>
-                    <TableCell>{(team as any).team_type || "-"}</TableCell>
                     <TableCell>{team.age_group || "-"}</TableCell>
-                    <TableCell>{team.division || "-"}</TableCell>
+                    <TableCell>
+                      {team.divisions?.name || team.team_divisions?.[0]?.divisions?.name || team.division || "-"}
+                    </TableCell>
                     <TableCell>{team.gender || "-"}</TableCell>
                     <TableCell className="text-right">
                       {canManageTeam(team.id) && (
