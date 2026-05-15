@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import EntityDashboard from "@/components/entity/EntityDashboard";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 
 const TeamDashboard = () => {
   const { id } = useParams<{ id: string }>();
@@ -69,9 +68,6 @@ const TeamDashboard = () => {
 
   return (
     <div className="space-y-4">
-      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-1">
-        <ArrowLeft className="h-4 w-4" /> Back
-      </Button>
       <EntityDashboard
         entityName={entityName}
         entityType="team"
