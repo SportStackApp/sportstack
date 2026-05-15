@@ -108,14 +108,36 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     fetchData();
   }, [user]);
 
+  useEffect(() => {
+    const associationId = selectedAssociationId || clubs.find(c => c.id === selectedClubId)?.association_id;
+    if (!associationId) {
+      setDivisions([]);
+      return;
+    }
+
+    const fetchDivisions = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("divisions")
+        .select("*")
+        .eq("association_id", associationId);
+
+      if (error) {
+        console.error("Error fetching divisions:", error);
+        setDivisions([]);
+      } else {
+        setDivisions(data || []);
+      }
+
+      setLoading(false);
+    };
+
+    fetchDivisions();
+  }, [selectedAssociationId, selectedClubId, clubs]);
+
   const filteredClubs = clubs.filter(c => c.association_id === selectedAssociationId);
   
-  // Divisions that contain at least one team from the selected club
-  const clubTeamIds = teams.filter(t => t.club_id === selectedClubId).map(t => t.id);
-  const activeDivisionIds = new Set(
-    teamDivisions.filter(td => clubTeamIds.includes(td.team_id)).map(td => td.division_id)
-  );
-  const filteredDivisions = divisions.filter(d => activeDivisionIds.has(d.id));
+  const filteredDivisions = selectedClubId || selectedAssociationId ? divisions : [];
 
   // Filter teams by club AND verify they belong to the selected division via team_divisions
   const filteredTeams = teams.filter(t => {
