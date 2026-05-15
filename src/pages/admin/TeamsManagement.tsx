@@ -44,6 +44,7 @@ const TeamsManagement = () => {
   const [teams, setTeams] = useState<TeamWithClub[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
   const [associations, setAssociations] = useState<Association[]>([]);
+  const [divisions, setDivisions] = useState<{ id: string; name: string; association_id: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<TeamWithClub | null>(null);
@@ -67,11 +68,12 @@ const TeamsManagement = () => {
       teamsQuery = teamsQuery.in("club_id", scopedClubIds);
     }
 
-    const [teamsRes, clubsRes, associationsRes, venuesRes] = await Promise.all([
+    const [teamsRes, clubsRes, associationsRes, venuesRes, divisionsRes] = await Promise.all([
       teamsQuery,
       supabase.from("clubs").select("*").order("name"),
       supabase.from("associations").select("*").order("name"),
       supabase.from("venues").select("id, name").order("name"),
+      supabase.from("divisions").select("id, name, association_id").order("name"),
     ]);
 
     if (teamsRes.error) toast({ title: "Error", description: "Failed to load teams", variant: "destructive" });
@@ -79,6 +81,7 @@ const TeamsManagement = () => {
     if (!clubsRes.error) setClubs(clubsRes.data || []);
     if (!associationsRes.error) setAssociations(associationsRes.data || []);
     if (!venuesRes.error) setVenues(venuesRes.data || []);
+    if (!divisionsRes.error) setDivisions(divisionsRes.data || []);
     setLoading(false);
   };
 
@@ -90,6 +93,14 @@ const TeamsManagement = () => {
   const formClubs = isSuperAdmin
     ? clubs
     : clubs.filter((c) => scopedClubIds.includes(c.id) || scopedAssociationIds.includes(c.association_id));
+
+  // Get divisions for the selected club's association
+  const getFilteredDivisions = () => {
+    if (!formData.club_id) return divisions;
+    const selectedClub = clubs.find(c => c.id === formData.club_id);
+    if (!selectedClub) return divisions;
+    return divisions.filter(d => d.association_id === selectedClub.association_id);
+  };
 
   let filteredTeams = teams;
   if (selectedAssociationId) {
@@ -196,6 +207,10 @@ const TeamsManagement = () => {
                       <SelectItem value="Senior">Senior</SelectItem>
                       <SelectItem value="Junior">Junior</SelectItem>
                       <SelectItem value="Masters">Masters</SelectItem>
+                      <SelectItem value="U11">U11</SelectItem>
+                      <SelectItem value="U13">U13</SelectItem>
+                      <SelectItem value="U14">U14</SelectItem>
+                      <SelectItem value="U16">U16</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -205,12 +220,11 @@ const TeamsManagement = () => {
                     <Select value={formData.division} onValueChange={(v) => setFormData({ ...formData, division: v })}>
                       <SelectTrigger><SelectValue placeholder="Select division" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Division 1">Division 1</SelectItem>
-                        <SelectItem value="Division 2">Division 2</SelectItem>
-                        <SelectItem value="Under 11">Under 11</SelectItem>
-                        <SelectItem value="Under 12">Under 12</SelectItem>
-                        <SelectItem value="Under 14">Under 14</SelectItem>
-                        <SelectItem value="Under 16">Under 16</SelectItem>
+                        {getFilteredDivisions().map((div) => (
+                          <SelectItem key={div.id} value={div.id}>
+                            {div.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -220,7 +234,8 @@ const TeamsManagement = () => {
                       <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Open">Open</SelectItem>
-                        <SelectItem value="Women">Women</SelectItem>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
