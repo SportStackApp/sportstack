@@ -82,19 +82,17 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const [assocRes, clubRes, teamRes, divRes, teamDivRes] = await Promise.all([
+      const [assocRes, clubRes, teamRes] = await Promise.all([
         supabase.from("associations").select("*").order("name"),
         supabase.from("clubs").select("*").order("name"),
         supabase.from("teams").select("*").order("name"),
-        supabase.from("divisions").select("*").order("name"),
-        supabase.from("team_divisions").select("*"),
       ]);
 
       const assocs = assocRes.data || [];
       const allClubs = clubRes.data || [];
       const allTeams = teamRes.data || [];
-      const allDivs = divRes.data || [];
-      const allTeamDivs = teamDivRes.data || [];
+      const allDivs: Division[] = [];
+      const allTeamDivs: TeamDivision[] = [];
 
       setAssociations(assocs);
       setClubs(allClubs);
