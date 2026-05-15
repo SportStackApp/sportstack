@@ -32,6 +32,7 @@ import {
   Globe,
   ChevronDown,
   MapPin,
+  LayoutGrid,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -47,6 +48,7 @@ const NAV_SETS: Record<AppMode, { path: string; label: string; icon: typeof Layo
     { path: "/admin/associations", label: "Associations", icon: Globe },
     { path: "/admin/clubs", label: "Clubs", icon: Building2 },
     { path: "/admin/teams", label: "Teams", icon: Shield },
+    { path: "/admin/divisions", label: "Divisions", icon: LayoutGrid },
     { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
     { path: "/admin/venues", label: "Venues", icon: MapPin },
     { path: "/admin/users", label: "Users", icon: UserCog },
@@ -56,6 +58,7 @@ const NAV_SETS: Record<AppMode, { path: string; label: string; icon: typeof Layo
     { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { path: "/admin/clubs", label: "Clubs", icon: Building2 },
     { path: "/admin/teams", label: "Teams", icon: Shield },
+    { path: "/admin/divisions", label: "Divisions", icon: LayoutGrid },
     { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
     { path: "/admin/venues", label: "Venues", icon: MapPin },
     { path: "/admin/users", label: "Users", icon: UserCog },
@@ -64,6 +67,7 @@ const NAV_SETS: Record<AppMode, { path: string; label: string; icon: typeof Layo
   club: [
     { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { path: "/admin/teams", label: "Teams", icon: Shield },
+    { path: "/admin/divisions", label: "Divisions", icon: LayoutGrid },
     { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
     { path: "/admin/users", label: "Users", icon: UserCog },
     { path: "/admin/requests", label: "Requests", icon: ClipboardList },

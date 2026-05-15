@@ -122,7 +122,6 @@ export default function Requests() {
         .from("team_memberships")
         .select("id, user_id, team_id, membership_type, status, created_at")
         .neq("membership_type", "PRIMARY")
-        .in("status", ["PENDING", "APPROVED", "DECLINED"])
         .order("created_at", { ascending: false });
 
       if (atrError) throw atrError;

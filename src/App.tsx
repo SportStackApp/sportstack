@@ -25,6 +25,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AssociationsManagement from "./pages/admin/AssociationsManagement";
 import ClubsManagement from "./pages/admin/ClubsManagement";
 import TeamsManagement from "./pages/admin/TeamsManagement";
+import DivisionsManagement from "./pages/admin/DivisionsManagement";
 import UsersManagement from "./pages/admin/UsersManagement";
 import AddPlayer from "./pages/admin/AddPlayer";
 import BulkImport from "./pages/admin/BulkImport";
@@ -88,6 +89,7 @@ const App = () => (
                       <Route path="/admin/associations" element={<AssociationsManagement />} />
                       <Route path="/admin/clubs" element={<ClubsManagement />} />
                       <Route path="/admin/teams" element={<TeamsManagement />} />
+                      <Route path="/admin/divisions" element={<DivisionsManagement />} />
                       <Route path="/admin/users" element={<UsersManagement />} />
                       <Route path="/admin/add-player" element={<AddPlayer />} />
                       <Route path="/admin/bulk-import" element={<BulkImport />} />
