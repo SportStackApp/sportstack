@@ -40,6 +40,24 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Association = Database["public"]["Tables"]["associations"]["Row"];
 
+const generateAbbreviation = (name: string) =>
+  name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase())
+    .join("")
+    .slice(0, 10);
+
+const slugifyName = (name: string) =>
+  name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+const sanitizeFileName = (filename: string) => filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+
 const AssociationsManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -52,7 +70,20 @@ const AssociationsManagement = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAssociation, setDeletingAssociation] = useState<Association | null>(null);
   const [formData, setFormData] = useState({ name: "", abbreviation: "", logo_url: "" });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
+  const [logoValidation, setLogoValidation] = useState<{ status: "success" | "error"; message: string } | null>(null);
+  const [formErrors, setFormErrors] = useState<{ abbreviation?: string; logo?: string }>({});
+  const [abbreviationTouched, setAbbreviationTouched] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(logoPreviewUrl);
+      }
+    };
+  }, [logoPreviewUrl]);
 
   // Only SUPER_ADMIN and ASSOCIATION_ADMIN should see this page
   const hasAccess = isSuperAdmin || scopedAssociationIds.length > 0;
@@ -104,10 +135,15 @@ const AssociationsManagement = () => {
         abbreviation: association.abbreviation || "",
         logo_url: association.logo_url || "",
       });
+      setLogoPreviewUrl(association.logo_url || "");
     } else {
       setEditingAssociation(null);
       setFormData({ name: "", abbreviation: "", logo_url: "" });
+      setLogoPreviewUrl("");
     }
+    setLogoFile(null);
+    setFormErrors({});
+    setAbbreviationTouched(false);
     setDialogOpen(true);
   };
 
@@ -117,16 +153,62 @@ const AssociationsManagement = () => {
       return;
     }
 
+    const abbreviation = formData.abbreviation.trim();
+    setFormErrors({});
+
+    if (abbreviation) {
+      let query = supabase.from("associations").select("id").eq("abbreviation", abbreviation);
+      if (editingAssociation) {
+        query = query.neq("id", editingAssociation.id);
+      }
+      const { data: existingAbbreviations, error: abbreviationError } = await query;
+      if (abbreviationError) {
+        toast({ title: "Error", description: "Failed to validate abbreviation", variant: "destructive" });
+        return;
+      }
+      if (existingAbbreviations && existingAbbreviations.length > 0) {
+        setFormErrors({ abbreviation: "This abbreviation is already in use." });
+        return;
+      }
+    }
+
+    let logoUrl = formData.logo_url.trim();
+    if (logoFile) {
+      const slug = slugifyName(formData.name);
+      const filename = `${Date.now()}-${sanitizeFileName(logoFile.name)}`;
+      const path = `associations/${slug}/${filename}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("logos")
+        .upload(path, logoFile, {
+          contentType: logoFile.type,
+          upsert: true,
+        });
+
+      if (uploadError || !uploadData) {
+        toast({ title: "Error", description: "Failed to upload logo", variant: "destructive" });
+        return;
+      }
+
+      const { data: publicUrlData, error: publicUrlError } = supabase.storage.from("logos").getPublicUrl(path);
+      if (publicUrlError || !publicUrlData?.publicUrl) {
+        toast({ title: "Error", description: "Failed to retrieve logo URL", variant: "destructive" });
+        return;
+      }
+      logoUrl = publicUrlData.publicUrl;
+    }
+
     setSaving(true);
+
+    const payload = {
+      name: formData.name.trim(),
+      abbreviation: abbreviation || null,
+      logo_url: logoUrl.trim() || null,
+    };
 
     if (editingAssociation) {
       const { error } = await supabase
         .from("associations")
-        .update({
-          name: formData.name.trim(),
-          abbreviation: formData.abbreviation.trim() || null,
-          logo_url: formData.logo_url.trim() || null,
-        })
+        .update(payload)
         .eq("id", editingAssociation.id);
 
       if (error) {
@@ -137,14 +219,7 @@ const AssociationsManagement = () => {
         fetchAssociations();
       }
     } else {
-      const { error } = await supabase
-        .from("associations")
-        .insert({
-          name: formData.name.trim(),
-          abbreviation: formData.abbreviation.trim() || null,
-          logo_url: formData.logo_url.trim() || null,
-        });
-
+      const { error } = await supabase.from("associations").insert(payload);
       if (error) {
         toast({ title: "Error", description: "Failed to create association", variant: "destructive" });
       } else {
@@ -221,7 +296,14 @@ const AssociationsManagement = () => {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        name,
+                        abbreviation: abbreviationTouched ? prev.abbreviation : generateAbbreviation(name),
+                      }));
+                    }}
                     placeholder="e.g., Hockey Victoria"
                   />
                 </div>
@@ -229,20 +311,95 @@ const AssociationsManagement = () => {
                   <Label htmlFor="abbreviation">Abbreviation</Label>
                   <Input
                     id="abbreviation"
+                    maxLength={10}
                     value={formData.abbreviation}
-                    onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value })}
+                    onChange={(e) => {
+                      setAbbreviationTouched(true);
+                      setFormData({ ...formData, abbreviation: e.target.value.slice(0, 10) });
+                    }}
                     placeholder="e.g., HV"
                   />
+                  {formErrors.abbreviation && (
+                    <p className="text-sm text-destructive">{formErrors.abbreviation}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="logo_url">Logo URL</Label>
-                  <Input
-                    id="logo_url"
-                    value={formData.logo_url}
-                    onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
-                    placeholder="https://..."
+                  <Label htmlFor="logo">Logo</Label>
+                  <input
+                    id="logo"
+                    type="file"
+                    accept=".png,.jpg,.jpeg,.svg,.webp"
+                    className="block w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground file:border-0 file:bg-transparent file:text-primary"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      if (!file) {
+                        setLogoValidation(null);
+                        return;
+                      }
+
+                      const allowedTypes = [
+                        "image/png",
+                        "image/jpeg",
+                        "image/jpg",
+                        "image/svg+xml",
+                        "image/webp",
+                      ];
+
+                      if (!allowedTypes.includes(file.type)) {
+                        setFormErrors((prev) => ({ ...prev, logo: "Accepted file types: PNG, JPG, SVG, WebP only." }));
+                        setLogoValidation({ status: "error", message: "Only PNG, JPG, SVG and WebP files are accepted" });
+                        setLogoFile(null);
+                        setLogoPreviewUrl("");
+                        return;
+                      }
+
+                      if (file.size > 2 * 1024 * 1024) {
+                        setFormErrors((prev) => ({ ...prev, logo: "File must be under 2MB." }));
+                        setLogoValidation({ status: "error", message: "File is too large — maximum size is 2MB" });
+                        setLogoFile(null);
+                        setLogoPreviewUrl("");
+                        return;
+                      }
+
+                      setFormErrors((prev) => ({ ...prev, logo: undefined }));
+                      setLogoValidation({ status: "success", message: "File looks good" });
+                      setLogoFile(file);
+                      setFormData({ ...formData, logo_url: "" });
+                      setLogoPreviewUrl(URL.createObjectURL(file));
+                    }}
                   />
+                  <p className="text-sm text-muted-foreground">Accepted formats: PNG, JPG, SVG, WebP · Max size: 2MB · Square image recommended</p>
+                  {logoValidation && (
+                    <p className={`text-sm ${logoValidation.status === "success" ? "text-emerald-600" : "text-destructive"}`}>
+                      {logoValidation.status === "success" ? "✅ File looks good" : `❌ ${logoValidation.message}`}
+                    </p>
+                  )}
+                  {formErrors.logo && <p className="text-sm text-destructive">{formErrors.logo}</p>}
                 </div>
+                {(logoPreviewUrl || formData.logo_url) && (
+                  <div className="flex items-center gap-4">
+                    <div className="h-20 w-20 overflow-hidden rounded border border-muted bg-muted">
+                      <img
+                        src={logoPreviewUrl || formData.logo_url}
+                        alt="Logo preview"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={() => {
+                        setLogoFile(null);
+                        setLogoPreviewUrl("");
+                        setFormData({ ...formData, logo_url: "" });
+                        setFormErrors((prev) => ({ ...prev, logo: undefined }));
+                        setLogoValidation(null);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

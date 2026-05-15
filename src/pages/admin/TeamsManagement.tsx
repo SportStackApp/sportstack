@@ -207,10 +207,6 @@ const TeamsManagement = () => {
                       <SelectItem value="Senior">Senior</SelectItem>
                       <SelectItem value="Junior">Junior</SelectItem>
                       <SelectItem value="Masters">Masters</SelectItem>
-                      <SelectItem value="U11">U11</SelectItem>
-                      <SelectItem value="U13">U13</SelectItem>
-                      <SelectItem value="U14">U14</SelectItem>
-                      <SelectItem value="U16">U16</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
