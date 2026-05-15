@@ -419,6 +419,7 @@ const AppLayout = () => {
             {selectedClubId && filteredDivisions.length > 0 && (
               <Select key={selectedClubId} value={selectedDivision || undefined} onValueChange={(v) => {
                 setSelectedDivision(v); 
+                navigate("/admin/division");
               }}>
                 <SelectTrigger className="w-[120px] lg:w-[160px] bg-accent text-accent-foreground border-0 font-medium">
                   <SelectValue placeholder="Division" />

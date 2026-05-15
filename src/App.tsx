@@ -36,6 +36,7 @@ import Requests from "./pages/admin/Requests";
 // Entity Dashboards
 import AssociationDashboard from "./pages/AssociationDashboard";
 import ClubDashboard from "./pages/ClubDashboard";
+import DivisionDashboard from "./pages/DivisionDashboard";
 import TeamDashboard from "./pages/TeamDashboard";
 
 // Layout
@@ -98,6 +99,7 @@ const App = () => (
                       {/* Entity Dashboards */}
                       <Route path="/associations/:id" element={<AssociationDashboard />} />
                       <Route path="/clubs/:id" element={<ClubDashboard />} />
+                      <Route path="/admin/division" element={<DivisionDashboard />} />
                       <Route path="/teams/:id" element={<TeamDashboard />} />
                     </Route>
                   </Route>

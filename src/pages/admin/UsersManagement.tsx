@@ -97,6 +97,39 @@ const UsersManagement = () => {
   const [assignMembershipType, setAssignMembershipType] = useState<MembershipType>("PRIMARY");
   const [assignSaving, setAssignSaving] = useState(false);
 
+  useEffect(() => {
+    if (!assignClubId) {
+      setAssignTeamOptions([]);
+      setAssignDivisionOptions([]);
+      return;
+    }
+
+    const load = async () => {
+      const { data, error } = await supabase
+        .from("teams")
+        .select("id, name, club_id, division")
+        .eq("club_id", assignClubId)
+        .order("name");
+
+      if (error) {
+        console.error("Failed to fetch teams for club:", error.message);
+        return;
+      }
+
+      const result = data || [];
+      console.log("Teams fetched for club", assignClubId, result);
+
+      const divs = Array.from(
+        new Set(result.map((t) => t.division).filter(Boolean))
+      ).sort() as string[];
+
+      setAssignTeamOptions(result);
+      setAssignDivisionOptions(divs);
+    };
+
+    load();
+  }, [assignClubId]);
+
 
   useEffect(() => {
     if (!scopeLoading && !isAnyAdmin) {
@@ -780,92 +813,110 @@ const UsersManagement = () => {
             </DialogHeader>
 
             <div className="space-y-4 py-2">
-              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Roles</h4>
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Roles</h4>
+                <div className="flex flex-wrap gap-2">
+                  {ALL_ROLES.map((role) => {
+                    const disabled = !canAssignRole(role);
+                    const isChecked = !!selectedRoleScopes.find((r) => r.role === role);
+
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => !disabled && handleToggleRole(role)}
+                        className={`
+                          px-3 py-1.5 rounded-full text-xs font-semibold border transition-all
+                          ${isChecked
+                            ? "opacity-100 ring-2 ring-offset-2 ring-offset-background"
+                            : "opacity-40 hover:opacity-70"
+                          }
+                          ${disabled ? "cursor-not-allowed" : "cursor-pointer"}
+                        `}
+                      >
+                        <Badge
+                          className={`${getRoleBadgeColor(role)} pointer-events-none`}
+                          variant="secondary"
+                        >
+                          {getRoleDisplayName(role)}
+                        </Badge>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {ALL_ROLES.map((role) => {
-                const disabled = !canAssignRole(role);
                 const roleScope = selectedRoleScopes.find((r) => r.role === role);
                 const isChecked = !!roleScope;
                 const scopeType = ROLES_NEEDING_SCOPE[role];
 
+                if (!isChecked || !scopeType) return null;
+
                 return (
-                  <div key={role} className="space-y-2">
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id={role}
-                        checked={isChecked}
-                        onCheckedChange={() => handleToggleRole(role)}
-                        disabled={disabled}
-                      />
-                      <Label htmlFor={role} className={`flex items-center gap-2 ${disabled ? "text-muted-foreground" : ""}`}>
-                        <Badge className={getRoleBadgeColor(role)} variant="secondary">
-                          {getRoleDisplayName(role)}
-                        </Badge>
-                        {disabled && <span className="text-xs">(insufficient permissions)</span>}
-                      </Label>
+                  <div key={`${role}-scope`} className="space-y-2 mt-4">
+                    <Label className="text-sm font-medium">{getRoleDisplayName(role)} Scope</Label>
+                    <div className="grid gap-2 sm:grid-cols-3 border-l-2 border-muted pl-4 py-2">
+                      {(scopeType === "association" || scopeType === "club" || scopeType === "team") && (
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Association</Label>
+                          <Select
+                            value={roleScope.association_id || ""}
+                            onValueChange={(v) => handleRoleScopeChange(role, "association_id", v)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Select..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {associations.map((a) => (
+                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {(scopeType === "club" || scopeType === "team") && (
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Club</Label>
+                          <Select
+                            value={roleScope.club_id || ""}
+                            onValueChange={(v) => handleRoleScopeChange(role, "club_id", v)}
+                            disabled={!roleScope.association_id}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Select..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getClubsForAssociation(roleScope.association_id).map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {scopeType === "team" && (
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Team</Label>
+                          <Select
+                            value={roleScope.team_id || ""}
+                            onValueChange={(v) => handleRoleScopeChange(role, "team_id", v)}
+                            disabled={!roleScope.club_id}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Select..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getTeamsForClub(roleScope.club_id).map((t) => (
+                                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
-
-                    {isChecked && scopeType && (
-                      <div className="ml-8 grid gap-2 sm:grid-cols-3 border-l-2 border-muted pl-4 py-2">
-                        {(scopeType === "association" || scopeType === "club" || scopeType === "team") && (
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Association</Label>
-                            <Select
-                              value={roleScope.association_id || ""}
-                              onValueChange={(v) => handleRoleScopeChange(role, "association_id", v)}
-                            >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Select..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {associations.map((a) => (
-                                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-
-                        {(scopeType === "club" || scopeType === "team") && (
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Club</Label>
-                            <Select
-                              value={roleScope.club_id || ""}
-                              onValueChange={(v) => handleRoleScopeChange(role, "club_id", v)}
-                              disabled={!roleScope.association_id}
-                            >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Select..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {getClubsForAssociation(roleScope.association_id).map((c) => (
-                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-
-                        {scopeType === "team" && (
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Team</Label>
-                            <Select
-                              value={roleScope.team_id || ""}
-                              onValueChange={(v) => handleRoleScopeChange(role, "team_id", v)}
-                              disabled={!roleScope.club_id}
-                            >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Select..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {getTeamsForClub(roleScope.club_id).map((t) => (
-                                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -963,31 +1014,12 @@ const UsersManagement = () => {
                       <Label className="text-xs">Club</Label>
                       <Select
                         value={assignClubId}
-                        onValueChange={async (v) => {
+                        onValueChange={(v) => {
                           setAssignClubId(v);
                           setAssignDivision("");
                           setAssignTeamId("");
                           setAssignTeamOptions([]);
                           setAssignDivisionOptions([]);
-
-                          if (!v) return;
-
-                          // Fetch teams for this club directly
-                          const { data } = await supabase
-                            .from("teams")
-                            .select("id, name, club_id, division")
-                            .eq("club_id", v)
-                            .order("name");
-
-                          const result = data || [];
-
-                          // Extract unique non-null divisions
-                          const divs = Array.from(
-                            new Set(result.map((t) => t.division).filter(Boolean))
-                          ).sort() as string[];
-
-                          setAssignDivisionOptions(divs);
-                          setAssignTeamOptions(result);
                         }}
                         disabled={!assignAssociationId}
                       >
