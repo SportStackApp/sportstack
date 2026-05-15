@@ -82,23 +82,24 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const [assocRes, clubRes, teamRes] = await Promise.all([
+      const [assocRes, clubRes, teamRes, tdRes] = await Promise.all([
         supabase.from("associations").select("*").order("name"),
         supabase.from("clubs").select("*").order("name"),
         supabase.from("teams").select("*").order("name"),
+        supabase.from("team_divisions").select("*"),
       ]);
 
       const assocs = assocRes.data || [];
       const allClubs = clubRes.data || [];
       const allTeams = teamRes.data || [];
+      const allTeamDivisions = tdRes.data || [];
       const allDivs: Division[] = [];
-      const allTeamDivs: TeamDivision[] = [];
 
       setAssociations(assocs);
       setClubs(allClubs);
       setTeams(allTeams);
       setDivisions(allDivs);
-      setTeamDivisions(allTeamDivs);
+      setTeamDivisions(allTeamDivisions);
 
       // No auto-select - selectors start empty, mode determines what's shown
 
@@ -137,7 +138,15 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const filteredClubs = clubs.filter(c => c.association_id === selectedAssociationId);
   
-  const filteredDivisions = selectedClubId || selectedAssociationId ? divisions : [];
+  const clubTeamIds = selectedClubId ? teams.filter(t => t.club_id === selectedClubId).map(t => t.id) : [];
+  const activeDivisionIds = new Set(
+    teamDivisions.filter(td => clubTeamIds.includes(td.team_id)).map(td => td.division_id)
+  );
+  const filteredDivisions = selectedClubId
+    ? divisions.filter(d => activeDivisionIds.has(d.id))
+    : selectedAssociationId
+      ? divisions
+      : [];
 
   // Filter teams by club AND verify they belong to the selected division via team_divisions
   const filteredTeams = teams.filter(t => {
