@@ -18,7 +18,7 @@ import {
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { LayoutGrid, Plus, Pencil, Trash2 } from "lucide-react";
+import { LayoutGrid, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Division {
@@ -33,6 +33,14 @@ interface Division {
   created_at: string;
   associations?: { name: string } | null;
 }
+
+type DivisionTeam = {
+  id: string;
+  name: string;
+  abbreviation: string | null;
+  club_name: string | null;
+  division_id: string | null;
+};
 
 const DivisionsManagement = () => {
   const { toast } = useToast();
@@ -51,16 +59,22 @@ const DivisionsManagement = () => {
     min_age: "",
     max_age: "",
   });
+  const [expandedDivisionIds, setExpandedDivisionIds] = useState<string[]>([]);
+  const [divisionTeams, setDivisionTeams] = useState<Record<string, DivisionTeam[]>>({});
   const [saving, setSaving] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
-    const [divisionsRes, associationsRes] = await Promise.all([
+    const [divisionsRes, associationsRes, teamsRes] = await Promise.all([
       supabase
         .from("divisions")
         .select("*, associations:association_id(name)")
         .order("name"),
       supabase.from("associations").select("id, name").order("name"),
+      supabase
+        .from("teams")
+        .select("id,name,abbreviation,division_id, clubs:club_id(name)")
+        .order("name"),
     ]);
 
     if (divisionsRes.error) {
@@ -71,12 +85,36 @@ const DivisionsManagement = () => {
     if (!associationsRes.error) {
       setAssociations(associationsRes.data || []);
     }
+    if (!teamsRes.error) {
+      const grouped: Record<string, DivisionTeam[]> = {};
+      (teamsRes.data || []).forEach((team: any) => {
+        const divisionId = team.division_id;
+        if (!divisionId) return;
+        if (!grouped[divisionId]) grouped[divisionId] = [];
+        grouped[divisionId].push({
+          id: team.id,
+          name: team.name,
+          abbreviation: team.abbreviation || null,
+          club_name: team.clubs?.name || null,
+          division_id: divisionId,
+        });
+      });
+      setDivisionTeams(grouped);
+    } else {
+      setDivisionTeams({});
+    }
     setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  const toggleDivisionExpanded = (divisionId: string) => {
+    setExpandedDivisionIds((prev) =>
+      prev.includes(divisionId) ? prev.filter((id) => id !== divisionId) : [...prev, divisionId]
+    );
+  };
 
   const handleOpenDialog = (division?: Division) => {
     if (division) {
@@ -214,13 +252,9 @@ const DivisionsManagement = () => {
                     <SelectValue placeholder="Select age group" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Senior">Senior</SelectItem>
-                    <SelectItem value="Junior">Junior</SelectItem>
+                    <SelectItem value="Juniors">Juniors</SelectItem>
+                    <SelectItem value="Seniors">Seniors</SelectItem>
                     <SelectItem value="Masters">Masters</SelectItem>
-                    <SelectItem value="U11">U11</SelectItem>
-                    <SelectItem value="U13">U13</SelectItem>
-                    <SelectItem value="U14">U14</SelectItem>
-                    <SelectItem value="U16">U16</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -232,8 +266,7 @@ const DivisionsManagement = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Open">Open</SelectItem>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Women">Women</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -306,34 +339,69 @@ const DivisionsManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {divisions.map((division) => (
-                  <TableRow key={division.id}>
-                    <TableCell className="font-medium">{division.name}</TableCell>
-                    <TableCell>{division.associations?.name || "-"}</TableCell>
-                    <TableCell>{division.age_group || "-"}</TableCell>
-                    <TableCell>{division.gender || "-"}</TableCell>
-                    <TableCell>
-                      {division.min_age || division.max_age
-                        ? `${division.min_age || "*"} - ${division.max_age || "*"}`
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(division)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setDeletingDivision(division);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {divisions.map((division) => {
+                  const isExpanded = expandedDivisionIds.includes(division.id);
+                  const teamsForDivision = divisionTeams[division.id] || [];
+                  return [
+                    <TableRow key={division.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                            onClick={() => toggleDivisionExpanded(division.id)}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                          {division.name}
+                        </div>
+                      </TableCell>
+                      <TableCell>{division.associations?.name || "-"}</TableCell>
+                      <TableCell>{division.age_group || "-"}</TableCell>
+                      <TableCell>{division.gender || "-"}</TableCell>
+                      <TableCell>
+                        {division.min_age || division.max_age
+                          ? `${division.min_age || "*"} - ${division.max_age || "*"}`
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(division)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setDeletingDivision(division);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>,
+                    isExpanded && (
+                      <TableRow key={`${division.id}-teams`}>
+                        <TableCell colSpan={6} className="bg-muted/10">
+                          {teamsForDivision.length > 0 ? (
+                            <ul className="pl-10 text-sm text-muted-foreground space-y-2">
+                              {teamsForDivision.map((team) => (
+                                <li key={team.id}>
+                                  <span className="font-medium">{team.name}</span>
+                                  {team.club_name ? ` — ${team.club_name}` : ""}
+                                  {team.abbreviation ? ` (${team.abbreviation})` : ""}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="pl-10 text-sm text-muted-foreground">No teams in this division.</p>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ),
+                  ];
+                })}
               </TableBody>
             </Table>
           )}

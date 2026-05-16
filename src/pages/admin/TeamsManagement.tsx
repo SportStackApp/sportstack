@@ -85,8 +85,30 @@ const TeamsManagement = () => {
     setLoading(false);
   };
 
+  const normalizeTeamGenderData = async () => {
+    const { error: maleError } = await supabase
+      .from("teams")
+      .update({ gender: "Open" })
+      .in("gender", ["male"]);
+
+    const { error: femaleError } = await supabase
+      .from("teams")
+      .update({ gender: "Women" })
+      .in("gender", ["female"]);
+
+    if (maleError || femaleError) {
+      toast({ title: "Error", description: "Failed to normalize team gender values", variant: "destructive" });
+    }
+  };
+
   useEffect(() => {
-    if (!scopeLoading && isAnyAdmin) fetchData();
+    if (!scopeLoading && isAnyAdmin) {
+      const load = async () => {
+        await normalizeTeamGenderData();
+        await fetchData();
+      };
+      load();
+    }
   }, [scopeLoading, isAnyAdmin]);
 
   // Scoped clubs for form dropdown
@@ -133,13 +155,14 @@ const TeamsManagement = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.club_id) {
+    const selectedClub = clubs.find((c) => c.id === formData.club_id);
+    const teamName = formData.name.trim() || selectedClub?.name || "";
+    if (!teamName || !formData.club_id) {
       toast({ title: "Error", description: "Name and Club are required", variant: "destructive" });
       return;
     }
     setSaving(true);
-    const autoName = formData.division && formData.gender ? `${formData.division} ${formData.gender}` : formData.name.trim();
-    const teamData = { name: autoName, club_id: formData.club_id, age_group: formData.age_group || null, division: formData.division.trim() || null, gender: formData.gender || null, home_venue_id: formData.home_venue_id || null } as any;
+    const teamData = { name: teamName, club_id: formData.club_id, age_group: formData.age_group || null, division: formData.division.trim() || null, gender: formData.gender || null, home_venue_id: formData.home_venue_id || null } as any;
 
     if (editingTeam) {
       const { error } = await supabase.from("teams").update(teamData).eq("id", editingTeam.id);
@@ -204,8 +227,8 @@ const TeamsManagement = () => {
                   <Select value={formData.age_group} onValueChange={(v) => setFormData({ ...formData, age_group: v })}>
                     <SelectTrigger><SelectValue placeholder="Select age group" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Senior">Senior</SelectItem>
-                      <SelectItem value="Junior">Junior</SelectItem>
+                      <SelectItem value="Seniors">Seniors</SelectItem>
+                      <SelectItem value="Juniors">Juniors</SelectItem>
                       <SelectItem value="Masters">Masters</SelectItem>
                     </SelectContent>
                   </Select>
@@ -230,8 +253,7 @@ const TeamsManagement = () => {
                       <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Open">Open</SelectItem>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Women">Women</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -274,9 +296,8 @@ const TeamsManagement = () => {
                 <TableRow>
                  <TableHead>Name</TableHead>
                   <TableHead>Club</TableHead>
-                  <TableHead>Age Group</TableHead>
+                  <TableHead>Abbreviation</TableHead>
                   <TableHead>Division</TableHead>
-                  <TableHead>Gender</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -289,11 +310,10 @@ const TeamsManagement = () => {
                       </Link>
                     </TableCell>
                     <TableCell>{team.clubs?.name || "-"}</TableCell>
-                    <TableCell>{team.age_group || "-"}</TableCell>
+                    <TableCell>{team.abbreviation || "-"}</TableCell>
                     <TableCell>
                       {team.divisions?.name || team.team_divisions?.[0]?.divisions?.name || team.division || "-"}
                     </TableCell>
-                    <TableCell>{team.gender || "-"}</TableCell>
                     <TableCell className="text-right">
                       {canManageTeam(team.id) && (
                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(team)}>
