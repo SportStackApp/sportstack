@@ -12,10 +12,21 @@ import {
   Check,
   X,
   HelpCircle,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getTeamDisplayName } from "@/lib/utils";
 
@@ -33,17 +44,33 @@ interface GameRow {
   venue: { id: string; name: string } | null;
 }
 
+interface TeamRequest {
+  id: string;
+  request_type: string;
+  team_id: string;
+  team_name: string;
+  club_name: string;
+  membership_type: string;
+  requester_name: string;
+  created_at: string;
+}
+
 const FIXTURE_SELECT =
   "id, fixture_date, status, home_team_id, away_team_id, venue_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
 
 const Dashboard = () => {
   const { selectedTeamId, selectedTeam, selectedClub } = useTeamContext();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [games, setGames] = useState<GameRow[]>([]);
   const [availability, setAvailability] = useState<Record<string, AvailabilityStatus>>({});
   const [loading, setLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [profileName, setProfileName] = useState("");
+  const [teamRequests, setTeamRequests] = useState<TeamRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [conflictRequest, setConflictRequest] = useState<TeamRequest | null>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -56,6 +83,60 @@ const Dashboard = () => {
       if (data?.first_name) setProfileName(data.first_name);
     };
     fetchProfile();
+  }, [user]);
+
+  // Fetch pending team requests for the player
+  useEffect(() => {
+    if (!user) return;
+    const fetchTeamRequests = async () => {
+      setLoadingRequests(true);
+      try {
+        const { data, error } = await supabase
+          .from("requests")
+          .select("*")
+          .eq("target_user_id", user.id)
+          .eq("status", "PENDING")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        // Fetch team and club info
+        const requestsWithTeamInfo = await Promise.all(
+          (data || []).map(async (req: any) => {
+            const { data: teamData } = await supabase
+              .from("teams")
+              .select("name, club_id, clubs(name)")
+              .eq("id", req.team_id)
+              .single();
+
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("first_name, last_name")
+              .eq("id", req.requester_id)
+              .single();
+
+            return {
+              id: req.id,
+              request_type: req.request_type,
+              team_id: req.team_id,
+              team_name: teamData?.name || "Unknown Team",
+              club_name: (teamData?.clubs as any)?.name || "Unknown Club",
+              membership_type: req.membership_type,
+              requester_name: `${profileData?.first_name || ""} ${profileData?.last_name || ""}`.trim() || "Unknown",
+              created_at: req.created_at,
+            };
+          })
+        );
+
+        setTeamRequests(requestsWithTeamInfo);
+      } catch (err: any) {
+        console.error(err);
+      } finally {
+        setLoadingRequests(false);
+      }
+    };
+
+    fetchTeamRequests();
   }, [user]);
 
   useEffect(() => {
@@ -106,6 +187,101 @@ const Dashboard = () => {
     await supabase
       .from("fixture_availability")
       .upsert({ fixture_id: gameId, user_id: user.id, status }, { onConflict: "fixture_id,user_id" });
+  };
+
+  const handleAcceptRequest = async (request: TeamRequest, joinAsSecondary?: boolean) => {
+    if (!user) return;
+
+    try {
+      // Check for existing PRIMARY membership if needed
+      if (request.membership_type === "PRIMARY" && !joinAsSecondary) {
+        const { data: existingPrimary } = await supabase
+          .from("team_memberships")
+          .select("id, team_id, status")
+          .eq("user_id", user.id)
+          .eq("membership_type", "PRIMARY")
+          .in("status", ["ACTIVE", "PENDING"]);
+
+        if ((existingPrimary || []).length > 0) {
+          setConflictRequest(request);
+          setShowConflictModal(true);
+          return;
+        }
+      }
+
+      // Determine membership type to use
+      const finalMembershipType = joinAsSecondary ? "SECONDARY" : request.membership_type;
+
+      // If switching primary, deactivate old one
+      if (request.membership_type === "PRIMARY" && !joinAsSecondary) {
+        const { data: oldPrimary } = await supabase
+          .from("team_memberships")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("membership_type", "PRIMARY")
+          .eq("status", "ACTIVE");
+
+        if (oldPrimary && oldPrimary.length > 0) {
+          await supabase
+            .from("team_memberships")
+            .update({ status: "INACTIVE" })
+            .eq("id", oldPrimary[0].id);
+        }
+      }
+
+      // Create new team membership
+      await supabase.from("team_memberships").insert({
+        user_id: user.id,
+        team_id: request.team_id,
+        membership_type: finalMembershipType,
+        status: "ACTIVE",
+      });
+
+      // Update request status
+      await supabase
+        .from("requests")
+        .update({ status: "APPROVED", responded_by: user.id })
+        .eq("id", request.id);
+
+      toast({
+        title: "Request accepted",
+        description: `You've joined ${request.team_name} as ${finalMembershipType.toLowerCase()}.`,
+      });
+
+      setShowConflictModal(false);
+      setConflictRequest(null);
+      setTeamRequests(teamRequests.filter((r) => r.id !== request.id));
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeclineRequest = async (requestId: string) => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .from("requests")
+        .update({ status: "DECLINED", responded_by: user.id })
+        .eq("id", requestId);
+
+      toast({
+        title: "Request declined",
+        description: "The team request has been declined.",
+      });
+
+      setTeamRequests(teamRequests.filter((r) => r.id !== requestId));
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const navigateMonth = (direction: "prev" | "next") => {
@@ -343,6 +519,107 @@ const Dashboard = () => {
           </Card>
         </div>
       </div>
+
+      {/* Team Requests Section */}
+      {teamRequests.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+              <CardTitle className="text-base font-semibold text-amber-900">
+                Team Requests ({teamRequests.length})
+              </CardTitle>
+            </div>
+            <p className="text-xs text-amber-700 mt-1">
+              You have pending team requests awaiting your response
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {loadingRequests ? (
+              <div className="space-y-2">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            ) : (
+              teamRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="flex items-start justify-between p-3 rounded-lg border border-amber-200 bg-white"
+                >
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{request.team_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {request.club_name} • {request.membership_type}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Sent by {request.requester_name} •{" "}
+                      {new Date(request.created_at).toLocaleDateString("en-AU", {
+                        day: "2-digit",
+                        month: "short",
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-green-600 border-green-200 hover:bg-green-50 h-8 px-3 text-xs"
+                      onClick={() => handleAcceptRequest(request)}
+                    >
+                      <Check className="h-3 w-3 mr-1" /> Accept
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 border-red-200 hover:bg-red-50 h-8 px-3 text-xs"
+                      onClick={() => handleDeclineRequest(request.id)}
+                    >
+                      <X className="h-3 w-3 mr-1" /> Decline
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Primary Team Conflict Modal */}
+      <AlertDialog open={showConflictModal} onOpenChange={setShowConflictModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Primary Team Conflict</AlertDialogTitle>
+            <AlertDialogDescription>
+              You already have an active primary team. How would you like to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-4">
+            <div className="p-3 rounded-lg bg-muted">
+              <p className="text-sm font-medium">{conflictRequest?.team_name}</p>
+              <p className="text-xs text-muted-foreground">
+                {conflictRequest?.club_name}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <AlertDialogCancel className="flex-1">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                conflictRequest && handleAcceptRequest(conflictRequest, true)
+              }
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
+            >
+              Join as Secondary
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => conflictRequest && handleAcceptRequest(conflictRequest, false)}
+              className="flex-1"
+            >
+              Switch as Primary
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

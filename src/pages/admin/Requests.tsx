@@ -6,144 +6,107 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, XCircle, Clock, ClipboardList, ArrowRight } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ClipboardList } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 
-type FilterStatus = "All" | "Pending" | "Approved" | "Declined";
 
-interface PrimaryChangeRequest {
+interface Request {
   id: string;
-  user_id: string;
-  from_team_id: string | null;
-  to_team_id: string;
-  status: string;
-  requested_at: string;
-  resolved_at: string | null;
-  resolved_by: string | null;
-  playerName: string;
-  fromTeamName: string;
-  toTeamName: string;
-  resolvedByName: string;
-}
-
-interface AdditionalTeamRequest {
-  id: string;
-  user_id: string;
+  request_type: string;
+  requester_id: string | null;
+  target_user_id: string;
   team_id: string;
+  association_id: string | null;
+  club_id: string | null;
   membership_type: string;
   status: string;
+  cancelled_by: string | null;
+  responded_by: string | null;
   created_at: string;
-  playerName: string;
-  teamName: string;
-  clubName: string;
+  requester_name: string;
+  target_user_name: string;
+  team_name: string;
+  club_name: string;
+  association_name: string;
 }
 
 export default function Requests() {
   const { user } = useAuth();
-  const { scopeLoading, isSuperAdmin, scopedAssociationIds, scopedClubIds, scopedTeamIds } = useAdminScope();
+  const { scopeLoading, isSuperAdmin, isAssociationAdmin, isClubAdmin, isTeamManager, scopedAssociationIds, scopedClubIds, scopedTeamIds } = useAdminScope();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>("Pending");
-  
-  const [primaryRequests, setPrimaryRequests] = useState<PrimaryChangeRequest[]>([]);
-  const [additionalRequests, setAdditionalRequests] = useState<AdditionalTeamRequest[]>([]);
+  const [requests, setRequests] = useState<Request[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>("PENDING");
 
   const loadData = async () => {
     if (!user || scopeLoading) return;
     setLoading(true);
 
     try {
-      // 1. Fetch lookup maps (Teams and Profiles)
-      const { data: teamsData, error: teamsError } = await supabase
-        .from("teams")
-        .select("id, name, club_id, clubs(id, name, association_id)");
-      
-      if (teamsError) throw teamsError;
+      const { data, error } = await supabase.from("requests").select("*").order("created_at", { ascending: false });
 
-      const teamLookup = new Map<string, any>(
+      if (error) throw error;
+
+      const allRequests = data || [];
+
+      // Fetch profiles for name lookups
+      const { data: profilesData } = await supabase.from("profiles").select("id, first_name, last_name");
+      const profileMap = new Map(
+        (profilesData || []).map((p: any) => [
+          p.id,
+          `${p.first_name || ""} ${p.last_name || ""}`.trim() || "Unknown",
+        ])
+      );
+
+      // Fetch teams for lookups
+      const { data: teamsData } = await supabase.from("teams").select("id, name, club_id, clubs(id, name, association_id, associations(id, name))");
+      const teamMap = new Map(
         (teamsData || []).map((t: any) => [
           t.id,
           {
-            id: t.id,
             name: t.name,
             clubId: t.club_id,
             clubName: t.clubs?.name || "",
-            associationId: t.clubs?.association_id
-          }
+            associationId: t.clubs?.association_id,
+            associationName: t.clubs?.associations?.name || "",
+          },
         ])
       );
 
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name");
-
-      if (profilesError) throw profilesError;
-
-      const profileLookup = new Map<string, string>(
-        (profilesData || []).map((p: any) => [
-          p.id,
-          `${p.first_name || ""} ${p.last_name || ""}`.trim() || "Unknown"
-        ])
-      );
-
-      // Access checks helper
-      const hasAccessToTeam = (teamId: string | null) => {
-        if (isSuperAdmin) return true;
-        if (!teamId) return false;
-        const t = teamLookup.get(teamId);
-        if (!t) return false;
-        if (scopedAssociationIds.includes(t.associationId)) return true;
-        if (scopedClubIds.includes(t.clubId)) return true;
-        if (scopedTeamIds.includes(t.id)) return true;
-        return false;
-      };
-
-      // 2. Fetch Primary Requests
-      const { data: pcrData, error: pcrError } = await supabase
-        .from("primary_change_requests")
-        .select("*")
-        .order("requested_at", { ascending: false });
-
-      if (pcrError) throw pcrError;
-
-      const filteredPcr = (pcrData || [])
-        .filter((req: any) => hasAccessToTeam(req.to_team_id))
-        .map((req: any) => ({
+      // Filter requests based on role
+      let filtered = allRequests.map((req: any) => {
+        const teamInfo = teamMap.get(req.team_id);
+        return {
           ...req,
-          playerName: profileLookup.get(req.user_id) || "Unknown User",
-          fromTeamName: req.from_team_id ? (teamLookup.get(req.from_team_id)?.name || "Unknown") : "None",
-          toTeamName: req.to_team_id ? (teamLookup.get(req.to_team_id)?.name || "Unknown") : "Unknown",
-          resolvedByName: req.resolved_by ? (profileLookup.get(req.resolved_by) || "Unknown") : "—"
-        }));
+          requester_name: profileMap.get(req.requester_id) || "Unknown",
+          target_user_name: profileMap.get(req.target_user_id) || "Unknown",
+          team_name: teamInfo?.name || "Unknown",
+          club_name: teamInfo?.clubName || "Unknown",
+          association_name: teamInfo?.associationName || "Unknown",
+        };
+      });
 
-      // 3. Fetch Additional Team Requests
-      const { data: atrData, error: atrError } = await supabase
-        .from("team_memberships")
-        .select("id, user_id, team_id, membership_type, status, created_at")
-        .neq("membership_type", "PRIMARY")
-        .order("created_at", { ascending: false });
+      // Apply role-based filtering
+      if (!isSuperAdmin) {
+        filtered = filtered.filter((req: any) => {
+          if (isAssociationAdmin && scopedAssociationIds.includes(req.association_id)) return true;
+          if (isClubAdmin && scopedClubIds.includes(req.club_id)) return true;
+          if (isTeamManager && scopedTeamIds.includes(req.team_id)) return true;
+          return false;
+        });
+      }
 
-      if (atrError) throw atrError;
-
-      const filteredAtr = (atrData || [])
-        .filter((req: any) => hasAccessToTeam(req.team_id))
-        .map((req: any) => ({
-          ...req,
-          playerName: profileLookup.get(req.user_id) || "Unknown User",
-          teamName: teamLookup.get(req.team_id)?.name || "Unknown",
-          clubName: teamLookup.get(req.team_id)?.clubName || "Unknown"
-        }));
-
-      setPrimaryRequests(filteredPcr);
-      setAdditionalRequests(filteredAtr);
-
+      setRequests(filtered);
     } catch (err: any) {
       console.error(err);
       toast({
         title: "Error fetching requests",
         description: err.message || "Failed to load requests",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -152,126 +115,85 @@ export default function Requests() {
 
   useEffect(() => {
     loadData();
-  }, [user, scopeLoading, isSuperAdmin]);
+  }, [user, scopeLoading]);
 
-  // Actions for Primary Team Changes
-  const handleAcceptPcr = async (record: PrimaryChangeRequest) => {
+  const handleApprove = async (request: Request) => {
     try {
-      const { error } = await supabase
-        .from("primary_change_requests")
+      // Update request status
+      const { error: updateError } = await supabase
+        .from("requests")
         .update({
-          status: "ADMIN_APPROVED",
-          resolved_by: user!.id,
-          resolved_at: new Date().toISOString()
+          status: "APPROVED",
+          responded_by: user?.id,
+          updated_at: new Date().toISOString(),
         })
-        .eq("id", record.id);
-      
-      if (error) throw error;
+        .eq("id", request.id);
 
-      await supabase.from("notifications").insert({
-        user_id: record.user_id,
-        title: "Primary Team Approved",
-        message: `Your request to change your primary team to ${record.toTeamName} has been approved.`,
-        type: "team_request_update"
+      if (updateError) throw updateError;
+
+      // Insert into team_memberships with status = ACTIVE
+      const { error: insertError } = await supabase.from("team_memberships").insert({
+        user_id: request.target_user_id,
+        team_id: request.team_id,
+        membership_type: request.membership_type,
+        status: "ACTIVE",
       });
 
-      toast({ title: "Request approved", description: "The primary team change was approved." });
+      if (insertError) throw insertError;
+
+      toast({ title: "Success", description: "Request approved and membership created." });
       loadData();
     } catch (err: any) {
-      toast({ title: "Action failed", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     }
   };
 
-  const handleDeclinePcr = async (record: PrimaryChangeRequest) => {
+  const handleDecline = async (request: Request) => {
     try {
       const { error } = await supabase
-        .from("primary_change_requests")
+        .from("requests")
         .update({
           status: "DECLINED",
-          resolved_by: user!.id,
-          resolved_at: new Date().toISOString()
+          responded_by: user?.id,
+          updated_at: new Date().toISOString(),
         })
-        .eq("id", record.id);
-      
+        .eq("id", request.id);
+
       if (error) throw error;
 
-      await supabase.from("notifications").insert({
-        user_id: record.user_id,
-        title: "Primary Team Declined",
-        message: `Your request to change your primary team to ${record.toTeamName} was declined.`,
-        type: "team_request_update"
-      });
-
-      toast({ title: "Request declined", description: "The primary team change was declined." });
+      toast({ title: "Success", description: "Request declined." });
       loadData();
     } catch (err: any) {
-      toast({ title: "Action failed", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     }
   };
 
-  // Actions for Additional Team Requests
-  const handleAcceptAtr = async (record: AdditionalTeamRequest) => {
+  const handleCancel = async (request: Request) => {
     try {
       const { error } = await supabase
-        .from("team_memberships")
-        .update({ status: "APPROVED" })
-        .eq("id", record.id);
-      
+        .from("requests")
+        .update({
+          status: "CANCELLED",
+          cancelled_by: user?.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", request.id);
+
       if (error) throw error;
 
-      await supabase.from("notifications").insert({
-        user_id: record.user_id,
-        title: "Team Request Approved",
-        message: `Your request to join ${record.teamName} has been approved.`,
-        type: "team_request_update"
-      });
-
-      toast({ title: "Request approved", description: "The team membership was approved." });
+      toast({ title: "Success", description: "Request cancelled." });
       loadData();
     } catch (err: any) {
-      toast({ title: "Action failed", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     }
   };
 
-  const handleDeclineAtr = async (record: AdditionalTeamRequest) => {
-    try {
-      const { error } = await supabase
-        .from("team_memberships")
-        .update({ status: "DECLINED" })
-        .eq("id", record.id);
-      
-      if (error) throw error;
-
-      await supabase.from("notifications").insert({
-        user_id: record.user_id,
-        title: "Team Request Declined",
-        message: `Your request to join ${record.teamName} was declined.`,
-        type: "team_request_update"
-      });
-
-      toast({ title: "Request declined", description: "The team membership was declined." });
-      loadData();
-    } catch (err: any) {
-      toast({ title: "Action failed", description: err.message, variant: "destructive" });
-    }
-  };
-
-  // Filters
-  const visiblePcr = primaryRequests.filter((r) => {
-    if (statusFilter === "Pending") return r.status === "PENDING";
-    if (statusFilter === "Approved") return r.status === "APPROVED" || r.status === "ADMIN_APPROVED";
-    if (statusFilter === "Declined") return r.status === "DECLINED" || r.status === "CANCELLED";
-    return true; // All
+  const visibleRequests = requests.filter((r) => {
+    if (statusFilter === "ALL") return true;
+    return r.status === statusFilter;
   });
 
-  const visibleAtr = additionalRequests.filter((r) => {
-    if (statusFilter === "Pending") return r.status === "PENDING";
-    if (statusFilter === "Approved") return r.status === "APPROVED" || r.status === "ADMIN_APPROVED";
-    if (statusFilter === "Declined") return r.status === "DECLINED" || r.status === "CANCELLED";
-    return true; // All
-  });
-
-  const formatDate = (d: string | null) => 
+  const formatDate = (d: string | null) =>
     d ? new Date(d).toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
   const renderStatusBadge = (status: string) => {
@@ -282,7 +204,7 @@ export default function Requests() {
         </Badge>
       );
     }
-    if (status === "APPROVED" || status === "ADMIN_APPROVED") {
+    if (status === "APPROVED") {
       return (
         <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 pointer-events-none">
           <CheckCircle2 className="w-3 h-3 mr-1" /> Approved
@@ -306,144 +228,118 @@ export default function Requests() {
     return <Badge variant="outline">{status}</Badge>;
   };
 
+  const canCancelRequest = (request: Request) => {
+    return request.status === "PENDING" && (isSuperAdmin || request.requester_id === user?.id);
+  };
+
   return (
     <div className="space-y-6 container py-6 mx-auto max-w-7xl">
       <div>
-        <h1 className="text-3xl font-display text-foreground">Requests</h1>
-        <p className="text-muted-foreground mt-1">Manage team membership and primary team change requests</p>
+        <h1 className="text-3xl font-display text-foreground">Team Requests</h1>
+        <p className="text-muted-foreground mt-1">Manage team membership and player requests</p>
       </div>
 
       <div className="flex gap-2 pb-2">
-        {(["All", "Pending", "Approved", "Declined"] as FilterStatus[]).map((f) => (
+        {["ALL", "PENDING", "APPROVED", "DECLINED", "CANCELLED"].map((status) => (
           <Button
-            key={f}
-            variant={statusFilter === f ? "default" : "outline"}
-            onClick={() => setStatusFilter(f)}
+            key={status}
+            variant={statusFilter === status ? "default" : "outline"}
+            onClick={() => setStatusFilter(status)}
           >
-            {f}
+            {status.charAt(0) + status.slice(1).toLowerCase()}
           </Button>
         ))}
       </div>
 
-      <div className="grid gap-6">
-        {/* Primary Team Changes Section */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 bg-muted/30">
-            <CardTitle className="text-xl font-display">Primary Team Changes</CardTitle>
-            {!loading && <Badge variant="secondary">{visiblePcr.length} requests</Badge>}
-          </CardHeader>
-          <CardContent className="pt-6">
-            {loading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : visiblePcr.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                <ClipboardList className="mx-auto h-12 w-12 opacity-20 mb-4" />
-                <p>No primary team change requests</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left align-middle border-collapse font-sans whitespace-nowrap">
-                  <thead>
-                    <tr className="border-b text-muted-foreground">
-                      <th className="pb-3 pr-4 font-medium">Player</th>
-                      <th className="pb-3 pr-4 font-medium">From Team</th>
-                      <th className="pb-3 pr-4 font-medium w-8"></th>
-                      <th className="pb-3 pr-4 font-medium">To Team</th>
-                      <th className="pb-3 pr-4 font-medium">Submitted</th>
-                      <th className="pb-3 pr-4 font-medium">Status</th>
-                      <th className="pb-3 pr-4 font-medium">Resolved By</th>
-                      <th className="pb-3 font-medium text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visiblePcr.map((record) => (
-                      <tr key={record.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="py-3 pr-4 font-medium">{record.playerName}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{record.fromTeamName}</td>
-                        <td className="py-3 pr-4 text-muted-foreground"><ArrowRight className="w-4 h-4 opacity-50" /></td>
-                        <td className="py-3 pr-4 font-medium">{record.toTeamName}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{formatDate(record.requested_at)}</td>
-                        <td className="py-3 pr-4">{renderStatusBadge(record.status)}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{record.resolvedByName}</td>
-                        <td className="py-3 text-right">
-                          {record.status === "PENDING" && (
-                            <div className="flex justify-end gap-2">
-                              <Button variant="default" size="sm" onClick={() => handleAcceptPcr(record)}>Accept</Button>
-                              <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleDeclinePcr(record)}>Decline</Button>
-                            </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2 bg-muted/30">
+          <CardTitle className="text-lg font-display">Requests</CardTitle>
+          {!loading && <Badge variant="secondary">{visibleRequests.length} requests</Badge>}
+        </CardHeader>
+        <CardContent className="pt-6">
+          {loading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : visibleRequests.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <ClipboardList className="mx-auto h-12 w-12 opacity-20 mb-4" />
+              <p>No requests found</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Player</TableHead>
+                    <TableHead>Team</TableHead>
+                    <TableHead>Club</TableHead>
+                    <TableHead>Membership Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleRequests.map((request) => (
+                    <TableRow key={request.id}>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(request.created_at)}</TableCell>
+                      <TableCell className="text-xs">
+                        {request.request_type === "TEAM_INVITE" ? "Team Invite" : "Player Request"}
+                      </TableCell>
+                      <TableCell className="font-medium text-sm">{request.target_user_name}</TableCell>
+                      <TableCell className="text-sm">{request.team_name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{request.club_name}</TableCell>
+                      <TableCell className="text-xs">{request.membership_type}</TableCell>
+                      <TableCell>{renderStatusBadge(request.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {request.status === "PENDING" && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-green-600 border-green-200 hover:bg-green-50 h-7 px-2 text-xs"
+                                onClick={() => handleApprove(request)}
+                              >
+                                <CheckCircle2 className="h-3 w-3 mr-1" /> Approve
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 border-red-200 hover:bg-red-50 h-7 px-2 text-xs"
+                                onClick={() => handleDecline(request)}
+                              >
+                                <XCircle className="h-3 w-3 mr-1" /> Decline
+                              </Button>
+                              {canCancelRequest(request) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-muted-foreground h-7 px-2 text-xs"
+                                  onClick={() => handleCancel(request)}
+                                >
+                                  Cancel
+                                </Button>
+                              )}
+                            </>
                           )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Additional Team Requests Section */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 bg-muted/30">
-            <CardTitle className="text-xl font-display">Additional Team Requests</CardTitle>
-            {!loading && <Badge variant="secondary">{visibleAtr.length} requests</Badge>}
-          </CardHeader>
-          <CardContent className="pt-6">
-            {loading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : visibleAtr.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                <ClipboardList className="mx-auto h-12 w-12 opacity-20 mb-4" />
-                <p>No additional team requests</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left align-middle border-collapse font-sans whitespace-nowrap">
-                  <thead>
-                    <tr className="border-b text-muted-foreground">
-                      <th className="pb-3 pr-4 font-medium">Player</th>
-                      <th className="pb-3 pr-4 font-medium">Team</th>
-                      <th className="pb-3 pr-4 font-medium">Club</th>
-                      <th className="pb-3 pr-4 font-medium">Type</th>
-                      <th className="pb-3 pr-4 font-medium">Submitted</th>
-                      <th className="pb-3 pr-4 font-medium">Status</th>
-                      <th className="pb-3 font-medium text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleAtr.map((record) => (
-                      <tr key={record.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="py-3 pr-4 font-medium">{record.playerName}</td>
-                        <td className="py-3 pr-4">{record.teamName}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{record.clubName}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{record.membership_type === "FILL_IN" ? "Fill-in" : "Permanent"}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{formatDate(record.created_at)}</td>
-                        <td className="py-3 pr-4">{renderStatusBadge(record.status)}</td>
-                        <td className="py-3 text-right">
-                          {record.status === "PENDING" && (
-                            <div className="flex justify-end gap-2">
-                              <Button variant="default" size="sm" onClick={() => handleAcceptAtr(record)}>Accept</Button>
-                              <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleDeclineAtr(record)}>Decline</Button>
-                            </div>
+                          {request.status === "CANCELLED" && (
+                            <Badge variant="outline" className="bg-gray-50 text-xs">Cancelled</Badge>
                           )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

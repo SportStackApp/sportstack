@@ -478,25 +478,59 @@ const UsersManagement = () => {
   };
 
   const handleAssignTeam = async () => {
-    if (!selectedUser || !assignTeamId) return;
+    if (!selectedUser || !assignTeamId || !assignAssociationId || !assignClubId) return;
     setAssignSaving(true);
 
-    const { error } = await supabase.from("team_memberships").insert({
-      user_id: selectedUser.id,
-      team_id: assignTeamId,
-      membership_type: assignMembershipType,
-      status: "APPROVED",
-    });
+    try {
+      // Check for duplicate PRIMARY pending request if this is a PRIMARY membership
+      if (assignMembershipType === "PRIMARY") {
+        const { data: existingPendingPrimary, error: checkError } = await supabase
+          .from("requests")
+          .select("id")
+          .eq("target_user_id", selectedUser.id)
+          .eq("membership_type", "PRIMARY")
+          .eq("status", "PENDING");
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Success", description: "Team membership added" });
-      setShowTeamAssign(false);
-      setAssignTeamId("");
-      fetchUsers();
+        if (checkError) throw checkError;
+
+        if ((existingPendingPrimary || []).length > 0) {
+          toast({
+            title: "Cannot send invite",
+            description: "This player already has a pending primary team request. It must be cancelled before a new one can be sent.",
+            variant: "destructive",
+          });
+          setAssignSaving(false);
+          return;
+        }
+      }
+
+      const { error } = await supabase.from("requests").insert({
+        request_type: "TEAM_INVITE",
+        requester_id: user?.id,
+        target_user_id: selectedUser.id,
+        team_id: assignTeamId,
+        association_id: assignAssociationId,
+        club_id: assignClubId,
+        membership_type: assignMembershipType,
+        status: "PENDING",
+      });
+
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Success", description: "Invite sent — waiting for player to accept" });
+        setShowTeamAssign(false);
+        setAssignTeamId("");
+        setAssignAssociationId("");
+        setAssignClubId("");
+        setAssignDivision("");
+        fetchUsers();
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setAssignSaving(false);
     }
-    setAssignSaving(false);
   };
 
   const handleMakePrimary = async (membershipId: string) => {
