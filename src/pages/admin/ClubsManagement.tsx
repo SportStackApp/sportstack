@@ -167,6 +167,18 @@ const ClubsManagement = () => {
 
     let logoUrl = formData.logo_url.trim();
     if (logoFile) {
+      const allowedTypes = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
+      if (!allowedTypes.includes(logoFile.type)) {
+        setFormErrors((prev) => ({ ...prev, logo: "Accepted file types: PNG, JPG, SVG, WebP only." }));
+        toast({ title: "Error", description: "Invalid file type. Please upload a PNG, JPG, SVG, or WebP image.", variant: "destructive" });
+        return;
+      }
+      if (logoFile.size > 2 * 1024 * 1024) {
+        setFormErrors((prev) => ({ ...prev, logo: "File must be under 2MB." }));
+        toast({ title: "Error", description: "File is too large. Maximum size is 2MB.", variant: "destructive" });
+        return;
+      }
+
       const slug = slugifyName(formData.name);
       const filename = `${Date.now()}-${sanitizeFileName(logoFile.name)}`;
       const path = `clubs/${slug}/${filename}`;
@@ -178,7 +190,7 @@ const ClubsManagement = () => {
         });
 
       if (uploadError || !uploadData) {
-        toast({ title: "Error", description: "Failed to upload logo", variant: "destructive" });
+        toast({ title: "Error", description: uploadError?.message || "Failed to upload logo", variant: "destructive" });
         return;
       }
 
