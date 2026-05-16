@@ -14,6 +14,8 @@ interface Stats {
   associations: number;
   clubs: number;
   teams: number;
+  divisions: number;
+  venues: number;
   users: number;
   pendingMemberships: number;
 }
@@ -30,7 +32,7 @@ const AdminDashboard = () => {
     selectedTeam,
   } = useTeamContext();
 
-  const [stats, setStats] = useState<Stats>({ associations: 0, clubs: 0, teams: 0, users: 0, pendingMemberships: 0 });
+  const [stats, setStats] = useState<Stats>({ associations: 0, clubs: 0, teams: 0, divisions: 0, venues: 0, users: 0, pendingMemberships: 0 });
   const [loading, setLoading] = useState(true);
 
   const contextLevel = selectedTeamId
@@ -81,6 +83,24 @@ const AdminDashboard = () => {
       }
       const teamsRes = await teamsQuery;
 
+      // Divisions
+      let divisionsQuery = supabase.from("divisions").select("id", { count: "exact", head: true });
+      if (selectedClubId) {
+        divisionsQuery = divisionsQuery.eq("club_id", selectedClubId);
+      } else if (selectedAssociationId) {
+        divisionsQuery = divisionsQuery.eq("association_id", selectedAssociationId);
+      }
+      const divisionsRes = await divisionsQuery;
+
+      // Venues
+      let venuesQuery = supabase.from("venues").select("id", { count: "exact", head: true });
+      if (selectedClubId) {
+        venuesQuery = venuesQuery.eq("club_id", selectedClubId);
+      } else if (selectedAssociationId) {
+        venuesQuery = venuesQuery.eq("association_id", selectedAssociationId);
+      }
+      const venuesRes = await venuesQuery;
+
       // Users and Pending Memberships
       let usersCount = 0;
       let pendingCount = 0;
@@ -111,6 +131,8 @@ const AdminDashboard = () => {
         associations: assocRes.count || 0,
         clubs: clubsRes.count || 0,
         teams: teamsRes.count || 0,
+        divisions: divisionsRes.count || 0,
+        venues: venuesRes.count || 0,
         users: usersCount,
         pendingMemberships: pendingCount,
       });
@@ -168,6 +190,22 @@ const AdminDashboard = () => {
       href: "/admin/teams",
       description: "Manage teams",
       color: "text-purple-600",
+    }] : []),
+    ...(showTeams ? [{
+      title: "Divisions",
+      value: stats.divisions,
+      icon: Trophy,
+      href: "/admin/divisions",
+      description: "Manage divisions",
+      color: "text-sky-600",
+    }] : []),
+    ...(showTeams ? [{
+      title: "Venues",
+      value: stats.venues,
+      icon: Trophy,
+      href: "/admin/venues",
+      description: "Manage venues",
+      color: "text-cyan-600",
     }] : []),
     {
       title: "Users",

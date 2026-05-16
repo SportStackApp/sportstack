@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Cropper, { type Area } from "react-easy-crop";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useNavigate, Link } from "react-router-dom";
-import { Plus, Pencil, Trash2, Shield, ArrowLeft } from "lucide-react";
+import { Plus, Pencil, Trash2, Shield, ArrowLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
@@ -26,9 +27,46 @@ import type { Database } from "@/integrations/supabase/types";
 type Club = Database["public"]["Tables"]["clubs"]["Row"];
 type Association = Database["public"]["Tables"]["associations"]["Row"];
 
+type ValidationState = {
+  status: "success" | "error";
+  message: string;
+};
+
 interface ClubWithAssociation extends Club {
   associations: { name: string } | null;
 }
+
+const createImage = (url: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", reject);
+    image.setAttribute("crossOrigin", "anonymous");
+    image.src = url;
+  });
+
+const getCroppedImg = async (imageSrc: string, pixelCrop: Area) => {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement("canvas");
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Unable to get canvas context");
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+  return new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), "image/png");
+  });
+};
 
 const generateAbbreviation = (name: string) =>
   name
@@ -63,12 +101,21 @@ const ClubsManagement = () => {
   const [editingClub, setEditingClub] = useState<ClubWithAssociation | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingClub, setDeletingClub] = useState<ClubWithAssociation | null>(null);
-  const [formData, setFormData] = useState({ name: "", abbreviation: "", logo_url: "", association_id: "" });
+  const [formData, setFormData] = useState({ name: "", abbreviation: "", website_url: "", logo_url: "", association_id: "" });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
   const [logoValidation, setLogoValidation] = useState<{ status: "success" | "error"; message: string } | null>(null);
   const [formErrors, setFormErrors] = useState<{ abbreviation?: string; logo?: string }>({});
   const [abbreviationTouched, setAbbreviationTouched] = useState(false);
+  const [expandedClubIds, setExpandedClubIds] = useState<string[]>([]);
+  const [clubTeamsByClub, setClubTeamsByClub] = useState<Record<string, { divisionId: string; divisionName: string; teams: { id: string; name: string }[] }[]>>({});
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [selectedLogoSrc, setSelectedLogoSrc] = useState("");
+  const [croppingFile, setCroppingFile] = useState<File | null>(null);
+  const [crop, setCrop] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -76,8 +123,11 @@ const ClubsManagement = () => {
       if (logoPreviewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(logoPreviewUrl);
       }
+      if (selectedLogoSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(selectedLogoSrc);
+      }
     };
-  }, [logoPreviewUrl]);
+  }, [logoPreviewUrl, selectedLogoSrc]);
 
   useEffect(() => {
     if (!scopeLoading && !hasAccess) {
@@ -100,8 +150,39 @@ const ClubsManagement = () => {
 
     if (clubsRes.error) {
       toast({ title: "Error", description: "Failed to load clubs", variant: "destructive" });
+      setClubTeamsByClub({});
     } else {
-      setClubs(clubsRes.data || []);
+      const clubsData = clubsRes.data || [];
+      setClubs(clubsData);
+
+      if (clubsData.length > 0) {
+        const { data: teamsData, error: teamsError } = await supabase
+          .from("teams")
+          .select("id,name,club_id,division_id,divisions(name)")
+          .in("club_id", clubsData.map((club) => club.id));
+
+        if (!teamsError && teamsData) {
+          const grouped: Record<string, { divisionId: string; divisionName: string; teams: { id: string; name: string }[] }[]> = {};
+          teamsData.forEach((team) => {
+            const clubId = team.club_id;
+            const divisionId = team.division_id || "unknown";
+            const divisionName = team.divisions?.name || "Unassigned";
+            const clubGroups = grouped[clubId] || [];
+            let divisionGroup = clubGroups.find((group) => group.divisionId === divisionId);
+            if (!divisionGroup) {
+              divisionGroup = { divisionId, divisionName, teams: [] };
+              clubGroups.push(divisionGroup);
+            }
+            divisionGroup.teams.push({ id: team.id, name: team.name });
+            grouped[clubId] = clubGroups;
+          });
+          setClubTeamsByClub(grouped);
+        } else {
+          setClubTeamsByClub({});
+        }
+      } else {
+        setClubTeamsByClub({});
+      }
     }
     if (!associationsRes.error) setAssociations(associationsRes.data || []);
     setLoading(false);
@@ -127,17 +208,29 @@ const ClubsManagement = () => {
   const handleOpenDialog = (club?: ClubWithAssociation) => {
     if (club) {
       setEditingClub(club);
-      setFormData({ name: club.name, abbreviation: club.abbreviation || "", logo_url: club.logo_url || "", association_id: club.association_id });
+      setFormData({
+        name: club.name,
+        abbreviation: club.abbreviation || "",
+        website_url: club.website_url || "",
+        logo_url: club.logo_url || "",
+        association_id: club.association_id,
+      });
       setLogoPreviewUrl(club.logo_url || "");
     } else {
       setEditingClub(null);
-      setFormData({ name: "", abbreviation: "", logo_url: "", association_id: formAssociations.length === 1 ? formAssociations[0].id : "" });
+      setFormData({ name: "", abbreviation: "", website_url: "", logo_url: "", association_id: formAssociations.length === 1 ? formAssociations[0].id : "" });
       setLogoPreviewUrl("");
     }
     setLogoFile(null);
     setFormErrors({});
     setAbbreviationTouched(false);
     setDialogOpen(true);
+  };
+
+  const toggleClubExpanded = (clubId: string) => {
+    setExpandedClubIds((prev) =>
+      prev.includes(clubId) ? prev.filter((id) => id !== clubId) : [...prev, clubId]
+    );
   };
 
   const handleSave = async () => {
@@ -206,6 +299,7 @@ const ClubsManagement = () => {
     const payload = {
       name: formData.name.trim(),
       abbreviation: abbreviation || null,
+      website_url: formData.website_url.trim() || null,
       logo_url: logoUrl.trim() || null,
       association_id: formData.association_id,
     };
@@ -276,6 +370,14 @@ const ClubsManagement = () => {
                       }));
                     }}
                     placeholder="e.g., Melbourne HC"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Website URL</Label>
+                  <Input
+                    value={formData.website_url}
+                    onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                    placeholder="https://example.com"
                   />
                 </div>
                 <div className="space-y-2">
@@ -376,6 +478,87 @@ const ClubsManagement = () => {
             </DialogContent>
           </Dialog>
         )}
+        <Dialog open={cropDialogOpen} onOpenChange={(open) => {
+          setCropDialogOpen(open);
+          if (!open && selectedLogoSrc.startsWith("blob:")) {
+            URL.revokeObjectURL(selectedLogoSrc);
+            setSelectedLogoSrc("");
+            setCroppingFile(null);
+          }
+        }}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Crop logo</DialogTitle>
+              <DialogDescription>Drag and resize the square crop box, then upload the cropped logo.</DialogDescription>
+            </DialogHeader>
+            <div className="relative h-96 w-full overflow-hidden rounded bg-black">
+              {selectedLogoSrc && (
+                <Cropper
+                  image={selectedLogoSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={(_, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels)}
+                />
+              )}
+            </div>
+            <div className="mt-4 flex items-center gap-4">
+              <Label>Zoom</Label>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCropDialogOpen(false)}>Cancel</Button>
+              <Button onClick={async () => {
+                if (!selectedLogoSrc || !croppedAreaPixels || !croppingFile) return;
+                setUploadingLogo(true);
+                try {
+                  const croppedBlob = await getCroppedImg(selectedLogoSrc, croppedAreaPixels);
+                  if (!croppedBlob) {
+                    toast({ title: "Error", description: "Failed to create cropped image.", variant: "destructive" });
+                    return;
+                  }
+                  const slug = slugifyName(formData.name);
+                  const filename = `${Date.now()}-${sanitizeFileName(croppingFile.name)}`;
+                  const path = `clubs/${slug}/${filename}`;
+                  const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from("logos")
+                    .upload(path, croppedBlob, {
+                      contentType: "image/png",
+                      upsert: true,
+                    });
+                  if (uploadError || !uploadData) {
+                    toast({ title: "Error", description: uploadError?.message || "Failed to upload logo", variant: "destructive" });
+                    return;
+                  }
+                  const { data: publicUrlData, error: publicUrlError } = supabase.storage.from("logos").getPublicUrl(path);
+                  if (publicUrlError || !publicUrlData?.publicUrl) {
+                    toast({ title: "Error", description: "Failed to retrieve logo URL", variant: "destructive" });
+                    return;
+                  }
+                  setFormData((prev) => ({ ...prev, logo_url: publicUrlData.publicUrl }));
+                  setLogoPreviewUrl(publicUrlData.publicUrl);
+                  setCroppingFile(null);
+                  setLogoValidation({ status: "success", message: "File uploaded successfully" });
+                  setCropDialogOpen(false);
+                } finally {
+                  setUploadingLogo(false);
+                }
+              }} disabled={uploadingLogo}>
+                {uploadingLogo ? "Uploading..." : "Crop & Upload"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filter */}
@@ -410,34 +593,80 @@ const ClubsManagement = () => {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Association</TableHead>
+                  <TableHead>Website</TableHead>
                   <TableHead>Abbreviation</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClubs.map((club) => (
-                  <TableRow key={club.id}>
-                    <TableCell className="font-medium">
-                      <Link to={`/clubs/${club.id}`} className="hover:underline text-primary">
-                        {club.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{club.associations?.name || "-"}</TableCell>
-                    <TableCell>{club.abbreviation || "-"}</TableCell>
-                    <TableCell className="text-right">
-                      {canManageClub(club.id) && (
-                        <Button variant="ghost" size="icon" onClick={() => { handleOpenDialog(club); setDialogOpen(true); }}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {canDelete && (
-                        <Button variant="ghost" size="icon" onClick={() => { setDeletingClub(club); setDeleteDialogOpen(true); }}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredClubs.map((club) => {
+                  const isExpanded = expandedClubIds.includes(club.id);
+                  const clubGroups = clubTeamsByClub[club.id] || [];
+                  return [
+                    <TableRow key={club.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                            onClick={() => toggleClubExpanded(club.id)}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                          <Link to={`/clubs/${club.id}`} className="hover:underline text-primary">
+                            {club.name}
+                          </Link>
+                        </div>
+                      </TableCell>
+                      <TableCell>{club.associations?.name || "-"}</TableCell>
+                      <TableCell>
+                        {club.website_url ? (
+                          <a href={club.website_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                            {club.website_url}
+                          </a>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell>{club.abbreviation || "-"}</TableCell>
+                      <TableCell className="text-right">
+                        {canManageClub(club.id) && (
+                          <Button variant="ghost" size="icon" onClick={() => { handleOpenDialog(club); setDialogOpen(true); }}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button variant="ghost" size="icon" onClick={() => { setDeletingClub(club); setDeleteDialogOpen(true); }}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>,
+                    isExpanded && (
+                      <TableRow key={`${club.id}-details`}>
+                        <TableCell colSpan={5} className="bg-muted/10">
+                          {clubGroups.length > 0 ? (
+                            <div className="space-y-4 pl-10 text-sm text-muted-foreground">
+                              {clubGroups.map((division) => (
+                                <div key={division.divisionId}>
+                                  <p className="font-medium">{division.divisionName}</p>
+                                  <ul className="ml-4 list-disc space-y-1">
+                                    {division.teams.map((team) => (
+                                      <li key={team.id}>{team.name}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground pl-10">No teams assigned.</p>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ),
+                  ];
+                })}
               </TableBody>
             </Table>
           )}

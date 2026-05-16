@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Cropper, { type Area } from "react-easy-crop";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,13 +33,50 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useNavigate, Link } from "react-router-dom";
-import { Plus, Pencil, Trash2, Building2, ArrowLeft } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, ArrowLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import type { Database } from "@/integrations/supabase/types";
 
 type Association = Database["public"]["Tables"]["associations"]["Row"];
+
+type ValidationState = {
+  status: "success" | "error";
+  message: string;
+};
+
+const createImage = (url: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", reject);
+    image.setAttribute("crossOrigin", "anonymous");
+    image.src = url;
+  });
+
+const getCroppedImg = async (imageSrc: string, pixelCrop: Area) => {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement("canvas");
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Unable to get canvas context");
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+  return new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), "image/png");
+  });
+};
 
 const generateAbbreviation = (name: string) =>
   name
@@ -69,12 +107,21 @@ const AssociationsManagement = () => {
   const [editingAssociation, setEditingAssociation] = useState<Association | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAssociation, setDeletingAssociation] = useState<Association | null>(null);
-  const [formData, setFormData] = useState({ name: "", abbreviation: "", logo_url: "" });
+  const [formData, setFormData] = useState({ name: "", abbreviation: "", website_url: "", logo_url: "" });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
   const [logoValidation, setLogoValidation] = useState<{ status: "success" | "error"; message: string } | null>(null);
   const [formErrors, setFormErrors] = useState<{ abbreviation?: string; logo?: string }>({});
   const [abbreviationTouched, setAbbreviationTouched] = useState(false);
+  const [expandedAssociationIds, setExpandedAssociationIds] = useState<string[]>([]);
+  const [associationClubs, setAssociationClubs] = useState<Record<string, { id: string; name: string; abbreviation: string | null }[]>>({});
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [selectedLogoSrc, setSelectedLogoSrc] = useState("");
+  const [croppingFile, setCroppingFile] = useState<File | null>(null);
+  const [crop, setCrop] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -82,8 +129,11 @@ const AssociationsManagement = () => {
       if (logoPreviewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(logoPreviewUrl);
       }
+      if (selectedLogoSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(selectedLogoSrc);
+      }
     };
-  }, [logoPreviewUrl]);
+  }, [logoPreviewUrl, selectedLogoSrc]);
 
   // Only SUPER_ADMIN and ASSOCIATION_ADMIN should see this page
   const hasAccess = isSuperAdmin || scopedAssociationIds.length > 0;
@@ -96,6 +146,8 @@ const AssociationsManagement = () => {
 
   const fetchAssociations = async () => {
     setLoading(true);
+    let associationData: Association[] = [];
+
     if (isSuperAdmin) {
       const { data, error } = await supabase
         .from("associations")
@@ -104,7 +156,8 @@ const AssociationsManagement = () => {
       if (error) {
         toast({ title: "Error", description: "Failed to load associations", variant: "destructive" });
       } else {
-        setAssociations(data || []);
+        associationData = data || [];
+        setAssociations(associationData);
       }
     } else {
       const { data, error } = await supabase
@@ -115,9 +168,34 @@ const AssociationsManagement = () => {
       if (error) {
         toast({ title: "Error", description: "Failed to load associations", variant: "destructive" });
       } else {
-        setAssociations(data || []);
+        associationData = data || [];
+        setAssociations(associationData);
       }
     }
+
+    const associationIds = associationData.map((association) => association.id);
+    if (associationIds.length > 0) {
+      const { data: clubsData } = await supabase
+        .from("clubs")
+        .select("id,name,abbreviation,association_id")
+        .in("association_id", associationIds);
+
+      const groupedClubs: Record<string, { id: string; name: string; abbreviation: string | null }[]> = {};
+      (clubsData || []).forEach((club) => {
+        if (!groupedClubs[club.association_id]) {
+          groupedClubs[club.association_id] = [];
+        }
+        groupedClubs[club.association_id].push({
+          id: club.id,
+          name: club.name,
+          abbreviation: club.abbreviation || null,
+        });
+      });
+      setAssociationClubs(groupedClubs);
+    } else {
+      setAssociationClubs({});
+    }
+
     setLoading(false);
   };
 
@@ -133,12 +211,13 @@ const AssociationsManagement = () => {
       setFormData({
         name: association.name,
         abbreviation: association.abbreviation || "",
+        website_url: association.website_url || "",
         logo_url: association.logo_url || "",
       });
       setLogoPreviewUrl(association.logo_url || "");
     } else {
       setEditingAssociation(null);
-      setFormData({ name: "", abbreviation: "", logo_url: "" });
+      setFormData({ name: "", abbreviation: "", website_url: "", logo_url: "" });
       setLogoPreviewUrl("");
     }
     setLogoFile(null);
@@ -214,6 +293,7 @@ const AssociationsManagement = () => {
     const payload = {
       name: formData.name.trim(),
       abbreviation: abbreviation || null,
+      website_url: formData.website_url.trim() || null,
       logo_url: logoUrl.trim() || null,
     };
 
@@ -320,6 +400,15 @@ const AssociationsManagement = () => {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="website_url">Website URL</Label>
+                  <Input
+                    id="website_url"
+                    value={formData.website_url}
+                    onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                    placeholder="https://example.com"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="abbreviation">Abbreviation</Label>
                   <Input
                     id="abbreviation"
@@ -352,32 +441,52 @@ const AssociationsManagement = () => {
                       const allowedTypes = [
                         "image/png",
                         "image/jpeg",
-                        "image/jpg",
                         "image/svg+xml",
                         "image/webp",
                       ];
 
                       if (!allowedTypes.includes(file.type)) {
                         setFormErrors((prev) => ({ ...prev, logo: "Accepted file types: PNG, JPG, SVG, WebP only." }));
-                        setLogoValidation({ status: "error", message: "Only PNG, JPG, SVG and WebP files are accepted" });
-                        setLogoFile(null);
-                        setLogoPreviewUrl("");
+                        setLogoValidation({ status: "error", message: "Invalid file type. Please upload a PNG, JPG, SVG, or WebP image." });
+                        setCroppingFile(null);
+                        setSelectedLogoSrc("");
                         return;
                       }
 
                       if (file.size > 2 * 1024 * 1024) {
                         setFormErrors((prev) => ({ ...prev, logo: "File must be under 2MB." }));
-                        setLogoValidation({ status: "error", message: "File is too large — maximum size is 2MB" });
-                        setLogoFile(null);
-                        setLogoPreviewUrl("");
+                        setLogoValidation({ status: "error", message: "File is too large. Maximum allowed size is 2MB." });
+                        setCroppingFile(null);
+                        setSelectedLogoSrc("");
                         return;
                       }
 
-                      setFormErrors((prev) => ({ ...prev, logo: undefined }));
-                      setLogoValidation({ status: "success", message: "File looks good" });
-                      setLogoFile(file);
-                      setFormData({ ...formData, logo_url: "" });
-                      setLogoPreviewUrl(URL.createObjectURL(file));
+                      const objectUrl = URL.createObjectURL(file);
+                      const image = new Image();
+                      image.onload = () => {
+                        if (image.width < 100 || image.height < 100) {
+                          setFormErrors((prev) => ({ ...prev, logo: "Image is too small. Minimum size is 100×100 pixels." }));
+                          setLogoValidation({ status: "error", message: "Image is too small. Minimum size is 100×100 pixels." });
+                          setCroppingFile(null);
+                          setSelectedLogoSrc("");
+                          URL.revokeObjectURL(objectUrl);
+                          return;
+                        }
+
+                        setFormErrors((prev) => ({ ...prev, logo: undefined }));
+                        setLogoValidation({ status: "success", message: "File looks good" });
+                        setCroppingFile(file);
+                        setSelectedLogoSrc(objectUrl);
+                        setCropDialogOpen(true);
+                      };
+                      image.onerror = () => {
+                        setFormErrors((prev) => ({ ...prev, logo: "Unable to load image file." }));
+                        setLogoValidation({ status: "error", message: "Unable to load the selected image." });
+                        setCroppingFile(null);
+                        setSelectedLogoSrc("");
+                        URL.revokeObjectURL(objectUrl);
+                      };
+                      image.src = objectUrl;
                     }}
                   />
                   <p className="text-sm text-muted-foreground">Accepted formats: PNG, JPG, SVG, WebP · Max size: 2MB · Square image recommended</p>
@@ -422,6 +531,87 @@ const AssociationsManagement = () => {
             </DialogContent>
           </Dialog>
         )}
+        <Dialog open={cropDialogOpen} onOpenChange={(open) => {
+          setCropDialogOpen(open);
+          if (!open && selectedLogoSrc.startsWith("blob:")) {
+            URL.revokeObjectURL(selectedLogoSrc);
+            setSelectedLogoSrc("");
+            setCroppingFile(null);
+          }
+        }}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Crop logo</DialogTitle>
+              <DialogDescription>Drag and resize the square crop box, then upload the cropped logo.</DialogDescription>
+            </DialogHeader>
+            <div className="relative h-96 w-full overflow-hidden rounded bg-black">
+              {selectedLogoSrc && (
+                <Cropper
+                  image={selectedLogoSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={(_, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels)}
+                />
+              )}
+            </div>
+            <div className="mt-4 flex items-center gap-4">
+              <Label>Zoom</Label>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCropDialogOpen(false)}>Cancel</Button>
+              <Button onClick={async () => {
+                if (!selectedLogoSrc || !croppedAreaPixels || !croppingFile) return;
+                setUploadingLogo(true);
+                try {
+                  const croppedBlob = await getCroppedImg(selectedLogoSrc, croppedAreaPixels);
+                  if (!croppedBlob) {
+                    toast({ title: "Error", description: "Failed to create cropped image.", variant: "destructive" });
+                    return;
+                  }
+                  const slug = slugifyName(formData.name);
+                  const filename = `${Date.now()}-${sanitizeFileName(croppingFile.name)}`;
+                  const path = `associations/${slug}/${filename}`;
+                  const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from("logos")
+                    .upload(path, croppedBlob, {
+                      contentType: "image/png",
+                      upsert: true,
+                    });
+                  if (uploadError || !uploadData) {
+                    toast({ title: "Error", description: uploadError?.message || "Failed to upload logo", variant: "destructive" });
+                    return;
+                  }
+                  const { data: publicUrlData, error: publicUrlError } = supabase.storage.from("logos").getPublicUrl(path);
+                  if (publicUrlError || !publicUrlData?.publicUrl) {
+                    toast({ title: "Error", description: "Failed to retrieve logo URL", variant: "destructive" });
+                    return;
+                  }
+                  setFormData((prev) => ({ ...prev, logo_url: publicUrlData.publicUrl }));
+                  setLogoPreviewUrl(publicUrlData.publicUrl);
+                  setCroppingFile(null);
+                  setLogoValidation({ status: "success", message: "File uploaded successfully" });
+                  setCropDialogOpen(false);
+                } finally {
+                  setUploadingLogo(false);
+                }
+              }} disabled={uploadingLogo}>
+                {uploadingLogo ? "Uploading..." : "Crop & Upload"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Table */}
@@ -450,47 +640,88 @@ const AssociationsManagement = () => {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Abbreviation</TableHead>
+                  <TableHead>Website</TableHead>
                   <TableHead>Logo</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {associations.map((association) => (
-                  <TableRow key={association.id}>
-                    <TableCell className="font-medium">
-                      <Link to={`/associations/${association.id}`} className="hover:underline text-primary">
-                        {association.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{association.abbreviation || "-"}</TableCell>
-                    <TableCell>
-                      {association.logo_url ? (
-                        <img src={association.logo_url} alt="" className="h-8 w-8 rounded object-cover" />
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {canEdit(association.id) && (
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(association)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setDeletingAssociation(association);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {associations.map((association) => {
+                  const isExpanded = expandedAssociationIds.includes(association.id);
+                  const clubsForAssociation = associationClubs[association.id] || [];
+                  return [
+                    <TableRow key={association.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                            onClick={() => toggleAssociationExpanded(association.id)}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                          <Link to={`/associations/${association.id}`} className="hover:underline text-primary">
+                            {association.name}
+                          </Link>
+                        </div>
+                      </TableCell>
+                      <TableCell>{association.abbreviation || "-"}</TableCell>
+                      <TableCell>
+                        {association.website_url ? (
+                          <a href={association.website_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                            {association.website_url}
+                          </a>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {association.logo_url ? (
+                          <img src={association.logo_url} alt="" className="h-8 w-8 rounded object-cover" />
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {canEdit(association.id) && (
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(association)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setDeletingAssociation(association);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>,
+                    isExpanded && (
+                      <TableRow key={`${association.id}-details`}>
+                        <TableCell colSpan={5} className="bg-muted/10">
+                          {clubsForAssociation.length > 0 ? (
+                            <ul className="space-y-1 pl-10 text-sm text-muted-foreground">
+                              {clubsForAssociation.map((club) => (
+                                <li key={club.id}>
+                                  {club.name} {club.abbreviation ? `(${club.abbreviation})` : ""}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-muted-foreground pl-10">No clubs yet.</p>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ),
+                  ];
+                })}
               </TableBody>
             </Table>
           )}
