@@ -91,7 +91,7 @@ const UsersManagement = () => {
   const [assignAssociationId, setAssignAssociationId] = useState("");
   const [assignClubId, setAssignClubId] = useState("");
   const [assignDivision, setAssignDivision] = useState("");
-  const [assignDivisionOptions, setAssignDivisionOptions] = useState<string[]>([]);
+  const [assignDivisionOptions, setAssignDivisionOptions] = useState<{ id: string; name: string }[]>([]);
   const [assignTeamOptions, setAssignTeamOptions] = useState<{ id: string; name: string; division: string | null }[]>([]);
   const [assignTeamId, setAssignTeamId] = useState("");
   const [assignMembershipType, setAssignMembershipType] = useState<MembershipType>("PRIMARY");
@@ -105,26 +105,41 @@ const UsersManagement = () => {
     }
 
     const load = async () => {
-      const { data, error } = await supabase
+      // First, get all teams for this club to find which divisions have teams
+      const { data: teamsData, error: teamsError } = await supabase
         .from("teams")
-        .select("id, name, club_id, division")
+        .select("id, name, club_id, division_id")
         .eq("club_id", assignClubId)
         .order("name");
 
-      if (error) {
-        console.error("Failed to fetch teams for club:", error.message);
+      if (teamsError) {
+        console.error("Failed to fetch teams for club:", teamsError.message);
         return;
       }
 
-      const result = data || [];
-      console.log("Teams fetched for club", assignClubId, result);
+      const result = teamsData || [];
 
-      const divs = Array.from(
-        new Set(result.map((t) => t.division).filter(Boolean))
-      ).sort() as string[];
+      // Extract unique division_ids
+      const divisionIds = Array.from(
+        new Set(result.map((t: any) => t.division_id).filter(Boolean))
+      ) as string[];
+
+      // Query divisions that have teams in this club
+      let divisions: { id: string; name: string }[] = [];
+      if (divisionIds.length > 0) {
+        const { data: divData, error: divError } = await supabase
+          .from("divisions")
+          .select("id, name")
+          .in("id", divisionIds)
+          .order("name");
+
+        if (!divError) {
+          divisions = divData || [];
+        }
+      }
 
       setAssignTeamOptions(result);
-      setAssignDivisionOptions(divs);
+      setAssignDivisionOptions(divisions);
     };
 
     load();
@@ -471,7 +486,6 @@ const UsersManagement = () => {
       team_id: assignTeamId,
       membership_type: assignMembershipType,
       status: "APPROVED",
-      is_player: true,
     });
 
     if (error) {
@@ -544,7 +558,7 @@ const UsersManagement = () => {
     ? clubs.filter((c) => c.association_id === assignAssociationId)
     : clubs;
   const assignAvailableTeams = assignDivision
-    ? assignTeamOptions.filter((t) => t.division === assignDivision)
+    ? assignTeamOptions.filter((t: any) => t.division_id === assignDivision)
     : assignTeamOptions;
 
   if (scopeLoading) {
@@ -1043,15 +1057,19 @@ const UsersManagement = () => {
                           setAssignDivision(v);
                           setAssignTeamId("");
                         }}
-                        disabled={!assignClubId}
+                        disabled={!assignClubId || assignDivisionOptions.length === 0}
                       >
                         <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="All divisions" />
+                          <SelectValue placeholder="Select division" />
                         </SelectTrigger>
                         <SelectContent>
-                          {assignDivisionOptions.map((d) => (
-                            <SelectItem key={d} value={d}>{d}</SelectItem>
-                          ))}
+                          {assignDivisionOptions.length === 0 ? (
+                            <SelectItem value="_none" disabled>No divisions available</SelectItem>
+                          ) : (
+                            assignDivisionOptions.map((d) => (
+                              <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1062,7 +1080,7 @@ const UsersManagement = () => {
                       <Select
                         value={assignTeamId}
                         onValueChange={setAssignTeamId}
-                        disabled={!assignClubId}
+                        disabled={!assignDivision}
                       >
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue placeholder="Select team" />
