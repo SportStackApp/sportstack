@@ -72,7 +72,7 @@ jobs:
           ONLY_ROUNDS: ${{ github.event.inputs.only_rounds || vars.ONLY_ROUNDS || '' }}
           ONLY_TEAM:   ${{ github.event.inputs.only_team   || vars.ONLY_TEAM   || '' }}
           OUTPUT_DIR:  data
-        run: python scraper.py
+        run: python scraper/scraper.py
 
       # 5. Commit the updated CSV and JSON back into the repo
       - name: Commit results
