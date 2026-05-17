@@ -112,6 +112,8 @@ const Profile = () => {
   const [memberships, setMemberships] = useState<TeamMembershipData[]>([]);
   const [pendingChangeRequest, setPendingChangeRequest] = useState<PrimaryChangeRequestData | null>(null);
   const [allTeams, setAllTeams] = useState<Array<{id: string; name: string; clubId: string; clubName: string; associationId: string; associationName: string;}>>([]);
+  const [pendingRequestTeams, setPendingRequestTeams] = useState<Array<{id: string; teamId: string; teamName: string; clubName: string; type: string;}>>([]);
+  const [pendingPrimaryRequest, setPendingPrimaryRequest] = useState<Array<{id: string; teamId: string; teamName: string; clubName: string; type: string;}>>([]);
   const [loading, setLoading] = useState(true);
   
   const [isEditing, setIsEditing] = useState(false);
@@ -229,6 +231,47 @@ const Profile = () => {
         setMemberships(transformed);
       }
     }
+
+    // Fetch pending team requests from requests table
+    const { data: pendingReqsData } = await supabase
+      .from("requests")
+      .select("id, team_id, membership_type")
+      .eq("target_user_id", user.id)
+      .eq("status", "PENDING");
+
+    const pendingReqsTransformed: Array<{id: string; teamId: string; teamName: string; clubName: string; type: string;}> = [];
+    if (pendingReqsData && pendingReqsData.length > 0) {
+      const pendingReqTeamIds = pendingReqsData.map((r: any) => r.team_id);
+      const { data: pendingReqTeamDetails } = await supabase
+        .from("teams")
+        .select("id, name, club_id, clubs(name)")
+        .in("id", pendingReqTeamIds);
+
+      const pendingReqTeamMap = (pendingReqTeamDetails || []).reduce((acc: any, team: any) => {
+        acc[team.id] = team;
+        return acc;
+      }, {});
+
+      const pendingPrimaryFromReqs: Array<{id: string; teamId: string; teamName: string; clubName: string; type: string;}> = [];
+      for (const req of pendingReqsData) {
+        const teamObj = pendingReqTeamMap[req.team_id];
+        const club = Array.isArray(teamObj?.clubs) ? teamObj.clubs[0] : teamObj?.clubs;
+        const item = {
+          id: `req_${req.id}`,
+          teamId: req.team_id,
+          teamName: teamObj?.name || "Unknown Team",
+          clubName: club?.name || "Unknown Club",
+          type: req.membership_type,
+        };
+        if (req.membership_type === "PRIMARY") {
+          pendingPrimaryFromReqs.push(item);
+        } else {
+          pendingReqsTransformed.push(item);
+        }
+      }
+      setPendingPrimaryRequest(pendingPrimaryFromReqs);
+    }
+    setPendingRequestTeams(pendingReqsTransformed);
 
     // Fetch all available teams with club and association info
     const [{ data: assocData }, { data: clubData }, { data: teamData }] = await Promise.all([
@@ -646,15 +689,18 @@ const Profile = () => {
 
   // Transform pending memberships for invites section
   // Non-primary pending memberships for the Additional Teams section
-  const pendingAdditionalTeams = pendingMemberships
-    .filter((m) => m.membership_type !== "PRIMARY")
-    .map((m) => ({
-      id: m.id,
-      teamId: m.team_id,
-      teamName: m.team.name,
-      clubName: m.team.club.name,
-      type: m.membership_type,
-    }));
+  const pendingAdditionalTeams = [
+    ...pendingMemberships
+      .filter((m) => m.membership_type !== "PRIMARY")
+      .map((m) => ({
+        id: m.id,
+        teamId: m.team_id,
+        teamName: m.team.name,
+        clubName: m.team.club.name,
+        type: m.membership_type,
+      })),
+    ...pendingRequestTeams,
+  ];
 
   const displayName = [formData.firstName, formData.lastName].filter(Boolean).join(" ") || user?.email || "User";
   const initials = (formData.firstName?.charAt(0) || user?.email?.charAt(0) || "U").toUpperCase();
@@ -752,6 +798,7 @@ const Profile = () => {
         primaryTeam={primaryTeam}
         extraTeams={extraTeams}
         pendingChangeRequest={pendingChangeRequestForDisplay}
+        pendingPrimaryRequest={pendingPrimaryRequest[0]}
         onRequestChange={handleRequestPrimaryChange}
         onCancelRequest={handleCancelChangeRequest}
         onConfirmChange={handleConfirmChange}
@@ -760,12 +807,26 @@ const Profile = () => {
         onRequestAdditionalTeam={() => setRequestAdditionalDialogOpen(true)}
         pendingAdditionalTeams={pendingAdditionalTeams}
         onCancelAdditionalRequest={async (id) => {
-          const { error } = await supabase.from("team_memberships").delete().eq("id", id);
-          if (error) {
-            toast({ title: "Error", description: "Failed to cancel request.", variant: "destructive" });
+          if (id.startsWith("req_")) {
+            const actualId = id.replace("req_", "");
+            const { error } = await supabase
+              .from("requests")
+              .update({ status: "CANCELLED", cancelled_by: user?.id })
+              .eq("id", actualId);
+            if (error) {
+              toast({ title: "Error", description: "Failed to cancel request.", variant: "destructive" });
+            } else {
+              toast({ title: "Cancelled", description: "Your team request has been cancelled." });
+              fetchData();
+            }
           } else {
-            toast({ title: "Cancelled", description: "Your team request has been cancelled." });
-            fetchData();
+            const { error } = await supabase.from("team_memberships").delete().eq("id", id);
+            if (error) {
+              toast({ title: "Error", description: "Failed to cancel request.", variant: "destructive" });
+            } else {
+              toast({ title: "Cancelled", description: "Your team request has been cancelled." });
+              fetchData();
+            }
           }
         }}
       />

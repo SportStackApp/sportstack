@@ -290,7 +290,12 @@ export default function Requests() {
                       <TableCell className="text-xs">
                         {request.request_type === "TEAM_INVITE" ? "Team Invite" : "Player Request"}
                       </TableCell>
-                      <TableCell className="font-medium text-sm">{request.target_user_name}</TableCell>
+                      <TableCell className="font-medium text-sm">
+                        {request.target_user_name}
+                        <p className="text-xs text-muted-foreground font-normal mt-0.5">
+                          Sent by {request.requester_name}
+                        </p>
+                      </TableCell>
                       <TableCell className="text-sm">{request.team_name}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{request.club_name}</TableCell>
                       <TableCell className="text-xs">{request.membership_type}</TableCell>

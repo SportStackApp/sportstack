@@ -38,6 +38,7 @@ interface TeamMembershipSectionProps {
   primaryTeam: TeamMembership | null;
   extraTeams: TeamMembership[];
   pendingChangeRequest: PendingChangeRequest | null;
+  pendingPrimaryRequest?: { id: string; teamId: string; teamName: string; clubName: string; type: string; };
   onRequestChange: () => void;
   onCancelRequest?: () => void;
   onSetPrimaryTeam?: () => void;
@@ -52,6 +53,7 @@ export const TeamMembershipSection = ({
   primaryTeam,
   extraTeams,
   pendingChangeRequest,
+  pendingPrimaryRequest,
   onRequestChange,
   onCancelRequest,
   onSetPrimaryTeam,
@@ -159,6 +161,31 @@ export const TeamMembershipSection = ({
               </p>
             </div>
           )}
+
+          {/* Pending primary request from team invite */}
+          {pendingPrimaryRequest && (
+            <div className="mt-4 p-3 bg-muted rounded-lg border border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 text-accent" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{pendingPrimaryRequest.teamName}</p>
+                    <p className="text-xs text-muted-foreground">{pendingPrimaryRequest.clubName}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs text-amber-500 border-amber-500/30 bg-amber-500/10">
+                    Pending
+                  </Badge>
+                  {onCancelAdditionalRequest && (
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onCancelAdditionalRequest(pendingPrimaryRequest.id)}>
+                      <X className="h-4 w-4 mr-1" />Cancel
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -237,7 +264,7 @@ export const TeamMembershipSection = ({
                     <RefreshCw className="h-4 w-4 text-accent" />
                     <div>
                       <p className="text-sm font-medium text-foreground">{req.teamName}</p>
-                      <p className="text-xs text-muted-foreground">{req.clubName} • Request pending approval</p>
+                      <p className="text-xs text-muted-foreground">{req.clubName} ï¿½ Request pending approval</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

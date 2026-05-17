@@ -522,15 +522,15 @@ const Dashboard = () => {
 
       {/* Team Requests Section */}
       {teamRequests.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-l-4 border-l-amber-500 bg-card">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-600" />
-              <CardTitle className="text-base font-semibold text-amber-900">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              <CardTitle className="text-base font-semibold text-foreground">
                 Team Requests ({teamRequests.length})
               </CardTitle>
             </div>
-            <p className="text-xs text-amber-700 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               You have pending team requests awaiting your response
             </p>
           </CardHeader>
@@ -544,7 +544,7 @@ const Dashboard = () => {
               teamRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="flex items-start justify-between p-3 rounded-lg border border-amber-200 bg-white"
+                  className="flex items-start justify-between p-3 rounded-lg border bg-muted/30"
                 >
                   <div className="flex-1">
                     <p className="font-medium text-sm">{request.team_name}</p>
