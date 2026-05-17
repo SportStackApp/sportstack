@@ -142,6 +142,10 @@ const AppLayout = () => {
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState("U");
+  const [playerAssociationName, setPlayerAssociationName] = useState("");
+  const [playerAssociationAbbr, setPlayerAssociationAbbr] = useState("");
+  const [playerClubName, setPlayerClubName] = useState("");
+  const [playerTeamName, setPlayerTeamName] = useState("");
 
   // Fetch notifications from DB
   useEffect(() => {
@@ -193,6 +197,42 @@ const AppLayout = () => {
     };
     fetchProfile();
   }, [user]);
+
+  // Fetch player header context from the player's primary team membership
+  useEffect(() => {
+    const clearPlayerHeaderContext = () => {
+      setPlayerAssociationName("");
+      setPlayerAssociationAbbr("");
+      setPlayerClubName("");
+      setPlayerTeamName("");
+    };
+
+    if (mode !== "player" || !user) {
+      clearPlayerHeaderContext();
+      return;
+    }
+
+    const fetchPlayerHeaderContext = async () => {
+      const { data } = await supabase
+        .from("team_memberships")
+        .select("teams(name, clubs(name, associations(name, abbreviation)))")
+        .eq("user_id", user.id)
+        .eq("membership_type", "PRIMARY")
+        .eq("status", "ACTIVE")
+        .maybeSingle();
+
+      const team = Array.isArray(data?.teams) ? data?.teams[0] : data?.teams;
+      const club = Array.isArray(team?.clubs) ? team?.clubs[0] : team?.clubs;
+      const association = Array.isArray(club?.associations) ? club?.associations[0] : club?.associations;
+
+      setPlayerAssociationName(association?.name || "");
+      setPlayerAssociationAbbr(association?.abbreviation || "");
+      setPlayerClubName(club?.name || "");
+      setPlayerTeamName(team?.name || "");
+    };
+
+    fetchPlayerHeaderContext();
+  }, [mode, user]);
 
   const handleAssociationChange = (associationId: string) => {
     setSelectedAssociationId(associationId);
@@ -386,18 +426,32 @@ const AppLayout = () => {
               </Popover>
             ) : (
               // Static association logo for non-super_admin modes
-              <div className="w-10 h-10 rounded-lg overflow-hidden border-2 border-primary-foreground/20">
-                <Avatar className="w-full h-full rounded-none">
-                  <AvatarImage
-                    src={selectedAssociation?.logo_url || undefined}
-                    alt={selectedAssociation?.name}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className="rounded-none bg-accent text-accent-foreground text-xs font-semibold">
-                    {selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "Admin"}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
+              <>
+                <div className="w-10 h-10 rounded-lg overflow-hidden border-2 border-primary-foreground/20">
+                  <Avatar className="w-full h-full rounded-none">
+                    <AvatarImage
+                      src={selectedAssociation?.logo_url || undefined}
+                      alt={selectedAssociation?.name}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="rounded-none bg-accent text-accent-foreground text-xs font-semibold">
+                      {mode === "player"
+                        ? playerAssociationAbbr || playerAssociationName.substring(0, 2).toUpperCase() || "Admin"
+                        : selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "Admin"}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                {mode === "player" && playerClubName && (
+                  <div className="h-10 max-w-[140px] lg:max-w-[180px] rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground truncate">
+                    {playerClubName}
+                  </div>
+                )}
+                {mode === "player" && playerTeamName && (
+                  <div className="h-10 max-w-[120px] lg:max-w-[160px] rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground truncate">
+                    {playerTeamName}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Club Selector */}
