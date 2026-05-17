@@ -1,0 +1,85 @@
+# .github/workflows/scrape.yml
+#
+# Runs the hockey scraper on a schedule and commits the
+# results back into the repo under the /data folder.
+#
+# Schedule (all times AEST = UTC+10):
+#   Weekdays  — once at 10:00pm AEST
+#   Weekends  — every 2 hours from 8:00am to 10:00pm AEST
+
+name: Hockey Scraper
+
+on:
+  # ── Scheduled runs ──────────────────────────────────────
+  schedule:
+    # Weekdays (Mon–Fri) at 10pm AEST (12:00 UTC)
+    - cron: "0 12 * * 1-5"
+
+    # Weekends (Sat–Sun) every 2 hours from 8am–10pm AEST
+    # 8am  AEST = 22:00 UTC (previous day, so Fri/Sat)
+    - cron: "0 22 * * 5,6"   # 8am Sat + 8am Sun
+    - cron: "0 0  * * 6,0"   # 10am Sat + 10am Sun
+    - cron: "0 2  * * 6,0"   # 12pm
+    - cron: "0 4  * * 6,0"   # 2pm
+    - cron: "0 6  * * 6,0"   # 4pm
+    - cron: "0 8  * * 6,0"   # 6pm
+    - cron: "0 10 * * 6,0"   # 8pm
+    - cron: "0 12 * * 6,0"   # 10pm
+
+  # ── Manual trigger — run anytime from the GitHub UI ─────
+  workflow_dispatch:
+    inputs:
+      only_grades:
+        description: 'Grades to scrape (comma-separated, blank = all)'
+        required: false
+        default: ''
+      only_rounds:
+        description: 'Rounds to scrape (comma-separated, blank = all)'
+        required: false
+        default: ''
+      only_team:
+        description: 'Team name filter (partial match, blank = all)'
+        required: false
+        default: ''
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the repo so the script and data folder are available
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      # 4. Run the scraper
+      #    Environment variables come from:
+      #      - Repository Settings → Secrets and variables → Variables
+      #      - Or the manual trigger inputs above
+      - name: Run scraper
+        env:
+          PORTAL_URL:  ${{ vars.PORTAL_URL || 'https://www.revolutionise.com.au/hockeyballarat' }}
+          ONLY_GRADES: ${{ github.event.inputs.only_grades || vars.ONLY_GRADES || '' }}
+          ONLY_ROUNDS: ${{ github.event.inputs.only_rounds || vars.ONLY_ROUNDS || '' }}
+          ONLY_TEAM:   ${{ github.event.inputs.only_team   || vars.ONLY_TEAM   || '' }}
+          OUTPUT_DIR:  data
+        run: python scraper.py
+
+      # 5. Commit the updated CSV and JSON back into the repo
+      - name: Commit results
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          # Only commit if something actually changed
+          git diff --cached --quiet || git commit -m "scrape: $(date '+%Y-%m-%d %H:%M') AEST"
+          git push
