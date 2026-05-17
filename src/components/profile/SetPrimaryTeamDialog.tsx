@@ -69,7 +69,7 @@ export const SetPrimaryTeamDialog = ({
 
   // Fetch teams when club changes
   useEffect(() => {
-    if (!selectedClub) { setTeams([]); setSelectedTeam(""); setDivisions([]); setSelectedDivision(""); return; }
+    if (!selectedClub) { setTeams([]); setSelectedTeam(""); setDivisions([]); setSelectedDivision("__all__"); return; }
     supabase.from("teams").select("id, name, division, division_id").eq("club_id", selectedClub).order("name").then(async ({ data }) => {
       // Exclude current primary team
       const filtered = (data || []).filter((t: any) => t.id !== currentPrimaryTeamId);
@@ -84,14 +84,14 @@ export const SetPrimaryTeamDialog = ({
       } else {
         setDivisions([]);
       }
-      setSelectedDivision("");
+      setSelectedDivision("__all__");
     });
   }, [selectedClub, currentPrimaryTeamId]);
 
   const handleClose = () => {
     setSelectedAssociation("");
     setSelectedClub("");
-    setSelectedDivision("");
+    setSelectedDivision("__all__");
     setSelectedTeam("");
     onOpenChange(false);
   };
@@ -151,7 +151,7 @@ export const SetPrimaryTeamDialog = ({
             </Select>
           </div>
 
-          {/* Club � only shows after association selected */}
+          {/* Club - only shows after association selected */}
           {selectedAssociation && (
             <div className="space-y-2">
               <Label>Club</Label>
@@ -168,7 +168,7 @@ export const SetPrimaryTeamDialog = ({
             </div>
           )}
 
-          {/* Division � only shows after club selected */}
+          {/* Division - only shows after club selected */}
           {selectedClub && divisions.length > 0 && (
             <div className="space-y-2">
               <Label>Division</Label>
@@ -186,12 +186,12 @@ export const SetPrimaryTeamDialog = ({
             </div>
           )}
 
-          {/* Team � only shows after club selected */}
+          {/* Team - only shows after club selected */}
           {selectedClub && (
             <div className="space-y-2">
               <Label>Team</Label>
               {(() => {
-                const filteredTeams = !selectedDivision || selectedDivision === "__all__"
+                const filteredTeams = selectedDivision === "__all__" || selectedDivision === ""
                   ? teams
                   : teams.filter((t) => t.division_id === selectedDivision);
                 return filteredTeams.length === 0 ? (

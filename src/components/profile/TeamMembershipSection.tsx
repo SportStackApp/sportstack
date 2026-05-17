@@ -264,7 +264,7 @@ export const TeamMembershipSection = ({
                     <RefreshCw className="h-4 w-4 text-accent" />
                     <div>
                       <p className="text-sm font-medium text-foreground">{req.teamName}</p>
-                      <p className="text-xs text-muted-foreground">{req.clubName} � Request pending approval</p>
+                      <p className="text-xs text-muted-foreground">{req.clubName} — Request pending approval</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
