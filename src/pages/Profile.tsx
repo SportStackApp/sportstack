@@ -643,7 +643,7 @@ const Profile = () => {
   };
 
   // Transform memberships for TeamMembershipSection
-  const approvedMemberships = memberships.filter((m) => m.status === "APPROVED");
+  const approvedMemberships = memberships.filter((m) => m.status === "APPROVED" || m.status === "ACTIVE");
   const primaryMembership = approvedMemberships.find((m) => m.membership_type === "PRIMARY");
   const extraMemberships = approvedMemberships.filter((m) => m.membership_type !== "PRIMARY");
   const pendingMemberships = memberships.filter((m) => m.status === "PENDING");
