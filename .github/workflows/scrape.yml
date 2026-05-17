@@ -45,7 +45,9 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write 
+      
     steps:
       # 1. Check out the repo so the script and data folder are available
       - name: Checkout repo
