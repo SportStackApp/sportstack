@@ -326,8 +326,11 @@ Deno.serve(async (req) => {
         } else {
           // New user — invite by email
           const { data: newUser, error: createError } =
-            await serviceClient.auth.admin.inviteUserByEmail(email, {
-              data: { first_name: player.first_name, last_name: player.last_name },
+            await serviceClient.auth.admin.createUser({
+              email: email,
+              email_confirm: true,
+              password: crypto.randomUUID(),
+              user_metadata: { first_name: player.first_name, last_name: player.last_name },
             });
 
           if (createError) {
