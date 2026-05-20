@@ -240,7 +240,7 @@ const TeamsManagement = () => {
                       <SelectTrigger><SelectValue placeholder="Select division" /></SelectTrigger>
                       <SelectContent>
                         {getFilteredDivisions().map((div) => (
-                          <SelectItem key={div.id} value={div.id}>
+                          <SelectItem key={div.id} value={div.name}>
                             {div.name}
                           </SelectItem>
                         ))}
