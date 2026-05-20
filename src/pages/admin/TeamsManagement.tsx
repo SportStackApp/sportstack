@@ -61,7 +61,7 @@ const TeamsManagement = () => {
   const fetchData = async () => {
     setLoading(true);
 
-    let teamsQuery = supabase.from("teams").select("*, clubs:club_id(name, association_id), divisions:division_id(id, name), team_divisions(division_id, divisions(id, name))" as any).order("name");
+    let teamsQuery = supabase.from("teams").select("*, home_venue_id, clubs:club_id(name, association_id), divisions:division_id(id, name), team_divisions(division_id, divisions(id, name))" as any).order("name");
     if (!isSuperAdmin && scopedTeamIds.length > 0) {
       teamsQuery = teamsQuery.in("id", scopedTeamIds);
     } else if (!isSuperAdmin && scopedClubIds.length > 0) {
@@ -144,7 +144,7 @@ const TeamsManagement = () => {
   const handleOpenDialog = (team?: TeamWithClub) => {
     if (team) {
       setEditingTeam(team);
-      setFormData({ name: team.name, club_id: team.club_id, age_group: team.age_group || "", division: team.division || "", gender: team.gender || "", home_venue_id: (team as any).home_venue_id || "" });
+      setFormData({ name: team.name, club_id: team.club_id, age_group: team.age_group || "", division: team.division || "", gender: team.gender || "", home_venue_id: team.home_venue_id || "" });
     } else {
       setEditingTeam(null);
       const defaultClubId = formClubs.length === 1 ? formClubs[0].id : "";
