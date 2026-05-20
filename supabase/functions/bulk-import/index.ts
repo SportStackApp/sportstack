@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+﻿import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
               .select("id, team_id, membership_type")
               .eq("user_id", existingUserId)
               .eq("membership_type", "PRIMARY")
-              .eq("status", "APPROVED");
+              .eq("status", "ACTIVE");
 
             if (existingMemberships && existingMemberships.length > 0) {
               const primaryTeamIds = existingMemberships.map((m) => m.team_id);
@@ -276,7 +276,7 @@ Deno.serve(async (req) => {
               user_id: existingUserId,
               team_id: player.team_id,
               membership_type: "PRIMARY",
-              status: "APPROVED",
+              status: "ACTIVE",
             });
 
             // Fix 5: role based on caller
@@ -302,7 +302,7 @@ Deno.serve(async (req) => {
               user_id: existingUserId,
               team_id: player.team_id,
               membership_type: "PERMANENT",
-              status: "APPROVED",
+              status: "ACTIVE",
             });
 
             const roleData = await getRoleInsertData(player, isSuperAdmin, serviceClient);
@@ -324,7 +324,7 @@ Deno.serve(async (req) => {
             added.push(player.row_number);
           }
         } else {
-          // New user — invite by email
+          // New user â€” invite by email
           const { data: newUser, error: createError } =
             await serviceClient.auth.admin.createUser({
               email: email,
@@ -362,7 +362,7 @@ Deno.serve(async (req) => {
             user_id: userId,
             team_id: player.team_id,
             membership_type: membershipType,
-            status: "APPROVED",
+            status: "ACTIVE",
           });
 
           const roleData = await getRoleInsertData(player, isSuperAdmin, serviceClient);
@@ -391,3 +391,4 @@ Deno.serve(async (req) => {
     );
   }
 });
+
