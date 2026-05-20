@@ -155,11 +155,16 @@ const BulkImport = () => {
       const [aRes, cRes, tRes] = await Promise.all([
         supabase.from("associations").select("id, name").order("name"),
         supabase.from("clubs").select("id, name, association_id").order("name"),
-        supabase.from("teams").select("id, name, club_id, division").order("name"),
+        supabase.from("teams").select("id, name, club_id, division, team_divisions(divisions(name))").order("name"),
       ]);
       setAssociations(aRes.data || []);
       setClubs(cRes.data || []);
-      setTeams(tRes.data || []);
+      setTeams((tRes.data || []).map((team) => ({
+        id: team.id,
+        name: team.name,
+        club_id: team.club_id,
+        division: team.division || (team.team_divisions?.[0]?.divisions?.name ?? null),
+      })));
     };
     load();
   }, []);
