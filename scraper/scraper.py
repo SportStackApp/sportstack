@@ -159,7 +159,18 @@ def scrape_match(session, game_url):
     tables = soup.find_all("table", class_="table")
     for table in tables:
         heading = table.find_previous(["h2", "h3", "h4", "h5", "h6"])
-        team_name = heading.get_text(strip=True) if heading else "Unknown"
+
+        if heading:
+            # RevSports headings contain two parts: club name then team name.
+            # e.g. "EGC" + "EGC Gold" — we want just the last part (team name)
+            # and the first part (club name) stored separately.
+            text_nodes = [s.strip() for s in heading.strings if s.strip()]
+            club_name = text_nodes[0] if len(text_nodes) >= 2 else ""
+            team_name = text_nodes[-1] if text_nodes else "Unknown"
+        else:
+            club_name = ""
+            team_name = "Unknown"
+
         players = []
         in_fillins = False
         for row in table.find_all("tr")[1:]:
@@ -193,7 +204,12 @@ def scrape_match(session, game_url):
                 "red_cards":     cells[4].get_text(strip=True) if len(cells) > 4 else "",
             })
         if players:
-            match["teams"].append({"team_name": team_name, "players": players})
+            # Store both club_name and team_name for each team
+            match["teams"].append({
+                "team_name": team_name,
+                "club_name": club_name,
+                "players": players,
+            })
 
     if match["home_team"] is None and len(match.get("teams", [])) >= 1:
         match["home_team"] = match["teams"][0]["team_name"]
@@ -263,7 +279,8 @@ def main():
                                 "away_score": match["away_score"],
                                 "umpire_1": match["umpires"][0] if len(match["umpires"]) > 0 else "",
                                 "umpire_2": match["umpires"][1] if len(match["umpires"]) > 1 else "",
-                                "team": team["team_name"],
+                                "team": team["team_name"],       # e.g. "EGC Gold"
+                                "club_name": team["club_name"],  # e.g. "EGC"
                                 "player_name": player["name"],
                                 "jersey": player["jersey"],
                                 "role": player["role"],
