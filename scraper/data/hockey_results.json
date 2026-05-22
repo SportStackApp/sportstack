@@ -4,8 +4,8 @@
     "date": "Sat 02 May 2026",
     "time": "08:00",
     "venue": "Prince of Wales Park - 1/2 Pitch North",
-    "home_team": "Blaze U11 Blaze Red",
-    "away_team": "Bobcats Bobcats Maroon",
+    "home_team": "U11 Blaze Red",
+    "away_team": "Bobcats Maroon",
     "home_score": "0",
     "away_score": "9",
     "umpires": [
@@ -13,8 +13,8 @@
     ],
     "teams": [
       {
-        "team_name": "Blaze U11 Blaze Red",
-        "club_name": "",
+        "team_name": "U11 Blaze Red",
+        "club_name": "Blaze",
         "players": [
           {
             "name": "Amy M.",
@@ -89,8 +89,8 @@
         ]
       },
       {
-        "team_name": "Bobcats Bobcats Maroon",
-        "club_name": "",
+        "team_name": "Bobcats Maroon",
+        "club_name": "Bobcats",
         "players": [
           {
             "name": "Angus k.",
@@ -183,8 +183,8 @@
     "date": "Sat 02 May 2026",
     "time": "08:00",
     "venue": "Prince of Wales Park - 1/2 Pitch South",
-    "home_team": "Blaze U11 Blaze Orange",
-    "away_team": "Bobcats Bobcats White",
+    "home_team": "U11 Blaze Orange",
+    "away_team": "Bobcats White",
     "home_score": "2",
     "away_score": "9",
     "umpires": [
@@ -193,8 +193,8 @@
     ],
     "teams": [
       {
-        "team_name": "Blaze U11 Blaze Orange",
-        "club_name": "",
+        "team_name": "U11 Blaze Orange",
+        "club_name": "Blaze",
         "players": [
           {
             "name": "Annie L.",
@@ -279,8 +279,8 @@
         ]
       },
       {
-        "team_name": "Bobcats Bobcats White",
-        "club_name": "",
+        "team_name": "Bobcats White",
+        "club_name": "Bobcats",
         "players": [
           {
             "name": "Ailish S.",
@@ -383,8 +383,8 @@
     "date": "Sat 02 May 2026",
     "time": "08:30",
     "venue": "John Vernon Field, Ballarat Grammar",
-    "home_team": "Blaze U11 Blaze Pink",
-    "away_team": "EGC EGC Blue",
+    "home_team": "U11 Blaze Pink",
+    "away_team": "EGC Blue",
     "home_score": "3",
     "away_score": "3",
     "umpires": [
@@ -393,8 +393,8 @@
     ],
     "teams": [
       {
-        "team_name": "Blaze U11 Blaze Pink",
-        "club_name": "",
+        "team_name": "U11 Blaze Pink",
+        "club_name": "Blaze",
         "players": [
           {
             "name": "Fred R.",
@@ -479,8 +479,8 @@
         ]
       },
       {
-        "team_name": "EGC EGC Blue",
-        "club_name": "",
+        "team_name": "EGC Blue",
+        "club_name": "EGC",
         "players": [
           {
             "name": "Alec H.",
@@ -603,8 +603,8 @@
     "date": "Sat 02 May 2026",
     "time": "08:30",
     "venue": "John Vernon Field, Ballarat Grammar",
-    "home_team": "Blaze U11 Blaze Yellow",
-    "away_team": "Lucas HC U11",
+    "home_team": "U11 Blaze Yellow",
+    "away_team": "U11",
     "home_score": "1",
     "away_score": "2",
     "umpires": [
@@ -613,8 +613,8 @@
     ],
     "teams": [
       {
-        "team_name": "Blaze U11 Blaze Yellow",
-        "club_name": "",
+        "team_name": "U11 Blaze Yellow",
+        "club_name": "Blaze",
         "players": [
           {
             "name": "Albie H.",
@@ -689,8 +689,8 @@
         ]
       },
       {
-        "team_name": "Lucas HC U11",
-        "club_name": "",
+        "team_name": "U11",
+        "club_name": "Lucas HC",
         "players": [
           {
             "name": "Annabelle R.",
@@ -783,8 +783,8 @@
     "date": "Sat 02 May 2026",
     "time": "08:50",
     "venue": "Prince of Wales Park",
-    "home_team": "Blaze U11 Blaze Green",
-    "away_team": "EGC EGC Gold",
+    "home_team": "U11 Blaze Green",
+    "away_team": "EGC Gold",
     "home_score": "4",
     "away_score": "1",
     "umpires": [
@@ -793,8 +793,8 @@
     ],
     "teams": [
       {
-        "team_name": "Blaze U11 Blaze Green",
-        "club_name": "",
+        "team_name": "U11 Blaze Green",
+        "club_name": "Blaze",
         "players": [
           {
             "name": "Campbell R.",
@@ -889,8 +889,8 @@
         ]
       },
       {
-        "team_name": "EGC EGC Gold",
-        "club_name": "",
+        "team_name": "EGC Gold",
+        "club_name": "EGC",
         "players": [
           {
             "name": "Aamber kaur G.",
@@ -1013,8 +1013,8 @@
     "date": "Sat 02 May 2026",
     "time": "10:00",
     "venue": "Prince of Wales Park",
-    "home_team": "Blaze U14 Blaze Orange",
-    "away_team": "Bobcats U14",
+    "home_team": "U14 Blaze Orange",
+    "away_team": "U14",
     "home_score": "9",
     "away_score": "0",
     "umpires": [
@@ -1023,8 +1023,8 @@
     ],
     "teams": [
       {
-        "team_name": "Blaze U14 Blaze Orange",
-        "club_name": "",
+        "team_name": "U14 Blaze Orange",
+        "club_name": "Blaze",
         "players": [
           {
             "name": "Abbie B.",
@@ -1179,8 +1179,8 @@
         ]
       },
       {
-        "team_name": "Bobcats U14",
-        "club_name": "",
+        "team_name": "U14",
+        "club_name": "Bobcats",
         "players": [
           {
             "name": "Ada O.",
@@ -1343,8 +1343,8 @@
     "date": "Sat 02 May 2026",
     "time": "10:00",
     "venue": "John Vernon Field, Ballarat Grammar",
-    "home_team": "EGC",
-    "away_team": "Lucas HC U14",
+    "home_team": "",
+    "away_team": "U14",
     "home_score": "2",
     "away_score": "3",
     "umpires": [
@@ -1353,8 +1353,8 @@
     ],
     "teams": [
       {
-        "team_name": "EGC",
-        "club_name": "",
+        "team_name": "",
+        "club_name": "EGC",
         "players": [
           {
             "name": "Divjot k.",
@@ -1509,8 +1509,8 @@
         ]
       },
       {
-        "team_name": "Lucas HC U14",
-        "club_name": "",
+        "team_name": "U14",
+        "club_name": "Lucas HC",
         "players": [
           {
             "name": "Caleb H.",
@@ -1663,8 +1663,8 @@
     "date": "Sat 02 May 2026",
     "time": "11:15",
     "venue": "John Vernon Field, Ballarat Grammar",
-    "home_team": "Lucas HC U16",
-    "away_team": "EGC",
+    "home_team": "U16",
+    "away_team": "",
     "home_score": "4",
     "away_score": "2",
     "umpires": [
@@ -1672,8 +1672,8 @@
     ],
     "teams": [
       {
-        "team_name": "Lucas HC U16",
-        "club_name": "",
+        "team_name": "U16",
+        "club_name": "Lucas HC",
         "players": [
           {
             "name": "Caleb H.",
@@ -1928,8 +1928,8 @@
         ]
       },
       {
-        "team_name": "EGC",
-        "club_name": "",
+        "team_name": "",
+        "club_name": "EGC",
         "players": [
           {
             "name": "Aarav K.",
@@ -2112,8 +2112,8 @@
     "date": "Sun 03 May 2026",
     "time": "09:00",
     "venue": "Prince of Wales Park",
-    "home_team": "SOBHC Ducks Men",
-    "away_team": "Lucas HC Div 1 Men",
+    "home_team": "Ducks Men",
+    "away_team": "Div 1 Men",
     "home_score": "0",
     "away_score": "5",
     "umpires": [
@@ -2122,8 +2122,8 @@
     ],
     "teams": [
       {
-        "team_name": "SOBHC Ducks Men",
-        "club_name": "",
+        "team_name": "Ducks Men",
+        "club_name": "SOBHC",
         "players": [
           {
             "name": "Adham H.",
@@ -2298,8 +2298,8 @@
         ]
       },
       {
-        "team_name": "Lucas HC Div 1 Men",
-        "club_name": "",
+        "team_name": "Div 1 Men",
+        "club_name": "Lucas HC",
         "players": [
           {
             "name": "Caleb H.",
@@ -2602,8 +2602,8 @@
     "date": "Sun 03 May 2026",
     "time": "17:00",
     "venue": "Prince of Wales Park",
-    "home_team": "Blaze Blaze Div 1 Men",
-    "away_team": "EGC",
+    "home_team": "Blaze Div 1 Men",
+    "away_team": "",
     "home_score": "2",
     "away_score": "2",
     "umpires": [
@@ -2612,8 +2612,8 @@
     ],
     "teams": [
       {
-        "team_name": "Blaze Blaze Div 1 Men",
-        "club_name": "",
+        "team_name": "Blaze Div 1 Men",
+        "club_name": "Blaze",
         "players": [
           {
             "name": "Anthony P.",
@@ -2768,8 +2768,8 @@
         ]
       },
       {
-        "team_name": "EGC",
-        "club_name": "",
+        "team_name": "",
+        "club_name": "EGC",
         "players": [
           {
             "name": "Adrian P.",
@@ -2962,8 +2962,8 @@
     "date": "Sun 03 May 2026",
     "time": "10:30",
     "venue": "Prince of Wales Park",
-    "home_team": "Blaze Women Blaze Black",
-    "away_team": "Bobcats Bobcats Women",
+    "home_team": "Women Blaze Black",
+    "away_team": "Bobcats Women",
     "home_score": "3",
     "away_score": "0",
     "umpires": [
@@ -2972,8 +2972,8 @@
     ],
     "teams": [
       {
-        "team_name": "Blaze Women Blaze Black",
-        "club_name": "",
+        "team_name": "Women Blaze Black",
+        "club_name": "Blaze",
         "players": [
           {
             "name": "Alicia C.",
@@ -3138,8 +3138,8 @@
         ]
       },
       {
-        "team_name": "Bobcats Bobcats Women",
-        "club_name": "",
+        "team_name": "Bobcats Women",
+        "club_name": "Bobcats",
         "players": [
           {
             "name": "Amelia B.",
@@ -3372,8 +3372,8 @@
     "date": "Sun 03 May 2026",
     "time": "13:45",
     "venue": "Prince of Wales Park",
-    "home_team": "Blaze Women Blaze Orange",
-    "away_team": "SOBHC Ducks Women",
+    "home_team": "Women Blaze Orange",
+    "away_team": "Ducks Women",
     "home_score": "1",
     "away_score": "0",
     "umpires": [
@@ -3382,8 +3382,8 @@
     ],
     "teams": [
       {
-        "team_name": "Blaze Women Blaze Orange",
-        "club_name": "",
+        "team_name": "Women Blaze Orange",
+        "club_name": "Blaze",
         "players": [
           {
             "name": "Aliyah K.",
@@ -3528,8 +3528,8 @@
         ]
       },
       {
-        "team_name": "SOBHC Ducks Women",
-        "club_name": "",
+        "team_name": "Ducks Women",
+        "club_name": "SOBHC",
         "players": [
           {
             "name": "Breanna J.",
@@ -3662,8 +3662,8 @@
     "date": "Sun 03 May 2026",
     "time": "13:45",
     "venue": "John Vernon Field, Ballarat Grammar",
-    "home_team": "EGC EGC Gold",
-    "away_team": "EGC EGC Blue",
+    "home_team": "EGC Gold",
+    "away_team": "EGC Blue",
     "home_score": "1",
     "away_score": "12",
     "umpires": [
@@ -3671,8 +3671,8 @@
     ],
     "teams": [
       {
-        "team_name": "EGC EGC Gold",
-        "club_name": "",
+        "team_name": "EGC Gold",
+        "club_name": "EGC",
         "players": [
           {
             "name": "Abbey P.",
@@ -3827,8 +3827,8 @@
         ]
       },
       {
-        "team_name": "EGC EGC Blue",
-        "club_name": "",
+        "team_name": "EGC Blue",
+        "club_name": "EGC",
         "players": [
           {
             "name": "Charli B.",
@@ -3951,8 +3951,8 @@
     "date": "Sun 03 May 2026",
     "time": "12:15",
     "venue": "Prince of Wales Park",
-    "home_team": "EGC EGC Gold",
-    "away_team": "EGC EGC Blue",
+    "home_team": "EGC Gold",
+    "away_team": "EGC Blue",
     "home_score": "2",
     "away_score": "1",
     "umpires": [
@@ -3961,8 +3961,8 @@
     ],
     "teams": [
       {
-        "team_name": "EGC EGC Gold",
-        "club_name": "",
+        "team_name": "EGC Gold",
+        "club_name": "EGC",
         "players": [
           {
             "name": "Alex S.",
@@ -4087,8 +4087,8 @@
         ]
       },
       {
-        "team_name": "EGC EGC Blue",
-        "club_name": "",
+        "team_name": "EGC Blue",
+        "club_name": "EGC",
         "players": [
           {
             "name": "Aarav K.",
@@ -4241,15 +4241,15 @@
     "date": "Sun 03 May 2026",
     "time": "12:15",
     "venue": "John Vernon Field, Ballarat Grammar",
-    "home_team": "Lucas HC Div 2 Men",
-    "away_team": "Grampians Hockey Club",
+    "home_team": "Div 2 Men",
+    "away_team": "",
     "home_score": "5",
     "away_score": "3",
     "umpires": [],
     "teams": [
       {
-        "team_name": "Lucas HC Div 2 Men",
-        "club_name": "",
+        "team_name": "Div 2 Men",
+        "club_name": "Lucas HC",
         "players": [
           {
             "name": "Andy M.",
@@ -4584,8 +4584,8 @@
         ]
       },
       {
-        "team_name": "Grampians Hockey Club",
-        "club_name": "",
+        "team_name": "",
+        "club_name": "Grampians Hockey Club",
         "players": [
           {
             "name": "Aaron M.",
@@ -4758,8 +4758,8 @@
     "date": "Sun 03 May 2026",
     "time": "15:30",
     "venue": "Prince of Wales Park",
-    "home_team": "Blaze Blaze Div 2 Men",
-    "away_team": "Bobcats Div 2 Men",
+    "home_team": "Blaze Div 2 Men",
+    "away_team": "Div 2 Men",
     "home_score": "2",
     "away_score": "1",
     "umpires": [
@@ -4768,8 +4768,8 @@
     ],
     "teams": [
       {
-        "team_name": "Blaze Blaze Div 2 Men",
-        "club_name": "",
+        "team_name": "Blaze Div 2 Men",
+        "club_name": "Blaze",
         "players": [
           {
             "name": "Adam H.",
@@ -4984,8 +4984,8 @@
         ]
       },
       {
-        "team_name": "Bobcats Div 2 Men",
-        "club_name": "",
+        "team_name": "Div 2 Men",
+        "club_name": "Bobcats",
         "players": [
           {
             "name": "David T.",
