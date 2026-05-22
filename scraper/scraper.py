@@ -21,8 +21,7 @@ PORTAL_URL  = os.getenv("PORTAL_URL", "https://www.revolutionise.com.au/hockeyba
 ONLY_GRADES = os.getenv("ONLY_GRADES", "")   # Comma-separated, e.g. "Division 1 Men,Womens"
 ONLY_ROUNDS = os.getenv("ONLY_ROUNDS", "")   # Comma-separated, e.g. "Round 1,Round 2"
 ONLY_TEAM   = os.getenv("ONLY_TEAM",   "")   # Partial match, e.g. "Grampians"
-OUTPUT_DIR  = os.getenv("OUTPUT_DIR",  "data")
-DELAY       = 0.8
+OUTPUT_DIR  = os.getenv("OUTPUT_DIR",  "../data")DELAY       = 0.8
 
 # Parse comma-separated env vars into lists (empty string = all)
 only_grades = [g.strip() for g in ONLY_GRADES.split(",") if g.strip()] or None
