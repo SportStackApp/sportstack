@@ -4,7 +4,7 @@ Hockey Results Scraper — Headless (GitHub Actions version)
 Runs without a GUI. Configure the variables below, or set them
 as GitHub Actions environment variables.
 
-Output: data/hockey_results.csv  and  data/hockey_results.json
+Output: ../data/hockey_results.csv  and  ../data/hockey_results.json
 """
 
 import requests
@@ -21,7 +21,7 @@ PORTAL_URL  = os.getenv("PORTAL_URL", "https://www.revolutionise.com.au/hockeyba
 ONLY_GRADES = os.getenv("ONLY_GRADES", "")   # Comma-separated, e.g. "Division 1 Men,Womens"
 ONLY_ROUNDS = os.getenv("ONLY_ROUNDS", "")   # Comma-separated, e.g. "Round 1,Round 2"
 ONLY_TEAM   = os.getenv("ONLY_TEAM",   "")   # Partial match, e.g. "Grampians"
-OUTPUT_DIR  = os.getenv("OUTPUT_DIR",  "data")
+OUTPUT_DIR  = os.getenv("OUTPUT_DIR",  "../data")
 DELAY       = 0.8
 
 # Parse comma-separated env vars into lists (empty string = all)
@@ -35,17 +35,20 @@ only_team   = ONLY_TEAM.strip() or None
 
 def split_club_and_team(full_name, grade_name=""):
     """
-    RevSports format on the team draws page:
+    RevSports team page headings have the format:
       "Hockey Ballarat 2026 Winter Competition · {Club} {Grade} {Team}"
     After stripping the competition prefix we get: "{Club} {Grade} {Team}"
 
     Primary method: use the grade name as the separator.
-      - Everything LEFT of the grade = club name   e.g. "EGC"
-      - Everything RIGHT of the grade = team name  e.g. "EGC Gold"
+      e.g. "Blaze Under 11 Open U11 Blaze Red" with grade "Under 11 Open"
+           → club = "Blaze",  team = "U11 Blaze Red"
 
     Fallback: if grade not found, find the first repeated word and split there.
-    """
+      e.g. "EGC EGC Gold" → club = "EGC",  team = "EGC Gold"
+      e.g. "Bobcats Bobcats Maroon" → club = "Bobcats",  team = "Bobcats Maroon"
 
+    If no split is possible (e.g. "Grampians Hockey Club"), return full string as team.
+    """
     # PRIMARY — split using the grade name as the divider
     if grade_name and grade_name in full_name:
         idx = full_name.index(grade_name)
@@ -69,20 +72,20 @@ def split_club_and_team(full_name, grade_name=""):
 
 def get_team_name_from_draws_page(session, team_url, grade_name):
     """
-    Visit the team's draws page (e.g. /games/team/26298/417821).
-    The heading there contains the full info:
-      "Hockey Ballarat 2026 Winter Competition · Blaze Under 11 Open U11 Blaze Red"
+    Visit a team's draws page, e.g.:
+      revolutionise.com.au/hockeyballarat/games/team/26298/417818
 
-    We strip everything before the middle dot (·) to get:
-      "Blaze Under 11 Open U11 Blaze Red"
+    The heading there reads:
+      "Hockey Ballarat 2026 Winter Competition · Lucas HC Under 11 Open U11"
 
-    Then split using the grade name to get:
-      club = "Blaze"
-      team = "U11 Blaze Red"
+    We strip everything up to and including the "·" to get:
+      "Lucas HC Under 11 Open U11"
+
+    Then split using the grade name:
+      club = "Lucas HC",  team = "U11"
     """
     try:
         soup = get_soup(session, team_url)
-        # The heading is an h2 on this page
         for tag in ["h2", "h1", "h3"]:
             heading = soup.find(tag)
             if heading:
@@ -163,17 +166,46 @@ def get_rounds(session, grade_url):
 
 
 def get_game_links(session, round_url):
+    """
+    Visit the round page and collect game links paired with their team links.
+    On each round page, team name links appear before the Details (game) link
+    within each fixture card. We collect team links until we hit a game link,
+    then pair them together.
+
+    Returns a list of dicts: {"game_url": ..., "team_urls": [...]}
+    """
     soup = get_soup(session, round_url)
-    game_urls, seen = [], set()
+    games = []
+    current_team_urls = []
+    seen = set()
+
     for a in soup.find_all("a", href=True):
         href = normalize_url(a["href"], round_url)
-        if href not in seen and path_matches(href, r"/game/\d+$"):
-            seen.add(href)
-            game_urls.append(href)
-    return game_urls
+        if href in seen:
+            continue
+        seen.add(href)
+
+        if path_matches(href, r"/games/team/\d+/\d+$"):
+            # Team link — collect until we hit the game's Details link
+            current_team_urls.append(href)
+        elif path_matches(href, r"/game/\d+$"):
+            # Details (game) link — pair with team links collected so far
+            games.append({
+                "game_url": href,
+                "team_urls": current_team_urls[:2]
+            })
+            current_team_urls = []  # Reset for next game
+
+    return games
 
 
-def scrape_match(session, game_url, grade_name=""):
+def scrape_match(session, game_url, grade_name="", team_urls=None):
+    """
+    Scrape a single match page.
+    team_urls: optional list of /games/team/ URLs pre-collected from the round page.
+               If supplied, we use these to get accurate clean team names.
+               If not supplied, we try to find them on the game page itself.
+    """
     soup = get_soup(session, game_url)
     for hidden in soup.select(".d-none, .d-lg-none"):
         hidden.decompose()
@@ -197,18 +229,22 @@ def scrape_match(session, game_url, grade_name=""):
         match["time"] = dm.group(2).strip()
 
     # ── Find team draws-page links ────────────────────────────
-    # The score box has clickable team names linking to /games/team/{id}/{id}
-    # We visit those pages to get the accurate full team name.
-    team_page_urls = []
-    seen_team_urls = set()
-    for a in soup.find_all("a", href=True):
-        href = normalize_url(a["href"], game_url)
-        if href not in seen_team_urls and path_matches(href, r"/games/team/\d+/\d+$"):
-            seen_team_urls.add(href)
-            team_page_urls.append(href)
+    # Use pre-supplied team URLs from the round page if available —
+    # those links ARE in the static HTML. On the game page itself they
+    # are JavaScript-rendered and can't be read by BeautifulSoup.
+    if team_urls:
+        team_page_urls = team_urls
+    else:
+        # Fallback: try to find team links on the game page
+        team_page_urls = []
+        seen_team_urls = set()
+        for a in soup.find_all("a", href=True):
+            href = normalize_url(a["href"], game_url)
+            if href not in seen_team_urls and path_matches(href, r"/games/team/\d+/\d+$"):
+                seen_team_urls.add(href)
+                team_page_urls.append(href)
 
-    # Fetch accurate club + team names from each team's draws page
-    # Index 0 = home team, index 1 = away team
+    # Visit each team's draws page to get the accurate clean name
     team_info = []
     for team_url in team_page_urls[:2]:
         club, team = get_team_name_from_draws_page(session, team_url, grade_name)
@@ -250,7 +286,7 @@ def scrape_match(session, game_url, grade_name=""):
     tables = soup.find_all("table", class_="table")
     for i, table in enumerate(tables):
 
-        # Use accurate team info if available (matched by position)
+        # Use accurate team info from draws page if available
         if i < len(team_info):
             club_name = team_info[i]["club_name"]
             team_name = team_info[i]["team_name"]
@@ -299,7 +335,7 @@ def scrape_match(session, game_url, grade_name=""):
                 "players": players,
             })
 
-    # Fallback for home/away if team links weren't found
+    # Fallback for home/away if team info wasn't available
     if match["home_team"] is None and len(match.get("teams", [])) >= 1:
         match["home_team"] = match["teams"][0]["team_name"]
     if match["away_team"] is None and len(match.get("teams", [])) >= 2:
@@ -342,13 +378,18 @@ def main():
                 print(f"  [Round] {rnd['round_label']} — skipped"); continue
             print(f"\n  [Round] {rnd['round_label']}")
 
-            game_urls = get_game_links(session, rnd["url"])
-            print(f"    {len(game_urls)} games.")
+            games = get_game_links(session, rnd["url"])
+            print(f"    {len(games)} games.")
 
-            for game_url in game_urls:
+            for game_info in games:
                 try:
-                    # Pass grade name so team names can be split accurately
-                    match = scrape_match(session, game_url, grade_name=grade["name"])
+                    # Pass grade name and pre-collected team URLs for accurate naming
+                    match = scrape_match(
+                        session,
+                        game_info["game_url"],
+                        grade_name=grade["name"],
+                        team_urls=game_info["team_urls"]
+                    )
                     match["grade"] = grade["name"]
                     match["round"] = rnd["round_label"]
                     all_results.append(match)
@@ -379,7 +420,7 @@ def main():
                                 "green_cards":  player["green_cards"],
                                 "yellow_cards": player["yellow_cards"],
                                 "red_cards":    player["red_cards"],
-                                "match_url":    game_url,
+                                "match_url":    game_info["game_url"],
                                 "scraped_at":   datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             })
 
@@ -387,7 +428,7 @@ def main():
                           f" – {match.get('away_score','?')} {match.get('away_team','?')}")
 
                 except Exception as e:
-                    print(f"    ✗ ERROR: {game_url} — {e}")
+                    print(f"    ✗ ERROR: {game_info['game_url']} — {e}")
 
     # ── Save CSV ─────────────────────────────────────────────
     csv_path = os.path.join(OUTPUT_DIR, "hockey_results.csv")
