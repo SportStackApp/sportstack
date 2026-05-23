@@ -254,7 +254,11 @@ def scrape_match(session, game_url, grade_name="", team_urls=None):
         page_text
     )
     if dm:
-        match["date"] = dm.group(1).strip()
+        date_str = dm.group(1).strip()
+        try:
+            match["date"] = datetime.strptime(date_str, "%a %d %B %Y").strftime("%Y-%m-%d")
+        except ValueError:
+            match["date"] = date_str
         match["time"] = dm.group(2).strip()
 
     # ── Find team draws-page links ────────────────────────────
@@ -430,8 +434,8 @@ def main():
                             csv_rows.append({
                                 "grade":        grade["name"],
                                 "round":        rnd["round_label"],
-                                "date":         match["date"],
-                                "time":         match["time"],
+                                "game_date":    match["date"],
+                                "game_time":    match["time"],
                                 "venue":        match["venue"],
                                 "home_team":    match["home_team"],
                                 "away_team":    match["away_team"],
