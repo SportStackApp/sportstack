@@ -19,6 +19,7 @@ import Roster from "./pages/Roster";
 import Chat from "./pages/Chat";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import VotingPortal from "./pages/VotingPortal";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -67,6 +68,7 @@ const App = () => (
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<Landing />} />
+                  <Route path="/vote/:token" element={<VotingPortal />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
