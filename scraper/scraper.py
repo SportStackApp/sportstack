@@ -43,17 +43,24 @@ def split_club_and_team(full_name, grade_name=""):
       e.g. "Blaze Under 11 Open U11 Blaze Red" with grade "Under 11 Open"
            → club = "Blaze",  team = "U11 Blaze Red"
 
-    Fallback: if grade not found, find the first repeated word and split there.
-      e.g. "EGC EGC Gold" → club = "EGC",  team = "EGC Gold"
-      e.g. "Bobcats Bobcats Maroon" → club = "Bobcats",  team = "Bobcats Maroon"
+      Edge case — team named same as division:
+      e.g. "Grampians Hockey Club Division 2 Men" with grade "Division 2 Men"
+           → club = "Grampians Hockey Club",  team = "Division 2 Men"
 
-    If no split is possible (e.g. "Grampians Hockey Club"), return full string as team.
+    Fallback: if grade not found, find the first repeated word and split there.
+      e.g. "EGC EGC Gold"          → club = "EGC",      team = "EGC Gold"
+      e.g. "Bobcats Bobcats Maroon"→ club = "Bobcats",  team = "Bobcats Maroon"
+
+    If no split possible (e.g. "SOBHC Ducks Men"), return full string as team.
     """
     # PRIMARY — split using the grade name as the divider
     if grade_name and grade_name in full_name:
         idx = full_name.index(grade_name)
         club = full_name[:idx].strip()
         team = full_name[idx + len(grade_name):].strip()
+        # Edge case: if team is blank, the club named themselves after the division
+        if not team:
+            team = grade_name
         return club, team
 
     # FALLBACK — find the first word that repeats and split there
@@ -75,10 +82,10 @@ def get_team_name_from_draws_page(session, team_url, grade_name):
     Visit a team's draws page, e.g.:
       revolutionise.com.au/hockeyballarat/games/team/26298/417818
 
-    The heading there reads:
+    The heading reads:
       "Hockey Ballarat 2026 Winter Competition · Lucas HC Under 11 Open U11"
 
-    We strip everything up to and including the "·" to get:
+    We strip the competition prefix (everything before "·") to get:
       "Lucas HC Under 11 Open U11"
 
     Then split using the grade name:
@@ -139,8 +146,16 @@ def path_matches(href, pattern):
 
 
 def get_all_grades(session, base_url):
+    """
+    Fetch all grade links from the main games page.
+    Returns empty list and logs a warning if the page can't be reached.
+    """
     games_url = base_url.rstrip("/") + "/games"
-    soup = get_soup(session, games_url)
+    try:
+        soup = get_soup(session, games_url)
+    except Exception as e:
+        print(f"⚠ Could not fetch grades page: {e}")
+        return []
     grades, seen = [], set()
     for a in soup.find_all("a", href=True):
         href = normalize_url(a["href"], games_url)
@@ -153,7 +168,15 @@ def get_all_grades(session, base_url):
 
 
 def get_rounds(session, grade_url):
-    soup = get_soup(session, grade_url)
+    """
+    Fetch all round links for a grade.
+    Returns empty list and logs a warning if the page can't be reached.
+    """
+    try:
+        soup = get_soup(session, grade_url)
+    except Exception as e:
+        print(f"  ⚠ Could not fetch rounds page: {e}")
+        return []
     rounds, seen = [], set()
     for a in soup.find_all("a", href=True):
         href = normalize_url(a["href"], grade_url)
@@ -168,13 +191,19 @@ def get_rounds(session, grade_url):
 def get_game_links(session, round_url):
     """
     Visit the round page and collect game links paired with their team links.
-    On each round page, team name links appear before the Details (game) link
-    within each fixture card. We collect team links until we hit a game link,
-    then pair them together.
+    Team name links appear before the Details (game) link within each fixture
+    card, so we collect team links until we hit each game link and pair them.
 
     Returns a list of dicts: {"game_url": ..., "team_urls": [...]}
+    Returns empty list and logs a warning if the page can't be reached
+    (e.g. future rounds that return 403).
     """
-    soup = get_soup(session, round_url)
+    try:
+        soup = get_soup(session, round_url)
+    except Exception as e:
+        print(f"    ⚠ Skipping round (could not fetch): {e}")
+        return []
+
     games = []
     current_team_urls = []
     seen = set()
@@ -202,9 +231,9 @@ def get_game_links(session, round_url):
 def scrape_match(session, game_url, grade_name="", team_urls=None):
     """
     Scrape a single match page.
-    team_urls: optional list of /games/team/ URLs pre-collected from the round page.
-               If supplied, we use these to get accurate clean team names.
-               If not supplied, we try to find them on the game page itself.
+    team_urls: list of /games/team/ URLs pre-collected from the round page.
+               Used to fetch accurate clean team names from the draws pages.
+               Falls back to searching the game page if not supplied.
     """
     soup = get_soup(session, game_url)
     for hidden in soup.select(".d-none, .d-lg-none"):
@@ -230,12 +259,12 @@ def scrape_match(session, game_url, grade_name="", team_urls=None):
 
     # ── Find team draws-page links ────────────────────────────
     # Use pre-supplied team URLs from the round page if available —
-    # those links ARE in the static HTML. On the game page itself they
-    # are JavaScript-rendered and can't be read by BeautifulSoup.
+    # those links are in the static HTML. On the game page itself they
+    # are JavaScript-rendered and invisible to BeautifulSoup.
     if team_urls:
         team_page_urls = team_urls
     else:
-        # Fallback: try to find team links on the game page
+        # Fallback: try to find team links directly on the game page
         team_page_urls = []
         seen_team_urls = set()
         for a in soup.find_all("a", href=True):
@@ -438,6 +467,8 @@ def main():
             writer.writeheader()
             writer.writerows(csv_rows)
         print(f"\n✅ CSV: {csv_path}  ({len(csv_rows)} rows)")
+    else:
+        print("\n⚠ No rows scraped — CSV not written.")
 
     # ── Save JSON ─────────────────────────────────────────────
     json_path = os.path.join(OUTPUT_DIR, "hockey_results.json")
