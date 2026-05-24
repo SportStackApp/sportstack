@@ -121,9 +121,14 @@ const FixturesManagement = () => {
   useEffect(() => {
     const loadRefData = async () => {
       if (!selectedAssociationId) {
-        setAllAssocTeams([]);
-        setVenues([]);
-        setPitches([]);
+        const [venueRes, teamRes, pitchRes] = await Promise.all([
+          supabase.from("venues").select("id, name").order("name"),
+          supabase.from("teams").select("id, name, club_id").order("name"),
+          supabase.from("pitches").select("id, name, venue_id").order("name"),
+        ]);
+        setVenues(venueRes.data || []);
+        setAllAssocTeams(teamRes.data || []);
+        setPitches(pitchRes.data || []);
         return;
       }
       const [clubRes, venueRes] = await Promise.all([
