@@ -57,7 +57,7 @@ interface RoleWithScope {
   team_id: string | null;
 }
 
-const ALL_ROLES: AppRole[] = ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "ASSOCIATION_ADMIN", "SUPER_ADMIN"];
+const ALL_ROLES: AppRole[] = ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "ASSOCIATION_ADMIN", "SUPER_ADMIN", "VOTER"];
 
 const ROLES_NEEDING_SCOPE: Record<string, string> = {
   ASSOCIATION_ADMIN: "association",

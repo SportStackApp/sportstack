@@ -14,6 +14,7 @@ const ROLE_HIERARCHY: AppRole[] = [
   "TEAM_MANAGER",
   "COACH",
   "PLAYER",
+  "VOTER",
 ];
 
 interface UseUserRoleReturn {
@@ -119,6 +120,7 @@ export const getRoleDisplayName = (role: AppRole): string => {
     CLUB_ADMIN: "Club Admin",
     ASSOCIATION_ADMIN: "Association Admin",
     SUPER_ADMIN: "Super Admin",
+    VOTER: "Voter",
   };
   return names[role];
 };
@@ -131,6 +133,7 @@ export const getRoleEmoji = (role: AppRole): string => {
     CLUB_ADMIN: "🏢",
     ASSOCIATION_ADMIN: "🏛️",
     SUPER_ADMIN: "👑",
+    VOTER: "🗳️",
   };
   return emojis[role];
 };
@@ -143,6 +146,7 @@ export const getRoleBadgeColor = (role: AppRole): string => {
     CLUB_ADMIN: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
     ASSOCIATION_ADMIN: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
     SUPER_ADMIN: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+    VOTER: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300",
   };
   return colors[role];
 };
