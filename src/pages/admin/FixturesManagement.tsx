@@ -105,7 +105,7 @@ const FixturesManagement = () => {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState<FixtureForm>(emptyForm);
-  const [allAssocTeams, setAllAssocTeams] = useState<{ id: string; name: string; club_id: string }[]>([]);
+  const [allAssocTeams, setAllAssocTeams] = useState<{ id: string; name: string; club_id: string; division_id: string | null; divisionName: string | null; associationName: string | null }[]>([]);
   const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
   const [pitches, setPitches] = useState<{ id: string; name: string; venue_id: string }[]>([]);
   const [filterStatus, setFilterStatus] = useState("ALL");
@@ -123,11 +123,18 @@ const FixturesManagement = () => {
       if (!selectedAssociationId) {
         const [venueRes, teamRes, pitchRes] = await Promise.all([
           supabase.from("venues").select("id, name").order("name"),
-          supabase.from("teams").select("id, name, club_id").order("name"),
+          supabase.from("teams").select("id, name, club_id, division_id, divisions(name, association_id, associations(name))").order("name"),
           supabase.from("pitches").select("id, name, venue_id").order("name"),
         ]);
         setVenues(venueRes.data || []);
-        setAllAssocTeams(teamRes.data || []);
+        setAllAssocTeams((teamRes.data || []).map((team: any) => ({
+          id: team.id,
+          name: team.name,
+          club_id: team.club_id,
+          division_id: team.division_id,
+          divisionName: team.divisions?.name ?? null,
+          associationName: team.divisions?.associations?.name ?? null,
+        })));
         setPitches(pitchRes.data || []);
         return;
       }
@@ -141,8 +148,15 @@ const FixturesManagement = () => {
       setVenues(loadedVenues);
 
       if (clubIds.length > 0) {
-        const { data: teamData } = await supabase.from("teams").select("id, name, club_id").in("club_id", clubIds).order("name");
-        setAllAssocTeams(teamData || []);
+        const { data: teamData } = await supabase.from("teams").select("id, name, club_id, division_id, divisions(name, association_id, associations(name))").in("club_id", clubIds).order("name");
+        setAllAssocTeams((teamData || []).map((team: any) => ({
+          id: team.id,
+          name: team.name,
+          club_id: team.club_id,
+          division_id: team.division_id,
+          divisionName: team.divisions?.name ?? null,
+          associationName: team.divisions?.associations?.name ?? null,
+        })));
       } else {
         setAllAssocTeams([]);
       }
@@ -332,7 +346,9 @@ const FixturesManagement = () => {
         <SelectContent>
           <SelectItem value="__none__">{allowBye ? "BYE" : "None"}</SelectItem>
           {allAssocTeams.map((team) => (
-            <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+            <SelectItem key={team.id} value={team.id}>
+              {team.name}{team.divisionName || team.associationName ? ` (${[team.associationName, team.divisionName].filter(Boolean).join(' · ')})` : ''}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
