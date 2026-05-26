@@ -8597,7 +8597,7 @@
           },
           {
             "name": "Benjamin T.",
-            "jersey": "17",
+            "jersey": "1",
             "role": null,
             "attended": false,
             "goals": "",
@@ -8607,7 +8607,7 @@
           },
           {
             "name": "Blake C.",
-            "jersey": "6",
+            "jersey": "11",
             "role": null,
             "attended": true,
             "goals": "",
@@ -8627,7 +8627,7 @@
           },
           {
             "name": "Craig W.",
-            "jersey": "18",
+            "jersey": null,
             "role": null,
             "attended": false,
             "goals": "",
@@ -8637,7 +8637,7 @@
           },
           {
             "name": "Ethan O.",
-            "jersey": "14",
+            "jersey": "23",
             "role": null,
             "attended": true,
             "goals": "",
@@ -8647,7 +8647,7 @@
           },
           {
             "name": "Jacob B.",
-            "jersey": "4",
+            "jersey": "26",
             "role": null,
             "attended": false,
             "goals": "",
@@ -8657,7 +8657,7 @@
           },
           {
             "name": "Lucas B.",
-            "jersey": "5",
+            "jersey": "27",
             "role": null,
             "attended": true,
             "goals": "",
@@ -8667,7 +8667,7 @@
           },
           {
             "name": "Mitchell R.",
-            "jersey": "15",
+            "jersey": "20",
             "role": null,
             "attended": true,
             "goals": "",
@@ -8677,7 +8677,7 @@
           },
           {
             "name": "Nigel D.",
-            "jersey": null,
+            "jersey": "24",
             "role": null,
             "attended": true,
             "goals": "",
@@ -8687,7 +8687,7 @@
           },
           {
             "name": "Reg B.",
-            "jersey": "1",
+            "jersey": "77",
             "role": null,
             "attended": true,
             "goals": "1",
@@ -8697,7 +8697,7 @@
           },
           {
             "name": "Sam C.",
-            "jersey": "7",
+            "jersey": "42",
             "role": null,
             "attended": false,
             "goals": "",
@@ -8707,7 +8707,7 @@
           },
           {
             "name": "Thane B.",
-            "jersey": "2",
+            "jersey": "7",
             "role": null,
             "attended": true,
             "goals": "",
@@ -8717,7 +8717,7 @@
           },
           {
             "name": "Timothy D.",
-            "jersey": "8",
+            "jersey": "81",
             "role": null,
             "attended": true,
             "goals": "",
@@ -8727,7 +8727,7 @@
           },
           {
             "name": "Timothy O.",
-            "jersey": "9",
+            "jersey": "17",
             "role": null,
             "attended": true,
             "goals": "",
@@ -8737,7 +8737,7 @@
           },
           {
             "name": "Troy S.",
-            "jersey": null,
+            "jersey": "25",
             "role": null,
             "attended": true,
             "goals": "",
@@ -8747,7 +8747,7 @@
           },
           {
             "name": "Tyson J.",
-            "jersey": "12",
+            "jersey": "60",
             "role": null,
             "attended": false,
             "goals": "",
@@ -8757,7 +8757,7 @@
           },
           {
             "name": "william D.",
-            "jersey": "11",
+            "jersey": "2",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10667,7 +10667,7 @@
           },
           {
             "name": "Benjamin T.",
-            "jersey": "17",
+            "jersey": "1",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10677,7 +10677,7 @@
           },
           {
             "name": "Blake C.",
-            "jersey": "6",
+            "jersey": "11",
             "role": null,
             "attended": true,
             "goals": "1",
@@ -10697,7 +10697,7 @@
           },
           {
             "name": "Craig W.",
-            "jersey": "18",
+            "jersey": null,
             "role": null,
             "attended": true,
             "goals": "",
@@ -10707,7 +10707,7 @@
           },
           {
             "name": "Ethan O.",
-            "jersey": "14",
+            "jersey": "23",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10717,7 +10717,7 @@
           },
           {
             "name": "Jacob B.",
-            "jersey": "4",
+            "jersey": "26",
             "role": null,
             "attended": false,
             "goals": "",
@@ -10727,7 +10727,7 @@
           },
           {
             "name": "Lucas B.",
-            "jersey": "5",
+            "jersey": "27",
             "role": null,
             "attended": false,
             "goals": "",
@@ -10737,7 +10737,7 @@
           },
           {
             "name": "Mitchell R.",
-            "jersey": "15",
+            "jersey": "20",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10747,7 +10747,7 @@
           },
           {
             "name": "Nigel D.",
-            "jersey": null,
+            "jersey": "24",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10757,7 +10757,7 @@
           },
           {
             "name": "Reg B.",
-            "jersey": "1",
+            "jersey": "77",
             "role": null,
             "attended": false,
             "goals": "",
@@ -10767,7 +10767,7 @@
           },
           {
             "name": "Sam C.",
-            "jersey": "7",
+            "jersey": "42",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10777,7 +10777,7 @@
           },
           {
             "name": "Thane B.",
-            "jersey": "2",
+            "jersey": "7",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10787,7 +10787,7 @@
           },
           {
             "name": "Timothy D.",
-            "jersey": "8",
+            "jersey": "81",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10797,7 +10797,7 @@
           },
           {
             "name": "Timothy O.",
-            "jersey": "9",
+            "jersey": "17",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10807,7 +10807,7 @@
           },
           {
             "name": "Troy S.",
-            "jersey": null,
+            "jersey": "25",
             "role": null,
             "attended": false,
             "goals": "",
@@ -10817,7 +10817,7 @@
           },
           {
             "name": "Tyson J.",
-            "jersey": "12",
+            "jersey": "60",
             "role": null,
             "attended": false,
             "goals": "",
@@ -10827,7 +10827,7 @@
           },
           {
             "name": "william D.",
-            "jersey": "11",
+            "jersey": "2",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10890,7 +10890,7 @@
           },
           {
             "name": "Benjamin T.",
-            "jersey": "17",
+            "jersey": "1",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10900,7 +10900,7 @@
           },
           {
             "name": "Blake C.",
-            "jersey": "6",
+            "jersey": "11",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10920,7 +10920,7 @@
           },
           {
             "name": "Craig W.",
-            "jersey": "18",
+            "jersey": null,
             "role": null,
             "attended": true,
             "goals": "2",
@@ -10930,7 +10930,7 @@
           },
           {
             "name": "Ethan O.",
-            "jersey": "14",
+            "jersey": "23",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10940,7 +10940,7 @@
           },
           {
             "name": "Jacob B.",
-            "jersey": "4",
+            "jersey": "26",
             "role": null,
             "attended": false,
             "goals": "",
@@ -10950,7 +10950,7 @@
           },
           {
             "name": "Lucas B.",
-            "jersey": "5",
+            "jersey": "27",
             "role": null,
             "attended": true,
             "goals": "",
@@ -10960,7 +10960,7 @@
           },
           {
             "name": "Mitchell R.",
-            "jersey": "15",
+            "jersey": "20",
             "role": null,
             "attended": false,
             "goals": "",
@@ -10970,7 +10970,7 @@
           },
           {
             "name": "Nigel D.",
-            "jersey": null,
+            "jersey": "24",
             "role": null,
             "attended": true,
             "goals": "1",
@@ -10980,7 +10980,7 @@
           },
           {
             "name": "Reg B.",
-            "jersey": "1",
+            "jersey": "77",
             "role": null,
             "attended": true,
             "goals": "1",
@@ -10990,7 +10990,7 @@
           },
           {
             "name": "Sam C.",
-            "jersey": "7",
+            "jersey": "42",
             "role": null,
             "attended": false,
             "goals": "",
@@ -11000,7 +11000,7 @@
           },
           {
             "name": "Thane B.",
-            "jersey": "2",
+            "jersey": "7",
             "role": null,
             "attended": false,
             "goals": "",
@@ -11010,7 +11010,7 @@
           },
           {
             "name": "Timothy D.",
-            "jersey": "8",
+            "jersey": "81",
             "role": null,
             "attended": true,
             "goals": "",
@@ -11020,7 +11020,7 @@
           },
           {
             "name": "Timothy O.",
-            "jersey": "9",
+            "jersey": "17",
             "role": null,
             "attended": true,
             "goals": "",
@@ -11030,7 +11030,7 @@
           },
           {
             "name": "Troy S.",
-            "jersey": null,
+            "jersey": "25",
             "role": null,
             "attended": true,
             "goals": "",
@@ -11040,7 +11040,7 @@
           },
           {
             "name": "Tyson J.",
-            "jersey": "12",
+            "jersey": "60",
             "role": null,
             "attended": false,
             "goals": "",
@@ -11050,7 +11050,7 @@
           },
           {
             "name": "william D.",
-            "jersey": "11",
+            "jersey": "2",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12154,7 +12154,7 @@
           },
           {
             "name": "Benjamin T.",
-            "jersey": "17",
+            "jersey": "1",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12164,7 +12164,7 @@
           },
           {
             "name": "Blake C.",
-            "jersey": "6",
+            "jersey": "11",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12184,7 +12184,7 @@
           },
           {
             "name": "Craig W.",
-            "jersey": "18",
+            "jersey": null,
             "role": null,
             "attended": false,
             "goals": "",
@@ -12194,7 +12194,7 @@
           },
           {
             "name": "Ethan O.",
-            "jersey": "14",
+            "jersey": "23",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12204,7 +12204,7 @@
           },
           {
             "name": "Jacob B.",
-            "jersey": "4",
+            "jersey": "26",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12214,7 +12214,7 @@
           },
           {
             "name": "Lucas B.",
-            "jersey": "5",
+            "jersey": "27",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12224,7 +12224,7 @@
           },
           {
             "name": "Mitchell R.",
-            "jersey": "15",
+            "jersey": "20",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12234,7 +12234,7 @@
           },
           {
             "name": "Nigel D.",
-            "jersey": null,
+            "jersey": "24",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12244,7 +12244,7 @@
           },
           {
             "name": "Reg B.",
-            "jersey": "1",
+            "jersey": "77",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12254,7 +12254,7 @@
           },
           {
             "name": "Sam C.",
-            "jersey": "7",
+            "jersey": "42",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12264,7 +12264,7 @@
           },
           {
             "name": "Thane B.",
-            "jersey": "2",
+            "jersey": "7",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12274,7 +12274,7 @@
           },
           {
             "name": "Timothy D.",
-            "jersey": "8",
+            "jersey": "81",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12284,7 +12284,7 @@
           },
           {
             "name": "Timothy O.",
-            "jersey": "9",
+            "jersey": "17",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12294,7 +12294,7 @@
           },
           {
             "name": "Troy S.",
-            "jersey": null,
+            "jersey": "25",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12304,7 +12304,7 @@
           },
           {
             "name": "Tyson J.",
-            "jersey": "12",
+            "jersey": "60",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12314,7 +12314,7 @@
           },
           {
             "name": "william D.",
-            "jersey": "11",
+            "jersey": "2",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12969,7 +12969,7 @@
         "players": [
           {
             "name": "Amelia B.",
-            "jersey": "3",
+            "jersey": "33",
             "role": null,
             "attended": false,
             "goals": "",
@@ -12999,7 +12999,7 @@
           },
           {
             "name": "Connie L.",
-            "jersey": "11",
+            "jersey": "90",
             "role": null,
             "attended": true,
             "goals": "",
@@ -13029,7 +13029,7 @@
           },
           {
             "name": "Emily L.",
-            "jersey": "12",
+            "jersey": "93",
             "role": null,
             "attended": false,
             "goals": "",
@@ -13069,7 +13069,7 @@
           },
           {
             "name": "Julie T.",
-            "jersey": "16",
+            "jersey": "26",
             "role": null,
             "attended": true,
             "goals": "",
@@ -13109,7 +13109,7 @@
           },
           {
             "name": "Pippa L.",
-            "jersey": "13",
+            "jersey": "91",
             "role": null,
             "attended": false,
             "goals": "",
@@ -13119,7 +13119,7 @@
           },
           {
             "name": "Rachel B.",
-            "jersey": "2",
+            "jersey": "13",
             "role": null,
             "attended": false,
             "goals": "",
@@ -13159,7 +13159,7 @@
           },
           {
             "name": "Shara B.",
-            "jersey": "199",
+            "jersey": "16",
             "role": null,
             "attended": false,
             "goals": "",
@@ -13179,7 +13179,7 @@
           },
           {
             "name": "Victoria C.",
-            "jersey": "63",
+            "jersey": "66",
             "role": null,
             "attended": true,
             "goals": "",
@@ -13808,7 +13808,7 @@
         "players": [
           {
             "name": "Amelia B.",
-            "jersey": "3",
+            "jersey": "33",
             "role": null,
             "attended": true,
             "goals": "",
@@ -13838,7 +13838,7 @@
           },
           {
             "name": "Connie L.",
-            "jersey": "11",
+            "jersey": "90",
             "role": null,
             "attended": true,
             "goals": "",
@@ -13868,7 +13868,7 @@
           },
           {
             "name": "Emily L.",
-            "jersey": "12",
+            "jersey": "93",
             "role": null,
             "attended": false,
             "goals": "",
@@ -13908,7 +13908,7 @@
           },
           {
             "name": "Julie T.",
-            "jersey": "16",
+            "jersey": "26",
             "role": null,
             "attended": true,
             "goals": "",
@@ -13948,7 +13948,7 @@
           },
           {
             "name": "Pippa L.",
-            "jersey": "13",
+            "jersey": "91",
             "role": null,
             "attended": false,
             "goals": "",
@@ -13958,7 +13958,7 @@
           },
           {
             "name": "Rachel B.",
-            "jersey": "2",
+            "jersey": "13",
             "role": null,
             "attended": true,
             "goals": "",
@@ -13998,7 +13998,7 @@
           },
           {
             "name": "Shara B.",
-            "jersey": "199",
+            "jersey": "16",
             "role": null,
             "attended": true,
             "goals": "",
@@ -14018,7 +14018,7 @@
           },
           {
             "name": "Victoria C.",
-            "jersey": "63",
+            "jersey": "66",
             "role": null,
             "attended": true,
             "goals": "",
@@ -14661,7 +14661,7 @@
         "players": [
           {
             "name": "Amelia B.",
-            "jersey": "3",
+            "jersey": "33",
             "role": null,
             "attended": true,
             "goals": "",
@@ -14691,7 +14691,7 @@
           },
           {
             "name": "Connie L.",
-            "jersey": "11",
+            "jersey": "90",
             "role": null,
             "attended": true,
             "goals": "",
@@ -14721,7 +14721,7 @@
           },
           {
             "name": "Emily L.",
-            "jersey": "12",
+            "jersey": "93",
             "role": null,
             "attended": false,
             "goals": "",
@@ -14761,7 +14761,7 @@
           },
           {
             "name": "Julie T.",
-            "jersey": "16",
+            "jersey": "26",
             "role": null,
             "attended": true,
             "goals": "",
@@ -14801,7 +14801,7 @@
           },
           {
             "name": "Pippa L.",
-            "jersey": "13",
+            "jersey": "91",
             "role": null,
             "attended": false,
             "goals": "",
@@ -14811,7 +14811,7 @@
           },
           {
             "name": "Rachel B.",
-            "jersey": "2",
+            "jersey": "13",
             "role": null,
             "attended": false,
             "goals": "",
@@ -14851,7 +14851,7 @@
           },
           {
             "name": "Shara B.",
-            "jersey": "199",
+            "jersey": "16",
             "role": null,
             "attended": true,
             "goals": "",
@@ -14871,7 +14871,7 @@
           },
           {
             "name": "Victoria C.",
-            "jersey": "63",
+            "jersey": "66",
             "role": null,
             "attended": true,
             "goals": "",
@@ -16120,7 +16120,7 @@
         "players": [
           {
             "name": "Amelia B.",
-            "jersey": "3",
+            "jersey": "33",
             "role": null,
             "attended": true,
             "goals": "",
@@ -16150,7 +16150,7 @@
           },
           {
             "name": "Connie L.",
-            "jersey": "11",
+            "jersey": "90",
             "role": null,
             "attended": true,
             "goals": "",
@@ -16180,7 +16180,7 @@
           },
           {
             "name": "Emily L.",
-            "jersey": "12",
+            "jersey": "93",
             "role": null,
             "attended": false,
             "goals": "",
@@ -16220,7 +16220,7 @@
           },
           {
             "name": "Julie T.",
-            "jersey": "16",
+            "jersey": "26",
             "role": null,
             "attended": true,
             "goals": "",
@@ -16260,7 +16260,7 @@
           },
           {
             "name": "Pippa L.",
-            "jersey": "13",
+            "jersey": "91",
             "role": null,
             "attended": false,
             "goals": "",
@@ -16270,7 +16270,7 @@
           },
           {
             "name": "Rachel B.",
-            "jersey": "2",
+            "jersey": "13",
             "role": null,
             "attended": true,
             "goals": "",
@@ -16310,7 +16310,7 @@
           },
           {
             "name": "Shara B.",
-            "jersey": "199",
+            "jersey": "16",
             "role": null,
             "attended": true,
             "goals": "",
@@ -16330,7 +16330,7 @@
           },
           {
             "name": "Victoria C.",
-            "jersey": "63",
+            "jersey": "66",
             "role": null,
             "attended": false,
             "goals": "",
@@ -18885,7 +18885,7 @@
         "players": [
           {
             "name": "David T.",
-            "jersey": "2",
+            "jersey": "54",
             "role": null,
             "attended": true,
             "goals": "",
@@ -18895,7 +18895,7 @@
           },
           {
             "name": "Digby S.",
-            "jersey": "20",
+            "jersey": "107",
             "role": null,
             "attended": false,
             "goals": "",
@@ -18905,7 +18905,7 @@
           },
           {
             "name": "Eathan D.",
-            "jersey": "10",
+            "jersey": "101",
             "role": null,
             "attended": true,
             "goals": "",
@@ -18915,7 +18915,7 @@
           },
           {
             "name": "Gareth A.",
-            "jersey": "18",
+            "jersey": "11",
             "role": null,
             "attended": false,
             "goals": "",
@@ -18925,7 +18925,7 @@
           },
           {
             "name": "James T.",
-            "jersey": "1",
+            "jersey": "10",
             "role": "Captain",
             "attended": true,
             "goals": "",
@@ -18935,7 +18935,7 @@
           },
           {
             "name": "Jarrod K.",
-            "jersey": "11",
+            "jersey": "14",
             "role": null,
             "attended": true,
             "goals": "",
@@ -18945,7 +18945,7 @@
           },
           {
             "name": "Joshua L.",
-            "jersey": "19",
+            "jersey": "92",
             "role": null,
             "attended": false,
             "goals": "",
@@ -18956,7 +18956,7 @@
           {
             "name": "Lauchlan W.",
             "jersey": "16",
-            "role": null,
+            "role": "Goalkeeper",
             "attended": false,
             "goals": "",
             "green_cards": "",
@@ -18965,7 +18965,7 @@
           },
           {
             "name": "Lucas B.",
-            "jersey": null,
+            "jersey": "55",
             "role": null,
             "attended": true,
             "goals": "",
@@ -18975,7 +18975,7 @@
           },
           {
             "name": "Max F.",
-            "jersey": "6",
+            "jersey": "9",
             "role": null,
             "attended": false,
             "goals": "",
@@ -18995,7 +18995,7 @@
           },
           {
             "name": "Richard G.",
-            "jersey": "7",
+            "jersey": "82",
             "role": null,
             "attended": true,
             "goals": "",
@@ -19005,7 +19005,7 @@
           },
           {
             "name": "Stephen B.",
-            "jersey": "14",
+            "jersey": "69",
             "role": null,
             "attended": true,
             "goals": "",
@@ -19015,7 +19015,7 @@
           },
           {
             "name": "Tom S.",
-            "jersey": "15",
+            "jersey": "31",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20152,7 +20152,7 @@
         "players": [
           {
             "name": "David T.",
-            "jersey": "2",
+            "jersey": "54",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20162,7 +20162,7 @@
           },
           {
             "name": "Digby S.",
-            "jersey": "20",
+            "jersey": "107",
             "role": null,
             "attended": false,
             "goals": "",
@@ -20172,7 +20172,7 @@
           },
           {
             "name": "Eathan D.",
-            "jersey": "10",
+            "jersey": "101",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20182,7 +20182,7 @@
           },
           {
             "name": "Gareth A.",
-            "jersey": "18",
+            "jersey": "11",
             "role": null,
             "attended": false,
             "goals": "",
@@ -20192,7 +20192,7 @@
           },
           {
             "name": "James T.",
-            "jersey": "1",
+            "jersey": "10",
             "role": "Captain",
             "attended": false,
             "goals": "",
@@ -20202,7 +20202,7 @@
           },
           {
             "name": "Jarrod K.",
-            "jersey": "11",
+            "jersey": "14",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20212,7 +20212,7 @@
           },
           {
             "name": "Joshua L.",
-            "jersey": "19",
+            "jersey": "92",
             "role": null,
             "attended": false,
             "goals": "",
@@ -20223,7 +20223,7 @@
           {
             "name": "Lauchlan W.",
             "jersey": "16",
-            "role": null,
+            "role": "Goalkeeper",
             "attended": false,
             "goals": "",
             "green_cards": "",
@@ -20232,7 +20232,7 @@
           },
           {
             "name": "Lucas B.",
-            "jersey": null,
+            "jersey": "55",
             "role": null,
             "attended": false,
             "goals": "",
@@ -20242,7 +20242,7 @@
           },
           {
             "name": "Max F.",
-            "jersey": "6",
+            "jersey": "9",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20262,7 +20262,7 @@
           },
           {
             "name": "Richard G.",
-            "jersey": "7",
+            "jersey": "82",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20272,7 +20272,7 @@
           },
           {
             "name": "Stephen B.",
-            "jersey": "14",
+            "jersey": "69",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20282,7 +20282,7 @@
           },
           {
             "name": "Tom S.",
-            "jersey": "15",
+            "jersey": "31",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20416,7 +20416,7 @@
         "players": [
           {
             "name": "David T.",
-            "jersey": "2",
+            "jersey": "54",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20426,7 +20426,7 @@
           },
           {
             "name": "Digby S.",
-            "jersey": "20",
+            "jersey": "107",
             "role": null,
             "attended": false,
             "goals": "",
@@ -20436,7 +20436,7 @@
           },
           {
             "name": "Eathan D.",
-            "jersey": "10",
+            "jersey": "101",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20446,7 +20446,7 @@
           },
           {
             "name": "Gareth A.",
-            "jersey": "18",
+            "jersey": "11",
             "role": null,
             "attended": false,
             "goals": "",
@@ -20456,7 +20456,7 @@
           },
           {
             "name": "James T.",
-            "jersey": "1",
+            "jersey": "10",
             "role": "Captain",
             "attended": true,
             "goals": "",
@@ -20466,7 +20466,7 @@
           },
           {
             "name": "Jarrod K.",
-            "jersey": "11",
+            "jersey": "14",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20476,7 +20476,7 @@
           },
           {
             "name": "Joshua L.",
-            "jersey": "19",
+            "jersey": "92",
             "role": null,
             "attended": false,
             "goals": "",
@@ -20487,7 +20487,7 @@
           {
             "name": "Lauchlan W.",
             "jersey": "16",
-            "role": null,
+            "role": "Goalkeeper",
             "attended": false,
             "goals": "",
             "green_cards": "",
@@ -20496,7 +20496,7 @@
           },
           {
             "name": "Lucas B.",
-            "jersey": null,
+            "jersey": "55",
             "role": null,
             "attended": false,
             "goals": "",
@@ -20506,7 +20506,7 @@
           },
           {
             "name": "Max F.",
-            "jersey": "6",
+            "jersey": "9",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20526,7 +20526,7 @@
           },
           {
             "name": "Richard G.",
-            "jersey": "7",
+            "jersey": "82",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20536,7 +20536,7 @@
           },
           {
             "name": "Stephen B.",
-            "jersey": "14",
+            "jersey": "69",
             "role": null,
             "attended": true,
             "goals": "",
@@ -20546,7 +20546,7 @@
           },
           {
             "name": "Tom S.",
-            "jersey": "15",
+            "jersey": "31",
             "role": null,
             "attended": true,
             "goals": "",
@@ -22105,7 +22105,7 @@
         "players": [
           {
             "name": "David T.",
-            "jersey": "2",
+            "jersey": "54",
             "role": null,
             "attended": true,
             "goals": "",
@@ -22115,7 +22115,7 @@
           },
           {
             "name": "Digby S.",
-            "jersey": "20",
+            "jersey": "107",
             "role": null,
             "attended": true,
             "goals": "",
@@ -22125,7 +22125,7 @@
           },
           {
             "name": "Eathan D.",
-            "jersey": "10",
+            "jersey": "101",
             "role": null,
             "attended": true,
             "goals": "",
@@ -22135,26 +22135,6 @@
           },
           {
             "name": "Gareth A.",
-            "jersey": "18",
-            "role": null,
-            "attended": true,
-            "goals": "",
-            "green_cards": "",
-            "yellow_cards": "",
-            "red_cards": ""
-          },
-          {
-            "name": "James T.",
-            "jersey": "1",
-            "role": "Captain",
-            "attended": true,
-            "goals": "",
-            "green_cards": "",
-            "yellow_cards": "",
-            "red_cards": ""
-          },
-          {
-            "name": "Jarrod K.",
             "jersey": "11",
             "role": null,
             "attended": true,
@@ -22164,8 +22144,28 @@
             "red_cards": ""
           },
           {
+            "name": "James T.",
+            "jersey": "10",
+            "role": "Captain",
+            "attended": true,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Jarrod K.",
+            "jersey": "14",
+            "role": null,
+            "attended": true,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Joshua L.",
-            "jersey": "19",
+            "jersey": "92",
             "role": null,
             "attended": true,
             "goals": "",
@@ -22176,7 +22176,7 @@
           {
             "name": "Lauchlan W.",
             "jersey": "16",
-            "role": null,
+            "role": "Goalkeeper",
             "attended": true,
             "goals": "",
             "green_cards": "",
@@ -22185,7 +22185,7 @@
           },
           {
             "name": "Lucas B.",
-            "jersey": null,
+            "jersey": "55",
             "role": null,
             "attended": true,
             "goals": "",
@@ -22195,7 +22195,7 @@
           },
           {
             "name": "Max F.",
-            "jersey": "6",
+            "jersey": "9",
             "role": null,
             "attended": true,
             "goals": "",
@@ -22215,7 +22215,7 @@
           },
           {
             "name": "Richard G.",
-            "jersey": "7",
+            "jersey": "82",
             "role": null,
             "attended": true,
             "goals": "",
@@ -22225,7 +22225,7 @@
           },
           {
             "name": "Stephen B.",
-            "jersey": "14",
+            "jersey": "69",
             "role": null,
             "attended": true,
             "goals": "",
@@ -22235,7 +22235,7 @@
           },
           {
             "name": "Tom S.",
-            "jersey": "15",
+            "jersey": "31",
             "role": null,
             "attended": true,
             "goals": "",
@@ -23445,7 +23445,7 @@
         "players": [
           {
             "name": "David T.",
-            "jersey": "2",
+            "jersey": "54",
             "role": null,
             "attended": false,
             "goals": "",
@@ -23455,7 +23455,7 @@
           },
           {
             "name": "Digby S.",
-            "jersey": "20",
+            "jersey": "107",
             "role": null,
             "attended": false,
             "goals": "",
@@ -23465,7 +23465,7 @@
           },
           {
             "name": "Eathan D.",
-            "jersey": "10",
+            "jersey": "101",
             "role": null,
             "attended": false,
             "goals": "",
@@ -23475,26 +23475,6 @@
           },
           {
             "name": "Gareth A.",
-            "jersey": "18",
-            "role": null,
-            "attended": false,
-            "goals": "",
-            "green_cards": "",
-            "yellow_cards": "",
-            "red_cards": ""
-          },
-          {
-            "name": "James T.",
-            "jersey": "1",
-            "role": "Captain",
-            "attended": false,
-            "goals": "",
-            "green_cards": "",
-            "yellow_cards": "",
-            "red_cards": ""
-          },
-          {
-            "name": "Jarrod K.",
             "jersey": "11",
             "role": null,
             "attended": false,
@@ -23504,8 +23484,28 @@
             "red_cards": ""
           },
           {
+            "name": "James T.",
+            "jersey": "10",
+            "role": "Captain",
+            "attended": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Jarrod K.",
+            "jersey": "14",
+            "role": null,
+            "attended": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Joshua L.",
-            "jersey": "19",
+            "jersey": "92",
             "role": null,
             "attended": false,
             "goals": "",
@@ -23516,7 +23516,7 @@
           {
             "name": "Lauchlan W.",
             "jersey": "16",
-            "role": null,
+            "role": "Goalkeeper",
             "attended": false,
             "goals": "",
             "green_cards": "",
@@ -23525,7 +23525,7 @@
           },
           {
             "name": "Lucas B.",
-            "jersey": null,
+            "jersey": "55",
             "role": null,
             "attended": false,
             "goals": "",
@@ -23535,7 +23535,7 @@
           },
           {
             "name": "Max F.",
-            "jersey": "6",
+            "jersey": "9",
             "role": null,
             "attended": false,
             "goals": "",
@@ -23555,7 +23555,7 @@
           },
           {
             "name": "Richard G.",
-            "jersey": "7",
+            "jersey": "82",
             "role": null,
             "attended": false,
             "goals": "",
@@ -23565,7 +23565,7 @@
           },
           {
             "name": "Stephen B.",
-            "jersey": "14",
+            "jersey": "69",
             "role": null,
             "attended": false,
             "goals": "",
@@ -23575,7 +23575,7 @@
           },
           {
             "name": "Tom S.",
-            "jersey": "15",
+            "jersey": "31",
             "role": null,
             "attended": false,
             "goals": "",
