@@ -8,21 +8,17 @@
 name: Scrape — Sunraysia Hockey Association
 
 on:
-  # ── Scheduled runs ──────────────────────────────────────
   schedule:
-    # Weekdays (Mon–Fri) at 10pm AEST (12:00 UTC)
     - cron: "0 12 * * 1-5"
-    # Weekends (Sat–Sun) every 2 hours from 8am–10pm AEST
-    - cron: "0 22 * * 5,6"   # 8am Sat + 8am Sun
-    - cron: "0 0  * * 6,0"   # 10am
-    - cron: "0 2  * * 6,0"   # 12pm
-    - cron: "0 4  * * 6,0"   # 2pm
-    - cron: "0 6  * * 6,0"   # 4pm
-    - cron: "0 8  * * 6,0"   # 6pm
-    - cron: "0 10 * * 6,0"   # 8pm
-    - cron: "0 12 * * 6,0"   # 10pm
+    - cron: "0 22 * * 5,6"
+    - cron: "0 0  * * 6,0"
+    - cron: "0 2  * * 6,0"
+    - cron: "0 4  * * 6,0"
+    - cron: "0 6  * * 6,0"
+    - cron: "0 8  * * 6,0"
+    - cron: "0 10 * * 6,0"
+    - cron: "0 12 * * 6,0"
 
-  # ── Manual trigger ───────────────────────────────────────
   workflow_dispatch:
     inputs:
       only_grades:
@@ -72,4 +68,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/
           git diff --cached --quiet || git commit -m "scrape [sunraysia]: $(date '+%Y-%m-%d %H:%M') AEST"
+          git pull --rebase
           git push
