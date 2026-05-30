@@ -50,7 +50,7 @@ const NAV_SETS: Record<AppMode, { path: string; label: string; icon: typeof Layo
     { path: "/admin/clubs", label: "Clubs", icon: Building2 },
     { path: "/admin/teams", label: "Teams", icon: Shield },
     { path: "/admin/divisions", label: "Divisions", icon: LayoutGrid },
-    { path: "/admin/revsports-mappings", label: "Team Mappings", icon: GitMerge },
+    { path: "/admin/revsports-mappings", label: "RevSports Mappings", icon: GitMerge },
     { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
     { path: "/admin/venues", label: "Venues", icon: MapPin },
     { path: "/admin/users", label: "Users", icon: UserCog },
@@ -220,7 +220,7 @@ const AppLayout = () => {
         .select("teams(name, clubs(name, associations(name, abbreviation)))")
         .eq("user_id", user.id)
         .eq("membership_type", "PRIMARY")
-        .eq("status", "ACTIVE")
+        .eq("status", "APPROVED")
         .maybeSingle();
 
       const team = Array.isArray(data?.teams) ? data?.teams[0] : data?.teams;

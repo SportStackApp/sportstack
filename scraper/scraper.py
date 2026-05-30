@@ -17,12 +17,13 @@ from urllib.parse import urlparse
 # CONFIG — edit these or set as GitHub secrets/env vars
 # ─────────────────────────────────────────────
 
-PORTAL_URL  = os.getenv("PORTAL_URL", "https://www.revolutionise.com.au/hockeyballarat")
-ONLY_GRADES = os.getenv("ONLY_GRADES", "")   # Comma-separated, e.g. "Division 1 Men,Womens"
-ONLY_ROUNDS = os.getenv("ONLY_ROUNDS", "")   # Comma-separated, e.g. "Round 1,Round 2"
-ONLY_TEAM   = os.getenv("ONLY_TEAM",   "")   # Partial match, e.g. "Grampians"
-OUTPUT_DIR  = os.getenv("OUTPUT_DIR",  "../data")
-DELAY       = 0.8
+PORTAL_URL       = os.getenv("PORTAL_URL",       "https://www.revolutionise.com.au/hockeyballarat")
+ASSOCIATION_NAME = os.getenv("ASSOCIATION_NAME", "Hockey Ballarat")   # ← NEW: stamps every row
+ONLY_GRADES      = os.getenv("ONLY_GRADES",      "")   # Comma-separated, e.g. "Division 1 Men,Womens"
+ONLY_ROUNDS      = os.getenv("ONLY_ROUNDS",      "")   # Comma-separated, e.g. "Round 1,Round 2"
+ONLY_TEAM        = os.getenv("ONLY_TEAM",        "")   # Partial match, e.g. "Grampians"
+OUTPUT_DIR       = os.getenv("OUTPUT_DIR",       "../data")
+DELAY            = 0.8
 
 # Parse comma-separated env vars into lists (empty string = all)
 only_grades = [g.strip() for g in ONLY_GRADES.split(",") if g.strip()] or None
@@ -550,11 +551,12 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
 def main():
     print("=" * 60)
     print("Hockey Results Scraper — Headless")
-    print(f"Started:  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"Portal:   {PORTAL_URL}")
-    print(f"Grades:   {only_grades or 'All'}")
-    print(f"Rounds:   {only_rounds or 'All'}")
-    print(f"Team:     {only_team or 'All'}")
+    print(f"Started:     {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Portal:      {PORTAL_URL}")
+    print(f"Association: {ASSOCIATION_NAME}")
+    print(f"Grades:      {only_grades or 'All'}")
+    print(f"Rounds:      {only_rounds or 'All'}")
+    print(f"Team:        {only_team or 'All'}")
     print("=" * 60)
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -588,7 +590,7 @@ def main():
                         grade_name=grade["name"],
                         team_urls=game_info["team_urls"],
                         round_venue=game_info.get("round_venue"),
-                        round_pitch=game_info.get("round_pitch"),  # ← new
+                        round_pitch=game_info.get("round_pitch"),
                     )
                     match["grade"] = grade["name"]
                     match["round"] = rnd["round_label"]
@@ -599,12 +601,13 @@ def main():
                             continue
                         for player in team["players"]:
                             csv_rows.append({
+                                "association":  ASSOCIATION_NAME,   # ← NEW: stamps every row
                                 "grade":        grade["name"],
                                 "round":        rnd["round_label"],
                                 "game_date":    match["date"],
                                 "game_time":    match["time"],
                                 "venue":        match["venue"],
-                                "pitch":        match["pitch"],   # ← new column
+                                "pitch":        match["pitch"],
                                 "home_team":    match["home_team"],
                                 "away_team":    match["away_team"],
                                 "home_score":   match["home_score"],
