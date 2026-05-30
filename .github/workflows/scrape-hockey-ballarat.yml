@@ -1,6 +1,7 @@
 # .github/workflows/scrape-hockey-ballarat.yml
 #
-# Scrapes Hockey Ballarat results and commits them to /data.
+# Scrapes Hockey Ballarat results, commits them to /data,
+# and upserts the rows into Supabase automatically.
 #
 # Schedule (all times AEST = UTC+10):
 #   Weekdays  — once at 10:00pm AEST
@@ -50,16 +51,20 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4
+        # supabase added so the scraper can upsert results automatically
+        run: pip install requests beautifulsoup4 supabase==2.10.0
 
       - name: Run scraper
         env:
-          PORTAL_URL:       "https://www.revolutionise.com.au/hockeyballarat"
-          ASSOCIATION_NAME: "Hockey Ballarat"
-          ONLY_GRADES:      ${{ github.event.inputs.only_grades || '' }}
-          ONLY_ROUNDS:      ${{ github.event.inputs.only_rounds || '' }}
-          ONLY_TEAM:        ${{ github.event.inputs.only_team   || '' }}
-          OUTPUT_DIR:       data/hockey-ballarat
+          PORTAL_URL:           "https://www.revolutionise.com.au/hockeyballarat"
+          ASSOCIATION_NAME:     "Hockey Ballarat"
+          ONLY_GRADES:          ${{ github.event.inputs.only_grades || '' }}
+          ONLY_ROUNDS:          ${{ github.event.inputs.only_rounds || '' }}
+          ONLY_TEAM:            ${{ github.event.inputs.only_team   || '' }}
+          OUTPUT_DIR:           data/hockey-ballarat
+          # Supabase secrets — set these in GitHub repo Settings → Secrets → Actions
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python scraper/scraper.py
 
       - name: Commit results

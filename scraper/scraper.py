@@ -611,7 +611,7 @@ def main():
                 try:
                     client.table("revsports_players").upsert(
                         batch,
-                        on_conflict="match_url,player_name,team"
+                        on_conflict="match_url,player_name,team,is_fillin"
                     ).execute()
                     total_upserted += len(batch)
                 except Exception as e:
