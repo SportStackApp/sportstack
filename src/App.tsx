@@ -69,12 +69,12 @@ const App = () => (
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<Landing />} />
-                  <Route path="/vote/:token" element={<VotingPortal />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/pending" element={<Pending />} />
+                  <Route path="/vote/:token" element={<VotingPortal />} />
 
                   {/* Protected Routes with App Layout */}
                   <Route element={<ProtectedRoute />}>
