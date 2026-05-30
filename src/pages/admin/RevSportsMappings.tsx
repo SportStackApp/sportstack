@@ -62,6 +62,7 @@ export default function RevSportsMappings() {
   // Filters
   const [teamFilters, setTeamFilters] = useState({ grades: [] as string[], clubs: [] as string[] });
   const [playerFilters, setPlayerFilters] = useState({ grades: [] as string[], teams: [] as string[] });
+  const [gradeTabAssociationFilter, setGradeTabAssociationFilter] = useState("all");
 
   const { toast } = useToast();
 
@@ -444,8 +445,29 @@ export default function RevSportsMappings() {
   };
 
   const renderGradesTab = () => {
+    const associationOptions = Array.from(new Set(systemDivisions.map(d => d.associationName))).filter(Boolean).sort();
+    
+    const filteredDivisions = gradeTabAssociationFilter === "all"
+      ? systemDivisions
+      : systemDivisions.filter(d => d.associationName === gradeTabAssociationFilter);
+
     return (
       <div className="space-y-4">
+        <div className="flex gap-4 flex-wrap">
+          <div className="w-[250px]">
+            <Select value={gradeTabAssociationFilter} onValueChange={setGradeTabAssociationFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by Association" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Associations</SelectItem>
+                {associationOptions.map(a => (
+                  <SelectItem key={a} value={a}>{a}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -462,6 +484,16 @@ export default function RevSportsMappings() {
                 {scrapedGrades.map(entry => {
                   const currentValue = gradeMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
+                  
+                  // Ensure the currently mapped option is always available, even if filtered out
+                  let optionsToRender = filteredDivisions;
+                  if (currentValue && currentValue !== "__none__" && !filteredDivisions.find(d => d.id === currentValue)) {
+                    const mappedDivision = systemDivisions.find(d => d.id === currentValue);
+                    if (mappedDivision) {
+                      optionsToRender = [...filteredDivisions, mappedDivision];
+                    }
+                  }
+
                   return (
                     <TableRow key={entry.key}>
                       <TableCell className="pl-6 text-muted-foreground font-mono text-xs">grade</TableCell>
@@ -471,7 +503,7 @@ export default function RevSportsMappings() {
                           <SelectTrigger className="w-[300px]"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
-                            {systemDivisions.map(d => <SelectItem key={d.id} value={d.id}>{d.associationName} — {d.name}</SelectItem>)}
+                            {optionsToRender.map(d => <SelectItem key={d.id} value={d.id}>{d.associationName} — {d.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </TableCell>
