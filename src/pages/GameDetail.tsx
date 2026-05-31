@@ -93,7 +93,7 @@ const GameDetail = () => {
           .from("team_memberships")
           .select("user_id, position, jersey_number")
           .eq("team_id", membershipTeamId)
-          .eq("status", "APPROVED");
+          .eq("status", "ACTIVE");
 
         if (members && members.length > 0) {
           const userIds = members.map((m) => m.user_id);

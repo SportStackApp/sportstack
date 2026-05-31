@@ -410,7 +410,7 @@ const Profile = () => {
     if (!user) return;
 
     const primaryMembership = memberships.find(
-      (m) => m.membership_type === "PRIMARY" && m.status === "APPROVED"
+      (m) => m.membership_type === "PRIMARY" && m.status === "ACTIVE"
     );
 
     // Get team info first for notifications
@@ -525,7 +525,7 @@ const Profile = () => {
   const handleAcceptInvite = async (membershipId: string) => {
     const { error } = await supabase
       .from("team_memberships")
-      .update({ status: "APPROVED" })
+      .update({ status: "ACTIVE" })
       .eq("id", membershipId);
 
     if (error) {
@@ -643,7 +643,7 @@ const Profile = () => {
   };
 
   // Transform memberships for TeamMembershipSection
-  const approvedMemberships = memberships.filter((m) => m.status === "APPROVED" || m.status === "ACTIVE");
+  const approvedMemberships = memberships.filter((m) => m.status === "ACTIVE");
   const primaryMembership = approvedMemberships.find((m) => m.membership_type === "PRIMARY");
   const extraMemberships = approvedMemberships.filter((m) => m.membership_type !== "PRIMARY");
   const pendingMemberships = memberships.filter((m) => m.status === "PENDING");

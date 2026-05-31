@@ -44,7 +44,7 @@ const Roster = () => {
         .from("team_memberships")
         .select("user_id, position, jersey_number, membership_type")
         .eq("team_id", selectedTeamId)
-        .eq("status", "APPROVED");
+        .eq("status", "ACTIVE");
 
       if (membershipData && membershipData.length > 0) {
         const userIds = membershipData.map((m) => m.user_id);

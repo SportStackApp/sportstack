@@ -21,11 +21,11 @@ interface SystemPitch { id: string; name: string; venueName: string; }
 
 // Scraped Data Interfaces
 interface ScrapedTeam { teamName: string; clubName: string; grade: string; key: string; }
-interface ScrapedGrade { grade: string; key: string; }
+interface ScrapedGrade { grade: string; association: string; key: string; }
 interface ScrapedClub { clubName: string; key: string; }
 interface ScrapedVenue { venueName: string; key: string; }
 interface ScrapedPitch { pitchName: string; venueName: string; key: string; }
-interface ScrapedPlayer { playerName: string; clubName: string; team: string; grade: string; jersey: string; key: string; }
+interface ScrapedPlayer { playerName: string; clubName: string; team: string; grade: string; jersey: string; isFillin: boolean; key: string; }
 interface ScrapedUmpire { umpireName: string; key: string; }
 
 export default function RevSportsMappings() {
@@ -84,7 +84,7 @@ export default function RevSportsMappings() {
         { data: plMapData },
         { data: uMapData }
       ] = await Promise.all([
-        supabase.from("revsports_players").select("team, player_name, grade, home_team, away_team, venue, club_name, jersey, umpire_1, umpire_2, pitch"),
+        supabase.from("revsports_players").select("team, player_name, grade, home_team, away_team, venue, club_name, jersey, umpire_1, umpire_2, pitch, association, is_fillin"),
         supabase.from("teams").select("id, name, club_id, division_id"),
         supabase.from("clubs").select("id, name"),
         supabase.from("divisions").select("id, name, associations(name)"),
@@ -189,7 +189,11 @@ export default function RevSportsMappings() {
 
           // Grades
           if (grade) {
-            if (!sGradesMap.has(grade)) sGradesMap.set(grade, { grade, key: grade });
+            const association = row.association || "";
+            const gradeKey = `${association}|||${grade}`;
+            if (!sGradesMap.has(gradeKey)) {
+              sGradesMap.set(gradeKey, { grade, association, key: gradeKey });
+            }
           }
 
           // Clubs
@@ -212,9 +216,10 @@ export default function RevSportsMappings() {
           if (row.player_name) {
             const tName = row.team || "";
             const jersey = row.jersey || "";
-            const key = `${row.player_name}|||${clubName}|||${grade}|||${tName}|||${jersey}`;
+            const isFillin = row.is_fillin === true;
+            const key = `${row.player_name}|||${clubName}|||${grade}|||${tName}|||${jersey}|||${isFillin}`;
             if (!sPlayersMap.has(key)) {
-              sPlayersMap.set(key, { playerName: row.player_name, clubName, team: tName, grade, jersey, key });
+              sPlayersMap.set(key, { playerName: row.player_name, clubName, team: tName, grade, jersey, isFillin, key });
             }
           }
 
@@ -260,7 +265,9 @@ export default function RevSportsMappings() {
         });
       }
       if (gMapData) {
-        gMapData.forEach((m: any) => { if (m.division_id) initGradeMappings[m.revsports_grade] = m.division_id; });
+        gMapData.forEach((m: any) => {
+          if (m.division_id) initGradeMappings[`${m.association || ""}|||${m.revsports_grade}`] = m.division_id;
+        });
       }
       if (cMapData) {
         cMapData.forEach((m: any) => { if (m.club_id) initClubMappings[m.revsports_club_name] = m.club_id; });
@@ -273,7 +280,11 @@ export default function RevSportsMappings() {
       }
       if (plMapData) {
         plMapData.forEach((m: any) => {
-          if (m.profile_id) initPlayerMappings[`${m.revsports_player_name}|||${m.club_name || ""}|||${m.grade || ""}|||${m.team || ""}|||${m.jersey || ""}`] = m.profile_id;
+          if (m.profile_id) {
+            const isFillin = m.is_fillin === true;
+            const newKey = `${m.revsports_player_name}|||${m.club_name || ""}|||${m.grade || ""}|||${m.team || ""}|||${m.jersey || ""}|||${isFillin}`;
+            initPlayerMappings[newKey] = m.profile_id;
+          }
         });
       }
       if (uMapData) {
@@ -318,7 +329,8 @@ export default function RevSportsMappings() {
         }
       } else if (activeTab === "grades") {
         const rowsToUpsert = Object.entries(gradeMappings).filter(([_, id]) => id !== "__none__").map(([key, id]) => {
-          return { revsports_grade: key, division_id: id };
+          const [association, revsports_grade] = key.split("|||");
+          return { revsports_grade, division_id: id };
         });
         if (rowsToUpsert.length > 0) {
           const { error } = await supabase.from("revsports_grade_mappings").upsert(rowsToUpsert, { onConflict: "revsports_grade" });
@@ -497,7 +509,12 @@ export default function RevSportsMappings() {
                   return (
                     <TableRow key={entry.key}>
                       <TableCell className="pl-6 text-muted-foreground font-mono text-xs">grade</TableCell>
-                      <TableCell><span className="font-bold">{entry.grade}</span></TableCell>
+                      <TableCell>
+                        {entry.association && (
+                          <span className="text-muted-foreground block text-xs">{entry.association}</span>
+                        )}
+                        <span className="font-bold">{entry.grade}</span>
+                      </TableCell>
                       <TableCell>
                         <Select value={currentValue} onValueChange={(val) => setGradeMappings(prev => ({ ...prev, [entry.key]: val }))}>
                           <SelectTrigger className="w-[300px]"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
@@ -706,7 +723,9 @@ export default function RevSportsMappings() {
                       <TableCell>
                         <span className="font-bold">{entry.playerName}</span>
                         <span className="text-muted-foreground block text-xs">
-                          {entry.clubName} • {entry.team} • {entry.grade} {entry.jersey ? `• #${entry.jersey}` : ""}
+                          {entry.clubName} • {entry.team} • {entry.grade}
+                          {entry.jersey ? ` • #${entry.jersey}` : ""}
+                          {entry.isFillin ? " (fill-in)" : ""}
                         </span>
                       </TableCell>
                       <TableCell>

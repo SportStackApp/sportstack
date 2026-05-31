@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
         user_id: userId,
         team_id: ta.team_id,
         membership_type: ta.membership_type,
-        status: "APPROVED",
+        status: "ACTIVE",
       });
 
       await serviceClient.from("user_roles").insert({

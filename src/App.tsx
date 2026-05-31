@@ -17,6 +17,8 @@ import GameDetail from "./pages/GameDetail";
 import Lineup from "./pages/Lineup";
 import Roster from "./pages/Roster";
 import Chat from "./pages/Chat";
+import CoachingSquad from "./pages/coaching/CoachingSquad";
+import CoachingPlayerProfile from "./pages/coaching/CoachingPlayerProfile";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import VotingPortal from "./pages/VotingPortal";
@@ -84,6 +86,8 @@ const App = () => (
                       <Route path="/games/:id" element={<GameDetail />} />
                       <Route path="/games/:id/lineup" element={<Lineup />} />
                       <Route path="/roster" element={<Roster />} />
+                      <Route path="/coaching" element={<CoachingSquad />} />
+                      <Route path="/coaching/:playerId" element={<CoachingPlayerProfile />} />
                       <Route path="/chat" element={<Chat />} />
                       <Route path="/profile" element={<Profile />} />
                       

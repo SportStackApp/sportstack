@@ -24,6 +24,7 @@ import {
   X,
   Bell,
   ClipboardList,
+  ClipboardCheck,
   Users,
   UserCog,
   Settings,
@@ -78,12 +79,14 @@ const NAV_SETS: Record<AppMode, { path: string; label: string; icon: typeof Layo
     { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { path: "/games", label: "Fixtures", icon: Calendar },
     { path: "/roster", label: "Roster", icon: Users },
+    { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
     { path: "/chat", label: "Chat", icon: MessageCircle },
   ],
   player: [
     { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { path: "/games", label: "Fixtures", icon: Calendar },
     { path: "/roster", label: "Statistics", icon: BarChart3 },
+    { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
     { path: "/chat", label: "Chat", icon: MessageCircle },
   ],
 };
@@ -97,7 +100,7 @@ const MOBILE_NAV: Record<AppMode, { path: string; label: string; icon: typeof La
     { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { path: "/games", label: "Fixtures", icon: Calendar },
     { path: "/roster", label: "Roster", icon: Users },
-    { path: "/chat", label: "Chat", icon: MessageCircle },
+    { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
   ],
   player: [
     { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -220,7 +223,7 @@ const AppLayout = () => {
         .select("teams(name, clubs(name, associations(name, abbreviation)))")
         .eq("user_id", user.id)
         .eq("membership_type", "PRIMARY")
-        .eq("status", "APPROVED")
+        .eq("status", "ACTIVE")
         .maybeSingle();
 
       const team = Array.isArray(data?.teams) ? data?.teams[0] : data?.teams;
@@ -242,7 +245,10 @@ const AppLayout = () => {
     navigate(`/associations/${associationId}`);
   };
 
-  const navItems = NAV_SETS[mode];
+  const baseNavItems = NAV_SETS[mode];
+  const navItems = (mode === "super_admin" && selectedTeamId)
+    ? [...baseNavItems, { path: "/coaching", label: "Coaching", icon: ClipboardCheck }]
+    : baseNavItems;
   
   // Hide nav items that are redundant based on cascade selection
   const visibleNavItems = navItems.filter((item) => {
