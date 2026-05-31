@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useTeamContext } from "@/contexts/TeamContext";
 
 const POSITIONS = [
   "GK", "FB-L", "FB-R", "FB-C", "HB-L", "HB-C", "HB-R", "IF-L", "IF-R", "CF", "FF-L", "FF-R", "FF-C"
@@ -20,7 +21,6 @@ interface Profile {
   first_name: string;
   last_name: string;
   avatar_url: string | null;
-  jersey_number: string | null;
   date_of_birth: string | null;
 }
 
@@ -43,6 +43,7 @@ export default function CoachingPlayerProfile() {
   const { playerId } = useParams<{ playerId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { selectedTeamId } = useTeamContext();
   
   const [loading, setLoading] = useState(true);
   const [teamId, setTeamId] = useState<string | null>(null);
@@ -57,21 +58,42 @@ export default function CoachingPlayerProfile() {
     async function loadData() {
       if (!user || !playerId) return;
       try {
-        // 1. Check coach role
-        const { data: roleData } = await supabase
+        // Check if Super Admin
+        const { data: superAdminCheck } = await supabase
           .from("user_roles")
-          .select("team_id")
+          .select("id")
           .eq("user_id", user.id)
-          .eq("role", "COACH")
+          .eq("role", "SUPER_ADMIN")
           .maybeSingle() as any;
 
-        if (!roleData?.team_id) {
-          toast.error("You are not assigned as a coach for any team.");
-          navigate("/coaching");
-          return;
+        const isSuperAdmin = !!superAdminCheck;
+        let tId = null;
+
+        if (isSuperAdmin) {
+          tId = selectedTeamId;
+          if (!tId) {
+            toast.error("Please select a team from the cascade menu first.");
+            navigate("/coaching");
+            return;
+          }
+        } else {
+          // 1. Check coach role
+          const { data: roleData } = await supabase
+            .from("user_roles")
+            .select("team_id")
+            .eq("user_id", user.id)
+            .eq("role", "COACH")
+            .maybeSingle() as any;
+
+          if (!roleData?.team_id) {
+            toast.error("You are not assigned as a coach for any team.");
+            navigate("/coaching");
+            return;
+          }
+          
+          tId = roleData.team_id;
         }
-        
-        const tId = roleData.team_id;
+
         setTeamId(tId);
 
         // 2. Load active season
@@ -86,7 +108,7 @@ export default function CoachingPlayerProfile() {
         // 3. Load profile
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("first_name, last_name, avatar_url, jersey_number, date_of_birth")
+          .select("first_name, last_name, avatar_url, date_of_birth")
           .eq("id", playerId)
           .single();
           
@@ -170,7 +192,7 @@ export default function CoachingPlayerProfile() {
     }
 
     loadData();
-  }, [user, playerId, navigate]);
+  }, [user, playerId, navigate, selectedTeamId]);
 
   const handleAssessmentChange = async (position: string, val: number) => {
     if (!user || !playerId || !teamId) return;
@@ -280,7 +302,6 @@ export default function CoachingPlayerProfile() {
             {profile.first_name} {profile.last_name}
           </h1>
           <div className="flex gap-3 mt-2 text-muted-foreground font-medium">
-            {profile.jersey_number && <span>Jersey #{profile.jersey_number}</span>}
             {profile.date_of_birth && <span>DOB: {new Date(profile.date_of_birth).toLocaleDateString()}</span>}
           </div>
         </div>

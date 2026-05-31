@@ -377,61 +377,76 @@ const AppLayout = () => {
 
             {/* Association Logo with Popover - only interactive for super_admin */}
             {showAssociationSelector ? (
-              <Popover open={isAssociationPopoverOpen} onOpenChange={setIsAssociationPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <button className="w-10 h-10 rounded-lg overflow-hidden border-2 border-primary-foreground/20 hover:border-primary-foreground/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground/50">
-                    <Avatar className="w-full h-full rounded-none">
-                      <AvatarImage
-                        src={selectedAssociation?.logo_url || undefined}
-                        alt={selectedAssociation?.name}
-                        className="object-cover"
-                      />
-                      <AvatarFallback className="rounded-none bg-accent text-accent-foreground text-xs font-semibold">
-                        {selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "Admin"}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-72 p-2 bg-background border-border" align="start">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground px-2 py-1">Select Association</p>
-                    <button
-                      onClick={() => {
-                        setSelectedAssociationId("");
-                        setIsAssociationPopoverOpen(false);
-                        navigate(mode === "super_admin" || mode === "association" || mode === "club" ? "/admin" : "/dashboard");
-                      }}
-                      className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left transition-colors hover:bg-muted text-foreground"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                        <LayoutDashboard className="h-4 w-4" />
-                      </div>
-                      <span className="text-sm font-medium">Dashboard</span>
+              <div className="flex items-center gap-1">
+                <Popover open={isAssociationPopoverOpen} onOpenChange={setIsAssociationPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="w-10 h-10 rounded-lg overflow-hidden border-2 border-primary-foreground/20 hover:border-primary-foreground/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground/50">
+                      <Avatar className="w-full h-full rounded-none">
+                        <AvatarImage
+                          src={selectedAssociation?.logo_url || undefined}
+                          alt={selectedAssociation?.name}
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="rounded-none bg-accent text-accent-foreground text-xs font-semibold">
+                          {selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "Admin"}
+                        </AvatarFallback>
+                      </Avatar>
                     </button>
-                    <div className="h-px bg-border my-1" />
-                    {associations.map((assoc) => (
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-2 bg-background border-border" align="start">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground px-2 py-1">Select Association</p>
                       <button
-                        key={assoc.id}
-                        onClick={() => handleAssociationChange(assoc.id)}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left transition-colors",
-                          selectedAssociationId === assoc.id
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-muted text-foreground"
-                        )}
+                        onClick={() => {
+                          setSelectedAssociationId("");
+                          setSelectedClubId("");
+                          setSelectedDivision("");
+                          setSelectedTeamId("");
+                          setIsAssociationPopoverOpen(false);
+                          navigate(mode === "super_admin" || mode === "association" || mode === "club" ? "/admin" : "/dashboard");
+                        }}
+                        className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left transition-colors hover:bg-muted text-foreground"
                       >
-                        <Avatar className="w-8 h-8">
-                          <AvatarImage src={assoc.logo_url || undefined} alt={assoc.name} className="object-cover" />
-                          <AvatarFallback className="text-xs">
-                            {assoc.abbreviation || assoc.name.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium truncate">{assoc.name}</span>
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                          <LayoutDashboard className="h-4 w-4" />
+                        </div>
+                        <span className="text-sm font-medium">Dashboard</span>
                       </button>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
+                      <div className="h-px bg-border my-1" />
+                      {associations.map((assoc) => (
+                        <button
+                          key={assoc.id}
+                          onClick={() => handleAssociationChange(assoc.id)}
+                          className={cn(
+                            "w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left transition-colors",
+                            selectedAssociationId === assoc.id
+                              ? "bg-primary text-primary-foreground"
+                              : "hover:bg-muted text-foreground"
+                          )}
+                        >
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={assoc.logo_url || undefined} alt={assoc.name} className="object-cover" />
+                            <AvatarFallback className="text-xs">
+                              {assoc.abbreviation || assoc.name.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium truncate">{assoc.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                {selectedAssociationId && (
+                  <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full text-primary-foreground/50 hover:text-primary-foreground hover:bg-primary-foreground/10" onClick={() => {
+                    setSelectedAssociationId("");
+                    setSelectedClubId("");
+                    setSelectedDivision("");
+                    setSelectedTeamId("");
+                  }}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             ) : (
               // Static association logo for non-super_admin modes
               <>
@@ -464,59 +479,89 @@ const AppLayout = () => {
 
             {/* Club Selector */}
             {showClubSelector && selectedAssociationId && filteredClubs.length > 0 && (
-              <Select key={selectedAssociationId} value={selectedClubId || undefined} onValueChange={(v) => {
-                setSelectedClubId(v); 
-                navigate(`/clubs/${v}`);
-              }}>
-                <SelectTrigger className="w-[140px] lg:w-[180px] bg-accent text-accent-foreground border-0 font-medium">
-                  <SelectValue placeholder="Select Club" />
-                </SelectTrigger>
-                <SelectContent className="bg-background border-border">
-                  {filteredClubs.map((club) => (
-                    <SelectItem key={club.id} value={club.id}>
-                      {club.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <Select key={selectedAssociationId} value={selectedClubId || undefined} onValueChange={(v) => {
+                  setSelectedClubId(v); 
+                  navigate(`/clubs/${v}`);
+                }}>
+                  <SelectTrigger className="w-[140px] lg:w-[180px] bg-accent text-accent-foreground border-0 font-medium">
+                    <SelectValue placeholder="Select Club" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border-border">
+                    {filteredClubs.map((club) => (
+                      <SelectItem key={club.id} value={club.id}>
+                        {club.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedClubId && (
+                  <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full text-primary-foreground/50 hover:text-primary-foreground hover:bg-primary-foreground/10" onClick={() => {
+                    setSelectedClubId("");
+                    setSelectedDivision("");
+                    setSelectedTeamId("");
+                  }}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             )}
 
             {/* Division Selector */}
             {selectedClubId && filteredDivisions.length > 0 && (
-              <Select key={selectedClubId} value={selectedDivision || undefined} onValueChange={(v) => {
-                setSelectedDivision(v); 
-                navigate("/admin/division");
-              }}>
-                <SelectTrigger className="w-[120px] lg:w-[160px] bg-accent text-accent-foreground border-0 font-medium">
-                  <SelectValue placeholder="Division" />
-                </SelectTrigger>
-                <SelectContent className="bg-background border-border">
-                  {filteredDivisions.map((div) => (
-                    <SelectItem key={div.id} value={div.id}>
-                      {div.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <Select key={selectedClubId} value={selectedDivision || undefined} onValueChange={(v) => {
+                  setSelectedDivision(v); 
+                  navigate("/admin/division");
+                }}>
+                  <SelectTrigger className="w-[120px] lg:w-[160px] bg-accent text-accent-foreground border-0 font-medium">
+                    <SelectValue placeholder="Division" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border-border">
+                    {filteredDivisions.map((div) => (
+                      <SelectItem key={div.id} value={div.id}>
+                        {div.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedDivision && (
+                  <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full text-primary-foreground/50 hover:text-primary-foreground hover:bg-primary-foreground/10" onClick={() => {
+                    setSelectedDivision("");
+                    setSelectedTeamId("");
+                  }}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             )}
 
             {/* Team Selector */}
             {selectedClubId && selectedDivision && filteredTeams.length > 0 && (
-              <Select key={selectedClubId + selectedDivision} value={selectedTeamId || undefined} onValueChange={(v) => {
-                setSelectedTeamId(v);
-                navigate(`/teams/${v}`);
-              }}>
-                <SelectTrigger className="w-[120px] lg:w-[160px] bg-accent text-accent-foreground border-0 font-medium">
-                  <SelectValue placeholder="Select Team" />
-                </SelectTrigger>
-                <SelectContent className="bg-background border-border">
-                  {filteredTeams.map((team) => (
-                    <SelectItem key={team.id} value={team.id}>
-                      {getTeamDisplayName(team)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <Select key={selectedClubId + selectedDivision} value={selectedTeamId || undefined} onValueChange={(v) => {
+                  setSelectedTeamId(v);
+                  navigate(`/teams/${v}`);
+                }}>
+                  <SelectTrigger className="w-[120px] lg:w-[160px] bg-accent text-accent-foreground border-0 font-medium">
+                    <SelectValue placeholder="Select Team" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border-border">
+                    {filteredTeams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {getTeamDisplayName(team)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedTeamId && (
+                  <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full text-primary-foreground/50 hover:text-primary-foreground hover:bg-primary-foreground/10" onClick={() => {
+                    setSelectedTeamId("");
+                  }}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             )}
           </div>
 

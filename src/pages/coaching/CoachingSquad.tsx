@@ -9,18 +9,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
+import { useTeamContext } from "@/contexts/TeamContext";
+
 interface Player {
   user_id: string;
   first_name: string;
   last_name: string;
   avatar_url: string | null;
-  jersey_number: string | null;
+  jersey_number: number | null;
   membership_type: string;
   assessments: { position_code: string; assessment: number }[];
 }
 
 export default function CoachingSquad() {
   const { user } = useAuth();
+  const { selectedTeamId } = useTeamContext();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [isCoach, setIsCoach] = useState(true);
@@ -32,27 +35,47 @@ export default function CoachingSquad() {
     async function loadSquad() {
       if (!user) return;
       try {
-        // 1. Check if user has COACH role and get team_id
-        const { data: roleData, error: roleError } = await supabase
+        // Check if Super Admin
+        const { data: superAdminCheck } = await supabase
           .from("user_roles")
-          .select("team_id")
+          .select("id")
           .eq("user_id", user.id)
-          .eq("role", "COACH")
+          .eq("role", "SUPER_ADMIN")
           .maybeSingle() as any;
 
-        if (roleError) throw roleError;
+        const isSuperAdmin = !!superAdminCheck;
+        let teamId = null;
 
-        if (!roleData) {
-          setIsCoach(false);
-          setLoading(false);
-          return;
-        }
+        if (isSuperAdmin) {
+          teamId = selectedTeamId;
+          if (!teamId) {
+            setError("Select a team from the top menu to view their coaching squad.");
+            setLoading(false);
+            return;
+          }
+        } else {
+          // 1. Check if user has COACH role and get team_id
+          const { data: roleData, error: roleError } = await supabase
+            .from("user_roles")
+            .select("team_id")
+            .eq("user_id", user.id)
+            .eq("role", "COACH")
+            .maybeSingle() as any;
 
-        const teamId = roleData.team_id;
-        if (!teamId) {
-          setError("No team assigned. Please contact your administrator.");
-          setLoading(false);
-          return;
+          if (roleError) throw roleError;
+
+          if (!roleData) {
+            setIsCoach(false);
+            setLoading(false);
+            return;
+          }
+
+          teamId = roleData.team_id;
+          if (!teamId) {
+            setError("No team assigned. Please contact your administrator.");
+            setLoading(false);
+            return;
+          }
         }
 
         // Fetch team name
@@ -68,7 +91,7 @@ export default function CoachingSquad() {
         // Query 1: get memberships
         const { data: membersData, error: membersError } = await supabase
           .from("team_memberships")
-          .select("user_id, membership_type")
+          .select("user_id, membership_type, jersey_number")
           .eq("team_id", teamId)
           .eq("status", "ACTIVE");
 
@@ -78,7 +101,7 @@ export default function CoachingSquad() {
         const userIds = (membersData || []).map((m: any) => m.user_id);
         const { data: profilesData, error: profilesError } = await supabase
           .from("profiles")
-          .select("id, first_name, last_name, avatar_url, jersey_number")
+          .select("id, first_name, last_name, avatar_url")
           .in("id", userIds);
 
         if (profilesError) throw profilesError;
@@ -108,7 +131,7 @@ export default function CoachingSquad() {
             first_name: profile?.first_name || "Unknown",
             last_name: profile?.last_name || "",
             avatar_url: profile?.avatar_url || null,
-            jersey_number: profile?.jersey_number || null,
+            jersey_number: m.jersey_number || null,
             membership_type: m.membership_type || "PRIMARY",
             assessments: (assessmentsByPlayer[m.user_id] || []).slice(0, 3)
           };
@@ -133,7 +156,7 @@ export default function CoachingSquad() {
     }
 
     loadSquad();
-  }, [user]);
+  }, [user, selectedTeamId]);
 
   const getAssessmentColor = (val: number) => {
     switch (val) {
