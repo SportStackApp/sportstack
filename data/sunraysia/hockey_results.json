@@ -8504,15 +8504,314 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs Blue Under 16",
     "away_team": "Waratahs White Under 16",
-    "home_score": "0",
-    "away_score": "4",
+    "home_score": "3",
+    "away_score": "3",
     "umpires": [
       "Kara Taylor",
-      "Ryan Saunders",
-      "Other matches between these teams",
-      "Round 3"
+      "Ryan Saunders"
     ],
-    "teams": [],
+    "teams": [
+      {
+        "team_name": "Waratahs Blue Under 16",
+        "club_name": "Waratahs",
+        "players": [
+          {
+            "name": "Clarke, Kenzie",
+            "jersey": "4",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Clarke, Monty",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Dowdy, Conan",
+            "jersey": "1",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Dowdy, Indi",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Giddings, Zali",
+            "jersey": "12",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Gowenlock, Madeline",
+            "jersey": "10",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hunt, Annalise",
+            "jersey": "8",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hunt, Brendan",
+            "jersey": "3",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hunt, Nate",
+            "jersey": "5",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Madden, Elsie",
+            "jersey": "14",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "O'Neill, Lilly-Rose",
+            "jersey": "9",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Obst, Arianny",
+            "jersey": "13",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Underwood, Ivy",
+            "jersey": "7",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      },
+      {
+        "team_name": "Waratahs White Under 16",
+        "club_name": "Waratahs",
+        "players": [
+          {
+            "name": "Baker, Alexander",
+            "jersey": "10",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Beckwith, Callum",
+            "jersey": "9",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "cavanagh-cook, zac",
+            "jersey": "1",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Crisp, Shelby",
+            "jersey": "11",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hugo, AJ",
+            "jersey": "4",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hugo, Phia",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Lourens, Fourie",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Madden, Philippa",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Niblett, Declan",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Parker, Maggie",
+            "jersey": "5",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Regan, Hamish",
+            "jersey": "12",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      }
+    ],
     "grade": "U16 Mixed",
     "round": "Round 6"
   },
@@ -8524,15 +8823,350 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside Under 16 Mixed",
     "away_team": "Koowinda Under 16",
-    "home_score": "0",
-    "away_score": "1",
+    "home_score": "1",
+    "away_score": "2",
     "umpires": [
       "Mark Lohmeyer",
-      "Sam Megson",
-      "Other matches between these teams",
-      "Round 3"
+      "Sam Megson"
     ],
-    "teams": [],
+    "teams": [
+      {
+        "team_name": "Rivaside Under 16 Mixed",
+        "club_name": "Rivaside",
+        "players": [
+          {
+            "name": "Egan, Archie",
+            "jersey": "10",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Fotheringham, Hunter",
+            "jersey": "12",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Fotheringham, Nash",
+            "jersey": "7",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Kovac, Noah",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Manfield, Sebastian",
+            "jersey": "6",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Mannes, Patrick",
+            "jersey": "14",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Pyke, Harry",
+            "jersey": "5",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Pyke, Malachy",
+            "jersey": "13",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Searle, Toby",
+            "jersey": "11",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Taylor, Aurora",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Taylor, Jotham",
+            "jersey": "9",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Thompson, Timothy",
+            "jersey": "4",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Tschirpig, Ethan",
+            "jersey": "8",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hibberd, Pippa",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": true,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      },
+      {
+        "team_name": "Koowinda Under 16",
+        "club_name": "Koowinda",
+        "players": [
+          {
+            "name": "Ellis, Darci",
+            "jersey": null,
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Ellis, Piper",
+            "jersey": null,
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "GAULKE, RUBY",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "McShane, Joshua",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Nicholson-ames, Jessica",
+            "jersey": null,
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Peters, Konna",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Schmidt, Thomas",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Scholes, Harry",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Snyman, Cian",
+            "jersey": "12",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Stackpool, Chantel",
+            "jersey": "9",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Stenner, Mitchell",
+            "jersey": "10",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "2",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Taylor, Izabel",
+            "jersey": "11",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Harris, Hunter",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": true,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      }
+    ],
     "grade": "U16 Mixed",
     "round": "Round 6"
   },
@@ -14536,14 +15170,253 @@
     "home_team": "Waratahs Under 13 Girls",
     "away_team": "Rivaside/Wanderers Under 13 Girls",
     "home_score": "0",
-    "away_score": "0",
+    "away_score": "2",
     "umpires": [
       "Ashleigh Gray",
-      "Robert Thompson",
-      "Other matches between these teams",
-      "Round 1"
+      "Robert Thompson"
     ],
-    "teams": [],
+    "teams": [
+      {
+        "team_name": "Waratahs Under 13 Girls",
+        "club_name": "Waratahs",
+        "players": [
+          {
+            "name": "Dowdy, Indi",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Gowenlock, Madeline",
+            "jersey": "5",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Healy, Zoe",
+            "jersey": "1",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Kerr-Robertson, Indianna",
+            "jersey": "7",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Maas, Georgie",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Madden, Violet",
+            "jersey": "4",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "McLeod Reese, Imogen",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Parker, Alice",
+            "jersey": null,
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Roccisano, Claudia",
+            "jersey": null,
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "SMITH, Mya",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Smith, ZOE",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      },
+      {
+        "team_name": "Rivaside/Wanderers Under 13 Girls",
+        "club_name": "Rivaside",
+        "players": [
+          {
+            "name": "Cameron, Elliot",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Ellis, Poppy",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hyde, Kaylee",
+            "jersey": "7",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Nyabonda, April",
+            "jersey": "5",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Simmonds, Zahli",
+            "jersey": "4",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Smith, Emily",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Taylor, Nyx",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Woods, Jordan",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      }
+    ],
     "grade": "U13 Girls",
     "round": "Round 6"
   },
@@ -14554,16 +15427,219 @@
     "venue": "Old Aerodrome Oval",
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Under 13 Girls",
-    "away_team": null,
-    "home_score": "0",
+    "away_team": "Koowinda Under 13 Girls",
+    "home_score": "3",
     "away_score": "0",
     "umpires": [
       "Ivy Underwood",
-      "Kaitlyn Hellwege",
-      "Other matches between these teams",
-      "Round 1"
+      "Kaitlyn Hellwege"
     ],
-    "teams": [],
+    "teams": [
+      {
+        "team_name": "Koowinda Under 13 Girls",
+        "club_name": "Koowinda",
+        "players": [
+          {
+            "name": "Cameron, Elliot",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Ellis, Poppy",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hyde, Kaylee",
+            "jersey": "7",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Nyabonda, April",
+            "jersey": "5",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Simmonds, Zahli",
+            "jersey": "4",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Smith, Emily",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Taylor, Nyx",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Woods, Jordan",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      },
+      {
+        "team_name": "Koowinda Under 13 Girls",
+        "club_name": "Koowinda",
+        "players": [
+          {
+            "name": "Blake-blundelle, Rachelle",
+            "jersey": "9",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Ellis, Darci",
+            "jersey": "1",
+            "role": "Goalkeeper",
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Manning, Alaura",
+            "jersey": "8",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Riley, Brianna",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Scholes, Tilly",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Stackpool, Tiffany",
+            "jersey": "4",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Taylor, Evie",
+            "jersey": "5",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Trehan, Yesha",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      }
+    ],
     "grade": "U13 Girls",
     "round": "Round 6"
   },
@@ -14579,11 +15655,250 @@
     "away_score": "0",
     "umpires": [
       "Dafydd Scholes",
-      "Kara Taylor",
-      "Other matches between these teams",
-      "Round 1"
+      "Kara Taylor"
     ],
-    "teams": [],
+    "teams": [
+      {
+        "team_name": "Koowinda Under 13 Girls",
+        "club_name": "Koowinda",
+        "players": [
+          {
+            "name": "Blake-blundelle, Rachelle",
+            "jersey": "9",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Ellis, Darci",
+            "jersey": "1",
+            "role": "Goalkeeper",
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Manning, Alaura",
+            "jersey": "8",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Riley, Brianna",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Scholes, Tilly",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Stackpool, Tiffany",
+            "jersey": "4",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Taylor, Evie",
+            "jersey": "5",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Trehan, Yesha",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      },
+      {
+        "team_name": "Waratahs Under 13 Girls",
+        "club_name": "Waratahs",
+        "players": [
+          {
+            "name": "Dowdy, Indi",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Gowenlock, Madeline",
+            "jersey": "5",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Healy, Zoe",
+            "jersey": "1",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Kerr-Robertson, Indianna",
+            "jersey": "7",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Maas, Georgie",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Madden, Violet",
+            "jersey": "4",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "McLeod Reese, Imogen",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Parker, Alice",
+            "jersey": null,
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Roccisano, Claudia",
+            "jersey": null,
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "SMITH, Mya",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Smith, ZOE",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      }
+    ],
     "grade": "U13 Girls",
     "round": "Round 6"
   },
@@ -14727,6 +16042,18 @@
         "club_name": "Rivaside",
         "players": [
           {
+            "name": "Buffon, William",
+            "jersey": "10",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Fotheringham, Nash",
             "jersey": "6",
             "role": null,
@@ -14824,7 +16151,7 @@
           },
           {
             "name": "Trevena, Chase",
-            "jersey": null,
+            "jersey": "9",
             "role": null,
             "attended": true,
             "is_fillin": false,
@@ -15503,6 +16830,18 @@
         "club_name": "Rivaside",
         "players": [
           {
+            "name": "Buffon, William",
+            "jersey": "10",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Fotheringham, Nash",
             "jersey": "6",
             "role": null,
@@ -15600,7 +16939,7 @@
           },
           {
             "name": "Trevena, Chase",
-            "jersey": null,
+            "jersey": "9",
             "role": null,
             "attended": true,
             "is_fillin": false,
@@ -16015,6 +17354,18 @@
         "club_name": "Rivaside",
         "players": [
           {
+            "name": "Buffon, William",
+            "jersey": "10",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Fotheringham, Nash",
             "jersey": "6",
             "role": null,
@@ -16112,7 +17463,7 @@
           },
           {
             "name": "Trevena, Chase",
-            "jersey": null,
+            "jersey": "9",
             "role": null,
             "attended": true,
             "is_fillin": false,
@@ -17020,6 +18371,18 @@
         "club_name": "Rivaside",
         "players": [
           {
+            "name": "Buffon, William",
+            "jersey": "10",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Fotheringham, Nash",
             "jersey": "6",
             "role": null,
@@ -17117,7 +18480,7 @@
           },
           {
             "name": "Trevena, Chase",
-            "jersey": null,
+            "jersey": "9",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -17489,6 +18852,18 @@
         "club_name": "Rivaside",
         "players": [
           {
+            "name": "Buffon, William",
+            "jersey": "10",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Fotheringham, Nash",
             "jersey": "6",
             "role": null,
@@ -17586,7 +18961,7 @@
           },
           {
             "name": "Trevena, Chase",
-            "jersey": null,
+            "jersey": "9",
             "role": null,
             "attended": true,
             "is_fillin": false,
@@ -17990,14 +19365,325 @@
     "home_team": "Koowinda Under 13 Boys",
     "away_team": "Waratahs Under 13 Boys",
     "home_score": "0",
-    "away_score": "3",
+    "away_score": "6",
     "umpires": [
       "Robert Thompson",
-      "Ryan Hawke",
-      "Other matches between these teams",
-      "Round 3"
+      "Ryan Hawke"
     ],
-    "teams": [],
+    "teams": [
+      {
+        "team_name": "Koowinda Under 13 Boys",
+        "club_name": "Koowinda",
+        "players": [
+          {
+            "name": "Ellis, Darci",
+            "jersey": "4",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Gaulke, Logan",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Josephs, Cooper",
+            "jersey": "1",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Manning, Alaura",
+            "jersey": "10",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Manning, Roman",
+            "jersey": "8",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "McShane, Joshua",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Riley, Brianna",
+            "jersey": "9",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Scholes, Harry",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Scholes, Tilly",
+            "jersey": "12",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Taylor, Evie",
+            "jersey": "7",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Trehan, Yesha",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Harris, Hunter",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": true,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      },
+      {
+        "team_name": "Waratahs Under 13 Boys",
+        "club_name": "Waratahs",
+        "players": [
+          {
+            "name": "Beckwith, Ryder",
+            "jersey": "10",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Clarke, Lenny",
+            "jersey": "7",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Clarke, Monty",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "3",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Dowdy, Reuben",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Healy, Mark",
+            "jersey": "1",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hugo, AJ",
+            "jersey": "4",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hunt, Nate",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "2",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Job, William",
+            "jersey": "12",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Lanyon, Sefton",
+            "jersey": "8",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Madden, Edward",
+            "jersey": "9",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Niblett, Padrick",
+            "jersey": "5",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "O'Neill, Rhen",
+            "jersey": "11",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Dowdy, Indi",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": true,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      }
+    ],
     "grade": "U13 Boys",
     "round": "Round 6"
   },
@@ -18010,14 +19696,349 @@
     "home_team": "Rivaside Under 13 Boys",
     "away_team": "Mildura Wanderers Under 13 Boys",
     "home_score": "0",
-    "away_score": "2",
+    "away_score": "0",
     "umpires": [
       "Hanna Flentjar",
-      "Sam Megson",
-      "Other matches between these teams",
-      "Round 3"
+      "Sam Megson"
     ],
-    "teams": [],
+    "teams": [
+      {
+        "team_name": "Rivaside Under 13 Boys",
+        "club_name": "Rivaside",
+        "players": [
+          {
+            "name": "Buffon, William",
+            "jersey": "10",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Fotheringham, Nash",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Manfield, Sebastian",
+            "jersey": "5",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Mannes, Patrick",
+            "jersey": "7",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Pyke, Lorcan",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Pyke, Malachy",
+            "jersey": "4",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Taylor, Jotham",
+            "jersey": "8",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Thompson, Henry",
+            "jersey": "1",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Thompson, Timothy",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Trevena, Chase",
+            "jersey": "9",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Ellis, Poppy",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": true,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Woods, Jordan",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": true,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      },
+      {
+        "team_name": "Mildura Wanderers Under 13 Boys",
+        "club_name": "Mildura Wanderers",
+        "players": [
+          {
+            "name": "Christian, Joshua",
+            "jersey": "17",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Egan, Archie",
+            "jersey": "1",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Giddings, Ned",
+            "jersey": "10",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Lohmeyer, Isaac",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Lohmeyer, Oliver",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Nyabonda, April",
+            "jersey": "15",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Nyabonda, Farai",
+            "jersey": "8",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Robertson, Seth",
+            "jersey": "16",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Searle, Toby",
+            "jersey": "4",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Smith, Joshua",
+            "jersey": "18",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Tait, Oliver",
+            "jersey": "9",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Veeren, Kiyaan",
+            "jersey": "6",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Veeren, Tanay",
+            "jersey": "7",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Williams, Ari",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Wood, Flynn",
+            "jersey": "5",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      }
+    ],
     "grade": "U13 Boys",
     "round": "Round 6"
   },
@@ -22143,12 +24164,347 @@
     "home_score": "1",
     "away_score": "2",
     "umpires": [
-      "Jenna Hollow;                                                                     Kaitlyn Hellwege",
-      "Details",
-      "Sponsors",
-      "We Support"
+      "Hannah Benson",
+      "Jenna Hollow"
     ],
-    "teams": [],
+    "teams": [
+      {
+        "team_name": "Koowinda Women",
+        "club_name": "Koowinda",
+        "players": [
+          {
+            "name": "Cass, Rhiannon",
+            "jersey": "10",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Cass, Tazmyn",
+            "jersey": "1",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Ellis, Piper",
+            "jersey": "2",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Flentjar, Hanna",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "GAULKE, RUBY",
+            "jersey": "3",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Harrison, Darrien",
+            "jersey": "5",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Lewin, Josephine",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Morrison, Mabel",
+            "jersey": "7",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Neagle, Eadie",
+            "jersey": "11",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Stackpool, Chantel",
+            "jersey": "8",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Wakefield, Susan",
+            "jersey": "9",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      },
+      {
+        "team_name": "Waratahs White Women",
+        "club_name": "Waratahs",
+        "players": [
+          {
+            "name": "Barlow, Carrie",
+            "jersey": null,
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Beckwith, Sarah",
+            "jersey": "10",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Cavanagh-cook, Paige",
+            "jersey": "2",
+            "role": "Goalkeeper",
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Crisp, Shelby",
+            "jersey": "11",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Gardner, Melissa",
+            "jersey": "7",
+            "role": "Captain",
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Giddings, Rory",
+            "jersey": "14",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "2",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Giddings, Zali",
+            "jersey": "13",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hugo, Eleen",
+            "jersey": "4",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hugo, Phia",
+            "jersey": "5",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hunt, Annalise",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Seekamp, Belinda",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Shields, Kristie",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Shields, Trinity",
+            "jersey": "9",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Shields, Tully",
+            "jersey": "8",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "McPhee, Abbey",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": true,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Thompson, Virginia",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": true,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      }
+    ],
     "grade": "Women",
     "round": "Round 6"
   },
@@ -22913,8 +25269,20 @@
             "red_cards": ""
           },
           {
+            "name": "Offer, Rehan",
+            "jersey": "9",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Simms, Mitchell",
-            "jersey": "8",
+            "jersey": null,
             "role": null,
             "attended": true,
             "is_fillin": false,
@@ -23118,8 +25486,32 @@
             "red_cards": ""
           },
           {
+            "name": "Hawke, Nicholas",
+            "jersey": "17",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hawke, Ryan",
+            "jersey": "18",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Kotroulas, Miltiadis",
-            "jersey": "12",
+            "jersey": null,
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -23912,8 +26304,20 @@
             "red_cards": ""
           },
           {
+            "name": "Offer, Rehan",
+            "jersey": "9",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Simms, Mitchell",
-            "jersey": "8",
+            "jersey": null,
             "role": null,
             "attended": true,
             "is_fillin": false,
@@ -24369,8 +26773,32 @@
             "red_cards": ""
           },
           {
+            "name": "Hawke, Nicholas",
+            "jersey": "17",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hawke, Ryan",
+            "jersey": "18",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Kotroulas, Miltiadis",
-            "jersey": "12",
+            "jersey": null,
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -24989,8 +27417,32 @@
             "red_cards": ""
           },
           {
+            "name": "Hawke, Nicholas",
+            "jersey": "17",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hawke, Ryan",
+            "jersey": "18",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Kotroulas, Miltiadis",
-            "jersey": "12",
+            "jersey": null,
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -25602,8 +28054,20 @@
             "red_cards": ""
           },
           {
+            "name": "Offer, Rehan",
+            "jersey": "9",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Simms, Mitchell",
-            "jersey": "8",
+            "jersey": null,
             "role": null,
             "attended": true,
             "is_fillin": false,
@@ -25768,8 +28232,20 @@
             "red_cards": ""
           },
           {
+            "name": "Offer, Rehan",
+            "jersey": "9",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Simms, Mitchell",
-            "jersey": "8",
+            "jersey": null,
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -25906,8 +28382,32 @@
             "red_cards": ""
           },
           {
+            "name": "Hawke, Nicholas",
+            "jersey": "17",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hawke, Ryan",
+            "jersey": "18",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Kotroulas, Miltiadis",
-            "jersey": "12",
+            "jersey": null,
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -26430,15 +28930,314 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Purple Men",
     "away_team": "Rivaside Blue Men",
-    "home_score": "2",
-    "away_score": "4",
+    "home_score": "3",
+    "away_score": "0",
     "umpires": [
       "Rory Giddings",
-      "Sam Megson",
-      "Other matches between these teams",
-      "Round 1"
+      "Sam Megson"
     ],
-    "teams": [],
+    "teams": [
+      {
+        "team_name": "Koowinda Purple Men",
+        "club_name": "Koowinda",
+        "players": [
+          {
+            "name": "Blandford, Slade",
+            "jersey": "2",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Chapman, Thomas",
+            "jersey": "5",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hood, Jamie",
+            "jersey": "12",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "1",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Longo, Daniel",
+            "jersey": "10",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Meppem, Jack",
+            "jersey": "7",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Morrison, Mabel",
+            "jersey": "4",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Peters, Konna",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Salter, Lachlan",
+            "jersey": "11",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Saunders, Ryan",
+            "jersey": null,
+            "role": "Goalkeeper",
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Scholes, Dafydd",
+            "jersey": "1",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Stenner, Mitchell",
+            "jersey": "8",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Wakefield, Susan",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Wickham, Matthew",
+            "jersey": null,
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Ginn, Tyler",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": true,
+            "is_removed": false,
+            "goals": "1",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      },
+      {
+        "team_name": "Rivaside Blue Men",
+        "club_name": "Rivaside",
+        "players": [
+          {
+            "name": "Barker, Greg",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Carrigan, Hugh",
+            "jersey": "7",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Gardiner, Liam",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Guild, Warren",
+            "jersey": "5",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hibberd, Zebb",
+            "jersey": "4",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Norton, Alex",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Offer, Rehan",
+            "jersey": "9",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Simms, Mitchell",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Thompson, Robert",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Pyke, Harry",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": true,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      }
+    ],
     "grade": "Men",
     "round": "Round 6"
   },
@@ -26450,15 +29249,422 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs Men",
     "away_team": "Koowinda Blue Men",
-    "home_score": "0",
+    "home_score": "2",
     "away_score": "0",
     "umpires": [
       "Robert Thompson",
-      "Sonya Drew",
-      "Other matches between these teams",
-      "Round 1"
+      "Sonya Drew"
     ],
-    "teams": [],
+    "teams": [
+      {
+        "team_name": "Waratahs Men",
+        "club_name": "Waratahs",
+        "players": [
+          {
+            "name": "Beckwith, Callum",
+            "jersey": "9",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Beckwith, Shane",
+            "jersey": "15",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Cavanagh-cook, Paige",
+            "jersey": "16",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "cavanagh-cook, zac",
+            "jersey": "1",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Clarke, Joshua",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Collins, Victor",
+            "jersey": "7",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Crisp, Oscar",
+            "jersey": "10",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Dowdy, Conan",
+            "jersey": "3",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Greatz, Paul",
+            "jersey": "6",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hawke, Nicholas",
+            "jersey": "17",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Hawke, Ryan",
+            "jersey": "18",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Kotroulas, Miltiadis",
+            "jersey": null,
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Megson, Sam",
+            "jersey": "8",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Qualmann, Aaron",
+            "jersey": "5",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Regan, Hamish",
+            "jersey": "11",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "2",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Shields, Tully",
+            "jersey": "13",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Thompson, Virginia",
+            "jersey": "14",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Zibell, Adam",
+            "jersey": "4",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "McPhee, Abbey",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": true,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      },
+      {
+        "team_name": "Koowinda Blue Men",
+        "club_name": "Koowinda",
+        "players": [
+          {
+            "name": "Cass, Michael",
+            "jersey": "8",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Cass, Tazmyn",
+            "jersey": "6",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Flentjar, Hanna",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Flentjar, Simon",
+            "jersey": "9",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Flentjar, Taj",
+            "jersey": "7",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "GAULKE, JONATHAN",
+            "jersey": "4",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Gray, AJ",
+            "jersey": "12",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Gray, Ashleigh",
+            "jersey": "2",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Harrison, Darrien",
+            "jersey": "5",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Head, Blair",
+            "jersey": null,
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Herbert, Terence",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Saunders, Charley",
+            "jersey": "1",
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Saunders, Ryan",
+            "jersey": null,
+            "role": null,
+            "attended": true,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Wickham, Matthew",
+            "jersey": null,
+            "role": "Goalkeeper",
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          }
+        ]
+      }
+    ],
     "grade": "Men",
     "round": "Round 6"
   },
