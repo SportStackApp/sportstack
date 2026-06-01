@@ -35,6 +35,7 @@ import {
   MapPin,
   LayoutGrid,
   GitMerge,
+  Vote,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,12 +51,14 @@ const NAV_SETS: Record<AppMode, { path: string; label: string; icon: typeof Layo
     { path: "/admin/associations", label: "Associations", icon: Globe },
     { path: "/admin/clubs", label: "Clubs", icon: Building2 },
     { path: "/admin/teams", label: "Teams", icon: Shield },
-    { path: "/admin/divisions", label: "Divisions", icon: LayoutGrid },
-    { path: "/admin/revsports-mappings", label: "RevSports Mappings", icon: GitMerge },
     { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
     { path: "/admin/venues", label: "Venues", icon: MapPin },
     { path: "/admin/users", label: "Users", icon: UserCog },
     { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+    { path: "/roster", label: "Roster", icon: Users },
+    { path: "/roster", label: "Statistics", icon: BarChart3 },
+    { path: "/chat", label: "Chat", icon: MessageCircle },
+    { path: "/voting", label: "Voting Portal", icon: Vote },
   ],
   association: [
     { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -123,7 +126,7 @@ const AppLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { mode, setMode, availableModes, canSwitchMode, modeLabel } = useAppMode();
+  const { mode, setMode, availableModes, canSwitchMode, modeLabel, viewingAs, setViewingAs, isViewingAsOverridden, setIsViewingAsOverridden } = useAppMode();
   const {
     associations,
     selectedAssociationId,
@@ -239,13 +242,29 @@ const AppLayout = () => {
     fetchPlayerHeaderContext();
   }, [mode, user]);
 
+  // Auto-switch viewingAs based on cascade selection (only if not manually overridden)
+  useEffect(() => {
+    if (mode !== "super_admin") return;
+    if (isViewingAsOverridden) return;
+
+    if (selectedTeamId) {
+      setViewingAs("team");
+    } else if (selectedClubId) {
+      setViewingAs("club");
+    } else if (selectedAssociationId) {
+      setViewingAs("association");
+    } else {
+      setViewingAs("super_admin");
+    }
+  }, [selectedAssociationId, selectedClubId, selectedTeamId, isViewingAsOverridden, mode]);
+
   const handleAssociationChange = (associationId: string) => {
     setSelectedAssociationId(associationId);
     setIsAssociationPopoverOpen(false);
     navigate(`/associations/${associationId}`);
   };
 
-  const baseNavItems = NAV_SETS[mode];
+  const baseNavItems = NAV_SETS[mode === "super_admin" ? viewingAs : mode];
   const navItems = (mode === "super_admin" && selectedTeamId)
     ? [...baseNavItems, { path: "/coaching", label: "Coaching", icon: ClipboardCheck }]
     : baseNavItems;
@@ -278,6 +297,31 @@ const AppLayout = () => {
 
   const renderSidebar = (isMobile: boolean) => (
     <>
+      {/* Viewing As dropdown — Super Admin only */}
+      {mode === "super_admin" && (
+        <div className="px-3 pt-3 pb-1">
+          <p className="text-xs font-medium text-muted-foreground mb-1 px-1">Viewing as</p>
+          <select
+            value={viewingAs}
+            onChange={(e) => {
+              const selected = e.target.value as AppMode;
+              if (selected === "super_admin") {
+                setIsViewingAsOverridden(false);
+                setViewingAs("super_admin");
+              } else {
+                setViewingAs(selected);
+              }
+            }}
+            className="w-full rounded-md border border-border bg-background text-foreground text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="super_admin">⭐ Super Admin</option>
+            {selectedAssociationId && <option value="association">Association Admin</option>}
+            {selectedClubId && <option value="club">Club Admin</option>}
+            {selectedTeamId && <option value="team">Team Manager</option>}
+            {selectedTeamId && <option value="player">Player</option>}
+          </select>
+        </div>
+      )}
       <nav className="flex-1 py-2">
         {visibleNavItems.map((item) => {
           const isActive =

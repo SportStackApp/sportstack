@@ -44,6 +44,10 @@ interface AppModeContextType {
   modeLanding: string;
   loading: boolean;
   roles: AppRole[];
+  viewingAs: AppMode;
+  setViewingAs: (mode: AppMode) => void;
+  isViewingAsOverridden: boolean;
+  setIsViewingAsOverridden: (value: boolean) => void;
 }
 
 const AppModeContext = createContext<AppModeContextType | undefined>(undefined);
@@ -58,6 +62,8 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
   const [availableModes, setAvailableModes] = useState<AppMode[]>([]);
   const [mode, setModeState] = useState<AppMode>("player");
   const [loading, setLoading] = useState(true);
+  const [viewingAs, setViewingAsState] = useState<AppMode>("super_admin");
+  const [isViewingAsOverridden, setIsViewingAsOverridden] = useState(false);
 
   // Fetch roles
   useEffect(() => {
@@ -124,6 +130,11 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, newMode);
   }, []);
 
+  const setViewingAs = useCallback((newMode: AppMode) => {
+    setViewingAsState(newMode);
+    setIsViewingAsOverridden(true);
+  }, []);
+
   return (
     <AppModeContext.Provider
       value={{
@@ -135,6 +146,10 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
         modeLanding: MODE_LANDING[mode],
         loading,
         roles,
+        viewingAs,
+        setViewingAs,
+        isViewingAsOverridden,
+        setIsViewingAsOverridden,
       }}
     >
       {children}

@@ -89,6 +89,7 @@ const App = () => (
                       <Route path="/coaching" element={<CoachingSquad />} />
                       <Route path="/coaching/:playerId" element={<CoachingPlayerProfile />} />
                       <Route path="/chat" element={<Chat />} />
+                      <Route path="/voting" element={<VotingPortal />} />
                       <Route path="/profile" element={<Profile />} />
                       
                       {/* Admin Routes */}
