@@ -13,16 +13,18 @@ import { Star, Trophy } from "lucide-react";
 interface MvpToken {
   id: string;
   token: string;
-  match_url: string;
-  voter_name: string;
   voted_at: string | null;
-  is_closed: boolean;
   shoutout: string | null;
+  revsports_player_id: string;
+  voter_name: string;
+  voter_team: string;
+  match_url: string;
   grade: string;
   round: string;
   date: string;
   home_team: string;
   away_team: string;
+  is_closed: boolean;
 }
 
 interface RevsportsPlayer {
@@ -62,7 +64,7 @@ export default function VotingPortal() {
       if (!token) return;
       
       const { data: tData, error: tErr } = await supabase
-        .from('mvp_tokens')
+        .from('mvp_vote_tokens')
         .select('*')
         .eq('token', token)
         .maybeSingle();
@@ -72,17 +74,54 @@ export default function VotingPortal() {
         return;
       }
       
-      setTokenData(tData as MvpToken);
+      const { data: pRow, error: pRowErr } = await supabase
+        .from('revsports_players')
+        .select('*')
+        .eq('id', tData.revsports_player_id)
+        .maybeSingle();
+        
+      const { data: sRow, error: sRowErr } = await supabase
+        .from('mvp_voting_sessions')
+        .select('*')
+        .eq('id', tData.session_id)
+        .maybeSingle();
+        
+      if (pRowErr || sRowErr || !pRow || !sRow) {
+        setLoading(false);
+        return;
+      }
       
-      if (!tData.voted_at && !tData.is_closed) {
+      const combinedTokenData: MvpToken = {
+        id: tData.id,
+        token: tData.token,
+        voted_at: tData.voted_at,
+        shoutout: tData.shoutout,
+        revsports_player_id: tData.revsports_player_id,
+        voter_name: pRow.player_name,
+        voter_team: pRow.team,
+        match_url: pRow.match_url,
+        grade: sRow.grade,
+        round: sRow.round,
+        date: sRow.game_date,
+        home_team: sRow.home_team,
+        away_team: sRow.away_team,
+        is_closed: sRow.status !== 'OPEN' || sRow.closes_at < new Date().toISOString(),
+      };
+      
+      setTokenData(combinedTokenData);
+      
+      if (!combinedTokenData.voted_at && !combinedTokenData.is_closed) {
         const { data: pData, error: pErr } = await supabase
           .from('revsports_players')
           .select('*')
-          .eq('match_url', tData.match_url)
-          .eq('attended', true);
+          .eq('match_url', combinedTokenData.match_url)
+          .eq('attended', true)
+          .eq('team', combinedTokenData.voter_team);
           
         if (!pErr && pData) {
-          const eligible = (pData as RevsportsPlayer[]).filter((p: RevsportsPlayer) => p.player_name !== tData.voter_name);
+          const typedPlayers = pData as RevsportsPlayer[];
+          const sorted = [...typedPlayers].sort((a, b) => a.player_name.localeCompare(b.player_name));
+          const eligible = sorted.filter((p: RevsportsPlayer) => p.id !== combinedTokenData.revsports_player_id);
           setPlayers(eligible);
         }
       }
@@ -177,7 +216,7 @@ export default function VotingPortal() {
       const { error: vErr } = await supabase.from('mvp_votes').insert(votesToInsert);
       if (vErr) throw vErr;
       
-      const { error: tErr } = await supabase.from('mvp_tokens').update({
+      const { error: tErr } = await supabase.from('mvp_vote_tokens').update({
         voted_at: new Date().toISOString(),
         shoutout: shoutout.trim() || null
       }).eq('id', tokenData.id);
