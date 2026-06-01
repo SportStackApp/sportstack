@@ -69,6 +69,11 @@ export default function UmpireVoteSubmit() {
   const [proxyUmpireName, setProxyUmpireName] = useState("");
   const [proxyReason, setProxyReason] = useState("");
 
+  // Step 1 - User Associations & Selection
+  const [userAssociations, setUserAssociations] = useState<{ id: string; name: string }[]>([]);
+  const [selectedAssociationId, setSelectedAssociationId] = useState<string>("");
+  const [associationsLoading, setAssociationsLoading] = useState(false);
+
   // Step 1 - Selection lists
   const [rounds, setRounds] = useState<number[]>([]);
   const [divisions, setDivisions] = useState<{ id: string; name: string }[]>([]);
@@ -99,16 +104,102 @@ export default function UmpireVoteSubmit() {
   const isUmpire =
     (roles as string[]).includes("UMPIRE") || (roles as string[]).includes("UMPIRE_ADMIN");
 
-  // Step 1 - Load unique rounds initially
+  // Load user's associations
   useEffect(() => {
-    if (!isUmpire) return;
+    if (!isUmpire || !user) return;
+
+    const fetchUserAssociations = async () => {
+      setAssociationsLoading(true);
+      try {
+        const isSuperAdmin = (roles as string[]).includes("SUPER_ADMIN");
+        let resolvedAssocs: { id: string; name: string }[] = [];
+
+        if (isSuperAdmin) {
+          // Fetch ALL associations for Super Admin
+          const { data: allData, error: allError } = await (supabase as any)
+            .from("associations")
+            .select("id, name")
+            .order("name");
+
+          if (allError) throw allError;
+          resolvedAssocs = allData || [];
+          
+          setUserAssociations(resolvedAssocs);
+          // Do NOT auto-select for Super Admin
+        } else {
+          // Query user's roles for any association_id link
+          const { data: rolesData, error: rolesError } = await (supabase as any)
+            .from("user_roles")
+            .select("association_id")
+            .eq("user_id", user.id)
+            .not("association_id", "is", null);
+
+          if (rolesError) throw rolesError;
+
+          const assocIds = Array.from(
+            new Set(
+              rolesData?.map((r: any) => r.association_id).filter(Boolean) || []
+            )
+          ) as string[];
+
+          if (assocIds.length > 0) {
+            // Fetch resolved names for the user's specific associations
+            const { data: namesData, error: namesError } = await (supabase as any)
+              .from("associations")
+              .select("id, name")
+              .in("id", assocIds)
+              .order("name");
+
+            if (namesError) throw namesError;
+            resolvedAssocs = namesData || [];
+          } else {
+            // Fallback: Fetch ALL associations
+            const { data: allData, error: allError } = await (supabase as any)
+              .from("associations")
+              .select("id, name")
+              .order("name");
+
+            if (allError) throw allError;
+            resolvedAssocs = allData || [];
+          }
+
+          setUserAssociations(resolvedAssocs);
+
+          // Auto-select if there is exactly 1 association
+          if (resolvedAssocs.length === 1) {
+            setSelectedAssociationId(resolvedAssocs[0].id);
+          }
+        }
+      } catch (err: any) {
+        console.error("Error fetching associations:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load associations.",
+          variant: "destructive",
+        });
+      } finally {
+        setAssociationsLoading(false);
+      }
+    };
+
+    fetchUserAssociations();
+  }, [isUmpire, user?.id, roles]);
+
+  // Step 1 - Load unique rounds filtered by association
+  useEffect(() => {
+    if (!isUmpire || !selectedAssociationId) {
+      setRounds([]);
+      setSelectedRound("");
+      return;
+    }
 
     const fetchRounds = async () => {
       setRoundsLoading(true);
       try {
         const { data, error } = await (supabase as any)
           .from("fixtures")
-          .select("round_number");
+          .select("round_number, divisions!inner(association_id)")
+          .eq("divisions.association_id", selectedAssociationId);
 
         if (error) throw error;
 
@@ -134,11 +225,11 @@ export default function UmpireVoteSubmit() {
     };
 
     fetchRounds();
-  }, [isUmpire]);
+  }, [isUmpire, selectedAssociationId]);
 
-  // Step 1 - Fetch divisions when round is chosen
+  // Step 1 - Fetch divisions when round is chosen, filtered by association
   useEffect(() => {
-    if (!selectedRound) {
+    if (!selectedRound || !selectedAssociationId) {
       setDivisions([]);
       setSelectedDivisionId("");
       return;
@@ -149,8 +240,9 @@ export default function UmpireVoteSubmit() {
       try {
         const { data, error } = await (supabase as any)
           .from("fixtures")
-          .select("division_id")
-          .eq("round_number", parseInt(selectedRound, 10));
+          .select("division_id, divisions!inner(association_id)")
+          .eq("round_number", parseInt(selectedRound, 10))
+          .eq("divisions.association_id", selectedAssociationId);
 
         if (error) throw error;
 
@@ -189,11 +281,11 @@ export default function UmpireVoteSubmit() {
     };
 
     fetchDivisions();
-  }, [selectedRound]);
+  }, [selectedRound, selectedAssociationId]);
 
-  // Step 1 - Fetch fixtures & teams when division and round are chosen
+  // Step 1 - Fetch fixtures & teams when division and round are chosen, filtered by association
   useEffect(() => {
-    if (!selectedRound || !selectedDivisionId) {
+    if (!selectedRound || !selectedDivisionId || !selectedAssociationId) {
       setFixtures([]);
       setSelectedFixtureId("");
       return;
@@ -205,9 +297,10 @@ export default function UmpireVoteSubmit() {
         // Query fixtures for this round and division, filtering out byes (away_team_id not null)
         const { data: fixturesData, error: fixturesError } = await (supabase as any)
           .from("fixtures")
-          .select("id, home_team_id, away_team_id, division_id, round_number")
+          .select("id, home_team_id, away_team_id, division_id, round_number, divisions!inner(association_id)")
           .eq("round_number", parseInt(selectedRound, 10))
           .eq("division_id", selectedDivisionId)
+          .eq("divisions.association_id", selectedAssociationId)
           .not("away_team_id", "is", null);
 
         if (fixturesError) throw fixturesError;
@@ -260,7 +353,7 @@ export default function UmpireVoteSubmit() {
     };
 
     fetchFixturesAndTeams();
-  }, [selectedRound, selectedDivisionId]);
+  }, [selectedRound, selectedDivisionId, selectedAssociationId]);
 
   // Step 1 - When a fixture is selected, resolve its details for subsequent steps
   useEffect(() => {
@@ -398,6 +491,9 @@ export default function UmpireVoteSubmit() {
     setIsProxy(false);
     setProxyUmpireName("");
     setProxyReason("");
+    if (userAssociations.length > 1) {
+      setSelectedAssociationId("");
+    }
     setSelectedRound("");
     setSelectedDivisionId("");
     setSelectedFixtureId("");
@@ -443,7 +539,6 @@ export default function UmpireVoteSubmit() {
         player_number: card.playerNumber.trim() ? parseInt(card.playerNumber, 10) : null,
         team_id: card.teamId === "__none__" || !card.teamId ? null : card.teamId,
         votes: card.points,
-        // Since vote_rank is omitted from target table, we don't pass it
       }));
 
       const { error: linesError } = await (supabase as any)
@@ -657,35 +752,78 @@ export default function UmpireVoteSubmit() {
 
                 {/* Match Selection Cascade */}
                 <div className="space-y-4 pt-2">
+                  {/* Association Select (only show if 2 or more available) */}
+                  {userAssociations.length > 1 && (
+                    <div className="space-y-2 animate-fade-in">
+                      <label className="text-sm font-semibold text-foreground">
+                        Association
+                      </label>
+                      <Select
+                        value={selectedAssociationId}
+                        onValueChange={(val) => {
+                          setSelectedAssociationId(val);
+                          setSelectedRound("");
+                          setSelectedDivisionId("");
+                          setSelectedFixtureId("");
+                        }}
+                        disabled={associationsLoading}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={associationsLoading ? "Loading associations..." : "Select Association"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {userAssociations.map((assoc) => (
+                            <SelectItem key={assoc.id} value={assoc.id}>
+                              {assoc.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
                   {/* Round Select */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      Round
-                    </label>
-                    <Select value={selectedRound} onValueChange={setSelectedRound} disabled={roundsLoading}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder={roundsLoading ? "Loading rounds..." : "Select Round"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {rounds.map((round) => (
-                          <SelectItem key={round} value={String(round)}>
-                            Round {round}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {selectedAssociationId && (
+                    <div className="space-y-2 animate-fade-in">
+                      <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        Round
+                      </label>
+                      <Select
+                        value={selectedRound}
+                        onValueChange={(val) => {
+                          setSelectedRound(val);
+                          setSelectedDivisionId("");
+                          setSelectedFixtureId("");
+                        }}
+                        disabled={roundsLoading}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={roundsLoading ? "Loading rounds..." : "Select Round"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {rounds.map((round) => (
+                            <SelectItem key={round} value={String(round)}>
+                              Round {round}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {/* Division Select */}
-                  {selectedRound && (
+                  {selectedAssociationId && selectedRound && (
                     <div className="space-y-2 animate-fade-in">
                       <label className="text-sm font-semibold text-foreground">
                         Division
                       </label>
                       <Select
                         value={selectedDivisionId}
-                        onValueChange={setSelectedDivisionId}
+                        onValueChange={(val) => {
+                          setSelectedDivisionId(val);
+                          setSelectedFixtureId("");
+                        }}
                         disabled={divisionsLoading}
                       >
                         <SelectTrigger className="w-full">
@@ -703,7 +841,7 @@ export default function UmpireVoteSubmit() {
                   )}
 
                   {/* Fixture Select */}
-                  {selectedDivisionId && (
+                  {selectedAssociationId && selectedRound && selectedDivisionId && (
                     <div className="space-y-2 animate-fade-in">
                       <label className="text-sm font-semibold text-foreground">
                         Fixture
