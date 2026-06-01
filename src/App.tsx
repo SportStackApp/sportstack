@@ -20,6 +20,7 @@ import Chat from "./pages/Chat";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import VotingPortal from "./pages/VotingPortal";
+import UmpireVoteSubmit from "./pages/umpire/UmpireVoteSubmit";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -85,6 +86,7 @@ const App = () => (
                       <Route path="/games/:id/lineup" element={<Lineup />} />
                       <Route path="/roster" element={<Roster />} />
                       <Route path="/chat" element={<Chat />} />
+                      <Route path="/umpire/vote" element={<UmpireVoteSubmit />} />
                       <Route path="/profile" element={<Profile />} />
                       
                       {/* Admin Routes */}
