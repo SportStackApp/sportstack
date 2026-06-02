@@ -24,7 +24,7 @@ name: Player History Scraper
 on:
   # ── Scheduled run — Monday night / Tuesday 2am AEST ──────────
   schedule:
-    - cron: "0 16 * * 0"   # 2am Tuesday AEST = 16:00 UTC Monday
+    - cron: "0 16 * * 1"   # 2am Tuesday AEST = 16:00 UTC Monday
                             # 1 hour after registry scraper — so player IDs are ready
 
   # ── Manual trigger ───────────────────────────────────────────

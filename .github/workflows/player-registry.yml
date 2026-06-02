@@ -18,7 +18,7 @@ name: Player Registry Scraper
 on:
   # ── Scheduled run — Monday night / Tuesday 1am AEST ──────────
   schedule:
-    - cron: "0 15 * * 0"   # 1am Tuesday AEST = 15:00 UTC Monday
+    - cron: "0 15 * * 1"   # 1am Tuesday AEST = 15:00 UTC Monday
 
   # ── Manual trigger ───────────────────────────────────────────
   workflow_dispatch:
