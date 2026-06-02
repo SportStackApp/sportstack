@@ -4,6 +4,8 @@
 # Scrapes the season-wide Team Statistics page for every configured
 # association/competition and writes results to revsports_player_registry.
 #
+# Also saves a CSV backup to data/player-registry/player_registry.csv in the repo.
+#
 # Uses Playwright (headless Chromium browser) because the stats page
 # loads player data via JavaScript — plain requests can't see it.
 #
@@ -18,7 +20,7 @@ name: Player Registry Scraper
 on:
   # ── Scheduled run — Monday night / Tuesday 1am AEST ──────────
   schedule:
-    - cron: "0 15 * * 1"   # 1am Tuesday AEST = 15:00 UTC Monday
+    - cron: "0 15 * * 0"   # 1am Tuesday AEST = 15:00 UTC Monday
 
   # ── Manual trigger ───────────────────────────────────────────
   workflow_dispatch:
@@ -26,6 +28,8 @@ on:
 jobs:
   scrape-registry:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       # 1. Check out the repo so the scraper file is available
@@ -52,9 +56,20 @@ jobs:
 
       # 5. Run the registry scraper
       #    Scrapes HB + Sunraysia competitions (all configured in the script)
-      #    SUPABASE_URL and SUPABASE_SERVICE_KEY come from repo Secrets
+      #    Saves CSV to data/player-registry/ and upserts to Supabase
       - name: Run player registry scraper
         env:
+          OUTPUT_DIR:           "data/player-registry"
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python scraper/player_registry_scraper.py
+
+      # 6. Commit the CSV backup back into the repo
+      - name: Commit results
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet || git commit -m "scrape(registry): $(date '+%Y-%m-%d %H:%M') AEST"
+          git pull --rebase -X theirs
+          git push

@@ -17,11 +17,12 @@ Usage:
 Environment variables:
     SUPABASE_URL          — your Supabase project URL
     SUPABASE_SERVICE_KEY  — your Supabase service role key (bypasses RLS)
+    OUTPUT_DIR            — folder to save CSV backup (default: ../data/player-history)
 """
 
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
-import os, sys, time
+import csv, os, sys, time
 from datetime import datetime
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
@@ -33,13 +34,14 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 
 # Base URLs per association — used to build the history page URL per player
 ASSOCIATION_BASE_URLS = {
-    "Hockey Ballarat":           "https://www.revolutionise.com.au/hockeyballarat",
+    "Hockey Ballarat":              "https://www.revolutionise.com.au/hockeyballarat",
     "Sunraysia Hockey Association": "https://www.sunraysiahockey.com.au",
 }
 
 # Delay between each player page request — be polite to the server
 DELAY             = 0.8   # seconds
 PAGE_LOAD_TIMEOUT = 15000 # milliseconds
+OUTPUT_DIR        = os.getenv("OUTPUT_DIR", "../data/player-history")
 
 # ─────────────────────────────────────────────
 # SUPABASE — FETCH PLAYER LIST
@@ -121,7 +123,7 @@ def scrape_player_history(page, player):
     association = player["association"]
     name        = player.get("player_name", player_id)
 
-    base_url    = ASSOCIATION_BASE_URLS.get(association)
+    base_url = ASSOCIATION_BASE_URLS.get(association)
     if not base_url:
         print(f"    ⚠ No base URL for association: {association} — skipping {name}")
         return []
@@ -165,6 +167,7 @@ def scrape_player_history(page, player):
         seasons.append({
             "revsports_player_id": player_id,
             "association":         association,
+            "player_name":         name,
             "season_year":         int(year_text),
             "season_attended":     cell_int(1),
             "season_goals":        cell_int(2),
@@ -175,6 +178,27 @@ def scrape_player_history(page, player):
         })
 
     return seasons
+
+
+# ─────────────────────────────────────────────
+# CSV SAVE
+# ─────────────────────────────────────────────
+
+def save_to_csv(all_seasons):
+    """Save all season rows to a CSV file in OUTPUT_DIR. Overwrites on each run."""
+    if not all_seasons:
+        print("\n⚠ No season rows to save — CSV not written.")
+        return
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    csv_path = os.path.join(OUTPUT_DIR, "player_history.csv")
+
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=all_seasons[0].keys())
+        writer.writeheader()
+        writer.writerows(all_seasons)
+
+    print(f"\n✅ CSV saved: {csv_path}  ({len(all_seasons)} rows)")
 
 
 # ─────────────────────────────────────────────
@@ -259,7 +283,6 @@ def main():
 
             # Show a summary for this player
             if seasons:
-                years = [s["season_year"] for s in seasons if s["season_attended"] > 0]
                 total_games = sum(s["season_attended"] for s in seasons)
                 total_goals = sum(s["season_goals"] for s in seasons)
                 print(f"    → {len(seasons)} seasons | {total_games} games | {total_goals} goals")
@@ -273,7 +296,8 @@ def main():
     print(f"Grand total: {len(all_seasons)} season rows across {len(players)} players")
     print(f"{'='*60}")
 
-    # Step 3 — Upsert to Supabase
+    # Step 3 — Save CSV backup, then upsert to Supabase
+    save_to_csv(all_seasons)
     upsert_to_supabase(all_seasons)
     print(f"\nDone! {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 

@@ -21,11 +21,12 @@ Usage:
 Environment variables:
     SUPABASE_URL          — your Supabase project URL
     SUPABASE_SERVICE_KEY  — your Supabase service role key (bypasses RLS)
+    OUTPUT_DIR            — folder to save CSV backup (default: ../data/player-registry)
 """
 
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
-import re, os, sys, time
+import csv, re, os, sys, time
 from datetime import datetime
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
@@ -56,6 +57,7 @@ COMPETITIONS = [
 
 PAGE_LOAD_TIMEOUT = 15000  # milliseconds
 PAGE_TURN_DELAY   = 1.0    # seconds between page clicks
+OUTPUT_DIR        = os.getenv("OUTPUT_DIR", "../data/player-registry")
 
 # ─────────────────────────────────────────────
 # HELPERS
@@ -272,6 +274,27 @@ def scrape_registry(page, competition):
 
 
 # ─────────────────────────────────────────────
+# CSV SAVE
+# ─────────────────────────────────────────────
+
+def save_to_csv(all_players):
+    """Save all players to a CSV file in OUTPUT_DIR. Overwrites on each run."""
+    if not all_players:
+        print("\n⚠ No players to save — CSV not written.")
+        return
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    csv_path = os.path.join(OUTPUT_DIR, "player_registry.csv")
+
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=all_players[0].keys())
+        writer.writeheader()
+        writer.writerows(all_players)
+
+    print(f"\n✅ CSV saved: {csv_path}  ({len(all_players)} rows)")
+
+
+# ─────────────────────────────────────────────
 # SUPABASE UPSERT
 # ─────────────────────────────────────────────
 
@@ -344,6 +367,8 @@ def main():
     print(f"Grand total: {len(all_players)} players across all competitions")
     print(f"{'='*60}")
 
+    # Save CSV backup first, then upsert to Supabase
+    save_to_csv(all_players)
     upsert_to_supabase(all_players)
     print(f"\nDone! {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 

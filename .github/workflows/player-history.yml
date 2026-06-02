@@ -5,8 +5,7 @@
 # then visits each player's career history page on RevSports to collect
 # season-by-season stats going back to 2020+.
 #
-# Writes results to revsports_player_history in Supabase.
-# Safe to re-run — uses upsert (won't create duplicates).
+# Also saves a CSV backup to data/player-history/player_history.csv in the repo.
 #
 # Uses Playwright (headless Chromium browser) because history pages
 # are JavaScript-rendered.
@@ -24,7 +23,7 @@ name: Player History Scraper
 on:
   # ── Scheduled run — Monday night / Tuesday 2am AEST ──────────
   schedule:
-    - cron: "0 16 * * 1"   # 2am Tuesday AEST = 16:00 UTC Monday
+    - cron: "0 16 * * 0"   # 2am Tuesday AEST = 16:00 UTC Monday
                             # 1 hour after registry scraper — so player IDs are ready
 
   # ── Manual trigger ───────────────────────────────────────────
@@ -33,6 +32,8 @@ on:
 jobs:
   scrape-history:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       # 1. Check out the repo so the scraper file is available
@@ -60,9 +61,20 @@ jobs:
       # 5. Run the history scraper
       #    Reads players from revsports_player_registry via Supabase
       #    Visits ~727 player history pages (takes ~15–20 minutes)
-      #    Writes season rows to revsports_player_history
+      #    Saves CSV to data/player-history/ and upserts to Supabase
       - name: Run player history scraper
         env:
+          OUTPUT_DIR:           "data/player-history"
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python scraper/history_scraper.py
+
+      # 6. Commit the CSV backup back into the repo
+      - name: Commit results
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet || git commit -m "scrape(history): $(date '+%Y-%m-%d %H:%M') AEST"
+          git pull --rebase -X theirs
+          git push
