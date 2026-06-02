@@ -36,6 +36,7 @@ import FixtureImport from "./pages/admin/FixtureImport";
 import VenuesManagement from "./pages/admin/VenuesManagement";
 import Requests from "./pages/admin/Requests";
 import RevSportsTeamMappings from "./pages/admin/RevSportsTeamMappings";
+import MvpVotingAdmin from "./pages/admin/MvpVotingAdmin";
 
 // Entity Dashboards
 import AssociationDashboard from "./pages/AssociationDashboard";
@@ -103,6 +104,7 @@ const App = () => (
                       <Route path="/admin/fixture-import" element={<FixtureImport />} />
                       <Route path="/admin/venues" element={<VenuesManagement />} />
                       <Route path="/admin/requests" element={<Requests />} />
+                      <Route path="/admin/mvp-voting" element={<MvpVotingAdmin />} />
 
                       {/* Entity Dashboards */}
                       <Route path="/associations/:id" element={<AssociationDashboard />} />

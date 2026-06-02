@@ -1,30 +1,38 @@
 """
-Hockey Results Scraper — Headless (GitHub Actions version)
+Match Scraper — Headless (GitHub Actions version)
 ============================================================
-Runs without a GUI. Configure the variables below, or set them
-as GitHub Actions environment variables.
+Scrapes match results and player appearances from RevSports.
+Runs without a GUI. Configure via environment variables below.
 
 Output: ../data/hockey_results.csv  and  ../data/hockey_results.json
+
+Changes from original:
+  - Added ASSOCIATION_NAME and competition_name capture from games page
+  - Extracts revsports_player_id from each player's link on the match card
+  - Adds association, competition_name, revsports_player_id to every row
 """
 
 import requests
 from bs4 import BeautifulSoup
-import json, csv, time, re, os
+import json, csv, time, re, os, sys
 from datetime import datetime
 from urllib.parse import urlparse
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
 
 # ─────────────────────────────────────────────
 # CONFIG — edit these or set as GitHub secrets/env vars
 # ─────────────────────────────────────────────
 
-PORTAL_URL  = os.getenv("PORTAL_URL", "https://www.revolutionise.com.au/hockeyballarat")
-ONLY_GRADES = os.getenv("ONLY_GRADES", "")   # Comma-separated, e.g. "Division 1 Men,Womens"
-ONLY_ROUNDS = os.getenv("ONLY_ROUNDS", "")   # Comma-separated, e.g. "Round 1,Round 2"
-ONLY_TEAM   = os.getenv("ONLY_TEAM",   "")   # Partial match, e.g. "Grampians"
-OUTPUT_DIR  = os.getenv("OUTPUT_DIR",  "../data")
-DELAY       = 0.8
+PORTAL_URL       = os.getenv("PORTAL_URL",       "https://www.revolutionise.com.au/hockeyballarat")
+ASSOCIATION_NAME = os.getenv("ASSOCIATION_NAME", "Hockey Ballarat")
+ONLY_GRADES      = os.getenv("ONLY_GRADES",      "")   # Comma-separated
+ONLY_ROUNDS      = os.getenv("ONLY_ROUNDS",      "")   # Comma-separated
+ONLY_TEAM        = os.getenv("ONLY_TEAM",        "")   # Partial match
+OUTPUT_DIR       = os.getenv("OUTPUT_DIR",       "../data")
+DELAY            = 0.8
 
-# Parse comma-separated env vars into lists (empty string = all)
 only_grades = [g.strip() for g in ONLY_GRADES.split(",") if g.strip()] or None
 only_rounds = [r.strip() for r in ONLY_ROUNDS.split(",") if r.strip()] or None
 only_team   = ONLY_TEAM.strip() or None
@@ -37,105 +45,54 @@ def split_venue_and_pitch(venue_line, pitch_line=None):
     """
     Splits a venue string into a clean (venue, pitch) pair.
 
-    The round page shows venue info in two ways depending on how the data
-    was entered in RevSports:
+    PATTERN A — Separate pitch line exists:
+      venue = venue_line, pitch = pitch_line
 
-    PATTERN A — Correct format (e.g. John Vernon Field):
-      Coloured line:  "John Vernon Field, Ballarat Grammar"
-      Black line:     "North End"
-      Result:         venue = "John Vernon Field, Ballarat Grammar"
-                      pitch = "North End"
+    PATTERN B — Pitch merged into venue with " - ":
+      e.g. "Prince of Wales Park - 1/2 Pitch North"
+      venue = "Prince of Wales Park", pitch = "1/2 Pitch North"
 
-    PATTERN B — Old merged format (e.g. Prince of Wales Park):
-      Coloured line:  "Prince of Wales Park - 1/2 Pitch North"
-      Black line:     (nothing)
-      Result:         venue = "Prince of Wales Park"
-                      pitch = "1/2 Pitch North"
-
-    PATTERN C — No pitch at all:
-      Coloured line:  "Prince of Wales Park"
-      Black line:     (nothing)
-      Result:         venue = "Prince of Wales Park"
-                      pitch = "Full Pitch"
+    PATTERN C — No pitch info at all:
+      venue = venue_line, pitch = "Full Pitch"
     """
     if pitch_line:
-        # Pattern A — separate pitch line exists, use it directly
         return venue_line.strip(), pitch_line.strip()
-
     if " - " in venue_line:
-        # Pattern B — pitch is merged into venue name with a dash, split it out
-        parts = venue_line.split(" - ", 1)  # Split on first dash only
+        parts = venue_line.split(" - ", 1)
         return parts[0].strip(), parts[1].strip()
-
-    # Pattern C — no pitch information at all, assume full pitch
     return venue_line.strip(), "Full Pitch"
 
 
 def split_club_and_team(full_name, grade_name=""):
     """
-    RevSports team page headings have the format:
-      "Hockey Ballarat 2026 Winter Competition · {Club} {Grade} {Team}"
-    After stripping the competition prefix we get: "{Club} {Grade} {Team}"
-
-    Primary method: use the grade name as the separator.
-      e.g. "Blaze Under 11 Open U11 Blaze Red" with grade "Under 11 Open"
-           → club = "Blaze",  team = "U11 Blaze Red"
-
-      Edge case — team named same as division:
-      e.g. "Grampians Hockey Club Division 2 Men" with grade "Division 2 Men"
-           → club = "Grampians Hockey Club",  team = "Division 2 Men"
-
-    Fallback: if grade not found, find the first repeated word and split there.
-      e.g. "EGC EGC Gold"          → club = "EGC",      team = "EGC Gold"
-      e.g. "Bobcats Bobcats Maroon"→ club = "Bobcats",  team = "Bobcats Maroon"
-
-    If no split possible (e.g. "SOBHC Ducks Men"), return full string as team.
+    Splits a heading like "Blaze Under 11 Open U11 Blaze Red" into
+    club = "Blaze" and team = "U11 Blaze Red" using the grade name as separator.
+    Falls back to finding the first repeated word if grade not found.
     """
-    # PRIMARY — split using the grade name as the divider
     if grade_name and grade_name in full_name:
-        idx = full_name.index(grade_name)
+        idx  = full_name.index(grade_name)
         club = full_name[:idx].strip()
         team = full_name[idx + len(grade_name):].strip()
-        # Edge case: if team is blank, the club named themselves after the division
         if not team:
             team = grade_name
         return club, team
-
-    # FALLBACK — find the first word that repeats and split there
     words = full_name.split()
-    seen = {}
+    seen  = {}
     for i, word in enumerate(words):
         if word in seen:
-            club = " ".join(words[:i])
-            team = " ".join(words[i:])
-            return club, team
+            return " ".join(words[:i]), " ".join(words[i:])
         seen[word] = i
-
-    # No split possible — return full string as team name
     return "", full_name
 
 
 def get_team_name_from_draws_page(session, team_url, grade_name):
-    """
-    Visit a team's draws page, e.g.:
-      revolutionise.com.au/hockeyballarat/games/team/26298/417818
-
-    The heading reads:
-      "Hockey Ballarat 2026 Winter Competition · Lucas HC Under 11 Open U11"
-
-    We strip the competition prefix (everything before "·") to get:
-      "Lucas HC Under 11 Open U11"
-
-    Then split using the grade name:
-      club = "Lucas HC",  team = "U11"
-    """
+    """Visit a team draws page and extract clean club + team name from heading."""
     try:
         soup = get_soup(session, team_url)
         for tag in ["h2", "h1", "h3"]:
             heading = soup.find(tag)
             if heading:
                 full_text = heading.get_text(strip=True)
-                # Strip the competition prefix — everything before the "·" symbol
                 if "·" in full_text:
                     full_text = full_text.split("·", 1)[-1].strip()
                 club, team = split_club_and_team(full_text, grade_name)
@@ -143,6 +100,51 @@ def get_team_name_from_draws_page(session, team_url, grade_name):
     except Exception as e:
         print(f"    ⚠ Could not fetch team page {team_url}: {e}")
     return "", "Unknown"
+
+
+def extract_player_id_from_row(row, game_url):
+    """
+    Extract the RevSports player ID from the player link in a match card row.
+
+    Each player name on a match page is a link, e.g.:
+      <a href="/hockeyballarat/games/statistics/qzrbDcZ?competition_id=26298">Aaron M.</a>
+
+    We extract the alphanumeric ID between /statistics/ and the next ? or end.
+    Returns None if no link or ID found.
+    """
+    link = row.find("a", href=True)
+    if not link:
+        return None
+    match = re.search(r"/statistics/([A-Za-z0-9]+)", link["href"])
+    return match.group(1) if match else None
+
+
+def get_competition_name(session, base_url):
+    """
+    Visit the games page and scrape the competition name from the heading
+    that sits above the Statistics link.
+
+    Returns a fallback string if not found.
+    """
+    games_url = base_url.rstrip("/") + "/games"
+    try:
+        soup = get_soup(session, games_url)
+        for a in soup.find_all("a", href=True):
+            if "team-stats" in a["href"]:
+                # Walk up the DOM to find the competition name
+                parent = a.find_parent()
+                for _ in range(6):
+                    if parent is None:
+                        break
+                    text = parent.get_text(" ", strip=True)
+                    if "Download Statistics" in text:
+                        name = text.split("Download Statistics")[0].strip()
+                        if name:
+                            return name
+                    parent = parent.find_parent()
+    except Exception as e:
+        print(f"  ⚠ Could not fetch competition name: {e}")
+    return ASSOCIATION_NAME  # Fallback to association name
 
 
 # ─────────────────────────────────────────────
@@ -175,7 +177,7 @@ def normalize_url(href, page_url):
     if href.startswith("http"):
         return href
     parsed = urlparse(page_url)
-    base = f"{parsed.scheme}://{parsed.netloc}"
+    base   = f"{parsed.scheme}://{parsed.netloc}"
     return base + href if href.startswith("/") else base + "/" + href
 
 
@@ -183,125 +185,57 @@ def path_matches(href, pattern):
     return bool(re.search(pattern, urlparse(href).path))
 
 
-def clean_round_location(lines):
-    """
-    Turn the round-page location block into one mapping value.
-    The page can show venue on one line and pitch underneath; keep both.
-    """
-    cleaned = []
-    for line in lines:
-        line = re.sub(r"\s+", " ", line).strip(" -")
-        if line and line not in cleaned:
-            cleaned.append(line)
-    return cleaned  # Return as a list so we can separate venue from pitch
-
-
 def find_fixture_card(link_tag, game_url, round_url):
-    """
-    Find the fixture card around a Details link on the round page.
-    The nearest parent is usually just the button area, so walk upwards until
-    the block also contains team links or a visible date/time line.
-    """
     node = link_tag
     for _ in range(12):
         node = node.parent
         if node is None or not hasattr(node, "find_all"):
             break
-
-        anchors = [
-            normalize_url(a["href"], round_url)
-            for a in node.find_all("a", href=True)
-        ]
-        text = node.get_text("\n", strip=True)
-        has_current_game = game_url in anchors
-        has_team_links = any(path_matches(h, r"/games/team/\d+/\d+$") for h in anchors)
-        has_date_time = bool(re.search(
-            r"\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}\s+\w+\s+\d{4}\b",
-            text,
-        ))
-
-        if has_current_game and (has_team_links or has_date_time):
+        anchors       = [normalize_url(a["href"], round_url) for a in node.find_all("a", href=True)]
+        text          = node.get_text("\n", strip=True)
+        has_game      = game_url in anchors
+        has_teams     = any(path_matches(h, r"/games/team/\d+/\d+$") for h in anchors)
+        has_date_time = bool(re.search(r"\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}\s+\w+\s+\d{4}\b", text))
+        if has_game and (has_teams or has_date_time):
             return node
-
     return None
 
 
 def get_round_card_venue_and_pitch(card):
-    """
-    Read the venue and pitch from a round-page fixture card.
-
-    Returns a tuple: (venue, pitch)
-
-    The card shows venue info in two possible formats:
-      - Coloured link text = venue name (always present)
-      - Plain black text underneath = pitch (only in the correct format)
-
-    We collect the location lines, then pass them to split_venue_and_pitch()
-    to cleanly separate venue from pitch.
-    """
     if card is None:
         return None, None
-
-    # Remove hidden elements (mobile-only duplicates etc.)
     for hidden in card.select(".d-none, .d-lg-none"):
         hidden.decompose()
-
     team_link_texts = {
         a.get_text(" ", strip=True)
         for a in card.find_all("a", href=True)
         if path_matches(a["href"], r"/games/team/\d+/\d+$")
     }
-    lines = [l.strip() for l in card.get_text("\n").split("\n") if l.strip()]
+    lines          = [l.strip() for l in card.get_text("\n").split("\n") if l.strip()]
     location_lines = []
-    collecting = False
-
+    collecting     = False
     for line in lines:
         lower = line.lower()
-
-        if lower in {"details", "umpire", "umpires", "byes"}:
-            break
-        if line in team_link_texts:
-            break
-
+        if lower in {"details", "umpire", "umpires", "byes"}: break
+        if line in team_link_texts: break
         if re.match(r"^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}\s+\w+\s+\d{4}$", line):
-            collecting = True
-            continue
-
-        if collecting and re.match(r"^\d{1,2}:\d{2}$", line):
-            continue
-
+            collecting = True; continue
+        if collecting and re.match(r"^\d{1,2}:\d{2}$", line): continue
         if collecting:
-            if re.match(r"^\d+\s*-\s*\d+$", line) or re.match(r"^\d+$", line):
-                break
-            if lower.startswith("umpires"):
-                break
+            if re.match(r"^\d+\s*-\s*\d+$", line) or re.match(r"^\d+$", line): break
+            if lower.startswith("umpires"): break
             location_lines.append(line)
-
-    # Clean up the lines (remove blank/duplicate entries)
     cleaned = []
     for line in location_lines:
         line = re.sub(r"\s+", " ", line).strip(" -")
         if line and line not in cleaned:
             cleaned.append(line)
-
     if not cleaned:
         return None, None
-
-    # First line is always the venue name (coloured link text)
-    # Second line (if present) is the pitch (plain black text)
-    venue_line = cleaned[0]
-    pitch_line = cleaned[1] if len(cleaned) > 1 else None
-
-    # Apply our 3-rule split to get clean venue + pitch
-    venue, pitch = split_venue_and_pitch(venue_line, pitch_line)
-    return venue, pitch
+    return split_venue_and_pitch(cleaned[0], cleaned[1] if len(cleaned) > 1 else None)
 
 
 def get_all_grades(session, base_url):
-    """
-    Fetch all grade links from the main games page.
-    Returns empty list and logs a warning if the page can't be reached.
-    """
     games_url = base_url.rstrip("/") + "/games"
     try:
         soup = get_soup(session, games_url)
@@ -320,10 +254,6 @@ def get_all_grades(session, base_url):
 
 
 def get_rounds(session, grade_url):
-    """
-    Fetch all round links for a grade.
-    Returns empty list and logs a warning if the page can't be reached.
-    """
     try:
         soup = get_soup(session, grade_url)
     except Exception as e:
@@ -341,61 +271,36 @@ def get_rounds(session, grade_url):
 
 
 def get_game_links(session, round_url):
-    """
-    Visit the round page and collect game links paired with their team links
-    and venue/pitch info.
-
-    Returns a list of dicts:
-      {"game_url": ..., "team_urls": [...], "round_venue": ..., "round_pitch": ...}
-
-    Returns empty list and logs a warning if the page can't be reached
-    (e.g. future rounds that return 403).
-    """
     try:
         soup = get_soup(session, round_url)
     except Exception as e:
         print(f"    ⚠ Skipping round (could not fetch): {e}")
         return []
-
-    games = []
-    current_team_urls = []
-    seen = set()
-
+    games, current_team_urls, seen = [], [], set()
     for a in soup.find_all("a", href=True):
         href = normalize_url(a["href"], round_url)
-        if href in seen:
-            continue
+        if href in seen: continue
         seen.add(href)
-
         if path_matches(href, r"/games/team/\d+/\d+$"):
-            # Team link — collect until we hit the game's Details link
             current_team_urls.append(href)
         elif path_matches(href, r"/game/\d+$"):
-            # Details (game) link — pair with team links collected so far
             fixture_card = find_fixture_card(a, href, round_url)
-
-            # Get venue and pitch separately from the fixture card
             round_venue, round_pitch = get_round_card_venue_and_pitch(fixture_card)
-
             games.append({
-                "game_url": href,
-                "team_urls": current_team_urls[:2],
+                "game_url":    href,
+                "team_urls":   current_team_urls[:2],
                 "round_venue": round_venue,
                 "round_pitch": round_pitch,
             })
-            current_team_urls = []  # Reset for next game
-
+            current_team_urls = []
     return games
 
 
 def scrape_match(session, game_url, grade_name="", team_urls=None,
                  round_venue=None, round_pitch=None):
     """
-    Scrape a single match page.
-
-    team_urls:   list of /games/team/ URLs pre-collected from the round page.
-    round_venue: clean venue name from the round page fixture card.
-    round_pitch: clean pitch name from the round page fixture card.
+    Scrape a single match page and return all player rows with full context.
+    Now also extracts revsports_player_id from each player's link.
     """
     soup = get_soup(session, game_url)
     for hidden in soup.select(".d-none, .d-lg-none"):
@@ -404,8 +309,7 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
     match = {
         "url": game_url,
         "date": None, "time": None,
-        "venue": round_venue,   # Set from round page (already cleaned)
-        "pitch": round_pitch,   # Set from round page (already cleaned)
+        "venue": round_venue, "pitch": round_pitch,
         "home_team": None, "away_team": None,
         "home_score": None, "away_score": None,
         "umpires": [], "teams": [],
@@ -425,11 +329,9 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
             match["date"] = date_str
         match["time"] = dm.group(2).strip()
 
-    # ── Find team draws-page links ────────────────────────────
-    if team_urls:
-        team_page_urls = team_urls
-    else:
-        team_page_urls = []
+    # ── Team names from draws pages ───────────────────────────
+    team_page_urls = team_urls or []
+    if not team_page_urls:
         seen_team_urls = set()
         for a in soup.find_all("a", href=True):
             href = normalize_url(a["href"], game_url)
@@ -437,104 +339,109 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
                 seen_team_urls.add(href)
                 team_page_urls.append(href)
 
-    # Visit each team's draws page to get the accurate clean name
     team_info = []
     for team_url in team_page_urls[:2]:
         club, team = get_team_name_from_draws_page(session, team_url, grade_name)
         team_info.append({"club_name": club, "team_name": team, "url": team_url})
         print(f"      → Club: '{club}'  Team: '{team}'")
 
-    # Set home/away team names from the accurate data
-    if len(team_info) >= 1:
-        match["home_team"] = team_info[0]["team_name"]
-    if len(team_info) >= 2:
-        match["away_team"] = team_info[1]["team_name"]
+    if len(team_info) >= 1: match["home_team"] = team_info[0]["team_name"]
+    if len(team_info) >= 2: match["away_team"] = team_info[1]["team_name"]
 
-    # ── Umpires & scores — line-by-line ──────────────────────
-    # Note: venue is already set from the round page above.
-    # We only fall back to reading it from the game page if it's missing.
-    STOP = {"venue", "date & time", "match card", "umpires", "umpire"}
+    # ── Umpires & scores ─────────────────────────────────────
+    STOP  = {"venue", "date & time", "match card", "umpires", "umpire"}
     lines = [l.strip() for l in soup.get_text("\n").split("\n") if l.strip()]
     for i, line in enumerate(lines):
         ll = line.lower()
-
-        # Fallback venue from game page (only if round page didn't supply one)
         if ll == "venue" and match["venue"] is None:
             for k in range(i + 1, min(i + 4, len(lines))):
                 if lines[k].lower() not in STOP:
-                    # Apply the same split logic for consistency
                     match["venue"], match["pitch"] = split_venue_and_pitch(lines[k])
                     break
-
         if ll in ("umpire", "umpires") and not match["umpires"]:
             for k in range(i + 1, min(i + 5, len(lines))):
                 if lines[k].lower() in STOP: break
                 match["umpires"].append(lines[k])
-
         if any(kw in ll for kw in ("won!", "draw", "forfeit", "walkover", "bye")):
-            remaining = lines[i + 1:]
             found = 0
-            for j, item in enumerate(remaining):
+            for item in lines[i + 1:]:
                 if re.match(r"^\d+$", item):
-                    if found == 0:
-                        match["home_score"] = item
-                    elif found == 1:
-                        match["away_score"] = item
+                    if found == 0: match["home_score"] = item
+                    elif found == 1: match["away_score"] = item
                     found += 1
                     if found == 2: break
 
     # ── Match card tables — one per team ─────────────────────
     tables = soup.find_all("table", class_="table")
     for i, table in enumerate(tables):
-
         if i < len(team_info):
             club_name = team_info[i]["club_name"]
             team_name = team_info[i]["team_name"]
         else:
-            heading = table.find_previous(["h2", "h3", "h4", "h5", "h6"])
-            raw_name = heading.get_text(strip=True) if heading else "Unknown"
+            heading   = table.find_previous(["h2", "h3", "h4", "h5", "h6"])
+            raw_name  = heading.get_text(strip=True) if heading else "Unknown"
             club_name, team_name = split_club_and_team(raw_name, grade_name)
 
-        players = []
+        players    = []
         in_fillins = False
+        in_removed = False
+
         for row in table.find_all("tr")[1:]:
             cells = row.find_all("td")
             if not cells: continue
             name_text = cells[0].get_text(" ", strip=True)
             if not name_text.strip(): continue
             norm = " ".join(name_text.split()).lower()
+
             if "fill-in" in norm:
-                in_fillins = True; continue
-            if any(j in norm for j in ["removed from team", "goals",
-                                        "green card", "yellow card", "red card"]):
-                in_fillins = False; continue
-            attended = in_fillins or bool(row.find(class_=re.compile(r"\bfa-check\b")))
+                in_fillins = True; in_removed = False; continue
+            if "removed from team" in norm:
+                in_removed = True; in_fillins = False; continue
+            if any(j in norm for j in ["goals", "green card", "yellow card", "red card"]):
+                continue
+
+            attended   = (not in_removed) and (
+                in_fillins or bool(row.find(class_=re.compile(r"\bfa-check\b")))
+            )
             name_clean = re.sub(r"^\d+\.\s*", "", name_text).strip()
             if not name_clean: continue
+
             jersey = None
-            jm = re.search(r"\(#(\d+)\)", name_clean)
+            jm     = re.search(r"\(#(\d+)\)", name_clean)
             if jm: jersey = jm.group(1)
+
             role = None
-            rm = re.search(r"\(([^#\d][^)]*)\)", name_clean)
+            rm   = re.search(r"\(([^#\d][^)]*)\)", name_clean)
             if rm: role = rm.group(1).strip()
+
             player_name = re.sub(r"\s*\([^)]*\)", "", name_clean).strip()
             if not player_name: continue
+
+            # Extract RevSports player ID from the player's link in this row
+            # Each name is a link like: /games/statistics/qzrbDcZ?competition_id=...
+            revsports_player_id = extract_player_id_from_row(row, game_url)
+
             players.append({
-                "name": player_name, "jersey": jersey, "role": role,
-                "attended": attended,
-                "goals":         cells[1].get_text(strip=True) if len(cells) > 1 else "",
-                "green_cards":   cells[2].get_text(strip=True) if len(cells) > 2 else "",
-                "yellow_cards":  cells[3].get_text(strip=True) if len(cells) > 3 else "",
-                "red_cards":     cells[4].get_text(strip=True) if len(cells) > 4 else "",
+                "name":                player_name,
+                "jersey":              jersey,
+                "role":                role,
+                "attended":            attended,
+                "is_fillin":           in_fillins,
+                "is_removed":          in_removed,
+                "revsports_player_id": revsports_player_id,  # NEW
+                "goals":               cells[1].get_text(strip=True) if len(cells) > 1 else "",
+                "green_cards":         cells[2].get_text(strip=True) if len(cells) > 2 else "",
+                "yellow_cards":        cells[3].get_text(strip=True) if len(cells) > 3 else "",
+                "red_cards":           cells[4].get_text(strip=True) if len(cells) > 4 else "",
             })
+
         if players:
             match["teams"].append({
                 "team_name": team_name,
                 "club_name": club_name,
-                "players": players,
+                "players":   players,
             })
 
-    # Fallback for home/away if team info wasn't available
     if match["home_team"] is None and len(match.get("teams", [])) >= 1:
         match["home_team"] = match["teams"][0]["team_name"]
     if match["away_team"] is None and len(match.get("teams", [])) >= 2:
@@ -549,16 +456,23 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
 
 def main():
     print("=" * 60)
-    print("Hockey Results Scraper — Headless")
-    print(f"Started:  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"Portal:   {PORTAL_URL}")
-    print(f"Grades:   {only_grades or 'All'}")
-    print(f"Rounds:   {only_rounds or 'All'}")
-    print(f"Team:     {only_team or 'All'}")
+    print("Match Scraper — Headless")
+    print(f"Started:     {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Portal:      {PORTAL_URL}")
+    print(f"Association: {ASSOCIATION_NAME}")
+    print(f"Grades:      {only_grades or 'All'}")
+    print(f"Rounds:      {only_rounds or 'All'}")
+    print(f"Team:        {only_team or 'All'}")
     print("=" * 60)
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     session = make_session()
+
+    # Fetch competition name from the games page
+    print("\nFetching competition name...")
+    competition_name = get_competition_name(session, PORTAL_URL)
+    print(f"Competition: {competition_name}")
+
     all_results, csv_rows = [], []
 
     grades = get_all_grades(session, PORTAL_URL)
@@ -588,7 +502,7 @@ def main():
                         grade_name=grade["name"],
                         team_urls=game_info["team_urls"],
                         round_venue=game_info.get("round_venue"),
-                        round_pitch=game_info.get("round_pitch"),  # ← new
+                        round_pitch=game_info.get("round_pitch"),
                     )
                     match["grade"] = grade["name"]
                     match["round"] = rnd["round_label"]
@@ -599,30 +513,35 @@ def main():
                             continue
                         for player in team["players"]:
                             csv_rows.append({
-                                "grade":        grade["name"],
-                                "round":        rnd["round_label"],
-                                "game_date":    match["date"],
-                                "game_time":    match["time"],
-                                "venue":        match["venue"],
-                                "pitch":        match["pitch"],   # ← new column
-                                "home_team":    match["home_team"],
-                                "away_team":    match["away_team"],
-                                "home_score":   match["home_score"],
-                                "away_score":   match["away_score"],
-                                "umpire_1":     match["umpires"][0] if len(match["umpires"]) > 0 else "",
-                                "umpire_2":     match["umpires"][1] if len(match["umpires"]) > 1 else "",
-                                "team":         team["team_name"],
-                                "club_name":    team["club_name"],
-                                "player_name":  player["name"],
-                                "jersey":       player["jersey"],
-                                "role":         player["role"],
-                                "attended":     player["attended"],
-                                "goals":        player["goals"],
-                                "green_cards":  player["green_cards"],
-                                "yellow_cards": player["yellow_cards"],
-                                "red_cards":    player["red_cards"],
-                                "match_url":    game_info["game_url"],
-                                "scraped_at":   datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                "association":         ASSOCIATION_NAME,
+                                "competition_name":    competition_name,
+                                "grade":               grade["name"],
+                                "round":               rnd["round_label"],
+                                "game_date":           match["date"],
+                                "game_time":           match["time"],
+                                "venue":               match["venue"],
+                                "pitch":               match["pitch"],
+                                "home_team":           match["home_team"],
+                                "away_team":           match["away_team"],
+                                "home_score":          match["home_score"],
+                                "away_score":          match["away_score"],
+                                "umpire_1":            match["umpires"][0] if len(match["umpires"]) > 0 else "",
+                                "umpire_2":            match["umpires"][1] if len(match["umpires"]) > 1 else "",
+                                "team":                team["team_name"],
+                                "club_name":           team["club_name"],
+                                "player_name":         player["name"],
+                                "jersey":              player["jersey"],
+                                "role":                player["role"],
+                                "attended":            player["attended"],
+                                "is_fillin":           player["is_fillin"],
+                                "is_removed":          player["is_removed"],
+                                "revsports_player_id": player["revsports_player_id"],  # NEW
+                                "goals":               player["goals"],
+                                "green_cards":         player["green_cards"],
+                                "yellow_cards":        player["yellow_cards"],
+                                "red_cards":           player["red_cards"],
+                                "match_url":           game_info["game_url"],
+                                "scraped_at":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             })
 
                     print(f"    ✓ {match.get('home_team','?')} {match.get('home_score','?')}"
@@ -648,6 +567,59 @@ def main():
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2, ensure_ascii=False)
     print(f"✅ JSON: {json_path}  ({len(all_results)} matches)")
+
+    # ── Upsert to Supabase ────────────────────────────────────
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
+
+    if not supabase_url or not supabase_key:
+        print("\n⚠ SUPABASE_URL or SUPABASE_SERVICE_KEY not set — skipping upsert.")
+    elif not csv_rows:
+        print("\n⚠ No rows to upsert.")
+    else:
+        try:
+            from supabase import create_client
+            client = create_client(supabase_url, supabase_key)
+
+            def clean_row(row):
+                cleaned = {}
+                for k, v in row.items():
+                    cleaned[k] = None if v == "" or v is None else v
+                for field in ["home_score", "away_score", "goals",
+                               "green_cards", "yellow_cards", "red_cards"]:
+                    if cleaned.get(field) is not None:
+                        try:    cleaned[field] = int(cleaned[field])
+                        except: cleaned[field] = None
+                for field in ["attended", "is_fillin", "is_removed"]:
+                    if cleaned.get(field) is not None:
+                        cleaned[field] = str(cleaned[field]).strip().lower() == "true"
+                return cleaned
+
+            cleaned_rows = [clean_row(r) for r in csv_rows]
+            BATCH_SIZE   = 200
+            total        = len(cleaned_rows)
+            num_batches  = (total + BATCH_SIZE - 1) // BATCH_SIZE
+            upserted     = 0
+
+            print(f"\n⏳ Upserting {total} rows in {num_batches} batch(es)...")
+
+            for i in range(0, total, BATCH_SIZE):
+                batch     = cleaned_rows[i:i + BATCH_SIZE]
+                batch_num = (i // BATCH_SIZE) + 1
+                print(f"  Batch {batch_num} of {num_batches}...")
+                try:
+                    client.table("revsports_players").upsert(
+                        batch,
+                        on_conflict="match_url,player_name,team,is_fillin"
+                    ).execute()
+                    upserted += len(batch)
+                except Exception as e:
+                    print(f"  ✗ Batch {batch_num} failed: {e}")
+
+            print(f"✅ Supabase upsert complete — {upserted} rows.")
+
+        except Exception as e:
+            print(f"✗ Supabase error: {e}")
 
     print(f"\nDone! {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 

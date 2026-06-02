@@ -34,6 +34,7 @@ import {
   MapPin,
   LayoutGrid,
   GitMerge,
+  Trophy,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -55,6 +56,7 @@ const NAV_SETS: Record<AppMode, { path: string; label: string; icon: typeof Layo
     { path: "/admin/venues", label: "Venues", icon: MapPin },
     { path: "/admin/users", label: "Users", icon: UserCog },
     { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+    { path: "/admin/mvp-voting", label: "MVP Voting", icon: Trophy },
   ],
   association: [
     { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -65,6 +67,7 @@ const NAV_SETS: Record<AppMode, { path: string; label: string; icon: typeof Layo
     { path: "/admin/venues", label: "Venues", icon: MapPin },
     { path: "/admin/users", label: "Users", icon: UserCog },
     { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+    { path: "/admin/mvp-voting", label: "MVP Voting", icon: Trophy },
   ],
   club: [
     { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
