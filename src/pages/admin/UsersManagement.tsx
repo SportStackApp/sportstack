@@ -73,9 +73,10 @@ const UsersManagement = () => {
   const { loading: scopeLoading, isSuperAdmin, isAnyAdmin, scopedTeamIds, scopedClubIds, scopedAssociationIds } = useAdminScope();
 
   const [users, setUsers] = useState<UserWithRoles[]>([]);
-  const [teams, setTeams] = useState<{ id: string; name: string; club_id: string; division?: string | null }[]>([]);
+  const [teams, setTeams] = useState<{ id: string; name: string; club_id: string; division?: string | null; division_id?: string | null }[]>([]);
   const [clubs, setClubs] = useState<{ id: string; name: string; association_id: string }[]>([]);
   const [associations, setAssociations] = useState<{ id: string; name: string }[]>([]);
+  const [divisions, setDivisions] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -83,7 +84,11 @@ const UsersManagement = () => {
   const [clubFilter, setClubFilter] = useState<string>("all");
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
-  const [selectedRoleScopes, setSelectedRoleScopes] = useState<RoleWithScope[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
+  const [coachScopes, setCoachScopes] = useState<{ id: string, association_id: string, club_id: string, team_id: string }[]>([]);
+  const [managerScopes, setManagerScopes] = useState<{ id: string, association_id: string, club_id: string, team_id: string }[]>([]);
+  const [assocAdminScopes, setAssocAdminScopes] = useState<{ id: string, association_id: string }[]>([]);
+  const [clubAdminScopes, setClubAdminScopes] = useState<{ id: string, association_id: string, club_id: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [primaryRequests, setPrimaryRequests] = useState<any[]>([]);
 
@@ -128,7 +133,7 @@ const UsersManagement = () => {
       let divisions: { id: string; name: string }[] = [];
       if (divisionIds.length > 0) {
         const { data: divData, error: divError } = await supabase
-          .from("divisions")
+          .from("divisions" as any)
           .select("id, name")
           .in("id", divisionIds)
           .order("name");
@@ -155,14 +160,16 @@ const UsersManagement = () => {
   const fetchUsers = async () => {
     setLoading(true);
 
-    const [teamsRes, clubsRes, assocRes] = await Promise.all([
-      supabase.from("teams").select("id, name, club_id, division"),
+    const [teamsRes, clubsRes, assocRes, divsRes] = await Promise.all([
+      supabase.from("teams" as any).select("id, name, club_id, division, division_id"),
       supabase.from("clubs").select("id, name, association_id"),
       supabase.from("associations").select("id, name"),
+      supabase.from("divisions" as any).select("id, name"),
     ]);
     setTeams(teamsRes.data || []);
     setClubs(clubsRes.data || []);
     setAssociations(assocRes.data || []);
+    setDivisions(divsRes.data || []);
 
     const teamsList = teamsRes.data || [];
     const teamsToShow = isSuperAdmin ? teamsList.map((t) => t.id) : scopedTeamIds;
@@ -361,7 +368,7 @@ const UsersManagement = () => {
   };
 
   const handleApproveMembership = async (membershipId: string) => {
-    const { error } = await supabase.from("team_memberships").update({ status: "APPROVED" }).eq("id", membershipId);
+    const { error } = await supabase.from("team_memberships").update({ status: "ACTIVE" }).eq("id", membershipId);
     if (error) {
       toast({ title: "Error", description: "Failed to approve", variant: "destructive" });
     } else {
@@ -387,14 +394,32 @@ const UsersManagement = () => {
       .select("role, association_id, club_id, team_id")
       .eq("user_id", u.id);
 
-    setSelectedRoleScopes(
-      (rolesData || []).map((r) => ({
-        role: r.role,
-        association_id: r.association_id,
-        club_id: r.club_id,
-        team_id: r.team_id,
-      }))
-    );
+    const roles = new Set<AppRole>();
+    const cScopes: any[] = [];
+    const mScopes: any[] = [];
+    const aScopes: any[] = [];
+    const clScopes: any[] = [];
+
+    (rolesData || []).forEach(r => {
+      roles.add(r.role as AppRole);
+      if (r.role === "COACH" && r.team_id) {
+        const teamObj = teams.find(t => t.id === r.team_id);
+        cScopes.push({ id: crypto.randomUUID(), association_id: r.association_id || "", club_id: r.club_id || "", division_id: teamObj?.division_id || "", team_id: r.team_id });
+      } else if (r.role === "TEAM_MANAGER" && r.team_id) {
+        const teamObj = teams.find(t => t.id === r.team_id);
+        mScopes.push({ id: crypto.randomUUID(), association_id: r.association_id || "", club_id: r.club_id || "", division_id: teamObj?.division_id || "", team_id: r.team_id });
+      } else if (r.role === "ASSOCIATION_ADMIN" && r.association_id) {
+        aScopes.push({ id: crypto.randomUUID(), association_id: r.association_id });
+      } else if (r.role === "CLUB_ADMIN" && r.club_id) {
+        clScopes.push({ id: crypto.randomUUID(), association_id: r.association_id || "", club_id: r.club_id });
+      }
+    });
+
+    setSelectedRoles(Array.from(roles));
+    setCoachScopes(cScopes.length > 0 ? cScopes : [{ id: crypto.randomUUID(), association_id: "", club_id: "", division_id: "", team_id: "" }]);
+    setManagerScopes(mScopes.length > 0 ? mScopes : [{ id: crypto.randomUUID(), association_id: "", club_id: "", division_id: "", team_id: "" }]);
+    setAssocAdminScopes(aScopes.length > 0 ? aScopes : [{ id: crypto.randomUUID(), association_id: "" }]);
+    setClubAdminScopes(clScopes.length > 0 ? clScopes : [{ id: crypto.randomUUID(), association_id: "", club_id: "" }]);
     setShowTeamAssign(false);
     setAssignAssociationId("");
     setAssignClubId("");
@@ -405,26 +430,32 @@ const UsersManagement = () => {
   };
 
   const handleToggleRole = (role: AppRole) => {
-    setSelectedRoleScopes((prev) => {
-      const exists = prev.find((r) => r.role === role);
-      if (exists) {
-        return prev.filter((r) => r.role !== role);
-      }
-      return [...prev, { role, association_id: null, club_id: null, team_id: null }];
-    });
+    setSelectedRoles((prev) => 
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+    );
   };
 
-  const handleRoleScopeChange = (role: AppRole, field: "association_id" | "club_id" | "team_id", value: string) => {
-    setSelectedRoleScopes((prev) =>
-      prev.map((r) => {
-        if (r.role !== role) return r;
-        const updated = { ...r, [field]: value || null };
+  const handleScopeChange = (
+    setState: React.Dispatch<React.SetStateAction<any[]>>,
+    id: string,
+    field: string,
+    value: string
+  ) => {
+    setState((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const updated = { ...item, [field]: value || "" };
         if (field === "association_id") {
-          updated.club_id = null;
-          updated.team_id = null;
+          updated.club_id = "";
+          updated.division_id = "";
+          updated.team_id = "";
         }
         if (field === "club_id") {
-          updated.team_id = null;
+          updated.division_id = "";
+          updated.team_id = "";
+        }
+        if (field === "division_id") {
+          updated.team_id = "";
         }
         return updated;
       })
@@ -447,28 +478,47 @@ const UsersManagement = () => {
     if (!selectedUser) return;
     setSaving(true);
 
-    const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", selectedUser.id);
-    if (delErr) {
-      toast({ title: "Error", description: "Failed to update roles", variant: "destructive" });
+    const p_coach_scopes = selectedRoles.includes("COACH")
+      ? coachScopes
+          .filter((s) => s.team_id)
+          .map((s) => ({
+            association_id: s.association_id || null,
+            club_id: s.club_id || null,
+            team_id: s.team_id,
+          }))
+      : [];
+    const p_manager_scopes = selectedRoles.includes("TEAM_MANAGER")
+      ? managerScopes
+          .filter((s) => s.team_id)
+          .map((s) => ({
+            association_id: s.association_id || null,
+            club_id: s.club_id || null,
+            team_id: s.team_id,
+          }))
+      : [];
+    const p_association_admin_associations = selectedRoles.includes("ASSOCIATION_ADMIN") ? assocAdminScopes.filter((s) => s.association_id).map((s) => s.association_id) : [];
+    const p_club_admin_scopes = selectedRoles.includes("CLUB_ADMIN")
+      ? clubAdminScopes
+          .filter((s) => s.club_id)
+          .map((s) => ({
+            association_id: s.association_id || null,
+            club_id: s.club_id,
+          }))
+      : [];
+
+    const { error } = await supabase.rpc('admin_save_user_roles' as any, {
+      p_user_id: selectedUser.id,
+      p_roles: selectedRoles,
+      p_coach_scopes: p_coach_scopes.length > 0 ? p_coach_scopes : null,
+      p_manager_scopes: p_manager_scopes.length > 0 ? p_manager_scopes : null,
+      p_association_admin_associations: p_association_admin_associations.length > 0 ? p_association_admin_associations : null,
+      p_club_admin_scopes: p_club_admin_scopes.length > 0 ? p_club_admin_scopes : null,
+    });
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
       setSaving(false);
       return;
-    }
-
-    if (selectedRoleScopes.length > 0) {
-      const inserts = selectedRoleScopes.map((rs) => ({
-        user_id: selectedUser.id,
-        role: rs.role,
-        association_id: rs.association_id,
-        club_id: rs.club_id,
-        team_id: rs.team_id,
-      }));
-
-      const { error: insErr } = await supabase.from("user_roles").insert(inserts);
-      if (insErr) {
-        toast({ title: "Error", description: insErr.message, variant: "destructive" });
-        setSaving(false);
-        return;
-      }
     }
 
     toast({ title: "Success", description: "User roles updated" });
@@ -485,7 +535,7 @@ const UsersManagement = () => {
       // Check for duplicate PRIMARY pending request if this is a PRIMARY membership
       if (assignMembershipType === "PRIMARY") {
         const { data: existingPendingPrimary, error: checkError } = await supabase
-          .from("requests")
+          .from("requests" as any)
           .select("id")
           .eq("target_user_id", selectedUser.id)
           .eq("membership_type", "PRIMARY")
@@ -504,7 +554,7 @@ const UsersManagement = () => {
         }
       }
 
-      const { error } = await supabase.from("requests").insert({
+      const { error } = await supabase.from("requests" as any).insert({
         request_type: "TEAM_INVITE",
         requester_id: user?.id,
         target_user_id: selectedUser.id,
@@ -588,6 +638,161 @@ const UsersManagement = () => {
     return teams.filter((t) => t.club_id === clubId);
   };
 
+  const renderTeamScopeList = (
+    title: string,
+    scopes: any[],
+    setScopes: React.Dispatch<React.SetStateAction<any[]>>
+  ) => (
+    <div className="space-y-2 mt-4">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-medium">{title} Scope</Label>
+        <Button variant="ghost" size="sm" onClick={() => setScopes(prev => [...prev, { id: crypto.randomUUID(), association_id: "", club_id: "", division_id: "", team_id: "" }])}>
+          <Plus className="h-3 w-3 mr-1" /> Add Team
+        </Button>
+      </div>
+      <div className="space-y-3">
+        {scopes.map((scope) => {
+          const divisionIdsForClub = new Set(teams.filter(t => t.club_id === scope.club_id && t.division_id).map(t => t.division_id));
+          const availableDivisions = divisions.filter(d => divisionIdsForClub.has(d.id));
+          const teamsForDivision = teams.filter(t => t.club_id === scope.club_id && t.division_id === scope.division_id);
+
+          return (
+            <div key={scope.id} className="grid gap-2 sm:grid-cols-5 items-end border-l-2 border-muted pl-4 py-2 relative group">
+              <div className="space-y-1 col-span-1">
+                <Label className="text-xs text-muted-foreground">Association</Label>
+                <Select value={scope.association_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "association_id", v)}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectContent>
+                    {associations.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1 col-span-1">
+                <Label className="text-xs text-muted-foreground">Club</Label>
+                <Select value={scope.club_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "club_id", v)} disabled={!scope.association_id}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectContent>
+                    {getClubsForAssociation(scope.association_id).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1 col-span-1">
+                <Label className="text-xs text-muted-foreground">Division</Label>
+                <Select value={scope.division_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "division_id", v)} disabled={!scope.club_id}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectContent>
+                    {availableDivisions.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1 col-span-1">
+                <Label className="text-xs text-muted-foreground">Team</Label>
+                <Select value={scope.team_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "team_id", v)} disabled={!scope.division_id}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectContent>
+                    {teamsForDivision.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-1 pb-1">
+                {scopes.length > 1 && (
+                  <button type="button" onClick={() => setScopes(prev => prev.filter(s => s.id !== scope.id))} className="text-xs text-destructive hover:underline px-2">
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderClubScopeList = (
+    title: string,
+    scopes: any[],
+    setScopes: React.Dispatch<React.SetStateAction<any[]>>
+  ) => (
+    <div className="space-y-2 mt-4">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-medium">{title} Scope</Label>
+        <Button variant="ghost" size="sm" onClick={() => setScopes(prev => [...prev, { id: crypto.randomUUID(), association_id: "", club_id: "" }])}>
+          <Plus className="h-3 w-3 mr-1" /> Add Club
+        </Button>
+      </div>
+      <div className="space-y-3">
+        {scopes.map((scope) => (
+          <div key={scope.id} className="grid gap-2 sm:grid-cols-4 items-end border-l-2 border-muted pl-4 py-2">
+            <div className="space-y-1 col-span-1">
+              <Label className="text-xs text-muted-foreground">Association</Label>
+              <Select value={scope.association_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "association_id", v)}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectContent>
+                  {associations.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1 col-span-1">
+              <Label className="text-xs text-muted-foreground">Club</Label>
+              <Select value={scope.club_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "club_id", v)} disabled={!scope.association_id}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectContent>
+                  {getClubsForAssociation(scope.association_id).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-1"></div>
+            <div className="col-span-1 pb-1">
+              {scopes.length > 1 && (
+                <button type="button" onClick={() => setScopes(prev => prev.filter(s => s.id !== scope.id))} className="text-xs text-destructive hover:underline px-2">
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderAssociationScopeList = (
+    title: string,
+    scopes: any[],
+    setScopes: React.Dispatch<React.SetStateAction<any[]>>
+  ) => (
+    <div className="space-y-2 mt-4">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-medium">{title} Scope</Label>
+        <Button variant="ghost" size="sm" onClick={() => setScopes(prev => [...prev, { id: crypto.randomUUID(), association_id: "" }])}>
+          <Plus className="h-3 w-3 mr-1" /> Add Association
+        </Button>
+      </div>
+      <div className="space-y-3">
+        {scopes.map((scope) => (
+          <div key={scope.id} className="grid gap-2 sm:grid-cols-4 items-end border-l-2 border-muted pl-4 py-2">
+            <div className="space-y-1 col-span-1">
+              <Label className="text-xs text-muted-foreground">Association</Label>
+              <Select value={scope.association_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "association_id", v)}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectContent>
+                  {associations.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2"></div>
+            <div className="col-span-1 pb-1">
+              {scopes.length > 1 && (
+                <button type="button" onClick={() => setScopes(prev => prev.filter(s => s.id !== scope.id))} className="text-xs text-destructive hover:underline px-2">
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   const assignAvailableClubs = assignAssociationId
     ? clubs.filter((c) => c.association_id === assignAssociationId)
     : clubs;
@@ -650,7 +855,7 @@ const UsersManagement = () => {
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="PENDING">Pending</SelectItem>
-              <SelectItem value="APPROVED">Approved</SelectItem>
+              <SelectItem value="ACTIVE">Active</SelectItem>
               <SelectItem value="DECLINED">Declined</SelectItem>
               {isSuperAdmin && <SelectItem value="unassigned">Unassigned</SelectItem>}
               <SelectItem value="duplicates">Duplicates</SelectItem>
@@ -801,7 +1006,7 @@ const UsersManagement = () => {
                                   className={
                                     m.status === "PENDING"
                                       ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300"
-                                      : m.status === "APPROVED"
+                                      : m.status === "ACTIVE"
                                       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                                       : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
                                   }
@@ -866,7 +1071,7 @@ const UsersManagement = () => {
                 <div className="flex flex-wrap gap-2">
                   {ALL_ROLES.map((role) => {
                     const disabled = !canAssignRole(role);
-                    const isChecked = !!selectedRoleScopes.find((r) => r.role === role);
+                    const isChecked = selectedRoles.includes(role);
 
                     return (
                       <button
@@ -895,79 +1100,10 @@ const UsersManagement = () => {
                 </div>
               </div>
 
-              {ALL_ROLES.map((role) => {
-                const roleScope = selectedRoleScopes.find((r) => r.role === role);
-                const isChecked = !!roleScope;
-                const scopeType = ROLES_NEEDING_SCOPE[role];
-
-                if (!isChecked || !scopeType) return null;
-
-                return (
-                  <div key={`${role}-scope`} className="space-y-2 mt-4">
-                    <Label className="text-sm font-medium">{getRoleDisplayName(role)} Scope</Label>
-                    <div className="grid gap-2 sm:grid-cols-3 border-l-2 border-muted pl-4 py-2">
-                      {(scopeType === "association" || scopeType === "club" || scopeType === "team") && (
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Association</Label>
-                          <Select
-                            value={roleScope.association_id || ""}
-                            onValueChange={(v) => handleRoleScopeChange(role, "association_id", v)}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Select..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {associations.map((a) => (
-                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-
-                      {(scopeType === "club" || scopeType === "team") && (
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Club</Label>
-                          <Select
-                            value={roleScope.club_id || ""}
-                            onValueChange={(v) => handleRoleScopeChange(role, "club_id", v)}
-                            disabled={!roleScope.association_id}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Select..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getClubsForAssociation(roleScope.association_id).map((c) => (
-                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-
-                      {scopeType === "team" && (
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Team</Label>
-                          <Select
-                            value={roleScope.team_id || ""}
-                            onValueChange={(v) => handleRoleScopeChange(role, "team_id", v)}
-                            disabled={!roleScope.club_id}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Select..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getTeamsForClub(roleScope.club_id).map((t) => (
-                                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+              {selectedRoles.includes("ASSOCIATION_ADMIN") && renderAssociationScopeList("Association Admin", assocAdminScopes, setAssocAdminScopes)}
+              {selectedRoles.includes("CLUB_ADMIN") && renderClubScopeList("Club Admin", clubAdminScopes, setClubAdminScopes)}
+              {selectedRoles.includes("COACH") && renderTeamScopeList("Coach", coachScopes, setCoachScopes)}
+              {selectedRoles.includes("TEAM_MANAGER") && renderTeamScopeList("Team Manager", managerScopes, setManagerScopes)}
             </div>
 
             <Separator />

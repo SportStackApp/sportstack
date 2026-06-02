@@ -17,6 +17,8 @@ import GameDetail from "./pages/GameDetail";
 import Lineup from "./pages/Lineup";
 import Roster from "./pages/Roster";
 import Chat from "./pages/Chat";
+import CoachingSquad from "./pages/coaching/CoachingSquad";
+import CoachingPlayerProfile from "./pages/coaching/CoachingPlayerProfile";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import VotingPortal from "./pages/VotingPortal";
@@ -35,7 +37,7 @@ import FixturesManagement from "./pages/admin/FixturesManagement";
 import FixtureImport from "./pages/admin/FixtureImport";
 import VenuesManagement from "./pages/admin/VenuesManagement";
 import Requests from "./pages/admin/Requests";
-import RevSportsTeamMappings from "./pages/admin/RevSportsTeamMappings";
+import RevSportsMappings from "./pages/admin/RevSportsMappings";
 import MvpVotingAdmin from "./pages/admin/MvpVotingAdmin";
 
 // Entity Dashboards
@@ -86,8 +88,11 @@ const App = () => (
                       <Route path="/games/:id" element={<GameDetail />} />
                       <Route path="/games/:id/lineup" element={<Lineup />} />
                       <Route path="/roster" element={<Roster />} />
+                      <Route path="/coaching" element={<CoachingSquad />} />
+                      <Route path="/coaching/:playerId" element={<CoachingPlayerProfile />} />
                       <Route path="/chat" element={<Chat />} />
                       <Route path="/umpire/vote" element={<UmpireVoteSubmit />} />
+                      <Route path="/voting" element={<VotingPortal />} />
                       <Route path="/profile" element={<Profile />} />
                       
                       {/* Admin Routes */}
@@ -99,7 +104,7 @@ const App = () => (
                       <Route path="/admin/users" element={<UsersManagement />} />
                       <Route path="/admin/add-player" element={<AddPlayer />} />
                       <Route path="/admin/bulk-import" element={<BulkImport />} />
-                      <Route path="/admin/revsports-mappings" element={<RevSportsTeamMappings />} />
+                      <Route path="/admin/revsports-mappings" element={<RevSportsMappings />} />
                       <Route path="/admin/fixtures" element={<FixturesManagement />} />
                       <Route path="/admin/fixture-import" element={<FixtureImport />} />
                       <Route path="/admin/venues" element={<VenuesManagement />} />

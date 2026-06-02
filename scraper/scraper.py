@@ -18,6 +18,7 @@ import json, csv, time, re, os, sys
 from datetime import datetime
 from urllib.parse import urlparse
 
+# Fix Windows console encoding so emoji and arrow characters print correctly
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -26,10 +27,10 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 # ─────────────────────────────────────────────
 
 PORTAL_URL       = os.getenv("PORTAL_URL",       "https://www.revolutionise.com.au/hockeyballarat")
-ASSOCIATION_NAME = os.getenv("ASSOCIATION_NAME", "Hockey Ballarat")
-ONLY_GRADES      = os.getenv("ONLY_GRADES",      "")   # Comma-separated
-ONLY_ROUNDS      = os.getenv("ONLY_ROUNDS",      "")   # Comma-separated
-ONLY_TEAM        = os.getenv("ONLY_TEAM",        "")   # Partial match
+ASSOCIATION_NAME = os.getenv("ASSOCIATION_NAME", "Hockey Ballarat")   # stamps every row
+ONLY_GRADES      = os.getenv("ONLY_GRADES",      "")   # Comma-separated, e.g. "Division 1 Men,Womens"
+ONLY_ROUNDS      = os.getenv("ONLY_ROUNDS",      "")   # Comma-separated, e.g. "Round 1,Round 2"
+ONLY_TEAM        = os.getenv("ONLY_TEAM",        "")   # Partial match, e.g. "Grampians"
 OUTPUT_DIR       = os.getenv("OUTPUT_DIR",       "../data")
 DELAY            = 0.8
 
@@ -76,17 +77,21 @@ def split_club_and_team(full_name, grade_name=""):
         if not team:
             team = grade_name
         return club, team
+
     words = full_name.split()
     seen  = {}
     for i, word in enumerate(words):
         if word in seen:
             return " ".join(words[:i]), " ".join(words[i:])
         seen[word] = i
+
     return "", full_name
 
 
 def get_team_name_from_draws_page(session, team_url, grade_name):
-    """Visit a team draws page and extract clean club + team name from heading."""
+    """
+    Visit a team draws page and extract clean club + team name from the heading.
+    """
     try:
         soup = get_soup(session, team_url)
         for tag in ["h2", "h1", "h3"]:
@@ -191,12 +196,14 @@ def find_fixture_card(link_tag, game_url, round_url):
         node = node.parent
         if node is None or not hasattr(node, "find_all"):
             break
-        anchors       = [normalize_url(a["href"], round_url) for a in node.find_all("a", href=True)]
-        text          = node.get_text("\n", strip=True)
-        has_game      = game_url in anchors
-        has_teams     = any(path_matches(h, r"/games/team/\d+/\d+$") for h in anchors)
-        has_date_time = bool(re.search(r"\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}\s+\w+\s+\d{4}\b", text))
-        if has_game and (has_teams or has_date_time):
+        anchors = [normalize_url(a["href"], round_url) for a in node.find_all("a", href=True)]
+        text = node.get_text("\n", strip=True)
+        has_current_game = game_url in anchors
+        has_team_links = any(path_matches(h, r"/games/team/\d+/\d+$") for h in anchors)
+        has_date_time = bool(re.search(
+            r"\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}\s+\w+\s+\d{4}\b", text,
+        ))
+        if has_current_game and (has_team_links or has_date_time):
             return node
     return None
 
@@ -213,14 +220,18 @@ def get_round_card_venue_and_pitch(card):
     }
     lines          = [l.strip() for l in card.get_text("\n").split("\n") if l.strip()]
     location_lines = []
-    collecting     = False
+    collecting = False
     for line in lines:
         lower = line.lower()
-        if lower in {"details", "umpire", "umpires", "byes"}: break
-        if line in team_link_texts: break
+        if lower in {"details", "umpire", "umpires", "byes"}:
+            break
+        if line in team_link_texts:
+            break
         if re.match(r"^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}\s+\w+\s+\d{4}$", line):
-            collecting = True; continue
-        if collecting and re.match(r"^\d{1,2}:\d{2}$", line): continue
+            collecting = True
+            continue
+        if collecting and re.match(r"^\d{1,2}:\d{2}$", line):
+            continue
         if collecting:
             if re.match(r"^\d+\s*-\s*\d+$", line) or re.match(r"^\d+$", line): break
             if lower.startswith("umpires"): break
@@ -232,7 +243,9 @@ def get_round_card_venue_and_pitch(card):
             cleaned.append(line)
     if not cleaned:
         return None, None
-    return split_venue_and_pitch(cleaned[0], cleaned[1] if len(cleaned) > 1 else None)
+    venue_line = cleaned[0]
+    pitch_line = cleaned[1] if len(cleaned) > 1 else None
+    return split_venue_and_pitch(venue_line, pitch_line)
 
 
 def get_all_grades(session, base_url):
@@ -276,7 +289,9 @@ def get_game_links(session, round_url):
     except Exception as e:
         print(f"    ⚠ Skipping round (could not fetch): {e}")
         return []
-    games, current_team_urls, seen = [], [], set()
+    games = []
+    current_team_urls = []
+    seen = set()
     for a in soup.find_all("a", href=True):
         href = normalize_url(a["href"], round_url)
         if href in seen: continue
@@ -301,6 +316,11 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
     """
     Scrape a single match page and return all player rows with full context.
     Now also extracts revsports_player_id from each player's link.
+
+    Each player dict includes:
+      - is_fillin:  True if the player appears under the Fill-ins section
+      - is_removed: True if the player appears under the Removed from team section
+      Both default to False for regular squad players.
     """
     soup = get_soup(session, game_url)
     for hidden in soup.select(".d-none, .d-lg-none"):
@@ -309,7 +329,8 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
     match = {
         "url": game_url,
         "date": None, "time": None,
-        "venue": round_venue, "pitch": round_pitch,
+        "venue": round_venue,
+        "pitch": round_pitch,
         "home_team": None, "away_team": None,
         "home_score": None, "away_score": None,
         "umpires": [], "teams": [],
@@ -330,8 +351,10 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
         match["time"] = dm.group(2).strip()
 
     # ── Team names from draws pages ───────────────────────────
-    team_page_urls = team_urls or []
-    if not team_page_urls:
+    if team_urls:
+        team_page_urls = team_urls
+    else:
+        team_page_urls = []
         seen_team_urls = set()
         for a in soup.find_all("a", href=True):
             href = normalize_url(a["href"], game_url)
@@ -345,11 +368,13 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
         team_info.append({"club_name": club, "team_name": team, "url": team_url})
         print(f"      → Club: '{club}'  Team: '{team}'")
 
-    if len(team_info) >= 1: match["home_team"] = team_info[0]["team_name"]
-    if len(team_info) >= 2: match["away_team"] = team_info[1]["team_name"]
+    if len(team_info) >= 1:
+        match["home_team"] = team_info[0]["team_name"]
+    if len(team_info) >= 2:
+        match["away_team"] = team_info[1]["team_name"]
 
     # ── Umpires & scores ─────────────────────────────────────
-    STOP  = {"venue", "date & time", "match card", "umpires", "umpire"}
+    STOP = {"venue", "date & time", "match card", "umpires", "umpire"}
     lines = [l.strip() for l in soup.get_text("\n").split("\n") if l.strip()]
     for i, line in enumerate(lines):
         ll = line.lower()
@@ -382,9 +407,9 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
             raw_name  = heading.get_text(strip=True) if heading else "Unknown"
             club_name, team_name = split_club_and_team(raw_name, grade_name)
 
-        players    = []
-        in_fillins = False
-        in_removed = False
+        players = []
+        in_fillins = False   # Tracks whether we're inside the Fill-ins section
+        in_removed = False   # Tracks whether we're inside the Removed from team section
 
         for row in table.find_all("tr")[1:]:
             cells = row.find_all("td")
@@ -393,16 +418,29 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
             if not name_text.strip(): continue
             norm = " ".join(name_text.split()).lower()
 
+            # ── Section header rows ───────────────────────────
+            # These rows mark the start of a new section — not actual players
             if "fill-in" in norm:
-                in_fillins = True; in_removed = False; continue
+                # Entering the Fill-ins section
+                in_fillins = True
+                in_removed = False
+                continue
             if "removed from team" in norm:
-                in_removed = True; in_fillins = False; continue
+                # Entering the Removed from team section
+                in_removed = True
+                in_fillins = False
+                continue
             if any(j in norm for j in ["goals", "green card", "yellow card", "red card"]):
+                # Stats header row — skip it
                 continue
 
-            attended   = (not in_removed) and (
+            # ── Player row ────────────────────────────────────
+            # Fill-ins always attended. Removed players did not.
+            # Regular players attended if they have a tick (fa-check icon).
+            attended = (not in_removed) and (
                 in_fillins or bool(row.find(class_=re.compile(r"\bfa-check\b")))
             )
+
             name_clean = re.sub(r"^\d+\.\s*", "", name_text).strip()
             if not name_clean: continue
 
@@ -426,9 +464,9 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
                 "jersey":              jersey,
                 "role":                role,
                 "attended":            attended,
-                "is_fillin":           in_fillins,
-                "is_removed":          in_removed,
-                "revsports_player_id": revsports_player_id,  # NEW
+                "is_fillin":           in_fillins,   # True = player is a fill-in for this game
+                "is_removed":          in_removed,   # True = player was removed from team list
+                "revsports_player_id": revsports_player_id,
                 "goals":               cells[1].get_text(strip=True) if len(cells) > 1 else "",
                 "green_cards":         cells[2].get_text(strip=True) if len(cells) > 2 else "",
                 "yellow_cards":        cells[3].get_text(strip=True) if len(cells) > 3 else "",
@@ -456,7 +494,7 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
 
 def main():
     print("=" * 60)
-    print("Match Scraper — Headless")
+    print("Hockey Results Scraper — Headless")
     print(f"Started:     {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Portal:      {PORTAL_URL}")
     print(f"Association: {ASSOCIATION_NAME}")
@@ -533,9 +571,9 @@ def main():
                                 "jersey":              player["jersey"],
                                 "role":                player["role"],
                                 "attended":            player["attended"],
-                                "is_fillin":           player["is_fillin"],
-                                "is_removed":          player["is_removed"],
-                                "revsports_player_id": player["revsports_player_id"],  # NEW
+                                "is_fillin":           player["is_fillin"],   # True = Fill-in player
+                                "is_removed":          player["is_removed"],  # True = Removed from team
+                                "revsports_player_id": player["revsports_player_id"],
                                 "goals":               player["goals"],
                                 "green_cards":         player["green_cards"],
                                 "yellow_cards":        player["yellow_cards"],
@@ -569,57 +607,79 @@ def main():
     print(f"✅ JSON: {json_path}  ({len(all_results)} matches)")
 
     # ── Upsert to Supabase ────────────────────────────────────
+    # Reads SUPABASE_URL and SUPABASE_SERVICE_KEY from environment variables.
+    # On your PC: set these as Windows environment variables.
+    # On GitHub Actions: set these as repository secrets.
+    # If either is missing, this step is skipped with a warning.
+
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
 
     if not supabase_url or not supabase_key:
         print("\n⚠ SUPABASE_URL or SUPABASE_SERVICE_KEY not set — skipping upsert.")
     elif not csv_rows:
-        print("\n⚠ No rows to upsert.")
+        print("\n⚠ No rows to upsert — skipping.")
     else:
         try:
             from supabase import create_client
+
+            # Connect to Supabase using the service role key (bypasses RLS)
             client = create_client(supabase_url, supabase_key)
 
+            # Clean and convert each row before upserting
             def clean_row(row):
                 cleaned = {}
                 for k, v in row.items():
-                    cleaned[k] = None if v == "" or v is None else v
+                    # Replace empty strings with None (Supabase prefers null over "")
+                    if v == "" or v is None:
+                        cleaned[k] = None
+                    else:
+                        cleaned[k] = v
+
+                # Convert numeric fields from string to int where possible
                 for field in ["home_score", "away_score", "goals",
                                "green_cards", "yellow_cards", "red_cards"]:
                     if cleaned.get(field) is not None:
-                        try:    cleaned[field] = int(cleaned[field])
-                        except: cleaned[field] = None
+                        try:
+                            cleaned[field] = int(cleaned[field])
+                        except (ValueError, TypeError):
+                            cleaned[field] = None
+
+                # Convert boolean fields (CSV stores them as strings "True"/"False")
                 for field in ["attended", "is_fillin", "is_removed"]:
                     if cleaned.get(field) is not None:
                         cleaned[field] = str(cleaned[field]).strip().lower() == "true"
+
                 return cleaned
 
             cleaned_rows = [clean_row(r) for r in csv_rows]
-            BATCH_SIZE   = 200
-            total        = len(cleaned_rows)
-            num_batches  = (total + BATCH_SIZE - 1) // BATCH_SIZE
-            upserted     = 0
 
-            print(f"\n⏳ Upserting {total} rows in {num_batches} batch(es)...")
+            # Upsert in batches of 200 to avoid timeouts
+            # on_conflict means: if match_url + player_name + team already exists,
+            # update that row instead of inserting a duplicate
+            BATCH_SIZE = 200
+            total_batches = (len(cleaned_rows) + BATCH_SIZE - 1) // BATCH_SIZE
+            total_upserted = 0
 
-            for i in range(0, total, BATCH_SIZE):
-                batch     = cleaned_rows[i:i + BATCH_SIZE]
+            print(f"\n⏳ Upserting {len(cleaned_rows)} rows to Supabase in {total_batches} batches...")
+
+            for i in range(0, len(cleaned_rows), BATCH_SIZE):
+                batch = cleaned_rows[i:i + BATCH_SIZE]
                 batch_num = (i // BATCH_SIZE) + 1
-                print(f"  Batch {batch_num} of {num_batches}...")
+                print(f"  Upserting batch {batch_num} of {total_batches}...")
                 try:
                     client.table("revsports_players").upsert(
                         batch,
                         on_conflict="match_url,player_name,team,is_fillin"
                     ).execute()
-                    upserted += len(batch)
+                    total_upserted += len(batch)
                 except Exception as e:
                     print(f"  ✗ Batch {batch_num} failed: {e}")
 
-            print(f"✅ Supabase upsert complete — {upserted} rows.")
+            print(f"✅ Supabase upsert complete — {total_upserted} rows processed.")
 
         except Exception as e:
-            print(f"✗ Supabase error: {e}")
+            print(f"✗ Supabase upsert error: {e}")
 
     print(f"\nDone! {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
