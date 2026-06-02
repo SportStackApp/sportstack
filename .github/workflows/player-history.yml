@@ -1,0 +1,68 @@
+# .github/workflows/player-history.yml
+#
+# Player History Scraper
+# Reads all players from revsports_player_registry in Supabase,
+# then visits each player's career history page on RevSports to collect
+# season-by-season stats going back to 2020+.
+#
+# Writes results to revsports_player_history in Supabase.
+# Safe to re-run — uses upsert (won't create duplicates).
+#
+# Uses Playwright (headless Chromium browser) because history pages
+# are JavaScript-rendered.
+#
+# Schedule (AEST = UTC+10):
+#   Every Monday night at 2:00am AEST (Tuesday morning)
+#   = 16:00 UTC Monday
+#   Runs 1 hour after the Registry scraper so player IDs are ready.
+#   With ~727 players at 0.8s delay, expect ~15–20 minutes to complete.
+#
+# Manual trigger: Actions tab → "Player History Scraper" → Run workflow
+
+name: Player History Scraper
+
+on:
+  # ── Scheduled run — Monday night / Tuesday 2am AEST ──────────
+  schedule:
+    - cron: "0 16 * * 0"   # 2am Tuesday AEST = 16:00 UTC Monday
+                            # 1 hour after registry scraper — so player IDs are ready
+
+  # ── Manual trigger ───────────────────────────────────────────
+  workflow_dispatch:
+
+jobs:
+  scrape-history:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the repo so the scraper file is available
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3. Install Python dependencies
+      #    playwright — headless browser (history pages are JavaScript-rendered)
+      #    beautifulsoup4 — HTML parsing
+      #    supabase — read player list + write history rows
+      - name: Install Python dependencies
+        run: pip install playwright beautifulsoup4 supabase
+
+      # 4. Install the Playwright browser (Chromium)
+      #    Downloads the headless browser binary into the GitHub runner
+      - name: Install Playwright browser
+        run: python -m playwright install chromium
+
+      # 5. Run the history scraper
+      #    Reads players from revsports_player_registry via Supabase
+      #    Visits ~727 player history pages (takes ~15–20 minutes)
+      #    Writes season rows to revsports_player_history
+      - name: Run player history scraper
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scraper/history_scraper.py

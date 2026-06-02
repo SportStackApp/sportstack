@@ -1,0 +1,60 @@
+# .github/workflows/player-registry.yml
+#
+# Player Registry Scraper
+# Scrapes the season-wide Team Statistics page for every configured
+# association/competition and writes results to revsports_player_registry.
+#
+# Uses Playwright (headless Chromium browser) because the stats page
+# loads player data via JavaScript — plain requests can't see it.
+#
+# Schedule (AEST = UTC+10):
+#   Every Monday night at 1:00am AEST (Tuesday morning)
+#   = 15:00 UTC Monday
+#
+# Manual trigger: Actions tab → "Player Registry Scraper" → Run workflow
+
+name: Player Registry Scraper
+
+on:
+  # ── Scheduled run — Monday night / Tuesday 1am AEST ──────────
+  schedule:
+    - cron: "0 15 * * 0"   # 1am Tuesday AEST = 15:00 UTC Monday
+
+  # ── Manual trigger ───────────────────────────────────────────
+  workflow_dispatch:
+
+jobs:
+  scrape-registry:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the repo so the scraper file is available
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3. Install Python dependencies
+      #    playwright — headless browser (needed for JavaScript-rendered stats page)
+      #    beautifulsoup4 — HTML parsing
+      #    supabase — write results to Supabase
+      - name: Install Python dependencies
+        run: pip install playwright beautifulsoup4 supabase
+
+      # 4. Install the Playwright browser (Chromium)
+      #    This downloads the headless browser binary into the GitHub runner
+      - name: Install Playwright browser
+        run: python -m playwright install chromium
+
+      # 5. Run the registry scraper
+      #    Scrapes HB + Sunraysia competitions (all configured in the script)
+      #    SUPABASE_URL and SUPABASE_SERVICE_KEY come from repo Secrets
+      - name: Run player registry scraper
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scraper/player_registry_scraper.py
