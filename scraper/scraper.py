@@ -255,14 +255,40 @@ def get_all_grades(session, base_url):
     except Exception as e:
         print(f"⚠ Could not fetch grades page: {e}")
         return []
+
     grades, seen = [], set()
-    for a in soup.find_all("a", href=True):
-        href = normalize_url(a["href"], games_url)
-        if href not in seen and path_matches(href, r"/games/\d+/\d+$"):
-            seen.add(href)
-            name = a.get_text(strip=True)
-            if name:
-                grades.append({"name": name, "url": href})
+    current_competition = "Unknown Competition"
+
+    # Walk every element in document order so we can track competition headings
+    for tag in soup.find_all(True):
+        # Detect a competition heading — it's a block-level element (h2, h3, div, p, strong)
+        # that contains text but NO grade links itself, and sits above the grade links
+        if tag.name in ("h2", "h3", "h4", "strong", "p", "div"):
+            # Only treat it as a competition name if it has direct text and no child <a> grade links
+            child_grade_links = [
+                a for a in tag.find_all("a", href=True)
+                if path_matches(normalize_url(a["href"], games_url), r"/games/\d+/\d+$")
+            ]
+            text = tag.get_text(" ", strip=True)
+            if text and not child_grade_links and len(text) > 10 and len(text) < 120:
+                # Heuristic: competition names are reasonably long but not paragraphs
+                # Only update if it looks like a season/competition title
+                if any(kw in text for kw in ["Competition", "Season", "Winter", "Summer", "Indoor", "Outdoor", "2026", "2025", "2024"]):
+                    current_competition = text
+
+        # Detect grade links
+        if tag.name == "a" and tag.get("href"):
+            href = normalize_url(tag["href"], games_url)
+            if href not in seen and path_matches(href, r"/games/\d+/\d+$"):
+                seen.add(href)
+                name = tag.get_text(strip=True)
+                if name:
+                    grades.append({
+                        "name": name,
+                        "url": href,
+                        "competition_name": current_competition,
+                    })
+
     return grades
 
 
@@ -506,10 +532,8 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     session = make_session()
 
-    # Fetch competition name from the games page
-    print("\nFetching competition name...")
-    competition_name = get_competition_name(session, PORTAL_URL)
-    print(f"Competition: {competition_name}")
+    # Competition name is now tracked per-grade inside get_all_grades()
+    # get_competition_name() is kept as a fallback but no longer used as the sole source
 
     all_results, csv_rows = [], []
 
@@ -552,7 +576,7 @@ def main():
                         for player in team["players"]:
                             csv_rows.append({
                                 "association":         ASSOCIATION_NAME,
-                                "competition_name":    competition_name,
+                                "competition_name":    grade.get("competition_name", ASSOCIATION_NAME),
                                 "grade":               grade["name"],
                                 "round":               rnd["round_label"],
                                 "game_date":           match["date"],
