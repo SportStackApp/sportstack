@@ -30,6 +30,7 @@ import AssociationsManagement from "./pages/admin/AssociationsManagement";
 import ClubsManagement from "./pages/admin/ClubsManagement";
 import TeamsManagement from "./pages/admin/TeamsManagement";
 import DivisionsManagement from "./pages/admin/DivisionsManagement";
+import CompetitionsManagement from "./pages/admin/CompetitionsManagement";
 import UsersManagement from "./pages/admin/UsersManagement";
 import AddPlayer from "./pages/admin/AddPlayer";
 import BulkImport from "./pages/admin/BulkImport";
@@ -98,6 +99,7 @@ const App = () => (
                       {/* Admin Routes */}
                       <Route path="/admin" element={<AdminDashboard />} />
                       <Route path="/admin/associations" element={<AssociationsManagement />} />
+                      <Route path="/admin/competitions" element={<CompetitionsManagement />} />
                       <Route path="/admin/clubs" element={<ClubsManagement />} />
                       <Route path="/admin/teams" element={<TeamsManagement />} />
                       <Route path="/admin/divisions" element={<DivisionsManagement />} />

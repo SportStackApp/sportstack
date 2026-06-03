@@ -55,6 +55,7 @@ const VenuesManagement = () => {
   const [venues, setVenues] = useState<VenueWithMeta[]>([]);
   const [associations, setAssociations] = useState<Association[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterAssociation, setFilterAssociation] = useState<string>("all");
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -285,10 +286,26 @@ const VenuesManagement = () => {
         )}
       </div>
 
+      {/* Filter Bar */}
+      {(isSuperAdmin || scopedAssociationIds.length > 1) && (
+        <div className="flex items-center gap-4">
+          <Label>Filter by Association:</Label>
+          <Select value={filterAssociation} onValueChange={setFilterAssociation}>
+            <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Associations</SelectItem>
+              {formAssociations.map((a) => (
+                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Table */}
       {loading ? (
         <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
-      ) : venues.length === 0 ? (
+      ) : (venues.filter(v => filterAssociation === "all" || v.association_id === filterAssociation)).length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">No venues found.</div>
       ) : (
         <div className="rounded-md border">
@@ -303,7 +320,7 @@ const VenuesManagement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {venues.map((venue) => (
+              {(venues.filter(v => filterAssociation === "all" || v.association_id === filterAssociation)).map((venue) => (
                 <Collapsible key={venue.id} open={expandedVenueId === venue.id} asChild>
                   <>
                     <TableRow>

@@ -22,36 +22,51 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getTeamDisplayName } from "@/lib/utils";
 import { useAdminScope } from "@/hooks/useAdminScope";
-import { useTeamContext } from "@/contexts/TeamContext";
 import type { Database } from "@/integrations/supabase/types";
 
-type Team = Database["public"]["Tables"]["teams"]["Row"];
+type Team = Database["public"]["Tables"]["teams"]["Row"] & { division_id?: string | null };
 type Club = Database["public"]["Tables"]["clubs"]["Row"];
 type Association = Database["public"]["Tables"]["associations"]["Row"];
+type Venue = Database["public"]["Tables"]["venues"]["Row"];
 
-interface TeamWithClub extends Team {
-  clubs: { name: string; association_id: string } | null;
-  divisions?: { name: string } | null;
-  team_divisions?: { divisions?: { name: string } | null }[] | null;
+interface Division {
+  id: string;
+  name: string;
+  association_id: string;
+  season_id: string | null;
 }
 
 const TeamsManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { loading: scopeLoading, isSuperAdmin, isAnyAdmin, scopedTeamIds, scopedClubIds, scopedAssociationIds, canManageTeam } = useAdminScope();
-  const { selectedAssociationId, selectedClubId, selectedDivision } = useTeamContext();
 
-  const [teams, setTeams] = useState<TeamWithClub[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
   const [associations, setAssociations] = useState<Association[]>([]);
-  const [divisions, setDivisions] = useState<{ id: string; name: string; association_id: string }[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Filter Bar State
+  const [filterAssociation, setFilterAssociation] = useState<string>("all");
+  const [filterClub, setFilterClub] = useState<string>("all");
+  const [filterDivision, setFilterDivision] = useState<string>("all");
+
+  // Dialog State
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTeam, setEditingTeam] = useState<TeamWithClub | null>(null);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletingTeam, setDeletingTeam] = useState<TeamWithClub | null>(null);
-  const [formData, setFormData] = useState({ name: "", club_id: "", age_group: "", division: "", gender: "", home_venue_id: "" });
-  const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
+  const [deletingTeam, setDeletingTeam] = useState<Team | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    club_id: "__none__",
+    age_group: "",
+    division: "",
+    division_id: "__none__",
+    gender: "",
+    home_venue_id: "__none__"
+  });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -61,27 +76,46 @@ const TeamsManagement = () => {
   const fetchData = async () => {
     setLoading(true);
 
-    let teamsQuery = supabase.from("teams").select("*, home_venue_id, clubs:club_id(name, association_id), divisions:division_id(id, name), team_divisions(division_id, divisions(id, name))" as any).order("name");
-    if (!isSuperAdmin && scopedTeamIds.length > 0) {
-      teamsQuery = teamsQuery.in("id", scopedTeamIds);
-    } else if (!isSuperAdmin && scopedClubIds.length > 0) {
-      teamsQuery = teamsQuery.in("club_id", scopedClubIds);
-    }
-
     const [teamsRes, clubsRes, associationsRes, venuesRes, divisionsRes] = await Promise.all([
-      teamsQuery,
+      supabase.from("teams").select("*").order("name"),
       supabase.from("clubs").select("*").order("name"),
       supabase.from("associations").select("*").order("name"),
-      supabase.from("venues").select("id, name").order("name"),
-      supabase.from("divisions").select("id, name, association_id").order("name"),
+      supabase.from("venues").select("*").order("name"),
+      supabase.from("divisions").select("id, name, association_id, season_id").order("name"),
     ]);
 
-    if (teamsRes.error) toast({ title: "Error", description: "Failed to load teams", variant: "destructive" });
-    else setTeams(teamsRes.data || []);
-    if (!clubsRes.error) setClubs(clubsRes.data || []);
-    if (!associationsRes.error) setAssociations(associationsRes.data || []);
-    if (!venuesRes.error) setVenues(venuesRes.data || []);
-    if (!divisionsRes.error) setDivisions(divisionsRes.data || []);
+    if (clubsRes.error) toast({ title: "Error", description: "Failed to load clubs", variant: "destructive" });
+    if (associationsRes.error) toast({ title: "Error", description: "Failed to load associations", variant: "destructive" });
+    if (venuesRes.error) toast({ title: "Error", description: "Failed to load venues", variant: "destructive" });
+    if (divisionsRes.error) toast({ title: "Error", description: "Failed to load divisions", variant: "destructive" });
+
+    const allClubs = clubsRes.data || [];
+    const allAssociations = associationsRes.data || [];
+    const allVenues = venuesRes.data || [];
+    const allDivisions = (divisionsRes.data as Division[]) || [];
+
+    setClubs(allClubs);
+    setAssociations(allAssociations);
+    setVenues(allVenues);
+    setDivisions(allDivisions);
+
+    if (teamsRes.error) {
+      toast({ title: "Error", description: "Failed to load teams", variant: "destructive" });
+    } else {
+      let teamsList = (teamsRes.data as Team[]) || [];
+      // Scope filter in memory
+      if (!isSuperAdmin) {
+        teamsList = teamsList.filter((t) => {
+          if (scopedTeamIds.includes(t.id)) return true;
+          if (scopedClubIds.includes(t.club_id)) return true;
+          const club = allClubs.find((c) => c.id === t.club_id);
+          if (club && scopedAssociationIds.includes(club.association_id)) return true;
+          return false;
+        });
+      }
+      setTeams(teamsList);
+    }
+
     setLoading(false);
   };
 
@@ -111,45 +145,69 @@ const TeamsManagement = () => {
     }
   }, [scopeLoading, isAnyAdmin]);
 
+  // Scoped associations for filters/forms
+  const formAssociations = isSuperAdmin
+    ? associations
+    : associations.filter((a) => scopedAssociationIds.includes(a.id));
+
   // Scoped clubs for form dropdown
   const formClubs = isSuperAdmin
     ? clubs
     : clubs.filter((c) => scopedClubIds.includes(c.id) || scopedAssociationIds.includes(c.association_id));
 
-  // Get divisions for the selected club's association
+  // Get divisions for the selected club's association in dialog
   const getFilteredDivisions = () => {
-    if (!formData.club_id) return divisions;
+    if (!formData.club_id || formData.club_id === "__none__") return divisions;
     const selectedClub = clubs.find(c => c.id === formData.club_id);
     if (!selectedClub) return divisions;
     return divisions.filter(d => d.association_id === selectedClub.association_id);
   };
 
-  let filteredTeams = teams;
-  if (selectedAssociationId) {
-    filteredTeams = filteredTeams.filter((t) => t.clubs?.association_id === selectedAssociationId);
-  }
-  if (selectedClubId) {
-    filteredTeams = filteredTeams.filter((t) => t.club_id === selectedClubId);
-  }
-  if (selectedDivision) {
-    filteredTeams = filteredTeams.filter((t) => 
-      t.divisions?.id === selectedDivision || 
-      t.team_divisions?.some(td => td.divisions?.id === selectedDivision || td.division_id === selectedDivision)
-    );
-  }
+  // Memory filtering of teams list based on cascading filter bar
+  const filteredTeams = teams.filter((t) => {
+    if (filterAssociation !== "all") {
+      const club = clubs.find((c) => c.id === t.club_id);
+      if (!club || club.association_id !== filterAssociation) {
+        return false;
+      }
+    }
+    if (filterClub !== "all" && t.club_id !== filterClub) {
+      return false;
+    }
+    if (filterDivision !== "all" && t.division_id !== filterDivision) {
+      return false;
+    }
+    return true;
+  });
 
   const canAdd = isSuperAdmin || scopedAssociationIds.length > 0 || scopedClubIds.length > 0;
   const canDelete = isSuperAdmin || scopedAssociationIds.length > 0 || scopedClubIds.length > 0;
 
-  const handleOpenDialog = (team?: TeamWithClub) => {
+  const handleOpenDialog = (team?: Team) => {
     if (team) {
       setEditingTeam(team);
-      setFormData({ name: team.name, club_id: team.club_id, age_group: team.age_group || "", division: team.division || "", gender: team.gender || "", home_venue_id: team.home_venue_id || "" });
+      setFormData({
+        name: team.name,
+        club_id: team.club_id || "__none__",
+        age_group: team.age_group || "",
+        division: team.division || "",
+        division_id: team.division_id || "__none__",
+        gender: team.gender || "",
+        home_venue_id: team.home_venue_id || "__none__"
+      });
     } else {
       setEditingTeam(null);
-      const defaultClubId = formClubs.length === 1 ? formClubs[0].id : "";
-      const defaultName = defaultClubId ? formClubs.find(c => c.id === defaultClubId)?.name || "" : "";
-      setFormData({ name: defaultName, club_id: defaultClubId, age_group: "", division: "", gender: "", home_venue_id: "" });
+      const defaultClubId = formClubs.length === 1 ? formClubs[0].id : "__none__";
+      const defaultName = defaultClubId !== "__none__" ? formClubs.find(c => c.id === defaultClubId)?.name || "" : "";
+      setFormData({
+        name: defaultName,
+        club_id: defaultClubId,
+        age_group: "",
+        division: "",
+        division_id: "__none__",
+        gender: "",
+        home_venue_id: "__none__"
+      });
     }
     setDialogOpen(true);
   };
@@ -157,21 +215,49 @@ const TeamsManagement = () => {
   const handleSave = async () => {
     const selectedClub = clubs.find((c) => c.id === formData.club_id);
     const teamName = formData.name.trim() || selectedClub?.name || "";
-    if (!teamName || !formData.club_id) {
-      toast({ title: "Error", description: "Name and Club are required", variant: "destructive" });
+    
+    if (!teamName) {
+      toast({ title: "Error", description: "Name is required", variant: "destructive" });
       return;
     }
+    if (formData.club_id === "__none__") {
+      toast({ title: "Error", description: "Club is required", variant: "destructive" });
+      return;
+    }
+    if (formData.division_id === "__none__") {
+      toast({ title: "Error", description: "Division is required", variant: "destructive" });
+      return;
+    }
+
     setSaving(true);
-    const teamData = { name: teamName, club_id: formData.club_id, age_group: formData.age_group || null, division: formData.division.trim() || null, gender: formData.gender || null, home_venue_id: formData.home_venue_id || null } as any;
+    const teamData = {
+      name: teamName,
+      club_id: formData.club_id,
+      age_group: formData.age_group || null,
+      division: formData.division.trim() || null,
+      division_id: formData.division_id,
+      gender: formData.gender || null,
+      home_venue_id: formData.home_venue_id === "__none__" ? null : formData.home_venue_id
+    };
 
     if (editingTeam) {
       const { error } = await supabase.from("teams").update(teamData).eq("id", editingTeam.id);
-      if (error) toast({ title: "Error", description: "Failed to update team", variant: "destructive" });
-      else { toast({ title: "Success", description: "Team updated" }); setDialogOpen(false); fetchData(); }
+      if (error) {
+        toast({ title: "Error", description: "Failed to update team", variant: "destructive" });
+      } else {
+        toast({ title: "Success", description: "Team updated" });
+        setDialogOpen(false);
+        fetchData();
+      }
     } else {
       const { error } = await supabase.from("teams").insert(teamData);
-      if (error) toast({ title: "Error", description: "Failed to create team", variant: "destructive" });
-      else { toast({ title: "Success", description: "Team created" }); setDialogOpen(false); fetchData(); }
+      if (error) {
+        toast({ title: "Error", description: "Failed to create team", variant: "destructive" });
+      } else {
+        toast({ title: "Success", description: "Team created" });
+        setDialogOpen(false);
+        fetchData();
+      }
     }
     setSaving(false);
   };
@@ -179,8 +265,12 @@ const TeamsManagement = () => {
   const handleDelete = async () => {
     if (!deletingTeam) return;
     const { error } = await supabase.from("teams").delete().eq("id", deletingTeam.id);
-    if (error) toast({ title: "Error", description: "Failed to delete team. It may have members.", variant: "destructive" });
-    else { toast({ title: "Success", description: "Team deleted" }); fetchData(); }
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete team. It may have members.", variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: "Team deleted" });
+      fetchData();
+    }
     setDeleteDialogOpen(false);
     setDeletingTeam(null);
   };
@@ -210,17 +300,17 @@ const TeamsManagement = () => {
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label>Club *</Label>
-                  <Select value={formData.club_id} onValueChange={(v) => setFormData({ ...formData, club_id: v })}>
+                  <Select value={formData.club_id} onValueChange={(v) => setFormData({ ...formData, club_id: v, division_id: "__none__", division: "" })}>
                     <SelectTrigger><SelectValue placeholder="Select club" /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="__none__">Select club</SelectItem>
                       {formClubs.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Name</Label>
+                  <Label>Name *</Label>
                   <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Team name" />
-                  {!editingTeam && <p className="text-xs text-muted-foreground">Tip: Rename this team after saving.</p>}
                 </div>
                 <div className="space-y-2">
                   <Label>Age Group</Label>
@@ -236,11 +326,19 @@ const TeamsManagement = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Division *</Label>
-                    <Select value={formData.division} onValueChange={(v) => setFormData({ ...formData, division: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select division" /></SelectTrigger>
+                    <Select
+                      value={formData.division_id}
+                      disabled={formData.club_id === "__none__"}
+                      onValueChange={(v) => {
+                        const div = divisions.find(d => d.id === v);
+                        setFormData({ ...formData, division_id: v, division: div ? div.name : "" });
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder={formData.club_id === "__none__" ? "Select club first" : "Select division"} /></SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="__none__">Select division</SelectItem>
                         {getFilteredDivisions().map((div) => (
-                          <SelectItem key={div.id} value={div.name}>
+                          <SelectItem key={div.id} value={div.id}>
                             {div.name}
                           </SelectItem>
                         ))}
@@ -260,7 +358,7 @@ const TeamsManagement = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Home Venue</Label>
-                  <Select value={formData.home_venue_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, home_venue_id: v === "__none__" ? "" : v })}>
+                  <Select value={formData.home_venue_id} onValueChange={(v) => setFormData({ ...formData, home_venue_id: v })}>
                     <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">None</SelectItem>
@@ -278,7 +376,66 @@ const TeamsManagement = () => {
         )}
       </div>
 
-      {/* Page-level filters have been removed in favor of the global cascade bar context */}
+      {/* Cascading Filter Bar */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Label className="shrink-0">Filter by Association:</Label>
+          <Select
+            value={filterAssociation}
+            onValueChange={(v) => {
+              setFilterAssociation(v);
+              setFilterClub("all");
+              setFilterDivision("all");
+            }}
+          >
+            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Associations</SelectItem>
+              {formAssociations.map((a) => (
+                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Label className="shrink-0">Filter by Club:</Label>
+          <Select
+            value={filterClub}
+            onValueChange={setFilterClub}
+            disabled={filterAssociation === "all"}
+          >
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder={filterAssociation === "all" ? "Select association first" : "All Clubs"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Clubs</SelectItem>
+              {clubs.filter(c => c.association_id === filterAssociation).map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Label className="shrink-0">Filter by Division:</Label>
+          <Select
+            value={filterDivision}
+            onValueChange={setFilterDivision}
+            disabled={filterAssociation === "all"}
+          >
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder={filterAssociation === "all" ? "Select association first" : "All Divisions"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Divisions</SelectItem>
+              {divisions.filter(d => d.association_id === filterAssociation).map((d) => (
+                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <Card>
         <CardHeader>
@@ -294,40 +451,44 @@ const TeamsManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                 <TableHead>Name</TableHead>
+                  <TableHead>Name</TableHead>
                   <TableHead>Club</TableHead>
-                  <TableHead>Abbreviation</TableHead>
                   <TableHead>Division</TableHead>
+                  <TableHead>Gender</TableHead>
+                  <TableHead>Age Group</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTeams.map((team) => (
-                  <TableRow key={team.id}>
-                    <TableCell className="font-medium">
-                      <Link to={`/teams/${team.id}`} className="hover:underline text-primary">
-                        {getTeamDisplayName(team)}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{team.clubs?.name || "-"}</TableCell>
-                    <TableCell>{team.abbreviation || "-"}</TableCell>
-                    <TableCell>
-                      {team.divisions?.name || team.team_divisions?.[0]?.divisions?.name || team.division || "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {canManageTeam(team.id) && (
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(team)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {canDelete && canManageTeam(team.id) && (
-                        <Button variant="ghost" size="icon" onClick={() => { setDeletingTeam(team); setDeleteDialogOpen(true); }}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredTeams.map((team) => {
+                  const clubName = clubs.find((c) => c.id === team.club_id)?.name || "-";
+                  const divName = divisions.find((d) => d.id === team.division_id)?.name || team.division || "-";
+                  return (
+                    <TableRow key={team.id}>
+                      <TableCell className="font-medium">
+                        <Link to={`/teams/${team.id}`} className="hover:underline text-primary">
+                          {getTeamDisplayName(team)}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{clubName}</TableCell>
+                      <TableCell>{divName}</TableCell>
+                      <TableCell>{team.gender || "-"}</TableCell>
+                      <TableCell>{team.age_group || "-"}</TableCell>
+                      <TableCell className="text-right">
+                        {canManageTeam(team.id) && (
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(team)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete && canManageTeam(team.id) && (
+                          <Button variant="ghost" size="icon" onClick={() => { setDeletingTeam(team); setDeleteDialogOpen(true); }}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

@@ -113,8 +113,6 @@ const AssociationsManagement = () => {
   const [logoValidation, setLogoValidation] = useState<{ status: "success" | "error"; message: string } | null>(null);
   const [formErrors, setFormErrors] = useState<{ abbreviation?: string; logo?: string }>({});
   const [abbreviationTouched, setAbbreviationTouched] = useState(false);
-  const [expandedAssociationIds, setExpandedAssociationIds] = useState<string[]>([]);
-  const [associationClubs, setAssociationClubs] = useState<Record<string, { id: string; name: string; abbreviation: string | null }[]>>({});
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [selectedLogoSrc, setSelectedLogoSrc] = useState("");
   const [croppingFile, setCroppingFile] = useState<File | null>(null);
@@ -146,54 +144,17 @@ const AssociationsManagement = () => {
 
   const fetchAssociations = async () => {
     setLoading(true);
-    let associationData: Association[] = [];
+    let query = supabase.from("associations").select("*").order("name");
 
-    if (isSuperAdmin) {
-      const { data, error } = await supabase
-        .from("associations")
-        .select("*")
-        .order("name");
-      if (error) {
-        toast({ title: "Error", description: "Failed to load associations", variant: "destructive" });
-      } else {
-        associationData = data || [];
-        setAssociations(associationData);
-      }
-    } else {
-      const { data, error } = await supabase
-        .from("associations")
-        .select("*")
-        .in("id", scopedAssociationIds)
-        .order("name");
-      if (error) {
-        toast({ title: "Error", description: "Failed to load associations", variant: "destructive" });
-      } else {
-        associationData = data || [];
-        setAssociations(associationData);
-      }
+    if (!isSuperAdmin) {
+      query = query.in("id", scopedAssociationIds);
     }
 
-    const associationIds = associationData.map((association) => association.id);
-    if (associationIds.length > 0) {
-      const { data: clubsData } = await supabase
-        .from("clubs")
-        .select("id,name,abbreviation,association_id")
-        .in("association_id", associationIds);
-
-      const groupedClubs: Record<string, { id: string; name: string; abbreviation: string | null }[]> = {};
-      (clubsData || []).forEach((club) => {
-        if (!groupedClubs[club.association_id]) {
-          groupedClubs[club.association_id] = [];
-        }
-        groupedClubs[club.association_id].push({
-          id: club.id,
-          name: club.name,
-          abbreviation: club.abbreviation || null,
-        });
-      });
-      setAssociationClubs(groupedClubs);
+    const { data, error } = await query;
+    if (error) {
+      toast({ title: "Error", description: "Failed to load associations", variant: "destructive" });
     } else {
-      setAssociationClubs({});
+      setAssociations(data || []);
     }
 
     setLoading(false);
@@ -647,24 +608,12 @@ const AssociationsManagement = () => {
               </TableHeader>
               <TableBody>
                 {associations.map((association) => {
-                  const isExpanded = expandedAssociationIds.includes(association.id);
-                  const clubsForAssociation = associationClubs[association.id] || [];
-                  return [
+                  return (
                     <TableRow key={association.id}>
                       <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                            onClick={() => toggleAssociationExpanded(association.id)}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                          <Link to={`/associations/${association.id}`} className="hover:underline text-primary">
-                            {association.name}
-                          </Link>
-                        </div>
+                        <Link to={`/associations/${association.id}`} className="hover:underline text-primary">
+                          {association.name}
+                        </Link>
                       </TableCell>
                       <TableCell>{association.abbreviation || "-"}</TableCell>
                       <TableCell>
@@ -702,25 +651,8 @@ const AssociationsManagement = () => {
                           </Button>
                         )}
                       </TableCell>
-                    </TableRow>,
-                    isExpanded && (
-                      <TableRow key={`${association.id}-details`}>
-                        <TableCell colSpan={5} className="bg-muted/10">
-                          {clubsForAssociation.length > 0 ? (
-                            <ul className="space-y-1 pl-10 text-sm text-muted-foreground">
-                              {clubsForAssociation.map((club) => (
-                                <li key={club.id}>
-                                  {club.name} {club.abbreviation ? `(${club.abbreviation})` : ""}
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-sm text-muted-foreground pl-10">No clubs yet.</p>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ),
-                  ];
+                    </TableRow>
+                  );
                 })}
               </TableBody>
             </Table>

@@ -37,6 +37,7 @@ import {
   GitMerge,
   Trophy,
   Vote,
+  Layers,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -45,75 +46,147 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAppMode, MODE_LABELS, type AppMode } from "@/contexts/AppModeContext";
 import { supabase } from "@/integrations/supabase/client";
 
-// Nav items per mode
-const NAV_SETS: Record<AppMode, { path: string; label: string; icon: typeof LayoutDashboard }[]> = {
+interface NavItem {
+  path: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+}
+interface NavSection {
+  heading: string;
+  items: NavItem[];
+}
+const NAV_SETS: Record<AppMode, NavSection[]> = {
   super_admin: [
-    { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/admin/associations", label: "Associations", icon: Globe },
-    { path: "/admin/clubs", label: "Clubs", icon: Building2 },
-    { path: "/admin/teams", label: "Teams", icon: Shield },
-    { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
-    { path: "/admin/venues", label: "Venues", icon: MapPin },
-    { path: "/admin/users", label: "Users", icon: UserCog },
-    { path: "/admin/requests", label: "Requests", icon: ClipboardList },
-    { path: "/admin/mvp-voting", label: "MVP Voting", icon: Trophy },
-    { path: "/roster", label: "Roster", icon: Users },
-    { path: "/roster", label: "Statistics", icon: BarChart3 },
-    { path: "/chat", label: "Chat", icon: MessageCircle },
-    { path: "/voting", label: "Voting Portal", icon: Vote },
+    {
+      heading: "Core",
+      items: [
+        { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
+        { path: "/chat", label: "Chat", icon: MessageCircle },
+      ],
+    },
+    {
+      heading: "MVP Voting",
+      items: [
+        { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
+        { path: "/voting", label: "Voting Portal", icon: Vote },
+      ],
+    },
+    {
+      heading: "Coaching",
+      items: [
+        { path: "/coaching", label: "Squad", icon: ClipboardCheck },
+        { path: "/roster", label: "Roster", icon: Users },
+      ],
+    },
+    {
+      heading: "Umpiring",
+      items: [
+        { path: "/umpire/vote", label: "Vote Submission", icon: ClipboardList },
+      ],
+    },
+    {
+      heading: "Admin",
+      items: [
+        { path: "/admin/associations", label: "Associations", icon: Globe },
+        { path: "/admin/competitions", label: "Competitions", icon: Trophy },
+        { path: "/admin/divisions", label: "Divisions", icon: Layers },
+        { path: "/admin/clubs", label: "Clubs", icon: Building2 },
+        { path: "/admin/teams", label: "Teams", icon: Shield },
+        { path: "/admin/venues", label: "Venues", icon: MapPin },
+        { path: "/admin/users", label: "Users", icon: UserCog },
+        { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+        { path: "/admin/revsports-mappings", label: "RevSports Mappings", icon: GitMerge },
+      ],
+    },
   ],
   association: [
-    { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/admin/clubs", label: "Clubs", icon: Building2 },
-    { path: "/admin/teams", label: "Teams", icon: Shield },
-    { path: "/admin/divisions", label: "Divisions", icon: LayoutGrid },
-    { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
-    { path: "/admin/venues", label: "Venues", icon: MapPin },
-    { path: "/admin/users", label: "Users", icon: UserCog },
-    { path: "/admin/requests", label: "Requests", icon: ClipboardList },
-    { path: "/admin/mvp-voting", label: "MVP Voting", icon: Trophy },
+    {
+      heading: "Core",
+      items: [
+        { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
+      ],
+    },
+    {
+      heading: "MVP Voting",
+      items: [
+        { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
+      ],
+    },
+    {
+      heading: "Admin",
+      items: [
+        { path: "/admin/competitions", label: "Competitions", icon: Trophy },
+        { path: "/admin/divisions", label: "Divisions", icon: Layers },
+        { path: "/admin/clubs", label: "Clubs", icon: Building2 },
+        { path: "/admin/teams", label: "Teams", icon: Shield },
+        { path: "/admin/venues", label: "Venues", icon: MapPin },
+        { path: "/admin/users", label: "Users", icon: UserCog },
+        { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+      ],
+    },
   ],
   club: [
-    { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/admin/teams", label: "Teams", icon: Shield },
-    { path: "/admin/divisions", label: "Divisions", icon: LayoutGrid },
-    { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
-    { path: "/admin/users", label: "Users", icon: UserCog },
-    { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+    {
+      heading: "Core",
+      items: [
+        { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
+      ],
+    },
+    {
+      heading: "Admin",
+      items: [
+        { path: "/admin/teams", label: "Teams", icon: Shield },
+        { path: "/admin/divisions", label: "Divisions", icon: LayoutGrid },
+        { path: "/admin/users", label: "Users", icon: UserCog },
+        { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+      ],
+    },
   ],
   team: [
-    { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/games", label: "Fixtures", icon: Calendar },
-    { path: "/roster", label: "Roster", icon: Users },
-    { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
-    { path: "/chat", label: "Chat", icon: MessageCircle },
+    {
+      heading: "Core",
+      items: [
+        { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/games", label: "Fixtures", icon: Calendar },
+        { path: "/chat", label: "Chat", icon: MessageCircle },
+      ],
+    },
+    {
+      heading: "Coaching",
+      items: [
+        { path: "/roster", label: "Roster", icon: Users },
+        { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
+      ],
+    },
   ],
   player: [
-    { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/games", label: "Fixtures", icon: Calendar },
-    { path: "/roster", label: "Statistics", icon: BarChart3 },
-    { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
-    { path: "/chat", label: "Chat", icon: MessageCircle },
+    {
+      heading: "Core",
+      items: [
+        { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/games", label: "Fixtures", icon: Calendar },
+        { path: "/roster", label: "Statistics", icon: BarChart3 },
+        { path: "/chat", label: "Chat", icon: MessageCircle },
+      ],
+    },
+    {
+      heading: "Coaching",
+      items: [
+        { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
+      ],
+    },
   ],
 };
 
-// Bottom nav for mobile per mode
-const MOBILE_NAV: Record<AppMode, { path: string; label: string; icon: typeof LayoutDashboard }[]> = {
-  super_admin: NAV_SETS.super_admin.slice(0, 4),
-  association: NAV_SETS.association.slice(0, 4),
-  club: NAV_SETS.club.slice(0, 4),
-  team: [
-    { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/games", label: "Fixtures", icon: Calendar },
-    { path: "/roster", label: "Roster", icon: Users },
-    { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
-  ],
-  player: [
-    { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/games", label: "Fixtures", icon: Calendar },
-    { path: "/roster", label: "Stats", icon: BarChart3 },
-    { path: "/chat", label: "Chat", icon: MessageCircle },
-  ],
+const MOBILE_NAV: Record<AppMode, NavItem[]> = {
+  super_admin: NAV_SETS.super_admin[0].items.slice(0, 4),
+  association: NAV_SETS.association[0].items.slice(0, 4),
+  club: NAV_SETS.club[0].items.slice(0, 4),
+  team: NAV_SETS.team[0].items.slice(0, 4),
+  player: NAV_SETS.player[0].items.slice(0, 4),
 };
 
 interface Notification {
@@ -267,18 +340,16 @@ const AppLayout = () => {
     navigate(`/associations/${associationId}`);
   };
 
-  const baseNavItems = NAV_SETS[mode === "super_admin" ? viewingAs : mode];
-  const navItems = (mode === "super_admin" && selectedTeamId)
-    ? [...baseNavItems, { path: "/coaching", label: "Coaching", icon: ClipboardCheck }]
-    : baseNavItems;
-  
-  // Hide nav items that are redundant based on cascade selection
-  const visibleNavItems = navItems.filter((item) => {
-    if (selectedAssociationId && item.path === "/admin/associations") return false;
-    if (selectedClubId && item.path === "/admin/clubs") return false;
-    if (selectedTeamId && item.path === "/admin/teams") return false;
-    return true;
-  });
+  const baseSections = NAV_SETS[mode === "super_admin" ? viewingAs : mode];
+  const visibleSections = baseSections.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      if (selectedAssociationId && item.path === "/admin/associations") return false;
+      if (selectedClubId && item.path === "/admin/clubs") return false;
+      if (selectedTeamId && item.path === "/admin/teams") return false;
+      return true;
+    }),
+  })).filter((section) => section.items.length > 0);
   const mobileNavItems = MOBILE_NAV[mode];
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -326,40 +397,47 @@ const AppLayout = () => {
         </div>
       )}
       <nav className="flex-1 py-2">
-        {visibleNavItems.map((item) => {
-          const isActive =
-            (item.path === "/admin" && location.pathname === "/admin") ||
-            (item.path !== "/admin" && (
-              location.pathname === item.path ||
-              (item.path === "/games" && location.pathname.startsWith("/games"))
-            ));
-          const Icon = item.icon;
-          const isRequestsItem = item.path === "/admin/requests";
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={isMobile ? () => setIsMobileMenuOpen(false) : undefined}
-            >
-              <div
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 mx-2 my-1 rounded-lg text-sm font-medium transition-all border-l-4",
-                  isActive
-                    ? "bg-secondary text-secondary-foreground border-secondary"
-                    : "text-accent-foreground hover:bg-accent-foreground/10 border-transparent"
-                )}
-              >
-                <Icon className="h-5 w-5" />
-                {item.label}
-                {isRequestsItem && pendingRequestCount > 0 && (
-                  <Badge className="ml-auto h-5 min-w-[20px] px-1.5 text-xs bg-destructive text-destructive-foreground">
-                    {pendingRequestCount}
-                  </Badge>
-                )}
-              </div>
-            </Link>
-          );
-        })}
+        {visibleSections.map((section) => (
+          <div key={section.heading} className="mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-2">
+              {section.heading}
+            </p>
+            {section.items.map((item) => {
+              const isActive =
+                (item.path === "/admin" && location.pathname === "/admin") ||
+                (item.path !== "/admin" && (
+                  location.pathname === item.path ||
+                  (item.path === "/games" && location.pathname.startsWith("/games"))
+                ));
+              const Icon = item.icon;
+              const isRequestsItem = item.path === "/admin/requests";
+              return (
+                <Link
+                  key={item.path + item.label}
+                  to={item.path}
+                  onClick={isMobile ? () => setIsMobileMenuOpen(false) : undefined}
+                >
+                  <div
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 mx-2 my-1 rounded-lg text-sm font-medium transition-all border-l-4",
+                      isActive
+                        ? "bg-secondary text-secondary-foreground border-secondary"
+                        : "text-accent-foreground hover:bg-accent-foreground/10 border-transparent"
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {item.label}
+                    {isRequestsItem && pendingRequestCount > 0 && (
+                      <Badge className="ml-auto h-5 min-w-[20px] px-1.5 text-xs bg-destructive text-destructive-foreground">
+                        {pendingRequestCount}
+                      </Badge>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       <div className="p-4 space-y-2">

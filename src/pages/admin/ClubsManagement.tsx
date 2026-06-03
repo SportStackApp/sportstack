@@ -32,10 +32,6 @@ type ValidationState = {
   message: string;
 };
 
-interface ClubWithAssociation extends Club {
-  associations: { name: string } | null;
-}
-
 const createImage = (url: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
@@ -93,22 +89,20 @@ const ClubsManagement = () => {
 
   const hasAccess = isSuperAdmin || scopedAssociationIds.length > 0 || scopedClubIds.length > 0;
 
-  const [clubs, setClubs] = useState<ClubWithAssociation[]>([]);
+  const [clubs, setClubs] = useState<Club[]>([]);
   const [associations, setAssociations] = useState<Association[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterAssociation, setFilterAssociation] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingClub, setEditingClub] = useState<ClubWithAssociation | null>(null);
+  const [editingClub, setEditingClub] = useState<Club | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletingClub, setDeletingClub] = useState<ClubWithAssociation | null>(null);
+  const [deletingClub, setDeletingClub] = useState<Club | null>(null);
   const [formData, setFormData] = useState({ name: "", abbreviation: "", website_url: "", logo_url: "", association_id: "" });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
   const [logoValidation, setLogoValidation] = useState<{ status: "success" | "error"; message: string } | null>(null);
   const [formErrors, setFormErrors] = useState<{ abbreviation?: string; logo?: string }>({});
   const [abbreviationTouched, setAbbreviationTouched] = useState(false);
-  const [expandedClubIds, setExpandedClubIds] = useState<string[]>([]);
-  const [clubTeamsByClub, setClubTeamsByClub] = useState<Record<string, { divisionId: string; divisionName: string; teams: { id: string; name: string }[] }[]>>({});
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [selectedLogoSrc, setSelectedLogoSrc] = useState("");
   const [croppingFile, setCroppingFile] = useState<File | null>(null);
@@ -138,7 +132,7 @@ const ClubsManagement = () => {
   const fetchData = async () => {
     setLoading(true);
 
-    let clubsQuery = supabase.from("clubs").select("*, associations:association_id(name)").order("name");
+    let clubsQuery = supabase.from("clubs").select("*").order("name");
     if (!isSuperAdmin && scopedClubIds.length > 0) {
       clubsQuery = clubsQuery.in("id", scopedClubIds);
     }
@@ -150,39 +144,8 @@ const ClubsManagement = () => {
 
     if (clubsRes.error) {
       toast({ title: "Error", description: "Failed to load clubs", variant: "destructive" });
-      setClubTeamsByClub({});
     } else {
-      const clubsData = clubsRes.data || [];
-      setClubs(clubsData);
-
-      if (clubsData.length > 0) {
-        const { data: teamsData, error: teamsError } = await supabase
-          .from("teams")
-          .select("id,name,club_id,division_id,divisions(name)")
-          .in("club_id", clubsData.map((club) => club.id));
-
-        if (!teamsError && teamsData) {
-          const grouped: Record<string, { divisionId: string; divisionName: string; teams: { id: string; name: string }[] }[]> = {};
-          teamsData.forEach((team) => {
-            const clubId = team.club_id;
-            const divisionId = team.division_id || "unknown";
-            const divisionName = team.divisions?.name || "Unassigned";
-            const clubGroups = grouped[clubId] || [];
-            let divisionGroup = clubGroups.find((group) => group.divisionId === divisionId);
-            if (!divisionGroup) {
-              divisionGroup = { divisionId, divisionName, teams: [] };
-              clubGroups.push(divisionGroup);
-            }
-            divisionGroup.teams.push({ id: team.id, name: team.name });
-            grouped[clubId] = clubGroups;
-          });
-          setClubTeamsByClub(grouped);
-        } else {
-          setClubTeamsByClub({});
-        }
-      } else {
-        setClubTeamsByClub({});
-      }
+      setClubs(clubsRes.data || []);
     }
     if (!associationsRes.error) setAssociations(associationsRes.data || []);
     setLoading(false);
@@ -205,7 +168,7 @@ const ClubsManagement = () => {
     ? associations
     : associations.filter((a) => scopedAssociationIds.includes(a.id));
 
-  const handleOpenDialog = (club?: ClubWithAssociation) => {
+  const handleOpenDialog = (club?: Club) => {
     if (club) {
       setEditingClub(club);
       setFormData({
@@ -225,12 +188,6 @@ const ClubsManagement = () => {
     setFormErrors({});
     setAbbreviationTouched(false);
     setDialogOpen(true);
-  };
-
-  const toggleClubExpanded = (clubId: string) => {
-    setExpandedClubIds((prev) =>
-      prev.includes(clubId) ? prev.filter((id) => id !== clubId) : [...prev, clubId]
-    );
   };
 
   const handleSave = async () => {
@@ -600,26 +557,15 @@ const ClubsManagement = () => {
               </TableHeader>
               <TableBody>
                 {filteredClubs.map((club) => {
-                  const isExpanded = expandedClubIds.includes(club.id);
-                  const clubGroups = clubTeamsByClub[club.id] || [];
-                  return [
+                  const assocName = associations.find((a) => a.id === club.association_id)?.name || "-";
+                  return (
                     <TableRow key={club.id}>
                       <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                            onClick={() => toggleClubExpanded(club.id)}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                          <Link to={`/clubs/${club.id}`} className="hover:underline text-primary">
-                            {club.name}
-                          </Link>
-                        </div>
+                        <Link to={`/clubs/${club.id}`} className="hover:underline text-primary">
+                          {club.name}
+                        </Link>
                       </TableCell>
-                      <TableCell>{club.associations?.name || "-"}</TableCell>
+                      <TableCell>{assocName}</TableCell>
                       <TableCell>
                         {club.website_url ? (
                           <a href={club.website_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
@@ -642,30 +588,8 @@ const ClubsManagement = () => {
                           </Button>
                         )}
                       </TableCell>
-                    </TableRow>,
-                    isExpanded && (
-                      <TableRow key={`${club.id}-details`}>
-                        <TableCell colSpan={5} className="bg-muted/10">
-                          {clubGroups.length > 0 ? (
-                            <div className="space-y-4 pl-10 text-sm text-muted-foreground">
-                              {clubGroups.map((division) => (
-                                <div key={division.divisionId}>
-                                  <p className="font-medium">{division.divisionName}</p>
-                                  <ul className="ml-4 list-disc space-y-1">
-                                    {division.teams.map((team) => (
-                                      <li key={team.id}>{team.name}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground pl-10">No teams assigned.</p>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ),
-                  ];
+                    </TableRow>
+                  );
                 })}
               </TableBody>
             </Table>
