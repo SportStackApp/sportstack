@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useNavigate } from "react-router-dom";
-import { Building2, Users, Shield, Trophy, ArrowRight, Crown, Clock } from "lucide-react";
+import { Building2, Users, Shield, Trophy, ArrowRight, Crown, Clock, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { getRoleDisplayName, getRoleBadgeColor } from "@/hooks/useUserRole";
@@ -34,6 +34,18 @@ const AdminDashboard = () => {
 
   const [stats, setStats] = useState<Stats>({ associations: 0, clubs: 0, teams: 0, divisions: 0, venues: 0, users: 0, pendingMemberships: 0 });
   const [loading, setLoading] = useState(true);
+  const [unmatchedCount, setUnmatchedCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnmatched = async () => {
+      const { count } = await supabase
+        .from("revsports_unmatched_items")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "unmatched");
+      setUnmatchedCount(count ?? 0);
+    };
+    fetchUnmatched();
+  }, []);
 
   const contextLevel = selectedTeamId
     ? "team"
@@ -248,6 +260,28 @@ const AdminDashboard = () => {
             </div>
             <Button variant="outline" size="sm" asChild>
               <Link to="/admin/users">Review</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Unmatched RevSports Items Alert */}
+      {unmatchedCount > 0 && (
+        <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30">
+          <CardContent className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              <div>
+                <p className="font-medium text-foreground">
+                  {unmatchedCount} unmatched RevSports item{unmatchedCount !== 1 ? "s" : ""}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Teams or grades found by the scraper with no SportStack match yet
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/admin/revsports-unmatched">Review</Link>
             </Button>
           </CardContent>
         </Card>
