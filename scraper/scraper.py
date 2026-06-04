@@ -203,10 +203,23 @@ def split_venue_and_pitch(venue_line, pitch_line=None):
 
 def split_club_and_team(full_name, grade_name=""):
     """
-    Splits a heading like "Blaze Under 11 Open U11 Blaze Red" into
-    club = "Blaze" and team = "U11 Blaze Red" using the grade name as separator.
-    Falls back to finding the first repeated word if grade not found.
+    Splits a team draws page heading into club and team name.
+
+    RevSports headings look like:
+      "2026 - Grass Field Competition - Oval 4 · Rivaside U13 Girls Rivaside/Wanderers Under 13 Girls"
+
+    Strategy:
+      1. Strip everything up to and including the · character
+      2. Search for the grade name in what remains
+      3. Everything left of the grade = club
+      4. Everything right of the grade = team name
+      5. Fallback: find the first repeated word
     """
+    # Step 1: strip the competition prefix if present
+    if "·" in full_name:
+        full_name = full_name.split("·", 1)[-1].strip()
+
+    # Step 2-4: split on grade name
     if grade_name and grade_name in full_name:
         idx  = full_name.index(grade_name)
         club = full_name[:idx].strip()
@@ -215,6 +228,7 @@ def split_club_and_team(full_name, grade_name=""):
             team = grade_name
         return club, team
 
+    # Step 5: fallback — find the first repeated word
     words = full_name.split()
     seen  = {}
     for i, word in enumerate(words):
@@ -228,6 +242,8 @@ def split_club_and_team(full_name, grade_name=""):
 def get_team_name_from_draws_page(session, team_url, grade_name):
     """
     Visit a team draws page and extract clean club + team name from the heading.
+    The full heading includes competition and pitch info before the · character —
+    split_club_and_team handles stripping that before parsing club and team.
     """
     try:
         soup = get_soup(session, team_url)
@@ -235,8 +251,6 @@ def get_team_name_from_draws_page(session, team_url, grade_name):
             heading = soup.find(tag)
             if heading:
                 full_text = heading.get_text(strip=True)
-                if "·" in full_text:
-                    full_text = full_text.split("·", 1)[-1].strip()
                 club, team = split_club_and_team(full_text, grade_name)
                 return club, team
     except Exception as e:
@@ -508,7 +522,7 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
     if dm:
         date_str = dm.group(1).strip()
         try:
-            match["date"] = datetime.strptime(date_str, "%a %d %B %Y").strftime("%Y-%m-%d")
+            match["date"] = datetime.strptime(date_str, "%a %d %b %Y").strftime("%Y-%m-%d")
         except ValueError:
             match["date"] = date_str
         match["time"] = dm.group(2).strip()
@@ -617,6 +631,12 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
 
             player_name = re.sub(r"\s*\([^)]*\)", "", name_clean).strip()
             if not player_name: continue
+
+            # Normalise "Surname, Firstname" format (used by Sunraysia match pages)
+            # into "Firstname Surname" to match the registry format
+            if "," in player_name:
+                parts = player_name.split(",", 1)
+                player_name = f"{parts[1].strip()} {parts[0].strip()}"
 
             # Extract RevSports player ID from the player's link in this row
             # Each name is a link like: /games/statistics/qzrbDcZ?competition_id=...
