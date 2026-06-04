@@ -3,56 +3,78 @@
 # Match Scraper — Sunraysia Hockey Association
 # Scrapes match results and player appearances from RevSports.
 # Writes directly to Supabase (revsports_players table).
-# Also saves a CSV + JSON backup to the /data folder in the repo.
+# Also saves a CSV backup to the /data folder in the repo.
 #
 # Sunraysia runs both grass field and indoor competitions.
-# The scraper auto-detects all grades from the games page — no config needed.
+# Indoor rounds are played on Friday evenings — extra runs added for those.
 #
 # Schedule (AEST = UTC+10):
-#   Weeknights (Mon–Fri) — once at 2am AEST (16:00 UTC previous day)
-#   Weekends (Sat–Sun)   — every 30 minutes from 8:00am to 8:00pm AEST
+#   Daily           — 2am AEST every day
+#   Sat & Sun       — hourly from 7:30am to 7:30pm AEST (on the half hour)
+#   Friday evenings — hourly from 4:30pm to 10:30pm AEST (indoor competition)
 #
-# Note: Sunraysia runs at :30 past the hour on weekends. HB runs at :00 — so they don't clash.
+# Staggering: Sunraysia runs on the half hour (:30). HB runs on the hour (:00).
 #
 # Manual trigger: Actions tab → "Scrape — Sunraysia Hockey Association" → Run workflow
 
 name: Scrape — Sunraysia Hockey Association
 
 on:
-  # ── Scheduled runs ──────────────────────────────────────────
   schedule:
-    # Weeknights (Mon–Fri) at 2am AEST (16:00 UTC previous day)
-    - cron: "0 16 * * 0-4"   # 2am Tue–Sat AEST = 16:00 UTC Mon–Fri
+    # ── Daily 2am AEST (16:00 UTC) ───────────────────────────
+    - cron: "0 16 * * *"
 
-    # Weekends (Sat–Sun) — every 30 min from 8am to 8pm AEST
-    # Staggered 30 min after HB to avoid running at exactly the same time
-    # 8:30am AEST = 22:30 UTC (previous day)
-    - cron: "30 22 * * 5,6"  # 8:30am
-    - cron: "0 23 * * 5,6"   # 9:00am  — note: alternates with HB at :00/:30
-    - cron: "30 23 * * 5,6"  # 9:30am
-    - cron: "0 0  * * 6,0"   # 10:00am
-    - cron: "30 0  * * 6,0"  # 10:30am
-    - cron: "0 1  * * 6,0"   # 11:00am
-    - cron: "30 1  * * 6,0"  # 11:30am
-    - cron: "0 2  * * 6,0"   # 12:00pm
-    - cron: "30 2  * * 6,0"  # 12:30pm
-    - cron: "0 3  * * 6,0"   # 1:00pm
-    - cron: "30 3  * * 6,0"  # 1:30pm
-    - cron: "0 4  * * 6,0"   # 2:00pm
-    - cron: "30 4  * * 6,0"  # 2:30pm
-    - cron: "0 5  * * 6,0"   # 3:00pm
-    - cron: "30 5  * * 6,0"  # 3:30pm
-    - cron: "0 6  * * 6,0"   # 4:00pm
-    - cron: "30 6  * * 6,0"  # 4:30pm
-    - cron: "0 7  * * 6,0"   # 5:00pm
-    - cron: "30 7  * * 6,0"  # 5:30pm
-    - cron: "0 8  * * 6,0"   # 6:00pm
-    - cron: "30 8  * * 6,0"  # 6:30pm
-    - cron: "0 9  * * 6,0"   # 7:00pm
-    - cron: "30 9  * * 6,0"  # 7:30pm
-    - cron: "0 10 * * 6,0"   # 8:00pm
+    # ── Friday evening hourly 4:30pm–10:30pm AEST (indoor) ───
+    # AEST = UTC+10, so subtract 10hrs
+    # 4:30pm Fri AEST  = 06:30 UTC Fri
+    # 5:30pm Fri AEST  = 07:30 UTC Fri
+    # 6:30pm Fri AEST  = 08:30 UTC Fri
+    # 7:30pm Fri AEST  = 09:30 UTC Fri
+    # 8:30pm Fri AEST  = 10:30 UTC Fri
+    # 9:30pm Fri AEST  = 11:30 UTC Fri
+    # 10:30pm Fri AEST = 12:30 UTC Fri
+    - cron: "30 6  * * 5"   # 4:30pm Fri
+    - cron: "30 7  * * 5"   # 5:30pm Fri
+    - cron: "30 8  * * 5"   # 6:30pm Fri
+    - cron: "30 9  * * 5"   # 7:30pm Fri
+    - cron: "30 10 * * 5"   # 8:30pm Fri
+    - cron: "30 11 * * 5"   # 9:30pm Fri
+    - cron: "30 12 * * 5"   # 10:30pm Fri
 
-  # ── Manual trigger ───────────────────────────────────────────
+    # ── Saturday hourly 7:30am–7:30pm AEST ───────────────────
+    # Sat 7:30am  AEST = 21:30 UTC Fri → day-of-week 5
+    # Sat 8:30am–7:30pm AEST = 22:30–09:30 UTC Sat → day-of-week 6
+    - cron: "30 21 * * 5"   # 7:30am Sat
+    - cron: "30 22 * * 5"   # 8:30am Sat
+    - cron: "30 23 * * 5"   # 9:30am Sat
+    - cron: "30 0  * * 6"   # 10:30am Sat
+    - cron: "30 1  * * 6"   # 11:30am Sat
+    - cron: "30 2  * * 6"   # 12:30pm Sat
+    - cron: "30 3  * * 6"   # 1:30pm Sat
+    - cron: "30 4  * * 6"   # 2:30pm Sat
+    - cron: "30 5  * * 6"   # 3:30pm Sat
+    - cron: "30 6  * * 6"   # 4:30pm Sat
+    - cron: "30 7  * * 6"   # 5:30pm Sat
+    - cron: "30 8  * * 6"   # 6:30pm Sat
+    - cron: "30 9  * * 6"   # 7:30pm Sat
+
+    # ── Sunday hourly 7:30am–7:30pm AEST ─────────────────────
+    # Sun 7:30am  AEST = 21:30 UTC Sat → day-of-week 6
+    # Sun 8:30am–7:30pm AEST = 22:30–09:30 UTC Sun → day-of-week 0
+    - cron: "30 21 * * 6"   # 7:30am Sun
+    - cron: "30 22 * * 6"   # 8:30am Sun
+    - cron: "30 23 * * 6"   # 9:30am Sun
+    - cron: "30 0  * * 0"   # 10:30am Sun
+    - cron: "30 1  * * 0"   # 11:30am Sun
+    - cron: "30 2  * * 0"   # 12:30pm Sun
+    - cron: "30 3  * * 0"   # 1:30pm Sun
+    - cron: "30 4  * * 0"   # 2:30pm Sun
+    - cron: "30 5  * * 0"   # 3:30pm Sun
+    - cron: "30 6  * * 0"   # 4:30pm Sun
+    - cron: "30 7  * * 0"   # 5:30pm Sun
+    - cron: "30 8  * * 0"   # 6:30pm Sun
+    - cron: "30 9  * * 0"   # 7:30pm Sun
+
   workflow_dispatch:
     inputs:
       only_grades:
@@ -75,25 +97,17 @@ jobs:
       contents: write
 
     steps:
-      # 1. Check out the repo
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 2. Set up Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 3. Install dependencies
-      #    requests + beautifulsoup4 for scraping
-      #    supabase for writing results to the database
       - name: Install dependencies
         run: pip install requests beautifulsoup4 supabase
 
-      # 4. Run the match scraper for Sunraysia
-      #    SUPABASE_URL and SUPABASE_SERVICE_KEY come from repo Secrets
-      #    PORTAL_URL points to the Sunraysia RevSports site
       - name: Run scraper
         env:
           PORTAL_URL:           "https://www.sunraysiahockey.com.au"
@@ -106,7 +120,6 @@ jobs:
           ONLY_TEAM:            ${{ github.event.inputs.only_team   || '' }}
         run: python scraper/scraper.py
 
-      # 5. Commit the CSV/JSON backup back into the repo
       - name: Commit results
         run: |
           git config user.name  "github-actions[bot]"

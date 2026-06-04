@@ -3,53 +3,57 @@
 # Match Scraper — Hockey Ballarat
 # Scrapes match results and player appearances from RevSports.
 # Writes directly to Supabase (revsports_players table).
-# Also saves a CSV + JSON backup to the /data folder in the repo.
+# Also saves a CSV backup to the /data folder in the repo.
 #
 # Schedule (AEST = UTC+10):
-#   Weeknights (Mon–Fri) — once between midnight and 3am AEST (random-ish, set to 1am)
-#   Weekends (Sat–Sun)   — every 30 minutes from 8:00am to 8:00pm AEST
+#   Daily       — 2am AEST every day
+#   Sat & Sun   — hourly from 8am to 8pm AEST (on the hour)
 #
-# Note: HB runs at :00 past the hour. Sunraysia runs at :30 — so they don't clash.
+# Staggering: HB runs on the hour (:00). Sunraysia runs on the half hour (:30).
 #
 # Manual trigger: Actions tab → "Scrape — Hockey Ballarat" → Run workflow
 
 name: Scrape — Hockey Ballarat
 
 on:
-  # ── Scheduled runs ──────────────────────────────────────────
   schedule:
-    # Weeknights (Mon–Fri) at 1am AEST (15:00 UTC previous day)
-    - cron: "0 15 * * 0-4"   # 1am Tue–Sat AEST = 15:00 UTC Mon–Fri
+    # ── Daily 2am AEST (16:00 UTC) ───────────────────────────
+    - cron: "0 16 * * *"
 
-    # Weekends (Sat–Sun) — every 30 min from 8am to 8pm AEST
-    # 8am AEST = 22:00 UTC (previous day)
-    - cron: "0 22 * * 5,6"   # 8:00am
-    - cron: "30 22 * * 5,6"  # 8:30am
-    - cron: "0 23 * * 5,6"   # 9:00am
-    - cron: "30 23 * * 5,6"  # 9:30am
-    - cron: "0 0  * * 6,0"   # 10:00am
-    - cron: "30 0  * * 6,0"  # 10:30am
-    - cron: "0 1  * * 6,0"   # 11:00am
-    - cron: "30 1  * * 6,0"  # 11:30am
-    - cron: "0 2  * * 6,0"   # 12:00pm
-    - cron: "30 2  * * 6,0"  # 12:30pm
-    - cron: "0 3  * * 6,0"   # 1:00pm
-    - cron: "30 3  * * 6,0"  # 1:30pm
-    - cron: "0 4  * * 6,0"   # 2:00pm
-    - cron: "30 4  * * 6,0"  # 2:30pm
-    - cron: "0 5  * * 6,0"   # 3:00pm
-    - cron: "30 5  * * 6,0"  # 3:30pm
-    - cron: "0 6  * * 6,0"   # 4:00pm
-    - cron: "30 6  * * 6,0"  # 4:30pm
-    - cron: "0 7  * * 6,0"   # 5:00pm
-    - cron: "30 7  * * 6,0"  # 5:30pm
-    - cron: "0 8  * * 6,0"   # 6:00pm
-    - cron: "30 8  * * 6,0"  # 6:30pm
-    - cron: "0 9  * * 6,0"   # 7:00pm
-    - cron: "30 9  * * 6,0"  # 7:30pm
-    - cron: "0 10 * * 6,0"   # 8:00pm
+    # ── Saturday hourly 8am–8pm AEST ─────────────────────────
+    # Sat 8am  AEST = 22:00 UTC Fri  → day-of-week 5
+    # Sat 9am–8pm AEST = 23:00–10:00 UTC Sat → day-of-week 6
+    - cron: "0 22 * * 5"   # 8:00am Sat
+    - cron: "0 23 * * 5"   # 9:00am Sat
+    - cron: "0 0  * * 6"   # 10:00am Sat
+    - cron: "0 1  * * 6"   # 11:00am Sat
+    - cron: "0 2  * * 6"   # 12:00pm Sat
+    - cron: "0 3  * * 6"   # 1:00pm Sat
+    - cron: "0 4  * * 6"   # 2:00pm Sat
+    - cron: "0 5  * * 6"   # 3:00pm Sat
+    - cron: "0 6  * * 6"   # 4:00pm Sat
+    - cron: "0 7  * * 6"   # 5:00pm Sat
+    - cron: "0 8  * * 6"   # 6:00pm Sat
+    - cron: "0 9  * * 6"   # 7:00pm Sat
+    - cron: "0 10 * * 6"   # 8:00pm Sat
 
-  # ── Manual trigger ───────────────────────────────────────────
+    # ── Sunday hourly 8am–8pm AEST ────────────────────────────
+    # Sun 8am  AEST = 22:00 UTC Sat → day-of-week 6
+    # Sun 9am–8pm AEST = 23:00–10:00 UTC Sun → day-of-week 0
+    - cron: "0 22 * * 6"   # 8:00am Sun
+    - cron: "0 23 * * 6"   # 9:00am Sun
+    - cron: "0 0  * * 0"   # 10:00am Sun
+    - cron: "0 1  * * 0"   # 11:00am Sun
+    - cron: "0 2  * * 0"   # 12:00pm Sun
+    - cron: "0 3  * * 0"   # 1:00pm Sun
+    - cron: "0 4  * * 0"   # 2:00pm Sun
+    - cron: "0 5  * * 0"   # 3:00pm Sun
+    - cron: "0 6  * * 0"   # 4:00pm Sun
+    - cron: "0 7  * * 0"   # 5:00pm Sun
+    - cron: "0 8  * * 0"   # 6:00pm Sun
+    - cron: "0 9  * * 0"   # 7:00pm Sun
+    - cron: "0 10 * * 0"   # 8:00pm Sun
+
   workflow_dispatch:
     inputs:
       only_grades:
@@ -72,25 +76,17 @@ jobs:
       contents: write
 
     steps:
-      # 1. Check out the repo
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 2. Set up Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 3. Install dependencies
-      #    requests + beautifulsoup4 for scraping
-      #    supabase for writing results to the database
       - name: Install dependencies
         run: pip install requests beautifulsoup4 supabase
 
-      # 4. Run the match scraper for Hockey Ballarat
-      #    SUPABASE_URL and SUPABASE_SERVICE_KEY come from repo Secrets
-      #    PORTAL_URL and ASSOCIATION_NAME are set here directly
       - name: Run scraper
         env:
           PORTAL_URL:           "https://www.revolutionise.com.au/hockeyballarat"
@@ -103,7 +99,6 @@ jobs:
           ONLY_TEAM:            ${{ github.event.inputs.only_team   || '' }}
         run: python scraper/scraper.py
 
-      # 5. Commit the CSV/JSON backup back into the repo
       - name: Commit results
         run: |
           git config user.name  "github-actions[bot]"

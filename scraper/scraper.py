@@ -18,6 +18,143 @@ import json, csv, time, re, os, sys
 from datetime import datetime
 from urllib.parse import urlparse
 
+def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -> int:
+    """
+    Scans all scraped rows for data quality issues.
+    Prints a report to console and writes it to a .txt file in output_dir.
+    Returns the number of rows with issues.
+    """
+    from datetime import datetime as dt
+
+    # ── Rules ────────────────────────────────────────────────────────────────
+    # Each entry: (column_name, rule, description)
+    # Rules: "required" = must not be empty
+    #        "numeric"  = must be a number if not empty
+    #        "boolean"  = must be True/False/true/false/0/1 if not empty
+    #        "date"     = must look like a date (YYYY-MM-DD or DD/MM/YYYY)
+
+    RULES = [
+        ("association",          "required", "Must never be empty"),
+        ("competition_name",     "required", "Must never be empty"),
+        ("grade",                "required", "Must never be empty"),
+        ("round",                "required", "Must never be empty"),
+        ("home_team",            "required", "Must never be empty"),
+        ("away_team",            "required", "Must never be empty"),
+        ("team",                 "required", "Must never be empty"),
+        ("player_name",          "required", "Must never be empty"),
+        ("revsports_player_id",  "required", "Must never be empty"),
+        ("club_name",            "required", "Must never be empty"),
+        ("game_date",            "date",     "Must look like a date"),
+        ("home_score",           "numeric",  "Must be a number if not empty"),
+        ("away_score",           "numeric",  "Must be a number if not empty"),
+        ("goals",                "numeric",  "Must be a number if not empty"),
+        ("green_cards",          "numeric",  "Must be a number if not empty"),
+        ("yellow_cards",         "numeric",  "Must be a number if not empty"),
+        ("red_cards",            "numeric",  "Must be a number if not empty"),
+        ("jersey",               "numeric",  "Must be a number if not empty"),
+        ("attended",             "boolean",  "Must be True/False if not empty"),
+        ("is_fillin",            "boolean",  "Must be True/False if not empty"),
+        ("is_removed",           "boolean",  "Must be True/False if not empty"),
+    ]
+
+    def is_numeric(val):
+        try:
+            float(str(val))
+            return True
+        except (ValueError, TypeError):
+            return False
+
+    def is_boolean(val):
+        return str(val).strip().lower() in ("true", "false", "1", "0", "yes", "no", "")
+
+    def is_date(val):
+        if not val or str(val).strip() == "":
+            return True  # empty is allowed — game may not have a date yet
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%Y/%m/%d", "%d-%m-%Y"):
+            try:
+                dt.strptime(str(val).strip(), fmt)
+                return True
+            except ValueError:
+                continue
+        return False
+
+    # ── Scan rows ────────────────────────────────────────────────────────────
+    column_issues = {col: [] for col, _, _ in RULES}  # col -> list of row indices
+
+    for i, row in enumerate(csv_rows):
+        for col, rule, _ in RULES:
+            val = row.get(col, "")
+            failed = False
+            if rule == "required":
+                failed = (val is None or str(val).strip() == "")
+            elif rule == "numeric":
+                failed = (val not in (None, "") and not is_numeric(val))
+            elif rule == "boolean":
+                failed = (val not in (None, "") and not is_boolean(val))
+            elif rule == "date":
+                failed = not is_date(val)
+            if failed:
+                column_issues[col].append(i)
+
+    # ── Build report ─────────────────────────────────────────────────────────
+    total_rows    = len(csv_rows)
+    bad_row_idxs  = set(idx for idxs in column_issues.values() for idx in idxs)
+    total_bad     = len(bad_row_idxs)
+    pct           = (total_bad / total_rows * 100) if total_rows else 0
+
+    lines = [
+        f"DATA QUALITY REPORT — {association}",
+        f"Generated: {dt.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        "─" * 60,
+        f"Total rows scraped : {total_rows:,}",
+        f"Rows with issues   : {total_bad:,}  ({pct:.1f}%)",
+        "",
+        "COLUMN ISSUES:",
+    ]
+
+    any_issues = False
+    for col, rule, desc in RULES:
+        count = len(column_issues[col])
+        if count > 0:
+            any_issues = True
+            lines.append(f"  {col:<25} — {count} row(s) failing '{rule}' rule")
+
+    if not any_issues:
+        lines.append("  ✅ No issues found — all columns look clean!")
+
+    # Sample up to 5 bad rows
+    if bad_row_idxs:
+        lines.append("")
+        lines.append("SAMPLE PROBLEM ROWS (first 5):")
+        for idx in sorted(bad_row_idxs)[:5]:
+            row = csv_rows[idx]
+            bad_cols = [col for col, idxs in column_issues.items() if idx in idxs]
+            lines.append(
+                f"  Row {idx+1:>4}: grade={row.get('grade','?')!r:20} "
+                f"team={row.get('team','?')!r:20} "
+                f"player={row.get('player_name','?')!r:20} "
+                f"| BAD COLUMNS: {', '.join(bad_cols)}"
+            )
+
+    lines.append("")
+    lines.append("─" * 60)
+    report_text = "\n".join(lines)
+
+    # ── Print to console ─────────────────────────────────────────────────────
+    print("\n" + report_text)
+
+    # ── Write to file ────────────────────────────────────────────────────────
+    import os
+    assoc_slug   = association.lower().replace(" ", "_")
+    report_path  = os.path.join(output_dir, f"{assoc_slug}_quality_report.txt")
+    os.makedirs(output_dir, exist_ok=True)
+    with open(report_path, "w", encoding="utf-8") as f:
+        f.write(report_text)
+    print(f"📋 Quality report saved: {report_path}")
+
+    return total_bad
+
+
 # Fix Windows console encoding so emoji and arrow characters print correctly
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8")
@@ -621,6 +758,8 @@ def main():
             writer.writeheader()
             writer.writerows(csv_rows)
         print(f"\n✅ CSV: {csv_path}  ({len(csv_rows)} rows)")
+        # ── Run data quality check ────────────────────────────
+        run_quality_check(csv_rows, OUTPUT_DIR, ASSOCIATION_NAME)
     else:
         print("\n⚠ No rows scraped — CSV not written.")
 

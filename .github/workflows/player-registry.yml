@@ -4,25 +4,23 @@
 # Scrapes the season-wide Team Statistics page for every configured
 # association/competition and writes results to revsports_player_registry.
 #
-# Also saves a CSV backup to data/player-registry/player_registry.csv in the repo.
+# Also saves a CSV backup to data/player-registry/ in the repo.
 #
-# Uses Playwright (headless Chromium browser) because the stats page
-# loads player data via JavaScript — plain requests can't see it.
+# Uses Playwright (headless Chromium) because the stats page loads
+# player data via JavaScript — plain requests can't see it.
 #
 # Schedule (AEST = UTC+10):
-#   Every Monday night at 1:00am AEST (Tuesday morning)
-#   = 15:00 UTC Monday
+#   Nightly — 2am AEST every day
 #
 # Manual trigger: Actions tab → "Player Registry Scraper" → Run workflow
 
 name: Player Registry Scraper
 
 on:
-  # ── Scheduled run — Monday night / Tuesday 1am AEST ──────────
   schedule:
-    - cron: "0 15 * * 0"   # 1am Tuesday AEST = 15:00 UTC Monday
+    # Nightly 2am AEST = 16:00 UTC every day
+    - cron: "0 16 * * *"
 
-  # ── Manual trigger ───────────────────────────────────────────
   workflow_dispatch:
 
 jobs:
@@ -32,31 +30,20 @@ jobs:
       contents: write
 
     steps:
-      # 1. Check out the repo so the scraper file is available
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 2. Set up Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 3. Install Python dependencies
-      #    playwright — headless browser (needed for JavaScript-rendered stats page)
-      #    beautifulsoup4 — HTML parsing
-      #    supabase — write results to Supabase
       - name: Install Python dependencies
         run: pip install playwright beautifulsoup4 supabase
 
-      # 4. Install the Playwright browser (Chromium)
-      #    This downloads the headless browser binary into the GitHub runner
       - name: Install Playwright browser
         run: python -m playwright install chromium
 
-      # 5. Run the registry scraper
-      #    Scrapes HB + Sunraysia competitions (all configured in the script)
-      #    Saves CSV to data/player-registry/ and upserts to Supabase
       - name: Run player registry scraper
         env:
           OUTPUT_DIR:           "data/player-registry"
@@ -64,7 +51,6 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python scraper/player_registry_scraper.py
 
-      # 6. Commit the CSV backup back into the repo
       - name: Commit results
         run: |
           git config user.name  "github-actions[bot]"
