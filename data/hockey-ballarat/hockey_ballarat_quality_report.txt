@@ -1,17 +1,10 @@
 DATA QUALITY REPORT — Hockey Ballarat
-Generated: 2026-06-04 08:15:46
+Generated: 2026-06-04 13:31:33
 ────────────────────────────────────────────────────────────
 Total rows scraped : 6,793
-Rows with issues   : 4,831  (71.1%)
+Rows with issues   : 0  (0.0%)
 
 COLUMN ISSUES:
-  game_date                 — 4831 row(s) failing 'date' rule
-
-SAMPLE PROBLEM ROWS (first 5):
-  Row  346: grade='Under 11 Open'      team='U11'                player='Annabelle R.'       | BAD COLUMNS: game_date
-  Row  347: grade='Under 11 Open'      team='U11'                player='Evora D.'           | BAD COLUMNS: game_date
-  Row  348: grade='Under 11 Open'      team='U11'                player='Heidi S.'           | BAD COLUMNS: game_date
-  Row  349: grade='Under 11 Open'      team='U11'                player='Jonathan H.'        | BAD COLUMNS: game_date
-  Row  350: grade='Under 11 Open'      team='U11'                player='Jonte P.'           | BAD COLUMNS: game_date
+  ✅ No issues found — all columns look clean!
 
 ────────────────────────────────────────────────────────────
