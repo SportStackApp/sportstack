@@ -1,18 +1,17 @@
 DATA QUALITY REPORT — Sunraysia Hockey Association
-Generated: 2026-06-04 08:08:51
+Generated: 2026-06-04 13:20:36
 ────────────────────────────────────────────────────────────
 Total rows scraped : 2,172
-Rows with issues   : 372  (17.1%)
+Rows with issues   : 16  (0.7%)
 
 COLUMN ISSUES:
   club_name                 — 16 row(s) failing 'required' rule
-  game_date                 — 356 row(s) failing 'date' rule
 
 SAMPLE PROBLEM ROWS (first 5):
-  Row    1: grade='Indoor Mixed'       team='Koowinda Indoor'    player='Cass, Tazmyn'       | BAD COLUMNS: game_date
-  Row    2: grade='Indoor Mixed'       team='Koowinda Indoor'    player='Chapman, Thomas'    | BAD COLUMNS: game_date
-  Row    3: grade='Indoor Mixed'       team='Koowinda Indoor'    player='Ellis, Rory'        | BAD COLUMNS: game_date
-  Row    4: grade='Indoor Mixed'       team='Koowinda Indoor'    player='Flentjar, Hanna'    | BAD COLUMNS: game_date
-  Row    5: grade='Indoor Mixed'       team='Koowinda Indoor'    player='Flentjar, Simon'    | BAD COLUMNS: game_date
+  Row 1017: grade='U13 Girls'          team='Rivaside Rivaside/Wanderers Under 13 Girls' player='Elliot Cameron'     | BAD COLUMNS: club_name
+  Row 1018: grade='U13 Girls'          team='Rivaside Rivaside/Wanderers Under 13 Girls' player='Poppy Ellis'        | BAD COLUMNS: club_name
+  Row 1019: grade='U13 Girls'          team='Rivaside Rivaside/Wanderers Under 13 Girls' player='Kaylee Hyde'        | BAD COLUMNS: club_name
+  Row 1020: grade='U13 Girls'          team='Rivaside Rivaside/Wanderers Under 13 Girls' player='April Nyabonda'     | BAD COLUMNS: club_name
+  Row 1021: grade='U13 Girls'          team='Rivaside Rivaside/Wanderers Under 13 Girls' player='Zahli Simmonds'     | BAD COLUMNS: club_name
 
 ────────────────────────────────────────────────────────────
