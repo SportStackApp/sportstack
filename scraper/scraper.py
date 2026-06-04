@@ -4,7 +4,7 @@ Match Scraper — Headless (GitHub Actions version)
 Scrapes match results and player appearances from RevSports.
 Runs without a GUI. Configure via environment variables below.
 
-Output: ../data/hockey_results.csv  and  ../data/hockey_results.json
+Output: ../data/{association}_results.csv  and  ../data/{association}_results.json
 
 Changes from original:
   - Added ASSOCIATION_NAME and competition_name capture from games page
@@ -751,7 +751,10 @@ def main():
                     print(f"    ✗ ERROR: {game_info['game_url']} — {e}")
 
     # ── Save CSV ─────────────────────────────────────────────
-    csv_path = os.path.join(OUTPUT_DIR, "hockey_results.csv")
+    # Build a safe filename prefix from the association name
+    # e.g. "Hockey Ballarat" → "hockey_ballarat"
+    assoc_slug = ASSOCIATION_NAME.lower().replace(" ", "_")
+    csv_path   = os.path.join(OUTPUT_DIR, f"{assoc_slug}_results.csv")
     if csv_rows:
         with open(csv_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=csv_rows[0].keys())
@@ -764,7 +767,7 @@ def main():
         print("\n⚠ No rows scraped — CSV not written.")
 
     # ── Save JSON ─────────────────────────────────────────────
-    json_path = os.path.join(OUTPUT_DIR, "hockey_results.json")
+    json_path = os.path.join(OUTPUT_DIR, f"{assoc_slug}_results.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2, ensure_ascii=False)
     print(f"✅ JSON: {json_path}  ({len(all_results)} matches)")
