@@ -13365,7 +13365,7 @@
     "venue": "Old Aerodrome Oval",
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Under 13 Girls",
-    "away_team": "Waratahs Under 13 Girls",
+    "away_team": "Koowinda Under 13 Girls",
     "home_score": "0",
     "away_score": "0",
     "umpires": [
@@ -13484,8 +13484,8 @@
         ]
       },
       {
-        "team_name": "Waratahs Under 13 Girls",
-        "club_name": "Waratahs",
+        "team_name": "Koowinda Under 13 Girls",
+        "club_name": "Koowinda",
         "players": [
           {
             "name": "Indi Dowdy",
@@ -14159,7 +14159,7 @@
     "venue": "Old Aerodrome Oval",
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside/Wanderers Under 13 Girls",
-    "away_team": "Koowinda Under 13 Girls",
+    "away_team": "Rivaside/Wanderers Under 13 Girls",
     "home_score": "5",
     "away_score": "0",
     "umpires": [
@@ -14277,8 +14277,8 @@
         ]
       },
       {
-        "team_name": "Koowinda Under 13 Girls",
-        "club_name": "Koowinda",
+        "team_name": "Rivaside/Wanderers Under 13 Girls",
+        "club_name": "Rivaside",
         "players": [
           {
             "name": "Rachelle Blake-blundelle",
@@ -14914,7 +14914,7 @@
     "venue": "Old Aerodrome Oval",
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Under 13 Girls",
-    "away_team": "Rivaside Rivaside/Wanderers Under 13 Girls",
+    "away_team": "Waratahs Under 13 Girls",
     "home_score": "1",
     "away_score": "0",
     "umpires": [
@@ -15072,8 +15072,8 @@
         ]
       },
       {
-        "team_name": "Rivaside Rivaside/Wanderers Under 13 Girls",
-        "club_name": "",
+        "team_name": "Waratahs Under 13 Girls",
+        "club_name": "Waratahs",
         "players": [
           {
             "name": "Elliot Cameron",
@@ -15748,7 +15748,7 @@
     "venue": "Old Aerodrome Oval",
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside/Wanderers Under 13 Girls",
-    "away_team": "Rivaside Rivaside/Wanderers Under 13 Girls",
+    "away_team": "Rivaside/Wanderers Under 13 Girls",
     "home_score": "2",
     "away_score": "3",
     "umpires": [
@@ -15906,8 +15906,8 @@
         ]
       },
       {
-        "team_name": "Rivaside Rivaside/Wanderers Under 13 Girls",
-        "club_name": "",
+        "team_name": "Rivaside/Wanderers Under 13 Girls",
+        "club_name": "Rivaside",
         "players": [
           {
             "name": "Elliot Cameron",

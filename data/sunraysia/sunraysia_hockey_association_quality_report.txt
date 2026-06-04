@@ -1,17 +1,10 @@
 DATA QUALITY REPORT — Sunraysia Hockey Association
-Generated: 2026-06-04 22:10:00
+Generated: 2026-06-04 22:39:30
 ────────────────────────────────────────────────────────────
 Total rows scraped : 2,172
-Rows with issues   : 16  (0.7%)
+Rows with issues   : 0  (0.0%)
 
 COLUMN ISSUES:
-  club_name                 — 16 row(s) failing 'required' rule
-
-SAMPLE PROBLEM ROWS (first 5):
-  Row 1017: grade='U13 Girls'          team='Rivaside Rivaside/Wanderers Under 13 Girls' player='Elliot Cameron'     | BAD COLUMNS: club_name
-  Row 1018: grade='U13 Girls'          team='Rivaside Rivaside/Wanderers Under 13 Girls' player='Poppy Ellis'        | BAD COLUMNS: club_name
-  Row 1019: grade='U13 Girls'          team='Rivaside Rivaside/Wanderers Under 13 Girls' player='Kaylee Hyde'        | BAD COLUMNS: club_name
-  Row 1020: grade='U13 Girls'          team='Rivaside Rivaside/Wanderers Under 13 Girls' player='April Nyabonda'     | BAD COLUMNS: club_name
-  Row 1021: grade='U13 Girls'          team='Rivaside Rivaside/Wanderers Under 13 Girls' player='Zahli Simmonds'     | BAD COLUMNS: club_name
+  ✅ No issues found — all columns look clean!
 
 ────────────────────────────────────────────────────────────
