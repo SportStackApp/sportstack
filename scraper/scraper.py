@@ -579,10 +579,14 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
         if i < len(team_info):
             club_name = team_info[i]["club_name"]
             team_name = team_info[i]["team_name"]
+        elif team_info:
+            # More tables than teams — reuse the last known team entry
+            # (avoids trying to split a match-page heading that lacks the · separator)
+            club_name = team_info[-1]["club_name"]
+            team_name = team_info[-1]["team_name"]
         else:
-            heading   = table.find_previous(["h2", "h3", "h4", "h5", "h6"])
-            raw_name  = heading.get_text(strip=True) if heading else "Unknown"
-            club_name, team_name = split_club_and_team(raw_name, grade_name)
+            club_name = ""
+            team_name = "Unknown"
 
         players = []
         in_fillins = False   # Tracks whether we're inside the Fill-ins section
