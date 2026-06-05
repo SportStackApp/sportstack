@@ -21,7 +21,7 @@ interface SystemClub { id: string; name: string; }
 interface SystemPitch { id: string; name: string; venueName: string; }
 
 // Scraped Data Interfaces
-interface ScrapedTeam { teamName: string; clubName: string; grade: string; association: string; key: string; }
+interface ScrapedTeam { teamName: string; association: string; clubName: string; grade: string; key: string; }
 interface ScrapedGrade { grade: string; association: string; key: string; }
 interface ScrapedClub { clubName: string; key: string; }
 interface ScrapedVenue { venueName: string; key: string; }
@@ -183,28 +183,28 @@ export default function RevSportsMappings() {
       const sUmpiresMap = new Map<string, ScrapedUmpire>();
 
       if (playersData) {
-        // Simple deduplication: key by team name, read club and grade from the same row
-        playersData.forEach((row: any) => {
-          const tName = row.team;
-          if (!tName) return;
-          if (!sTeamsMap.has(tName)) {
-            sTeamsMap.set(tName, {
-              teamName: tName,
-              clubName: row.club_name || "",
-              grade: row.grade || "",
-              association: row.association || "",
-              key: tName
-            });
-          }
-        });
+        // First pass: tally club+grade combos per team name
+        const teamTally = new Map<string, Map<string, { clubName: string; grade: string; association: string; count: number }>>();
 
-        // Also ensure home_team and away_team appear in the list, even if they have no matching team rows
         playersData.forEach((row: any) => {
-          [row.home_team, row.away_team].filter(Boolean).forEach((tName: string) => {
-            if (!sTeamsMap.has(tName)) {
-              sTeamsMap.set(tName, { teamName: tName, clubName: "", grade: "", association: row.association || "", key: tName });
+          const teamsToProcess = [row.home_team, row.away_team, row.team].filter(Boolean);
+          teamsToProcess.forEach((tName: string) => {
+            if (!teamTally.has(tName)) teamTally.set(tName, new Map());
+            const comboKey = `${row.club_name}|||${row.grade}`;
+            const tally = teamTally.get(tName)!;
+            if (tally.has(comboKey)) {
+              tally.get(comboKey)!.count++;
+            } else {
+              tally.set(comboKey, { clubName: row.club_name || "", grade: row.grade || "", association: row.association || "", count: 1 });
             }
           });
+        });
+
+        // Second pass: pick the most common combo for each team name
+        teamTally.forEach((combos, tName) => {
+          let best = { clubName: "", grade: "", association: "", count: 0 };
+          combos.forEach(combo => { if (combo.count > best.count) best = combo; });
+          sTeamsMap.set(tName, { teamName: tName, clubName: best.clubName, grade: best.grade, association: best.association, key: tName });
         });
 
         playersData.forEach((row: any) => {
