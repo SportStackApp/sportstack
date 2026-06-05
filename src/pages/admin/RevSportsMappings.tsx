@@ -20,7 +20,7 @@ interface SystemClub { id: string; name: string; }
 interface SystemPitch { id: string; name: string; venueName: string; }
 
 // Scraped Data Interfaces
-interface ScrapedTeam { teamName: string; clubName: string; grade: string; key: string; }
+interface ScrapedTeam { teamName: string; association: string; key: string; }
 interface ScrapedGrade { grade: string; association: string; key: string; }
 interface ScrapedClub { clubName: string; key: string; }
 interface ScrapedVenue { venueName: string; key: string; }
@@ -180,9 +180,9 @@ export default function RevSportsMappings() {
           
           teamsToProcess.forEach(tName => {
             if (tName) {
-              const key = tName; // key by team name only — club and grade are per-player, not per-team
+              const key = tName;
               if (!sTeamsMap.has(key)) {
-                sTeamsMap.set(key, { teamName: tName, clubName: "", grade: "", key });
+                sTeamsMap.set(key, { teamName: tName, association: row.association || "", key });
               }
             }
           });
@@ -234,7 +234,7 @@ export default function RevSportsMappings() {
       }
 
       // Sort Scraped Data
-      const sortedTeams = Array.from(sTeamsMap.values()).sort((a, b) => a.clubName.localeCompare(b.clubName) || a.grade.localeCompare(b.grade) || a.teamName.localeCompare(b.teamName));
+      const sortedTeams = Array.from(sTeamsMap.values()).sort((a, b) => a.association.localeCompare(b.association) || a.teamName.localeCompare(b.teamName));
       const sortedGrades = Array.from(sGradesMap.values()).sort((a, b) => a.grade.localeCompare(b.grade));
       const sortedClubs = Array.from(sClubsMap.values()).sort((a, b) => a.clubName.localeCompare(b.clubName));
       const sortedVenues = Array.from(sVenuesMap.values()).sort((a, b) => a.venueName.localeCompare(b.venueName));
@@ -426,12 +426,10 @@ export default function RevSportsMappings() {
                     <TableRow key={entry.key}>
                       <TableCell className="pl-6 text-muted-foreground font-mono text-xs">team / home_team / away_team</TableCell>
                       <TableCell>
-                        <span className="font-bold">{entry.teamName}</span>
-                        {(entry.clubName || entry.grade) && (
-                          <span className="text-muted-foreground block text-xs">
-                            {entry.clubName}{entry.clubName && entry.grade ? " • " : ""}{entry.grade}
-                          </span>
-                        )}
+                        <div>
+                          <div className="font-medium">{entry.teamName}</div>
+                          <div className="text-xs text-muted-foreground">{entry.association}</div>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Select value={currentValue} onValueChange={(val) => setTeamMappings(prev => ({ ...prev, [entry.key]: val }))}>
