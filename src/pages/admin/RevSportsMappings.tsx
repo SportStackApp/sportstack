@@ -64,35 +64,6 @@ export default function RevSportsMappings() {
   const [playerFilters, setPlayerFilters] = useState({ grades: [] as string[], teams: [] as string[] });
   const [gradeTabAssociationFilter, setGradeTabAssociationFilter] = useState("all");
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  const [teamSearch, setTeamSearch] = useState("");
-  const [teamStatusFilter, setTeamStatusFilter] = useState<"all"|"mapped"|"unmapped">("all");
-  const [teamAssocFilter, setTeamAssocFilter] = useState("all");
-
-  const [gradeSearch, setGradeSearch] = useState("");
-  const [gradeStatusFilter, setGradeStatusFilter] = useState<"all"|"mapped"|"unmapped">("all");
-
-  const [clubSearch, setClubSearch] = useState("");
-  const [clubStatusFilter, setClubStatusFilter] = useState<"all"|"mapped"|"unmapped">("all");
-
-  const [venueSearch, setVenueSearch] = useState("");
-  const [venueStatusFilter, setVenueStatusFilter] = useState<"all"|"mapped"|"unmapped">("all");
-
-  const [pitchSearch, setPitchSearch] = useState("");
-  const [pitchVenueFilter, setPitchVenueFilter] = useState("all");
-  const [pitchStatusFilter, setPitchStatusFilter] = useState<"all"|"mapped"|"unmapped">("all");
-
-  const [playerSearch, setPlayerSearch] = useState("");
-  const [playerAssocFilter, setPlayerAssocFilter] = useState("all");
-  const [playerClubFilter, setPlayerClubFilter] = useState("all");
-  const [playerStatusFilter, setPlayerStatusFilter] = useState<"all"|"mapped"|"unmapped">("all");
-  const [playerFillinFilter, setPlayerFillinFilter] = useState<"all"|"regular"|"fillin">("all");
-
-  const [umpireSearch, setUmpireSearch] = useState("");
-  const [umpireStatusFilter, setUmpireStatusFilter] = useState<"all"|"mapped"|"unmapped">("all");
-
   const { toast } = useToast();
 
   useEffect(() => {
@@ -209,9 +180,9 @@ export default function RevSportsMappings() {
           
           teamsToProcess.forEach(tName => {
             if (tName) {
-              const key = `${clubName}|||${grade}|||${tName}`;
+              const key = tName; // key by team name only — club and grade are per-player, not per-team
               if (!sTeamsMap.has(key)) {
-                sTeamsMap.set(key, { teamName: tName, clubName, grade, key });
+                sTeamsMap.set(key, { teamName: tName, clubName: "", grade: "", key });
               }
             }
           });
@@ -290,7 +261,7 @@ export default function RevSportsMappings() {
 
       if (tMapData) {
         tMapData.forEach((m: any) => {
-          if (m.team_id) initTeamMappings[`${m.club_name || ""}|||${m.grade || ""}|||${m.revsports_team_name}`] = m.team_id;
+          if (m.team_id) initTeamMappings[m.revsports_team_name] = m.team_id;
         });
       }
       if (gMapData) {
@@ -349,8 +320,7 @@ export default function RevSportsMappings() {
     try {
       if (activeTab === "teams") {
         const rowsToUpsert = Object.entries(teamMappings).filter(([_, id]) => id !== "__none__").map(([key, id]) => {
-          const [club_name, grade, revsports_team_name] = key.split("|||");
-          return { revsports_team_name, club_name, division_name: grade, team_id: id };
+          return { revsports_team_name: key, club_name: "", division_name: "", team_id: id };
         });
         if (rowsToUpsert.length > 0) {
           const { error } = await supabase.from("revsports_team_mappings").upsert(rowsToUpsert, { onConflict: "revsports_team_name,club_name,division_name" });
@@ -359,10 +329,10 @@ export default function RevSportsMappings() {
       } else if (activeTab === "grades") {
         const rowsToUpsert = Object.entries(gradeMappings).filter(([_, id]) => id !== "__none__").map(([key, id]) => {
           const [association, revsports_grade] = key.split("|||");
-          return { revsports_grade, association: association || null, division_id: id };
+          return { revsports_grade, division_id: id };
         });
         if (rowsToUpsert.length > 0) {
-          const { error } = await supabase.from("revsports_grade_mappings").upsert(rowsToUpsert, { onConflict: "revsports_grade,association" });
+          const { error } = await supabase.from("revsports_grade_mappings").upsert(rowsToUpsert, { onConflict: "revsports_grade" });
           if (error) throw error;
         }
       } else if (activeTab === "clubs") {
@@ -392,11 +362,11 @@ export default function RevSportsMappings() {
         }
       } else if (activeTab === "players") {
         const rowsToUpsert = Object.entries(playerMappings).filter(([_, id]) => id !== "__none__").map(([key, id]) => {
-          const [revsports_player_name, club_name, grade, team, jersey, isFillinStr] = key.split("|||");
-          return { revsports_player_name, club_name: club_name || "", grade, team, jersey: jersey || "", is_fillin: isFillinStr === "true", profile_id: id };
+          const [revsports_player_name, club_name, grade, team, jersey] = key.split("|||");
+          return { revsports_player_name, grade, team, profile_id: id };
         });
         if (rowsToUpsert.length > 0) {
-          const { error } = await supabase.from("revsports_player_mappings").upsert(rowsToUpsert, { onConflict: "revsports_player_name,club_name,grade,team,jersey,is_fillin" });
+          const { error } = await supabase.from("revsports_player_mappings").upsert(rowsToUpsert, { onConflict: "revsports_player_name,grade,team" });
           if (error) throw error;
         }
       } else if (activeTab === "umpires") {
@@ -419,93 +389,22 @@ export default function RevSportsMappings() {
 
   if (loading) return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
 
-  const visibleTeams = scrapedTeams.filter(t => {
-    if (teamAssocFilter !== "all" && t.key.split("|||")[0] !== teamAssocFilter) return false;
-    if (teamFilters.grades.length > 0 && !teamFilters.grades.includes(t.grade)) return false;
-    if (teamFilters.clubs.length > 0 && !teamFilters.clubs.includes(t.clubName)) return false;
-    if (teamSearch && !t.teamName.toLowerCase().includes(teamSearch.toLowerCase())) return false;
-    const mapped = teamMappings[t.key] && teamMappings[t.key] !== "__none__";
-    if (teamStatusFilter === "mapped" && !mapped) return false;
-    if (teamStatusFilter === "unmapped" && mapped) return false;
-    return true;
-  });
-
-  const filteredGrades = scrapedGrades.filter(g => {
-    if (gradeSearch && !g.grade.toLowerCase().includes(gradeSearch.toLowerCase())) return false;
-    if (gradeTabAssociationFilter !== "all" && g.association !== gradeTabAssociationFilter) return false;
-    const mapped = gradeMappings[g.key] && gradeMappings[g.key] !== "__none__";
-    if (gradeStatusFilter === "mapped" && !mapped) return false;
-    if (gradeStatusFilter === "unmapped" && mapped) return false;
-    return true;
-  });
-
-  const filteredClubs = scrapedClubs.filter(c => {
-    if (clubSearch && !c.clubName.toLowerCase().includes(clubSearch.toLowerCase())) return false;
-    const mapped = clubMappings[c.key] && clubMappings[c.key] !== "__none__";
-    if (clubStatusFilter === "mapped" && !mapped) return false;
-    if (clubStatusFilter === "unmapped" && mapped) return false;
-    return true;
-  });
-
-  const filteredVenues = scrapedVenues.filter(v => {
-    if (venueSearch && !v.venueName.toLowerCase().includes(venueSearch.toLowerCase())) return false;
-    const mapped = venueMappings[v.key] && venueMappings[v.key] !== "__none__";
-    if (venueStatusFilter === "mapped" && !mapped) return false;
-    if (venueStatusFilter === "unmapped" && mapped) return false;
-    return true;
-  });
-
-  const filteredPitches = scrapedPitches.filter(p => {
-    if (pitchSearch && !p.pitchName.toLowerCase().includes(pitchSearch.toLowerCase())) return false;
-    if (pitchVenueFilter !== "all" && p.venueName !== pitchVenueFilter) return false;
-    const mapped = pitchMappings[p.key] && pitchMappings[p.key] !== "__none__";
-    if (pitchStatusFilter === "mapped" && !mapped) return false;
-    if (pitchStatusFilter === "unmapped" && mapped) return false;
-    return true;
-  });
-
-  const sortedPlayers = scrapedPlayers.filter(p => {
-    if (playerSearch && !p.playerName.toLowerCase().includes(playerSearch.toLowerCase())) return false;
-    if (playerAssocFilter !== "all" && !p.key.includes(playerAssocFilter)) return false;
-    if (playerClubFilter !== "all" && p.clubName !== playerClubFilter) return false;
-    if (playerFillinFilter === "regular" && p.isFillin) return false;
-    if (playerFillinFilter === "fillin" && !p.isFillin) return false;
-    const mapped = playerMappings[p.key] && playerMappings[p.key] !== "__none__";
-    if (playerStatusFilter === "mapped" && !mapped) return false;
-    if (playerStatusFilter === "unmapped" && mapped) return false;
-    return true;
-  });
-
-  const filteredUmpires = scrapedUmpires.filter(u => {
-    if (umpireSearch && !u.umpireName.toLowerCase().includes(umpireSearch.toLowerCase())) return false;
-    const mapped = umpireMappings[u.key] && umpireMappings[u.key] !== "__none__";
-    if (umpireStatusFilter === "mapped" && !mapped) return false;
-    if (umpireStatusFilter === "unmapped" && mapped) return false;
-    return true;
-  });
-
   // Render Functions
   const renderTeamsTab = () => {
     const gradeOptions = Array.from(new Set(scrapedTeams.map(t => t.grade))).filter(Boolean).sort().map(g => ({ label: g, value: g }));
     const clubOptions = Array.from(new Set(scrapedTeams.map(t => t.clubName))).filter(Boolean).sort().map(c => ({ label: c, value: c }));
 
+    const filtered = scrapedTeams.filter(t => {
+      if (teamFilters.grades.length > 0 && !teamFilters.grades.includes(t.grade)) return false;
+      if (teamFilters.clubs.length > 0 && !teamFilters.clubs.includes(t.clubName)) return false;
+      return true;
+    });
+
     return (
       <div className="space-y-4">
-        <div className="flex gap-3 flex-wrap items-center">
-          <input
-            type="text"
-            placeholder="Search team name..."
-            value={teamSearch}
-            onChange={e => { setTeamSearch(e.target.value); setCurrentPage(1); }}
-            className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground w-[220px]"
-          />
-          <select value={teamStatusFilter} onChange={e => { setTeamStatusFilter(e.target.value as any); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground">
-            <option value="all">All</option>
-            <option value="mapped">Mapped</option>
-            <option value="unmapped">Unmapped</option>
-          </select>
-          <MultiSelect title="Grade" options={Array.from(new Set(scrapedTeams.map(t => t.grade))).filter(Boolean).sort().map(g => ({ label: g, value: g }))} selected={teamFilters.grades} onChange={(s) => { setTeamFilters(p => ({ ...p, grades: s })); setCurrentPage(1); }} className="w-[200px]" />
-          <MultiSelect title="Club" options={Array.from(new Set(scrapedTeams.map(t => t.clubName))).filter(Boolean).sort().map(c => ({ label: c, value: c }))} selected={teamFilters.clubs} onChange={(s) => { setTeamFilters(p => ({ ...p, clubs: s })); setCurrentPage(1); }} className="w-[280px]" />
+        <div className="flex gap-4 flex-wrap">
+          <MultiSelect title="Grade" options={gradeOptions} selected={teamFilters.grades} onChange={(s) => setTeamFilters(p => ({ ...p, grades: s }))} className="w-[250px]" />
+          <MultiSelect title="Club (Scraped)" options={clubOptions} selected={teamFilters.clubs} onChange={(s) => setTeamFilters(p => ({ ...p, clubs: s }))} className="w-[250px]" />
         </div>
         <Card>
           <CardContent className="p-0">
@@ -520,7 +419,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginate(visibleTeams).map(entry => {
+                {filtered.map(entry => {
                   const currentValue = teamMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   return (
@@ -528,7 +427,11 @@ export default function RevSportsMappings() {
                       <TableCell className="pl-6 text-muted-foreground font-mono text-xs">team / home_team / away_team</TableCell>
                       <TableCell>
                         <span className="font-bold">{entry.teamName}</span>
-                        <span className="text-muted-foreground block text-xs">{entry.clubName} • {entry.grade}</span>
+                        {(entry.clubName || entry.grade) && (
+                          <span className="text-muted-foreground block text-xs">
+                            {entry.clubName}{entry.clubName && entry.grade ? " • " : ""}{entry.grade}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Select value={currentValue} onValueChange={(val) => setTeamMappings(prev => ({ ...prev, [entry.key]: val }))}>
@@ -565,17 +468,20 @@ export default function RevSportsMappings() {
 
     return (
       <div className="space-y-4">
-        <div className="flex gap-3 flex-wrap items-center">
-          <input type="text" placeholder="Search grade..." value={gradeSearch} onChange={e => { setGradeSearch(e.target.value); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground w-[220px]" />
-          <select value={gradeStatusFilter} onChange={e => { setGradeStatusFilter(e.target.value as any); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground">
-            <option value="all">All</option>
-            <option value="mapped">Mapped</option>
-            <option value="unmapped">Unmapped</option>
-          </select>
-          <select value={gradeTabAssociationFilter} onChange={e => { setGradeTabAssociationFilter(e.target.value); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground">
-            <option value="all">All Associations</option>
-            {Array.from(new Set(scrapedGrades.map(g => g.association))).filter(Boolean).sort().map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
+        <div className="flex gap-4 flex-wrap">
+          <div className="w-[250px]">
+            <Select value={gradeTabAssociationFilter} onValueChange={setGradeTabAssociationFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by Association" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Associations</SelectItem>
+                {associationOptions.map(a => (
+                  <SelectItem key={a} value={a}>{a}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <Card>
           <CardContent className="p-0">
@@ -590,7 +496,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginate(filteredGrades).map(entry => {
+                {scrapedGrades.map(entry => {
                   const currentValue = gradeMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   
@@ -639,14 +545,6 @@ export default function RevSportsMappings() {
   const renderClubsTab = () => {
     return (
       <div className="space-y-4">
-        <div className="flex gap-3 flex-wrap items-center">
-          <input type="text" placeholder="Search club..." value={clubSearch} onChange={e => { setClubSearch(e.target.value); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground w-[220px]" />
-          <select value={clubStatusFilter} onChange={e => { setClubStatusFilter(e.target.value as any); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground">
-            <option value="all">All</option>
-            <option value="mapped">Mapped</option>
-            <option value="unmapped">Unmapped</option>
-          </select>
-        </div>
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -660,7 +558,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginate(filteredClubs).map(entry => {
+                {scrapedClubs.map(entry => {
                   const currentValue = clubMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   return (
@@ -694,14 +592,6 @@ export default function RevSportsMappings() {
   const renderVenuesTab = () => {
     return (
       <div className="space-y-4">
-        <div className="flex gap-3 flex-wrap items-center">
-          <input type="text" placeholder="Search venue..." value={venueSearch} onChange={e => { setVenueSearch(e.target.value); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground w-[220px]" />
-          <select value={venueStatusFilter} onChange={e => { setVenueStatusFilter(e.target.value as any); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground">
-            <option value="all">All</option>
-            <option value="mapped">Mapped</option>
-            <option value="unmapped">Unmapped</option>
-          </select>
-        </div>
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -715,7 +605,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginate(filteredVenues).map(entry => {
+                {scrapedVenues.map(entry => {
                   const currentValue = venueMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   return (
@@ -749,18 +639,6 @@ export default function RevSportsMappings() {
   const renderPitchesTab = () => {
     return (
       <div className="space-y-4">
-        <div className="flex gap-3 flex-wrap items-center">
-          <input type="text" placeholder="Search pitch..." value={pitchSearch} onChange={e => { setPitchSearch(e.target.value); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground w-[220px]" />
-          <select value={pitchStatusFilter} onChange={e => { setPitchStatusFilter(e.target.value as any); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground">
-            <option value="all">All</option>
-            <option value="mapped">Mapped</option>
-            <option value="unmapped">Unmapped</option>
-          </select>
-          <select value={pitchVenueFilter} onChange={e => { setPitchVenueFilter(e.target.value); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground">
-            <option value="all">All Venues</option>
-            {Array.from(new Set(scrapedPitches.map(p => p.venueName))).filter(Boolean).sort().map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-        </div>
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -774,7 +652,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginate(filteredPitches).map(entry => {
+                {scrapedPitches.map(entry => {
                   const currentValue = pitchMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   return (
@@ -811,28 +689,20 @@ export default function RevSportsMappings() {
   };
 
   const renderPlayersTab = () => {
+    const gradeOptions = Array.from(new Set(scrapedPlayers.map(p => p.grade))).filter(Boolean).sort().map(g => ({ label: g, value: g }));
+    const teamOptions = Array.from(new Set(scrapedPlayers.map(p => p.team))).filter(Boolean).sort().map(t => ({ label: t, value: t }));
+
+    const filtered = scrapedPlayers.filter(p => {
+      if (playerFilters.grades.length > 0 && !playerFilters.grades.includes(p.grade)) return false;
+      if (playerFilters.teams.length > 0 && !playerFilters.teams.includes(p.team)) return false;
+      return true;
+    });
+
     return (
       <div className="space-y-4">
-        <div className="flex gap-3 flex-wrap items-center">
-          <input type="text" placeholder="Search player name..." value={playerSearch} onChange={e => { setPlayerSearch(e.target.value); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground w-[220px]" />
-          <select value={playerStatusFilter} onChange={e => { setPlayerStatusFilter(e.target.value as any); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground">
-            <option value="all">All Statuses</option>
-            <option value="mapped">Mapped</option>
-            <option value="unmapped">Unmapped</option>
-          </select>
-          <select value={playerAssocFilter} onChange={e => { setPlayerAssocFilter(e.target.value); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground">
-            <option value="all">All Associations</option>
-            {Array.from(new Set(scrapedGrades.map(g => g.association))).filter(Boolean).sort().map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-          <select value={playerClubFilter} onChange={e => { setPlayerClubFilter(e.target.value); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground">
-            <option value="all">All Clubs</option>
-            {Array.from(new Set(scrapedPlayers.map(p => p.clubName))).filter(Boolean).sort().map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select value={playerFillinFilter} onChange={e => { setPlayerFillinFilter(e.target.value as any); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground">
-            <option value="all">All Players</option>
-            <option value="regular">Regular Only</option>
-            <option value="fillin">Fill-in Only</option>
-          </select>
+        <div className="flex gap-4 flex-wrap">
+          <MultiSelect title="Grade" options={gradeOptions} selected={playerFilters.grades} onChange={(s) => setPlayerFilters(p => ({ ...p, grades: s }))} className="w-[250px]" />
+          <MultiSelect title="Team" options={teamOptions} selected={playerFilters.teams} onChange={(s) => setPlayerFilters(p => ({ ...p, teams: s }))} className="w-[250px]" />
         </div>
         <Card>
           <CardContent className="p-0">
@@ -847,7 +717,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginate(sortedPlayers).map(entry => {
+                {filtered.map(entry => {
                   const currentValue = playerMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   return (
@@ -890,14 +760,6 @@ export default function RevSportsMappings() {
   const renderUmpiresTab = () => {
     return (
       <div className="space-y-4">
-        <div className="flex gap-3 flex-wrap items-center">
-          <input type="text" placeholder="Search umpire..." value={umpireSearch} onChange={e => { setUmpireSearch(e.target.value); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground w-[220px]" />
-          <select value={umpireStatusFilter} onChange={e => { setUmpireStatusFilter(e.target.value as any); setCurrentPage(1); }} className="border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground">
-            <option value="all">All</option>
-            <option value="mapped">Mapped</option>
-            <option value="unmapped">Unmapped</option>
-          </select>
-        </div>
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -911,7 +773,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginate(filteredUmpires).map(entry => {
+                {scrapedUmpires.map(entry => {
                   const currentValue = umpireMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   return (
@@ -944,60 +806,6 @@ export default function RevSportsMappings() {
     );
   };
 
-  function paginate<T>(items: T[]): T[] {
-    const start = (currentPage - 1) * pageSize;
-    return items.slice(start, start + pageSize);
-  }
-
-  const renderPaginationFooter = () => {
-    const activeItems =
-      activeTab === "teams" ? visibleTeams :
-      activeTab === "grades" ? filteredGrades :
-      activeTab === "clubs" ? filteredClubs :
-      activeTab === "venues" ? filteredVenues :
-      activeTab === "pitches" ? filteredPitches :
-      activeTab === "players" ? sortedPlayers :
-      filteredUmpires;
-    const totalPages = Math.ceil(activeItems.length / pageSize);
-    return (
-      <div className="flex items-center justify-between px-4 py-3 border-t border-border mt-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Show</span>
-          <select
-            value={pageSize}
-            onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-            className="rounded border border-border bg-background text-foreground text-sm px-2 py-1"
-          >
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-          <span>per page · {activeItems.length} total</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -1010,7 +818,7 @@ export default function RevSportsMappings() {
         </Button>
       </div>
 
-      <Tabs defaultValue="teams" value={activeTab} onValueChange={(val) => { setActiveTab(val); setCurrentPage(1); }} className="w-full">
+      <Tabs defaultValue="teams" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4 flex-wrap h-auto">
           <TabsTrigger value="teams">Teams</TabsTrigger>
           <TabsTrigger value="grades">Grades</TabsTrigger>
@@ -1020,34 +828,13 @@ export default function RevSportsMappings() {
           <TabsTrigger value="players">Players</TabsTrigger>
           <TabsTrigger value="umpires">Umpires</TabsTrigger>
         </TabsList>
-        <TabsContent value="teams">
-          {renderTeamsTab()}
-          {renderPaginationFooter()}
-        </TabsContent>
-        <TabsContent value="grades">
-          {renderGradesTab()}
-          {renderPaginationFooter()}
-        </TabsContent>
-        <TabsContent value="clubs">
-          {renderClubsTab()}
-          {renderPaginationFooter()}
-        </TabsContent>
-        <TabsContent value="venues">
-          {renderVenuesTab()}
-          {renderPaginationFooter()}
-        </TabsContent>
-        <TabsContent value="pitches">
-          {renderPitchesTab()}
-          {renderPaginationFooter()}
-        </TabsContent>
-        <TabsContent value="players">
-          {renderPlayersTab()}
-          {renderPaginationFooter()}
-        </TabsContent>
-        <TabsContent value="umpires">
-          {renderUmpiresTab()}
-          {renderPaginationFooter()}
-        </TabsContent>
+        <TabsContent value="teams">{renderTeamsTab()}</TabsContent>
+        <TabsContent value="grades">{renderGradesTab()}</TabsContent>
+        <TabsContent value="clubs">{renderClubsTab()}</TabsContent>
+        <TabsContent value="venues">{renderVenuesTab()}</TabsContent>
+        <TabsContent value="pitches">{renderPitchesTab()}</TabsContent>
+        <TabsContent value="players">{renderPlayersTab()}</TabsContent>
+        <TabsContent value="umpires">{renderUmpiresTab()}</TabsContent>
       </Tabs>
     </div>
   );
