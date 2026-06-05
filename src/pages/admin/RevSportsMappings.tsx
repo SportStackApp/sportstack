@@ -20,7 +20,7 @@ interface SystemClub { id: string; name: string; }
 interface SystemPitch { id: string; name: string; venueName: string; }
 
 // Scraped Data Interfaces
-interface ScrapedTeam { teamName: string; association: string; key: string; }
+interface ScrapedTeam { teamName: string; association: string; clubName: string; grade: string; key: string; }
 interface ScrapedGrade { grade: string; association: string; key: string; }
 interface ScrapedClub { clubName: string; key: string; }
 interface ScrapedVenue { venueName: string; key: string; }
@@ -168,24 +168,33 @@ export default function RevSportsMappings() {
       const sUmpiresMap = new Map<string, ScrapedUmpire>();
 
       if (playersData) {
+        // First pass: tally club+grade combos per team name
+        const teamTally = new Map<string, Map<string, { clubName: string; grade: string; association: string; count: number }>>();
+
+        playersData.forEach((row: any) => {
+          const teamsToProcess = [row.home_team, row.away_team, row.team].filter(Boolean);
+          teamsToProcess.forEach((tName: string) => {
+            if (!teamTally.has(tName)) teamTally.set(tName, new Map());
+            const comboKey = `${row.club_name}|||${row.grade}`;
+            const tally = teamTally.get(tName)!;
+            if (tally.has(comboKey)) {
+              tally.get(comboKey)!.count++;
+            } else {
+              tally.set(comboKey, { clubName: row.club_name || "", grade: row.grade || "", association: row.association || "", count: 1 });
+            }
+          });
+        });
+
+        // Second pass: pick the most common combo for each team name
+        teamTally.forEach((combos, tName) => {
+          let best = { clubName: "", grade: "", association: "", count: 0 };
+          combos.forEach(combo => { if (combo.count > best.count) best = combo; });
+          sTeamsMap.set(tName, { teamName: tName, clubName: best.clubName, grade: best.grade, association: best.association, key: tName });
+        });
+
         playersData.forEach((row: any) => {
           const clubName = row.club_name || "";
           const grade = row.grade || "";
-          
-          // Teams (home_team, away_team, team)
-          const teamsToProcess = [];
-          if (row.home_team) teamsToProcess.push(row.home_team);
-          if (row.away_team) teamsToProcess.push(row.away_team);
-          if (row.team) teamsToProcess.push(row.team);
-          
-          teamsToProcess.forEach(tName => {
-            if (tName) {
-              const key = tName;
-              if (!sTeamsMap.has(key)) {
-                sTeamsMap.set(key, { teamName: tName, association: row.association || "", key });
-              }
-            }
-          });
 
           // Grades
           if (grade) {
@@ -234,7 +243,7 @@ export default function RevSportsMappings() {
       }
 
       // Sort Scraped Data
-      const sortedTeams = Array.from(sTeamsMap.values()).sort((a, b) => a.association.localeCompare(b.association) || a.teamName.localeCompare(b.teamName));
+      const sortedTeams = Array.from(sTeamsMap.values()).sort((a, b) => a.association.localeCompare(b.association) || a.clubName.localeCompare(b.clubName) || a.grade.localeCompare(b.grade) || a.teamName.localeCompare(b.teamName));
       const sortedGrades = Array.from(sGradesMap.values()).sort((a, b) => a.grade.localeCompare(b.grade));
       const sortedClubs = Array.from(sClubsMap.values()).sort((a, b) => a.clubName.localeCompare(b.clubName));
       const sortedVenues = Array.from(sVenuesMap.values()).sort((a, b) => a.venueName.localeCompare(b.venueName));
@@ -428,7 +437,7 @@ export default function RevSportsMappings() {
                       <TableCell>
                         <div>
                           <div className="font-medium">{entry.teamName}</div>
-                          <div className="text-xs text-muted-foreground">{entry.association}</div>
+                          <div className="text-xs text-muted-foreground">{[entry.clubName, entry.grade].filter(Boolean).join(" • ")}</div>
                         </div>
                       </TableCell>
                       <TableCell>
