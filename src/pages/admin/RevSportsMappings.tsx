@@ -172,16 +172,23 @@ export default function RevSportsMappings() {
         const teamTally = new Map<string, Map<string, { clubName: string; grade: string; association: string; count: number }>>();
 
         playersData.forEach((row: any) => {
-          const teamsToProcess = [row.home_team, row.away_team, row.team].filter(Boolean);
-          teamsToProcess.forEach((tName: string) => {
+          // Only use row.team for club/grade context — home_team/away_team rows have the wrong club_name
+          const tName = row.team;
+          if (!tName) return;
+          if (!teamTally.has(tName)) teamTally.set(tName, new Map());
+          const comboKey = `${row.club_name}|||${row.grade}`;
+          const tally = teamTally.get(tName)!;
+          if (tally.has(comboKey)) {
+            tally.get(comboKey)!.count++;
+          } else {
+            tally.set(comboKey, { clubName: row.club_name || "", grade: row.grade || "", association: row.association || "", count: 1 });
+          }
+        });
+
+        // Still need home_team/away_team in the map for display, but without club context
+        playersData.forEach((row: any) => {
+          [row.home_team, row.away_team].filter(Boolean).forEach((tName: string) => {
             if (!teamTally.has(tName)) teamTally.set(tName, new Map());
-            const comboKey = `${row.club_name}|||${row.grade}`;
-            const tally = teamTally.get(tName)!;
-            if (tally.has(comboKey)) {
-              tally.get(comboKey)!.count++;
-            } else {
-              tally.set(comboKey, { clubName: row.club_name || "", grade: row.grade || "", association: row.association || "", count: 1 });
-            }
           });
         });
 
