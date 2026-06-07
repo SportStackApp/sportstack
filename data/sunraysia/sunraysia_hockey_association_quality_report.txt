@@ -1,5 +1,5 @@
 DATA QUALITY REPORT — Sunraysia Hockey Association
-Generated: 2026-06-07 11:31:12
+Generated: 2026-06-07 11:34:49
 ────────────────────────────────────────────────────────────
 Total rows scraped : 2,172
 Rows with issues   : 0  (0.0%)
