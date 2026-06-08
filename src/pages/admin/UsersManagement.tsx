@@ -43,6 +43,7 @@ interface Membership {
   status: string;
   membership_type: string;
   team_name?: string;
+  club_id?: string;
 }
 
 interface UserWithRoles extends Profile {
@@ -77,11 +78,13 @@ const UsersManagement = () => {
   const [clubs, setClubs] = useState<{ id: string; name: string; association_id: string }[]>([]);
   const [associations, setAssociations] = useState<{ id: string; name: string }[]>([]);
   const [divisions, setDivisions] = useState<{ id: string; name: string }[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [associationFilter, setAssociationFilter] = useState<string>("all");
   const [clubFilter, setClubFilter] = useState<string>("all");
+  const [hidePlaceholders, setHidePlaceholders] = useState(true);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
@@ -201,13 +204,17 @@ const UsersManagement = () => {
       roles: (userRoles || []).filter((r) => r.user_id === profile.id).map((r) => r.role),
       memberships: membershipsData
         .filter((m) => m.user_id === profile.id)
-        .map((m) => ({
-          id: m.id,
-          team_id: m.team_id,
-          status: m.status,
-          membership_type: m.membership_type,
-          team_name: teamsList.find((t) => t.id === m.team_id)?.name,
-        })),
+        .map((m) => {
+          const team = teamsList.find((t) => t.id === m.team_id);
+          return {
+            id: m.id,
+            team_id: m.team_id,
+            status: m.status,
+            membership_type: m.membership_type,
+            team_name: team?.name,
+            club_id: team?.club_id,
+          };
+        }),
     }));
 
     setUsers(usersWithRoles);
@@ -294,6 +301,7 @@ const UsersManagement = () => {
       const clubTeamIds = teams.filter((t) => t.club_id === clubFilter).map((t) => t.id);
       if (!user.memberships.some((m) => clubTeamIds.includes(m.team_id))) return false;
     }
+    if (hidePlaceholders && (user as any).is_placeholder === true) return false;
     return true;
   });
 
@@ -883,6 +891,12 @@ const UsersManagement = () => {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant={hidePlaceholders ? "secondary" : "outline"}
+            onClick={() => setHidePlaceholders(prev => !prev)}
+          >
+            Hide placeholders
+          </Button>
         </div>
 
         {/* Pending Primary Team Change Requests */}
@@ -942,8 +956,7 @@ const UsersManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Player Status</TableHead>
-                    <TableHead>Team(s)</TableHead>
+                    <TableHead>Association / Club / Team</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Roles</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -968,29 +981,24 @@ const UsersManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant="secondary"
-                          className={
-                            (u as any).status === "Suspended"
-                              ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                              : (u as any).status === "Inactive"
-                              ? "bg-muted text-muted-foreground"
-                              : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                          }
-                        >
-                          {(u as any).status || "Active"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {u.memberships.length === 0 ? (
                             <span className="text-muted-foreground text-sm">Unassigned</span>
                           ) : (
-                            u.memberships.map((m) => (
-                              <Badge key={m.id} variant="outline" className="text-xs">
-                                {m.team_name || "Unknown"}
-                              </Badge>
-                            ))
+                            u.memberships.map((m) => {
+                              const club = clubs.find((c) => c.id === m.club_id);
+                              const association = club ? associations.find((a) => a.id === club.association_id) : undefined;
+                              const parts = [];
+                              if (association?.name) parts.push(association.name);
+                              if (club?.name) parts.push(club.name);
+                              if (m.team_name) parts.push(m.team_name);
+                              const displayText = parts.join(" / ") || "Unknown";
+                              return (
+                                <Badge key={m.id} variant="outline" className="text-xs">
+                                  {displayText}
+                                </Badge>
+                              );
+                            })
                           )}
                         </div>
                       </TableCell>

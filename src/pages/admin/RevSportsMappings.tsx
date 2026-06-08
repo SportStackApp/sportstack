@@ -14,7 +14,7 @@ const supabase = originalSupabase as any;
 
 // System Data Interfaces
 interface SystemTeam { id: string; name: string; divisionName: string; clubName: string; }
-interface SystemProfile { id: string; firstName: string; lastName: string; }
+interface SystemProfile { id: string; firstName: string; lastName: string; isPlaceholder: boolean; }
 interface SystemVenue { id: string; name: string; }
 interface SystemDivision { id: string; name: string; associationName: string; }
 interface SystemClub { id: string; name: string; }
@@ -102,7 +102,7 @@ export default function RevSportsMappings() {
         supabase.from("teams").select("id, name, club_id, division_id"),
         supabase.from("clubs").select("id, name"),
         supabase.from("divisions").select("id, name, associations(name)"),
-        supabase.from("profiles").select("id, first_name, last_name"),
+        supabase.from("profiles").select("id, first_name, last_name, is_placeholder").eq("is_placeholder" as any, false),
         supabase.from("venues").select("id, name"),
         supabase.from("pitches").select("id, name, venue_id"),
         
@@ -136,7 +136,8 @@ export default function RevSportsMappings() {
       const builtProfiles: SystemProfile[] = (profilesData || []).map((p: any) => ({
         id: p.id,
         firstName: p.first_name || "",
-        lastName: p.last_name || ""
+        lastName: p.last_name || "",
+        isPlaceholder: p.is_placeholder === true
       })).sort((a: SystemProfile, b: SystemProfile) => {
         const aName = `${a.firstName} ${a.lastName}`.trim();
         const bName = `${b.firstName} ${b.lastName}`.trim();
@@ -248,10 +249,20 @@ export default function RevSportsMappings() {
 
           // Umpires
           if (row.umpire_1) {
-            if (!sUmpiresMap.has(row.umpire_1)) sUmpiresMap.set(row.umpire_1, { umpireName: row.umpire_1, key: row.umpire_1 });
+            row.umpire_1.split(";").forEach((uName: string) => {
+              const trimmed = uName.trim();
+              if (trimmed && !sUmpiresMap.has(trimmed)) {
+                sUmpiresMap.set(trimmed, { umpireName: trimmed, key: trimmed });
+              }
+            });
           }
           if (row.umpire_2) {
-            if (!sUmpiresMap.has(row.umpire_2)) sUmpiresMap.set(row.umpire_2, { umpireName: row.umpire_2, key: row.umpire_2 });
+            row.umpire_2.split(";").forEach((uName: string) => {
+              const trimmed = uName.trim();
+              if (trimmed && !sUmpiresMap.has(trimmed)) {
+                sUmpiresMap.set(trimmed, { umpireName: trimmed, key: trimmed });
+              }
+            });
           }
         });
       }
@@ -384,12 +395,12 @@ export default function RevSportsMappings() {
           if (error) throw error;
         }
       } else if (activeTab === "players") {
-        const rowsToUpsert = Object.entries(playerMappings).filter(([_, id]) => id !== "__none__").map(([key, id]) => {
-          const [revsports_player_name, club_name, grade, team, jersey] = key.split("|||");
-          return { revsports_player_name, grade, team, profile_id: id };
+        const rowsToUpsert = Object.entries(playerMappings).filter(([_, id]) => id !== "none" && id !== "__none__").map(([key, id]) => {
+          const [revsports_player_name, club_name, grade, team, jersey, is_fillin_str] = key.split("|||");
+          return { revsports_player_name, club_name: club_name || null, grade, team, jersey: jersey || null, is_fillin: is_fillin_str === "true", profile_id: id };
         });
         if (rowsToUpsert.length > 0) {
-          const { error } = await supabase.from("revsports_player_mappings").upsert(rowsToUpsert, { onConflict: "revsports_player_name,grade,team" });
+          const { error } = await supabase.from("revsports_player_mappings").upsert(rowsToUpsert, { onConflict: "revsports_player_name,club_name,grade,team,jersey,is_fillin" });
           if (error) throw error;
         }
       } else if (activeTab === "umpires") {
@@ -442,8 +453,9 @@ export default function RevSportsMappings() {
               setCurrentPage((prev) => ({ ...prev, [tabKey]: 1 }));
             }}
           >
-            {unmappedOnly ? "Unmapped only" : "Show all"}
+            {unmappedOnly ? "Show all" : "Unmapped only"}
           </Button>
+
           <span className="text-sm text-muted-foreground">
             Showing {filteredRows} of {totalRows} rows
           </span>
@@ -576,7 +588,7 @@ export default function RevSportsMappings() {
                       </TableCell>
                       <TableCell>
                         <Select value={currentValue} onValueChange={(val) => setTeamMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-[300px]"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemTeams.map(t => (
@@ -692,7 +704,7 @@ export default function RevSportsMappings() {
                       </TableCell>
                       <TableCell>
                         <Select value={currentValue} onValueChange={(val) => setGradeMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-[300px]"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {optionsToRender.map(d => <SelectItem key={d.id} value={d.id}>{d.associationName} — {d.name}</SelectItem>)}
@@ -768,7 +780,7 @@ export default function RevSportsMappings() {
                       <TableCell><span className="font-bold">{entry.clubName}</span></TableCell>
                       <TableCell>
                         <Select value={currentValue} onValueChange={(val) => setClubMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-[300px]"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemClubs.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -844,7 +856,7 @@ export default function RevSportsMappings() {
                       <TableCell><span className="font-bold">{entry.venueName}</span></TableCell>
                       <TableCell>
                         <Select value={currentValue} onValueChange={(val) => setVenueMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-[300px]"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemVenues.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
@@ -923,7 +935,7 @@ export default function RevSportsMappings() {
                       </TableCell>
                       <TableCell>
                         <Select value={currentValue} onValueChange={(val) => setPitchMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-[300px]"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemPitches.map(p => (
@@ -1022,7 +1034,7 @@ export default function RevSportsMappings() {
                       </TableCell>
                       <TableCell>
                         <Select value={currentValue} onValueChange={(val) => setPlayerMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-[300px]"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemProfiles.map(profile => (
@@ -1100,7 +1112,7 @@ export default function RevSportsMappings() {
                       <TableCell><span className="font-bold">{entry.umpireName}</span></TableCell>
                       <TableCell>
                         <Select value={currentValue} onValueChange={(val) => setUmpireMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-[300px]"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemProfiles.map(profile => (
