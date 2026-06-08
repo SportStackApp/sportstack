@@ -491,11 +491,11 @@ const Profile = () => {
   const handleConfirmChange = async () => {
     if (!user || !pendingChangeRequest || pendingChangeRequest.status !== "ADMIN_APPROVED") return;
 
-    // Downgrade old PRIMARY to PERMANENT
+    // Downgrade old PRIMARY to SECONDARY
     if (pendingChangeRequest.from_team_id) {
       await supabase
         .from("team_memberships")
-        .update({ membership_type: "PERMANENT" })
+        .update({ membership_type: "SECONDARY" })
         .eq("user_id", user.id)
         .eq("team_id", pendingChangeRequest.from_team_id)
         .eq("membership_type", "PRIMARY");
@@ -669,7 +669,7 @@ const Profile = () => {
     clubName: m.team.club.name,
     associationId: m.team.club.association.id,
     associationName: m.team.club.association.name,
-    type: m.membership_type as "PRIMARY" | "PERMANENT" | "FILL_IN",
+    type: m.membership_type as "PRIMARY" | "SECONDARY" | "FILL_IN",
     position: m.position || undefined,
     jerseyNumber: m.jersey_number || undefined,
   }));

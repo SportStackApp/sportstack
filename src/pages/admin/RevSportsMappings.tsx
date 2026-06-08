@@ -586,9 +586,9 @@ export default function RevSportsMappings() {
                           <div className="text-xs text-muted-foreground">{[entry.clubName, entry.grade].filter(Boolean).join(" • ")}</div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-64 max-w-xs">
                         <Select value={currentValue} onValueChange={(val) => setTeamMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemTeams.map(t => (
@@ -645,7 +645,7 @@ export default function RevSportsMappings() {
           <div className="flex gap-4 flex-wrap">
             <div className="w-[250px]">
               <Select value={gradeTabAssociationFilter} onValueChange={(val) => { setGradeTabAssociationFilter(val); setCurrentPage(prev => ({ ...prev, grades: 1 })); }}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full min-w-0 overflow-hidden">
                   <SelectValue placeholder="Filter by Association" />
                 </SelectTrigger>
                 <SelectContent>
@@ -702,9 +702,9 @@ export default function RevSportsMappings() {
                         )}
                         <span className="font-bold">{entry.grade}</span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-64 max-w-xs">
                         <Select value={currentValue} onValueChange={(val) => setGradeMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {optionsToRender.map(d => <SelectItem key={d.id} value={d.id}>{d.associationName} — {d.name}</SelectItem>)}
@@ -778,9 +778,9 @@ export default function RevSportsMappings() {
                     <TableRow key={entry.key}>
                       <TableCell className="pl-6 text-muted-foreground font-mono text-xs">club_name</TableCell>
                       <TableCell><span className="font-bold">{entry.clubName}</span></TableCell>
-                      <TableCell>
+                      <TableCell className="w-64 max-w-xs">
                         <Select value={currentValue} onValueChange={(val) => setClubMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemClubs.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -854,9 +854,9 @@ export default function RevSportsMappings() {
                     <TableRow key={entry.key}>
                       <TableCell className="pl-6 text-muted-foreground font-mono text-xs">venue</TableCell>
                       <TableCell><span className="font-bold">{entry.venueName}</span></TableCell>
-                      <TableCell>
+                      <TableCell className="w-64 max-w-xs">
                         <Select value={currentValue} onValueChange={(val) => setVenueMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemVenues.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
@@ -933,9 +933,9 @@ export default function RevSportsMappings() {
                         <span className="font-bold">{entry.pitchName}</span>
                         <span className="text-muted-foreground block text-xs">{entry.venueName}</span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-64 max-w-xs">
                         <Select value={currentValue} onValueChange={(val) => setPitchMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemPitches.map(p => (
@@ -1032,9 +1032,9 @@ export default function RevSportsMappings() {
                           {entry.isFillin ? " (fill-in)" : ""}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-64 max-w-xs">
                         <Select value={currentValue} onValueChange={(val) => setPlayerMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemProfiles.map(profile => (
@@ -1110,9 +1110,9 @@ export default function RevSportsMappings() {
                     <TableRow key={entry.key}>
                       <TableCell className="pl-6 text-muted-foreground font-mono text-xs">umpire_1 / umpire_2</TableCell>
                       <TableCell><span className="font-bold">{entry.umpireName}</span></TableCell>
-                      <TableCell>
+                      <TableCell className="w-64 max-w-xs">
                         <Select value={currentValue} onValueChange={(val) => setUmpireMappings(prev => ({ ...prev, [entry.key]: val }))}>
-                          <SelectTrigger className="w-full min-w-0"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
+                          <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue placeholder="— Not mapped —" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemProfiles.map(profile => (

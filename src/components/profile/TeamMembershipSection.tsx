@@ -10,7 +10,7 @@ interface TeamMembership {
   clubName: string;
   associationId: string;
   associationName: string;
-  type: "PRIMARY" | "PERMANENT" | "FILL_IN";
+  type: "PRIMARY" | "SECONDARY" | "FILL_IN";
   position?: string;
   jerseyNumber?: number;
   gameDate?: string;
@@ -232,7 +232,7 @@ export const TeamMembershipSection = ({
                       variant={team.type === "FILL_IN" ? "outline" : "secondary"}
                       className="text-xs"
                     >
-                      {team.type === "FILL_IN" ? "Fill-in" : "Permanent"}
+                      {team.type === "FILL_IN" ? "Fill-in" : "Secondary"}
                     </Badge>
                     {team.type === "FILL_IN" && team.gameDate && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">

@@ -60,7 +60,7 @@ export const PendingInvitesSection = ({
                       variant={invite.type === "FILL_IN" ? "outline" : "secondary"}
                       className="text-xs shrink-0"
                     >
-                      {invite.type === "FILL_IN" ? "Fill-in" : "Permanent"}
+                      {invite.type === "FILL_IN" ? "Fill-in" : "Secondary"}
                     </Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">

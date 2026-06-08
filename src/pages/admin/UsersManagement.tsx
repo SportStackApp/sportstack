@@ -594,10 +594,10 @@ const UsersManagement = () => {
   const handleMakePrimary = async (membershipId: string) => {
     if (!selectedUser) return;
 
-    // Downgrade any existing PRIMARY to PERMANENT first
+    // Downgrade any existing PRIMARY to SECONDARY first
     const { error: downgradeError } = await supabase
       .from("team_memberships")
-      .update({ membership_type: "PERMANENT" })
+      .update({ membership_type: "SECONDARY" })
       .eq("user_id", selectedUser.id)
       .eq("membership_type", "PRIMARY");
 
@@ -669,7 +669,7 @@ const UsersManagement = () => {
               <div className="space-y-1 col-span-1">
                 <Label className="text-xs text-muted-foreground">Association</Label>
                 <Select value={scope.association_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "association_id", v)}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
                     {associations.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                   </SelectContent>
@@ -678,7 +678,7 @@ const UsersManagement = () => {
               <div className="space-y-1 col-span-1">
                 <Label className="text-xs text-muted-foreground">Club</Label>
                 <Select value={scope.club_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "club_id", v)} disabled={!scope.association_id}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
                     {getClubsForAssociation(scope.association_id).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
@@ -687,7 +687,7 @@ const UsersManagement = () => {
               <div className="space-y-1 col-span-1">
                 <Label className="text-xs text-muted-foreground">Division</Label>
                 <Select value={scope.division_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "division_id", v)} disabled={!scope.club_id}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
                     {availableDivisions.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                   </SelectContent>
@@ -696,7 +696,7 @@ const UsersManagement = () => {
               <div className="space-y-1 col-span-1">
                 <Label className="text-xs text-muted-foreground">Team</Label>
                 <Select value={scope.team_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "team_id", v)} disabled={!scope.division_id}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
                     {teamsForDivision.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                   </SelectContent>
@@ -734,7 +734,7 @@ const UsersManagement = () => {
             <div className="space-y-1 col-span-1">
               <Label className="text-xs text-muted-foreground">Association</Label>
               <Select value={scope.association_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "association_id", v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   {associations.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                 </SelectContent>
@@ -743,7 +743,7 @@ const UsersManagement = () => {
             <div className="space-y-1 col-span-1">
               <Label className="text-xs text-muted-foreground">Club</Label>
               <Select value={scope.club_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "club_id", v)} disabled={!scope.association_id}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   {getClubsForAssociation(scope.association_id).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
@@ -781,7 +781,7 @@ const UsersManagement = () => {
             <div className="space-y-1 col-span-1">
               <Label className="text-xs text-muted-foreground">Association</Label>
               <Select value={scope.association_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "association_id", v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   {associations.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                 </SelectContent>
@@ -1190,7 +1190,7 @@ const UsersManagement = () => {
                           setAssignTeamId("");
                         }}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs overflow-hidden">
                           <SelectValue placeholder="Select association" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1215,7 +1215,7 @@ const UsersManagement = () => {
                         }}
                         disabled={!assignAssociationId}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs overflow-hidden">
                           <SelectValue placeholder="Select club" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1237,7 +1237,7 @@ const UsersManagement = () => {
                         }}
                         disabled={!assignClubId || assignDivisionOptions.length === 0}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs overflow-hidden">
                           <SelectValue placeholder="Select division" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1260,7 +1260,7 @@ const UsersManagement = () => {
                         onValueChange={setAssignTeamId}
                         disabled={!assignDivision}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs overflow-hidden">
                           <SelectValue placeholder="Select team" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1278,12 +1278,12 @@ const UsersManagement = () => {
                         value={assignMembershipType}
                         onValueChange={(v) => setAssignMembershipType(v as MembershipType)}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs overflow-hidden">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="PRIMARY">Primary</SelectItem>
-                          <SelectItem value="PERMANENT">Secondary (Permanent)</SelectItem>
+                          <SelectItem value="SECONDARY">Secondary</SelectItem>
                           <SelectItem value="FILL_IN">Fill-in</SelectItem>
                         </SelectContent>
                       </Select>
