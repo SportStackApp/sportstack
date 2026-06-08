@@ -57,7 +57,7 @@ const CompetitionsManagement = () => {
   const [formData, setFormData] = useState({
     name: "",
     association_id: "__none__",
-    season_id: "__none__",
+    year: new Date().getFullYear().toString(),
     is_active: true,
   });
   const [saving, setSaving] = useState(false);
@@ -111,18 +111,17 @@ const CompetitionsManagement = () => {
     ? associations
     : associations.filter((a) => scopedAssociationIds.includes(a.id));
 
-  // Filter seasons based on selected association in dialog
-  const dialogSeasons = seasons.filter(
-    (s) => s.association_id === formData.association_id
-  );
+
 
   const handleOpenDialog = (comp?: Competition) => {
     if (comp) {
       setEditingCompetition(comp);
+      const compSeason = seasons.find(s => s.id === comp.season_id);
+      const yearVal = compSeason?.year?.toString() || new Date().getFullYear().toString();
       setFormData({
         name: comp.name,
         association_id: comp.association_id || "__none__",
-        season_id: comp.season_id || "__none__",
+        year: yearVal,
         is_active: comp.is_active ?? true,
       });
     } else {
@@ -131,7 +130,7 @@ const CompetitionsManagement = () => {
       setFormData({
         name: "",
         association_id: defaultAssocId,
-        season_id: "__none__",
+        year: new Date().getFullYear().toString(),
         is_active: true,
       });
     }
@@ -147,16 +146,67 @@ const CompetitionsManagement = () => {
       toast({ title: "Error", description: "Association is required", variant: "destructive" });
       return;
     }
-    if (formData.season_id === "__none__") {
-      toast({ title: "Error", description: "Season is required", variant: "destructive" });
+
+    const yearNum = parseInt(formData.year, 10);
+    if (!formData.year || isNaN(yearNum) || yearNum < 2020 || yearNum > 2040 || formData.year.trim().length !== 4) {
+      toast({ title: "Error", description: "Please enter a valid year", variant: "destructive" });
       return;
     }
 
     setSaving(true);
+
+    let seasonId: string;
+    try {
+      const { data: existingSeasons, error: findError } = await supabase
+        .from("seasons")
+        .select("id")
+        .eq("association_id", formData.association_id)
+        .eq("year", yearNum);
+
+      if (findError) {
+        toast({ title: "Error", description: `Failed to search seasons: ${findError.message}`, variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
+      if (existingSeasons && existingSeasons.length > 0) {
+        seasonId = existingSeasons[0].id;
+      } else {
+        const { data: newSeason, error: insertError } = await supabase
+          .from("seasons")
+          .insert({
+            name: yearNum.toString(),
+            association_id: formData.association_id,
+            year: yearNum,
+            is_active: true
+          })
+          .select("id")
+          .single();
+
+        if (insertError) {
+          toast({ title: "Error", description: `Failed to create season: ${insertError.message}`, variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+
+        if (!newSeason) {
+          toast({ title: "Error", description: "No season returned after insertion", variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+
+        seasonId = newSeason.id;
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "An unexpected error occurred", variant: "destructive" });
+      setSaving(false);
+      return;
+    }
+
     const payload = {
       name: formData.name.trim(),
       association_id: formData.association_id,
-      season_id: formData.season_id,
+      season_id: seasonId,
       is_active: formData.is_active,
     };
 
@@ -243,20 +293,14 @@ const CompetitionsManagement = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Season *</Label>
-                  <Select
-                    value={formData.season_id}
-                    onValueChange={(v) => setFormData({ ...formData, season_id: v })}
-                    disabled={formData.association_id === "__none__"}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={formData.association_id === "__none__" ? "Select association first" : "Select season"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Select season</SelectItem>
-                      {dialogSeasons.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label>Year *</Label>
+                  <Input
+                    type="number"
+                    min="2020"
+                    max="2040"
+                    value={formData.year}
+                    onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Name *</Label>
@@ -326,7 +370,7 @@ const CompetitionsManagement = () => {
               <TableBody>
                 {filteredCompetitions.map((comp) => {
                   const assocName = associations.find((a) => a.id === comp.association_id)?.name || "-";
-                  const seasonName = seasons.find((s) => s.id === comp.season_id)?.name || "-";
+                  const seasonName = seasons.find((s) => s.id === comp.season_id)?.year?.toString() ?? "-";
                   return (
                     <TableRow key={comp.id}>
                       <TableCell className="font-medium">{comp.name}</TableCell>

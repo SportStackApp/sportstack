@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { Input } from "@/components/ui/input";
 
 const supabase = originalSupabase as any;
 
@@ -20,7 +21,7 @@ interface SystemClub { id: string; name: string; }
 interface SystemPitch { id: string; name: string; venueName: string; }
 
 // Scraped Data Interfaces
-interface ScrapedTeam { teamName: string; association: string; clubName: string; grade: string; key: string; }
+interface ScrapedTeam { teamName: string; clubName: string; grade: string; association: string; key: string; }
 interface ScrapedGrade { grade: string; association: string; key: string; }
 interface ScrapedClub { clubName: string; key: string; }
 interface ScrapedVenue { venueName: string; key: string; }
@@ -63,6 +64,19 @@ export default function RevSportsMappings() {
   const [teamFilters, setTeamFilters] = useState({ grades: [] as string[], clubs: [] as string[] });
   const [playerFilters, setPlayerFilters] = useState({ grades: [] as string[], teams: [] as string[] });
   const [gradeTabAssociationFilter, setGradeTabAssociationFilter] = useState("all");
+
+  const [searchTerms, setSearchTerms] = useState<Record<string, string>>({
+    teams: "", grades: "", clubs: "", venues: "", pitches: "", players: "", umpires: ""
+  });
+  const [showUnmappedOnly, setShowUnmappedOnly] = useState<Record<string, boolean>>({
+    teams: true, grades: true, clubs: true, venues: true, pitches: true, players: true, umpires: true
+  });
+  const [currentPage, setCurrentPage] = useState<Record<string, number>>({
+    teams: 1, grades: 1, clubs: 1, venues: 1, pitches: 1, players: 1, umpires: 1
+  });
+  const [rowsPerPage, setRowsPerPage] = useState<Record<string, number>>({
+    teams: 25, grades: 25, clubs: 25, venues: 25, pitches: 25, players: 25, umpires: 25
+  });
 
   const { toast } = useToast();
 
@@ -168,35 +182,28 @@ export default function RevSportsMappings() {
       const sUmpiresMap = new Map<string, ScrapedUmpire>();
 
       if (playersData) {
-        // First pass: tally club+grade combos per team name
-        const teamTally = new Map<string, Map<string, { clubName: string; grade: string; association: string; count: number }>>();
-
+        // Simple deduplication: key by team name, read club and grade from the same row
         playersData.forEach((row: any) => {
-          // Only use row.team for club/grade context — home_team/away_team rows have the wrong club_name
           const tName = row.team;
           if (!tName) return;
-          if (!teamTally.has(tName)) teamTally.set(tName, new Map());
-          const comboKey = `${row.club_name}|||${row.grade}`;
-          const tally = teamTally.get(tName)!;
-          if (tally.has(comboKey)) {
-            tally.get(comboKey)!.count++;
-          } else {
-            tally.set(comboKey, { clubName: row.club_name || "", grade: row.grade || "", association: row.association || "", count: 1 });
+          if (!sTeamsMap.has(tName)) {
+            sTeamsMap.set(tName, {
+              teamName: tName,
+              clubName: row.club_name || "",
+              grade: row.grade || "",
+              association: row.association || "",
+              key: tName
+            });
           }
         });
 
-        // Still need home_team/away_team in the map for display, but without club context
+        // Also ensure home_team and away_team appear in the list, even if they have no matching team rows
         playersData.forEach((row: any) => {
           [row.home_team, row.away_team].filter(Boolean).forEach((tName: string) => {
-            if (!teamTally.has(tName)) teamTally.set(tName, new Map());
+            if (!sTeamsMap.has(tName)) {
+              sTeamsMap.set(tName, { teamName: tName, clubName: "", grade: "", association: row.association || "", key: tName });
+            }
           });
-        });
-
-        // Second pass: pick the most common combo for each team name
-        teamTally.forEach((combos, tName) => {
-          let best = { clubName: "", grade: "", association: "", count: 0 };
-          combos.forEach(combo => { if (combo.count > best.count) best = combo; });
-          sTeamsMap.set(tName, { teamName: tName, clubName: best.clubName, grade: best.grade, association: best.association, key: tName });
         });
 
         playersData.forEach((row: any) => {
@@ -406,21 +413,141 @@ export default function RevSportsMappings() {
   if (loading) return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
 
   // Render Functions
+  const renderTabControls = (
+    tabKey: string,
+    searchValue: string,
+    onSearchChange: (val: string) => void,
+    unmappedOnly: boolean,
+    onToggleUnmapped: (val: boolean) => void,
+    totalRows: number,
+    filteredRows: number
+  ) => {
+    return (
+      <div className="flex flex-wrap items-center gap-4 justify-between mt-2 mb-4">
+        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-[300px]">
+          <Input
+            placeholder="Search..."
+            value={searchValue}
+            onChange={(e) => {
+              onSearchChange(e.target.value);
+              setCurrentPage((prev) => ({ ...prev, [tabKey]: 1 }));
+            }}
+            className="w-[200px]"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              onToggleUnmapped(!unmappedOnly);
+              setCurrentPage((prev) => ({ ...prev, [tabKey]: 1 }));
+            }}
+          >
+            {unmappedOnly ? "Unmapped only" : "Show all"}
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Showing {filteredRows} of {totalRows} rows
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
+          <Select
+            value={String(rowsPerPage[tabKey])}
+            onValueChange={(val) => {
+              setRowsPerPage((prev) => ({ ...prev, [tabKey]: Number(val) }));
+              setCurrentPage((prev) => ({ ...prev, [tabKey]: 1 }));
+            }}
+          >
+            <SelectTrigger className="w-[80px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPaginationFooter = (tabKey: string, totalFilteredRows: number) => {
+    const rPerPage = rowsPerPage[tabKey];
+    const totalPages = Math.ceil(totalFilteredRows / rPerPage);
+    if (totalPages <= 1) return null;
+
+    const current = currentPage[tabKey];
+
+    return (
+      <div className="flex items-center justify-between mt-4 py-4 border-t px-6">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={current === 1}
+          onClick={() => setCurrentPage((prev) => ({ ...prev, [tabKey]: Math.max(1, current - 1) }))}
+        >
+          Previous
+        </Button>
+        <span className="text-sm text-muted-foreground font-medium">
+          Page {current} of {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={current === totalPages}
+          onClick={() => setCurrentPage((prev) => ({ ...prev, [tabKey]: Math.min(totalPages, current + 1) }))}
+        >
+          Next
+        </Button>
+      </div>
+    );
+  };
+
   const renderTeamsTab = () => {
     const gradeOptions = Array.from(new Set(scrapedTeams.map(t => t.grade))).filter(Boolean).sort().map(g => ({ label: g, value: g }));
     const clubOptions = Array.from(new Set(scrapedTeams.map(t => t.clubName))).filter(Boolean).sort().map(c => ({ label: c, value: c }));
 
-    const filtered = scrapedTeams.filter(t => {
+    let filtered = scrapedTeams.filter(t => {
       if (teamFilters.grades.length > 0 && !teamFilters.grades.includes(t.grade)) return false;
       if (teamFilters.clubs.length > 0 && !teamFilters.clubs.includes(t.clubName)) return false;
       return true;
     });
 
+    const totalRows = filtered.length;
+
+    if (showUnmappedOnly["teams"]) {
+      filtered = filtered.filter(entry => {
+        const val = teamMappings[entry.key];
+        return val === "none" || val === "__none__" || !val;
+      });
+    }
+
+    if (searchTerms["teams"]) {
+      const searchLower = searchTerms["teams"].toLowerCase();
+      filtered = filtered.filter(entry => entry.teamName.toLowerCase().includes(searchLower));
+    }
+
+    const totalFilteredCount = filtered.length;
+
+    const startIdx = (currentPage["teams"] - 1) * rowsPerPage["teams"];
+    const paginated = filtered.slice(startIdx, startIdx + rowsPerPage["teams"]);
+
     return (
       <div className="space-y-4">
-        <div className="flex gap-4 flex-wrap">
-          <MultiSelect title="Grade" options={gradeOptions} selected={teamFilters.grades} onChange={(s) => setTeamFilters(p => ({ ...p, grades: s }))} className="w-[250px]" />
-          <MultiSelect title="Club (Scraped)" options={clubOptions} selected={teamFilters.clubs} onChange={(s) => setTeamFilters(p => ({ ...p, clubs: s }))} className="w-[250px]" />
+        <div className="space-y-2">
+          <div className="flex gap-4 flex-wrap">
+            <MultiSelect title="Grade" options={gradeOptions} selected={teamFilters.grades} onChange={(s) => { setTeamFilters(p => ({ ...p, grades: s })); setCurrentPage(prev => ({ ...prev, teams: 1 })); }} className="w-[250px]" />
+            <MultiSelect title="Club (Scraped)" options={clubOptions} selected={teamFilters.clubs} onChange={(s) => { setTeamFilters(p => ({ ...p, clubs: s })); setCurrentPage(prev => ({ ...prev, teams: 1 })); }} className="w-[250px]" />
+          </div>
+          {renderTabControls(
+            "teams",
+            searchTerms["teams"],
+            (val) => setSearchTerms(prev => ({ ...prev, teams: val })),
+            showUnmappedOnly["teams"],
+            (val) => setShowUnmappedOnly(prev => ({ ...prev, teams: val })),
+            totalRows,
+            totalFilteredCount
+          )}
         </div>
         <Card>
           <CardContent className="p-0">
@@ -435,7 +562,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map(entry => {
+                {paginated.map(entry => {
                   const currentValue = teamMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   return (
@@ -469,6 +596,7 @@ export default function RevSportsMappings() {
             </Table>
           </CardContent>
         </Card>
+        {renderPaginationFooter("teams", totalFilteredCount)}
       </div>
     );
   };
@@ -480,22 +608,52 @@ export default function RevSportsMappings() {
       ? systemDivisions
       : systemDivisions.filter(d => d.associationName === gradeTabAssociationFilter);
 
+    let filtered = scrapedGrades;
+    const totalRows = filtered.length;
+
+    if (showUnmappedOnly["grades"]) {
+      filtered = filtered.filter(entry => {
+        const val = gradeMappings[entry.key];
+        return val === "none" || val === "__none__" || !val;
+      });
+    }
+
+    if (searchTerms["grades"]) {
+      const searchLower = searchTerms["grades"].toLowerCase();
+      filtered = filtered.filter(entry => entry.grade.toLowerCase().includes(searchLower));
+    }
+
+    const totalFilteredCount = filtered.length;
+    const startIdx = (currentPage["grades"] - 1) * rowsPerPage["grades"];
+    const paginated = filtered.slice(startIdx, startIdx + rowsPerPage["grades"]);
+
     return (
       <div className="space-y-4">
-        <div className="flex gap-4 flex-wrap">
-          <div className="w-[250px]">
-            <Select value={gradeTabAssociationFilter} onValueChange={setGradeTabAssociationFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by Association" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Associations</SelectItem>
-                {associationOptions.map(a => (
-                  <SelectItem key={a} value={a}>{a}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="space-y-2">
+          <div className="flex gap-4 flex-wrap">
+            <div className="w-[250px]">
+              <Select value={gradeTabAssociationFilter} onValueChange={(val) => { setGradeTabAssociationFilter(val); setCurrentPage(prev => ({ ...prev, grades: 1 })); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by Association" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Associations</SelectItem>
+                  {associationOptions.map(a => (
+                    <SelectItem key={a} value={a}>{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+          {renderTabControls(
+            "grades",
+            searchTerms["grades"],
+            (val) => setSearchTerms(prev => ({ ...prev, grades: val })),
+            showUnmappedOnly["grades"],
+            (val) => setShowUnmappedOnly(prev => ({ ...prev, grades: val })),
+            totalRows,
+            totalFilteredCount
+          )}
         </div>
         <Card>
           <CardContent className="p-0">
@@ -510,7 +668,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {scrapedGrades.map(entry => {
+                {paginated.map(entry => {
                   const currentValue = gradeMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   
@@ -552,13 +710,42 @@ export default function RevSportsMappings() {
             </Table>
           </CardContent>
         </Card>
+        {renderPaginationFooter("grades", totalFilteredCount)}
       </div>
     );
   };
 
   const renderClubsTab = () => {
+    let filtered = scrapedClubs;
+    const totalRows = filtered.length;
+
+    if (showUnmappedOnly["clubs"]) {
+      filtered = filtered.filter(entry => {
+        const val = clubMappings[entry.key];
+        return val === "none" || val === "__none__" || !val;
+      });
+    }
+
+    if (searchTerms["clubs"]) {
+      const searchLower = searchTerms["clubs"].toLowerCase();
+      filtered = filtered.filter(entry => entry.clubName.toLowerCase().includes(searchLower));
+    }
+
+    const totalFilteredCount = filtered.length;
+    const startIdx = (currentPage["clubs"] - 1) * rowsPerPage["clubs"];
+    const paginated = filtered.slice(startIdx, startIdx + rowsPerPage["clubs"]);
+
     return (
       <div className="space-y-4">
+        {renderTabControls(
+          "clubs",
+          searchTerms["clubs"],
+          (val) => setSearchTerms(prev => ({ ...prev, clubs: val })),
+          showUnmappedOnly["clubs"],
+          (val) => setShowUnmappedOnly(prev => ({ ...prev, clubs: val })),
+          totalRows,
+          totalFilteredCount
+        )}
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -572,7 +759,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {scrapedClubs.map(entry => {
+                {paginated.map(entry => {
                   const currentValue = clubMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   return (
@@ -599,13 +786,42 @@ export default function RevSportsMappings() {
             </Table>
           </CardContent>
         </Card>
+        {renderPaginationFooter("clubs", totalFilteredCount)}
       </div>
     );
   };
 
   const renderVenuesTab = () => {
+    let filtered = scrapedVenues;
+    const totalRows = filtered.length;
+
+    if (showUnmappedOnly["venues"]) {
+      filtered = filtered.filter(entry => {
+        const val = venueMappings[entry.key];
+        return val === "none" || val === "__none__" || !val;
+      });
+    }
+
+    if (searchTerms["venues"]) {
+      const searchLower = searchTerms["venues"].toLowerCase();
+      filtered = filtered.filter(entry => entry.venueName.toLowerCase().includes(searchLower));
+    }
+
+    const totalFilteredCount = filtered.length;
+    const startIdx = (currentPage["venues"] - 1) * rowsPerPage["venues"];
+    const paginated = filtered.slice(startIdx, startIdx + rowsPerPage["venues"]);
+
     return (
       <div className="space-y-4">
+        {renderTabControls(
+          "venues",
+          searchTerms["venues"],
+          (val) => setSearchTerms(prev => ({ ...prev, venues: val })),
+          showUnmappedOnly["venues"],
+          (val) => setShowUnmappedOnly(prev => ({ ...prev, venues: val })),
+          totalRows,
+          totalFilteredCount
+        )}
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -619,7 +835,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {scrapedVenues.map(entry => {
+                {paginated.map(entry => {
                   const currentValue = venueMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   return (
@@ -646,13 +862,42 @@ export default function RevSportsMappings() {
             </Table>
           </CardContent>
         </Card>
+        {renderPaginationFooter("venues", totalFilteredCount)}
       </div>
     );
   };
 
   const renderPitchesTab = () => {
+    let filtered = scrapedPitches;
+    const totalRows = filtered.length;
+
+    if (showUnmappedOnly["pitches"]) {
+      filtered = filtered.filter(entry => {
+        const val = pitchMappings[entry.key];
+        return val === "none" || val === "__none__" || !val;
+      });
+    }
+
+    if (searchTerms["pitches"]) {
+      const searchLower = searchTerms["pitches"].toLowerCase();
+      filtered = filtered.filter(entry => entry.pitchName.toLowerCase().includes(searchLower));
+    }
+
+    const totalFilteredCount = filtered.length;
+    const startIdx = (currentPage["pitches"] - 1) * rowsPerPage["pitches"];
+    const paginated = filtered.slice(startIdx, startIdx + rowsPerPage["pitches"]);
+
     return (
       <div className="space-y-4">
+        {renderTabControls(
+          "pitches",
+          searchTerms["pitches"],
+          (val) => setSearchTerms(prev => ({ ...prev, pitches: val })),
+          showUnmappedOnly["pitches"],
+          (val) => setShowUnmappedOnly(prev => ({ ...prev, pitches: val })),
+          totalRows,
+          totalFilteredCount
+        )}
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -666,7 +911,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {scrapedPitches.map(entry => {
+                {paginated.map(entry => {
                   const currentValue = pitchMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   return (
@@ -698,6 +943,7 @@ export default function RevSportsMappings() {
             </Table>
           </CardContent>
         </Card>
+        {renderPaginationFooter("pitches", totalFilteredCount)}
       </div>
     );
   };
@@ -706,17 +952,46 @@ export default function RevSportsMappings() {
     const gradeOptions = Array.from(new Set(scrapedPlayers.map(p => p.grade))).filter(Boolean).sort().map(g => ({ label: g, value: g }));
     const teamOptions = Array.from(new Set(scrapedPlayers.map(p => p.team))).filter(Boolean).sort().map(t => ({ label: t, value: t }));
 
-    const filtered = scrapedPlayers.filter(p => {
+    let filtered = scrapedPlayers.filter(p => {
       if (playerFilters.grades.length > 0 && !playerFilters.grades.includes(p.grade)) return false;
       if (playerFilters.teams.length > 0 && !playerFilters.teams.includes(p.team)) return false;
       return true;
     });
 
+    const totalRows = filtered.length;
+
+    if (showUnmappedOnly["players"]) {
+      filtered = filtered.filter(entry => {
+        const val = playerMappings[entry.key];
+        return val === "none" || val === "__none__" || !val;
+      });
+    }
+
+    if (searchTerms["players"]) {
+      const searchLower = searchTerms["players"].toLowerCase();
+      filtered = filtered.filter(entry => entry.playerName.toLowerCase().includes(searchLower));
+    }
+
+    const totalFilteredCount = filtered.length;
+    const startIdx = (currentPage["players"] - 1) * rowsPerPage["players"];
+    const paginated = filtered.slice(startIdx, startIdx + rowsPerPage["players"]);
+
     return (
       <div className="space-y-4">
-        <div className="flex gap-4 flex-wrap">
-          <MultiSelect title="Grade" options={gradeOptions} selected={playerFilters.grades} onChange={(s) => setPlayerFilters(p => ({ ...p, grades: s }))} className="w-[250px]" />
-          <MultiSelect title="Team" options={teamOptions} selected={playerFilters.teams} onChange={(s) => setPlayerFilters(p => ({ ...p, teams: s }))} className="w-[250px]" />
+        <div className="space-y-2">
+          <div className="flex gap-4 flex-wrap">
+            <MultiSelect title="Grade" options={gradeOptions} selected={playerFilters.grades} onChange={(s) => { setPlayerFilters(p => ({ ...p, grades: s })); setCurrentPage(prev => ({ ...prev, players: 1 })); }} className="w-[250px]" />
+            <MultiSelect title="Team" options={teamOptions} selected={playerFilters.teams} onChange={(s) => { setPlayerFilters(p => ({ ...p, teams: s })); setCurrentPage(prev => ({ ...prev, players: 1 })); }} className="w-[250px]" />
+          </div>
+          {renderTabControls(
+            "players",
+            searchTerms["players"],
+            (val) => setSearchTerms(prev => ({ ...prev, players: val })),
+            showUnmappedOnly["players"],
+            (val) => setShowUnmappedOnly(prev => ({ ...prev, players: val })),
+            totalRows,
+            totalFilteredCount
+          )}
         </div>
         <Card>
           <CardContent className="p-0">
@@ -731,7 +1006,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map(entry => {
+                {paginated.map(entry => {
                   const currentValue = playerMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   return (
@@ -767,13 +1042,42 @@ export default function RevSportsMappings() {
             </Table>
           </CardContent>
         </Card>
+        {renderPaginationFooter("players", totalFilteredCount)}
       </div>
     );
   };
 
   const renderUmpiresTab = () => {
+    let filtered = scrapedUmpires;
+    const totalRows = filtered.length;
+
+    if (showUnmappedOnly["umpires"]) {
+      filtered = filtered.filter(entry => {
+        const val = umpireMappings[entry.key];
+        return val === "none" || val === "__none__" || !val;
+      });
+    }
+
+    if (searchTerms["umpires"]) {
+      const searchLower = searchTerms["umpires"].toLowerCase();
+      filtered = filtered.filter(entry => entry.umpireName.toLowerCase().includes(searchLower));
+    }
+
+    const totalFilteredCount = filtered.length;
+    const startIdx = (currentPage["umpires"] - 1) * rowsPerPage["umpires"];
+    const paginated = filtered.slice(startIdx, startIdx + rowsPerPage["umpires"]);
+
     return (
       <div className="space-y-4">
+        {renderTabControls(
+          "umpires",
+          searchTerms["umpires"],
+          (val) => setSearchTerms(prev => ({ ...prev, umpires: val })),
+          showUnmappedOnly["umpires"],
+          (val) => setShowUnmappedOnly(prev => ({ ...prev, umpires: val })),
+          totalRows,
+          totalFilteredCount
+        )}
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -787,7 +1091,7 @@ export default function RevSportsMappings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {scrapedUmpires.map(entry => {
+                {paginated.map(entry => {
                   const currentValue = umpireMappings[entry.key];
                   const isMapped = currentValue && currentValue !== "__none__";
                   return (
@@ -816,6 +1120,7 @@ export default function RevSportsMappings() {
             </Table>
           </CardContent>
         </Card>
+        {renderPaginationFooter("umpires", totalFilteredCount)}
       </div>
     );
   };
