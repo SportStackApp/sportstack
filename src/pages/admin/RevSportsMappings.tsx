@@ -21,7 +21,7 @@ interface SystemClub { id: string; name: string; }
 interface SystemPitch { id: string; name: string; venueName: string; }
 
 // Scraped Data Interfaces
-interface ScrapedTeam { teamName: string; association: string; clubName: string; grade: string; key: string; }
+interface ScrapedTeam { teamName: string; clubName: string; grade: string; association: string; key: string; }
 interface ScrapedGrade { grade: string; association: string; key: string; }
 interface ScrapedClub { clubName: string; key: string; }
 interface ScrapedVenue { venueName: string; key: string; }
@@ -183,35 +183,28 @@ export default function RevSportsMappings() {
       const sUmpiresMap = new Map<string, ScrapedUmpire>();
 
       if (playersData) {
-        // First pass: tally club+grade combos per team name
-        const teamTally = new Map<string, Map<string, { clubName: string; grade: string; association: string; count: number }>>();
-
+        // Simple deduplication: key by team name, read club and grade from the same row
         playersData.forEach((row: any) => {
-          // Only use row.team for club/grade context — home_team/away_team rows have the wrong club_name
           const tName = row.team;
           if (!tName) return;
-          if (!teamTally.has(tName)) teamTally.set(tName, new Map());
-          const comboKey = `${row.club_name}|||${row.grade}`;
-          const tally = teamTally.get(tName)!;
-          if (tally.has(comboKey)) {
-            tally.get(comboKey)!.count++;
-          } else {
-            tally.set(comboKey, { clubName: row.club_name || "", grade: row.grade || "", association: row.association || "", count: 1 });
+          if (!sTeamsMap.has(tName)) {
+            sTeamsMap.set(tName, {
+              teamName: tName,
+              clubName: row.club_name || "",
+              grade: row.grade || "",
+              association: row.association || "",
+              key: tName
+            });
           }
         });
 
-        // Still need home_team/away_team in the map for display, but without club context
+        // Also ensure home_team and away_team appear in the list, even if they have no matching team rows
         playersData.forEach((row: any) => {
           [row.home_team, row.away_team].filter(Boolean).forEach((tName: string) => {
-            if (!teamTally.has(tName)) teamTally.set(tName, new Map());
+            if (!sTeamsMap.has(tName)) {
+              sTeamsMap.set(tName, { teamName: tName, clubName: "", grade: "", association: row.association || "", key: tName });
+            }
           });
-        });
-
-        // Second pass: pick the most common combo for each team name
-        teamTally.forEach((combos, tName) => {
-          let best = { clubName: "", grade: "", association: "", count: 0 };
-          combos.forEach(combo => { if (combo.count > best.count) best = combo; });
-          sTeamsMap.set(tName, { teamName: tName, clubName: best.clubName, grade: best.grade, association: best.association, key: tName });
         });
 
         playersData.forEach((row: any) => {
@@ -460,9 +453,8 @@ export default function RevSportsMappings() {
               setCurrentPage((prev) => ({ ...prev, [tabKey]: 1 }));
             }}
           >
-            {unmappedOnly ? "Show all" : "Unmapped only"}
+            {unmappedOnly ? "Unmapped only" : "Show all"}
           </Button>
-
           <span className="text-sm text-muted-foreground">
             Showing {filteredRows} of {totalRows} rows
           </span>
@@ -652,7 +644,7 @@ export default function RevSportsMappings() {
           <div className="flex gap-4 flex-wrap">
             <div className="w-[250px]">
               <Select value={gradeTabAssociationFilter} onValueChange={(val) => { setGradeTabAssociationFilter(val); setCurrentPage(prev => ({ ...prev, grades: 1 })); }}>
-                <SelectTrigger className="w-full min-w-0 overflow-hidden">
+                <SelectTrigger>
                   <SelectValue placeholder="Filter by Association" />
                 </SelectTrigger>
                 <SelectContent>
