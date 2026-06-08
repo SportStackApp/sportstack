@@ -77,6 +77,8 @@ const DivisionsManagement = () => {
     competition_id: "__none__",
     gender: "__none__",
     age_group: "",
+    min_age: "",
+    max_age: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -149,6 +151,8 @@ const DivisionsManagement = () => {
         competition_id: div.competition_id || "__none__",
         gender: div.gender || "__none__",
         age_group: div.age_group || "",
+        min_age: div.min_age !== null && div.min_age !== undefined ? div.min_age.toString() : "",
+        max_age: div.max_age !== null && div.max_age !== undefined ? div.max_age.toString() : "",
       });
     } else {
       setEditingDivision(null);
@@ -159,6 +163,8 @@ const DivisionsManagement = () => {
         competition_id: "__none__",
         gender: "__none__",
         age_group: "",
+        min_age: "",
+        max_age: "",
       });
     }
     setDialogOpen(true);
@@ -190,6 +196,8 @@ const DivisionsManagement = () => {
       season_id: seasonId,
       gender: formData.gender === "__none__" ? null : formData.gender,
       age_group: formData.age_group.trim() || null,
+      min_age: formData.min_age.trim() !== "" ? parseInt(formData.min_age, 10) : null,
+      max_age: formData.max_age.trim() !== "" ? parseInt(formData.max_age, 10) : null,
     };
 
     if (editingDivision) {
@@ -308,20 +316,62 @@ const DivisionsManagement = () => {
                     <SelectContent>
                       <SelectItem value="__none__">— None —</SelectItem>
                       <SelectItem value="Open">Open</SelectItem>
-                      <SelectItem value="Women">Women</SelectItem>
-                      <SelectItem value="Men">Men</SelectItem>
-                      <SelectItem value="Mixed">Mixed</SelectItem>
+                      <SelectItem value="Womens">Women's</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Age Group</Label>
-                  <Input
-                    value={formData.age_group}
-                    onChange={(e) => setFormData({ ...formData, age_group: e.target.value })}
-                    placeholder="e.g., Under 16"
-                  />
+                  <Select
+                    value={formData.age_group || "none"}
+                    onValueChange={(v) => {
+                      const val = v === "none" ? "" : v;
+                      setFormData({ ...formData, age_group: val, min_age: "", max_age: "" });
+                    }}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— None —</SelectItem>
+                      <SelectItem value="Juniors">Juniors</SelectItem>
+                      <SelectItem value="Seniors">Seniors</SelectItem>
+                      <SelectItem value="Masters">Masters</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                {(formData.age_group === "Juniors" || formData.age_group === "Masters") && (
+                  <div className="grid grid-cols-2 gap-4">
+                    {formData.age_group === "Juniors" && (
+                      <div className="space-y-2 col-span-2 sm:col-span-1">
+                        <Label>Max Age</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Age on 31 Dec of competition year. Players must be this age or younger.
+                        </p>
+                        <Input
+                          type="number"
+                          min={5}
+                          max={21}
+                          value={formData.max_age}
+                          onChange={(e) => setFormData({ ...formData, max_age: e.target.value })}
+                        />
+                      </div>
+                    )}
+                    {formData.age_group === "Masters" && (
+                      <div className="space-y-2 col-span-2 sm:col-span-1">
+                        <Label>Min Age</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Age on 31 Dec of competition year. Players must have reached this age.
+                        </p>
+                        <Input
+                          type="number"
+                          min={25}
+                          max={80}
+                          value={formData.min_age}
+                          onChange={(e) => setFormData({ ...formData, min_age: e.target.value })}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
@@ -406,8 +456,10 @@ const DivisionsManagement = () => {
                       <TableCell className="font-medium">{div.name}</TableCell>
                       <TableCell>{compName}</TableCell>
                       <TableCell>{assocName}</TableCell>
-                      <TableCell>{div.gender || "-"}</TableCell>
-                      <TableCell>{div.age_group || "-"}</TableCell>
+                      <TableCell>{div.gender === "Womens" ? "Women's" : (div.gender || "-")}</TableCell>
+                      <TableCell>
+                        {div.age_group ? div.age_group + (div.max_age ? " (U" + div.max_age + ")" : "") + (div.min_age ? " (" + div.min_age + "+)" : "") : "-"}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(div)}>
                           <Pencil className="h-4 w-4" />
