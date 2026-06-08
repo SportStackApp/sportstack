@@ -818,8 +818,7 @@ export type Database = {
         | "ASSOCIATION_ADMIN"
         | "SUPER_ADMIN"
         | "VOTER"
-        | "UMPIRE"
-      membership_status: "ACTIVE" | "INACTIVE" | "PENDING" | "INVITED" | "CANCELLED" | "DECLINED"
+      membership_status: "ACTIVE" | "INACTIVE" | "PENDING" | "INVITED" | "CANCELLED"
       membership_type: "PRIMARY" | "SECONDARY" | "FILL_IN"
     }
     CompositeTypes: {
@@ -958,7 +957,7 @@ export const Constants = {
         "VOTER",
         "UMPIRE",
       ],
-      membership_status: ["ACTIVE", "INACTIVE", "PENDING", "INVITED", "CANCELLED", "DECLINED"],
+      membership_status: ["ACTIVE", "INACTIVE", "PENDING", "INVITED", "CANCELLED"],
       membership_type: ["PRIMARY", "SECONDARY", "FILL_IN"],
     },
   },
