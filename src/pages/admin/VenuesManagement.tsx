@@ -33,12 +33,14 @@ type Association = Database["public"]["Tables"]["associations"]["Row"];
 
 interface VenueWithMeta extends Venue {
   pitchCount: number;
-  associationName: string | null;
+  associationIds: string[];
 }
 
 const EMPTY_FORM = {
   name: "", address: "", suburb: "", state: "", postcode: "",
-  phone: "", email: "", association_id: "", available_times: "", notes: "",
+  phone: "", email: "", selectedAssociationIds: [] as string[],
+  associationPitchRestrictions: {} as Record<string, string[]>,
+  available_times: "", notes: "",
 };
 
 const VenuesManagement = () => {
@@ -54,6 +56,9 @@ const VenuesManagement = () => {
 
   const [venues, setVenues] = useState<VenueWithMeta[]>([]);
   const [associations, setAssociations] = useState<Association[]>([]);
+  const [venueAssociations, setVenueAssociations] = useState<{ id: string; venue_id: string; association_id: string; allowed_pitch_ids?: string[] | null }[]>([]);
+  const [venuePitches, setVenuePitches] = useState<{ id: string; venue_id: string; name: string }[]>([]);
+  const [pitchesLoadingForDialog, setPitchesLoadingForDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filterAssociation, setFilterAssociation] = useState<string>("all");
 
@@ -82,14 +87,18 @@ const VenuesManagement = () => {
 
   const fetchVenues = async () => {
     setLoading(true);
-    const [venuesRes, pitchesRes, assocRes] = await Promise.all([
+    const [venuesRes, pitchesRes, assocRes, vaRes] = await Promise.all([
       supabase.from("venues").select("*").order("name"),
       supabase.from("pitches").select("venue_id"),
       supabase.from("associations").select("*").order("name"),
+      supabase.from("venue_associations").select("id, venue_id, association_id, allowed_pitch_ids"),
     ]);
 
     const allAssoc = assocRes.data || [];
     setAssociations(allAssoc);
+
+    const vaData = vaRes.data || [];
+    setVenueAssociations(vaData);
 
     const pitchCounts: Record<string, number> = {};
     (pitchesRes.data || []).forEach((p) => {
@@ -100,7 +109,7 @@ const VenuesManagement = () => {
     // Scope for ASSOCIATION_ADMIN
     if (!isSuperAdmin && scopedAssociationIds.length > 0) {
       venuesList = venuesList.filter(
-        (v) => v.association_id && scopedAssociationIds.includes(v.association_id)
+        (v) => (vaData || []).some((va: any) => va.venue_id === v.id && scopedAssociationIds.includes(va.association_id))
       );
     }
 
@@ -108,9 +117,7 @@ const VenuesManagement = () => {
       venuesList.map((v) => ({
         ...v,
         pitchCount: pitchCounts[v.id] || 0,
-        associationName: v.association_id
-          ? allAssoc.find((a) => a.id === v.association_id)?.name || null
-          : null,
+        associationIds: (vaData || []).filter((va: any) => va.venue_id === v.id).map((va: any) => va.association_id),
       }))
     );
     setLoading(false);
@@ -126,9 +133,23 @@ const VenuesManagement = () => {
     : associations.filter((a) => scopedAssociationIds.includes(a.id));
 
   // --- Dialog handlers ---
-  const handleOpenDialog = (venue?: Venue) => {
+  const handleOpenDialog = async (venue?: Venue) => {
     if (venue) {
       setEditingVenue(venue);
+      const mappedAssocIds = venueAssociations
+        .filter((va) => va.venue_id === venue.id)
+        .map((va) => va.association_id);
+
+      const restrictions: Record<string, string[]> = {};
+      mappedAssocIds.forEach((assocId) => {
+        const row = venueAssociations.find(
+          (va) => va.venue_id === venue.id && va.association_id === assocId
+        );
+        restrictions[assocId] = (row?.allowed_pitch_ids && row.allowed_pitch_ids.length > 0)
+          ? row.allowed_pitch_ids
+          : [];
+      });
+
       setFormData({
         name: venue.name,
         address: venue.address || "",
@@ -137,14 +158,27 @@ const VenuesManagement = () => {
         postcode: venue.postcode || "",
         phone: venue.phone || "",
         email: venue.email || "",
-        association_id: venue.association_id || "",
+        selectedAssociationIds: mappedAssocIds,
+        associationPitchRestrictions: restrictions,
         available_times: venue.available_times || "",
         notes: venue.notes || "",
       });
+
+      setPitchesLoadingForDialog(true);
+      const { data } = await supabase
+        .from("pitches")
+        .select("id, venue_id, name")
+        .eq("venue_id", venue.id);
+      setVenuePitches(data || []);
+      setPitchesLoadingForDialog(false);
     } else {
       setEditingVenue(null);
-      const defaultAssoc = formAssociations.length === 1 ? formAssociations[0].id : "";
-      setFormData({ ...EMPTY_FORM, association_id: defaultAssoc });
+      setFormData({
+        ...EMPTY_FORM,
+        selectedAssociationIds: [],
+        associationPitchRestrictions: {},
+      });
+      setVenuePitches([]);
     }
     setDialogOpen(true);
   };
@@ -163,19 +197,66 @@ const VenuesManagement = () => {
       postcode: formData.postcode.trim() || null,
       phone: formData.phone.trim() || null,
       email: formData.email.trim() || null,
-      association_id: formData.association_id || null,
       available_times: formData.available_times.trim() || null,
       notes: formData.notes.trim() || null,
     };
 
+    let venueId = "";
+    let saveSuccess = false;
+
     if (editingVenue) {
       const { error } = await supabase.from("venues").update(payload).eq("id", editingVenue.id);
-      if (error) toast({ title: "Error", description: "Failed to update venue", variant: "destructive" });
-      else { toast({ title: "Success", description: "Venue updated" }); setDialogOpen(false); fetchVenues(); }
+      if (error) {
+        toast({ title: "Error", description: "Failed to update venue", variant: "destructive" });
+      } else {
+        venueId = editingVenue.id;
+        saveSuccess = true;
+      }
     } else {
-      const { error } = await supabase.from("venues").insert(payload);
-      if (error) toast({ title: "Error", description: "Failed to create venue", variant: "destructive" });
-      else { toast({ title: "Success", description: "Venue created" }); setDialogOpen(false); fetchVenues(); }
+      const { data, error } = await supabase.from("venues").insert(payload).select("id").single();
+      if (error) {
+        toast({ title: "Error", description: "Failed to create venue", variant: "destructive" });
+      } else if (data) {
+        venueId = data.id;
+        saveSuccess = true;
+      }
+    }
+
+    if (saveSuccess) {
+      try {
+        const { error: deleteError } = await supabase
+          .from("venue_associations")
+          .delete()
+          .eq("venue_id", venueId);
+
+        if (deleteError) {
+          toast({ title: "Error", description: "Failed to clear old association links", variant: "destructive" });
+        }
+
+        if (formData.selectedAssociationIds.length > 0) {
+          const rowsToInsert = formData.selectedAssociationIds.map(assocId => {
+            const restrictions = formData.associationPitchRestrictions[assocId] || [];
+            return {
+              venue_id: venueId,
+              association_id: assocId,
+              allowed_pitch_ids: restrictions.length > 0 ? restrictions : null
+            };
+          });
+          const { error: insertError } = await supabase
+            .from("venue_associations")
+            .insert(rowsToInsert);
+
+          if (insertError) {
+            toast({ title: "Error", description: "Failed to link new associations", variant: "destructive" });
+          }
+        }
+      } catch (err) {
+        console.error("Junction save error:", err);
+      }
+
+      toast({ title: "Success", description: editingVenue ? "Venue updated" : "Venue created" });
+      setDialogOpen(false);
+      fetchVenues();
     }
     setSaving(false);
   };
@@ -305,7 +386,7 @@ const VenuesManagement = () => {
       {/* Table */}
       {loading ? (
         <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
-      ) : (venues.filter(v => filterAssociation === "all" || v.association_id === filterAssociation)).length === 0 ? (
+      ) : (venues.filter(v => filterAssociation === "all" || v.associationIds.includes(filterAssociation))).length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">No venues found.</div>
       ) : (
         <div className="rounded-md border">
@@ -320,7 +401,7 @@ const VenuesManagement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(venues.filter(v => filterAssociation === "all" || v.association_id === filterAssociation)).map((venue) => (
+              {(venues.filter(v => filterAssociation === "all" || v.associationIds.includes(filterAssociation))).map((venue) => (
                 <Collapsible key={venue.id} open={expandedVenueId === venue.id} asChild>
                   <>
                     <TableRow>
@@ -331,7 +412,16 @@ const VenuesManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell>{venue.suburb || "-"}</TableCell>
-                      <TableCell>{venue.associationName || "-"}</TableCell>
+                      <TableCell>
+                        {venue.associationIds && venue.associationIds.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {venue.associationIds.map(assocId => {
+                              const name = associations.find(a => a.id === assocId)?.name || "Unknown";
+                              return <Badge key={assocId} variant="secondary">{name}</Badge>;
+                            })}
+                          </div>
+                        ) : "-"}
+                      </TableCell>
                       <TableCell>
                         <CollapsibleTrigger asChild>
                           <Button variant="ghost" size="sm" onClick={() => togglePitches(venue.id)}>
@@ -462,14 +552,88 @@ const VenuesManagement = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Association</Label>
-              <Select value={formData.association_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, association_id: v === "__none__" ? "" : v })}>
-                <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
-                  {formAssociations.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>Associations</Label>
+              <div className="space-y-3 border rounded-md p-3 max-h-[300px] overflow-y-auto">
+                {formAssociations.map((assoc) => {
+                  const isChecked = formData.selectedAssociationIds.includes(assoc.id);
+                  return (
+                    <div key={assoc.id} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`assoc-${assoc.id}`}
+                          checked={isChecked}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            const updatedIds = checked
+                              ? [...formData.selectedAssociationIds, assoc.id]
+                              : formData.selectedAssociationIds.filter((id) => id !== assoc.id);
+                            
+                            const updatedRestrictions = { ...formData.associationPitchRestrictions };
+                            if (!checked) {
+                              updatedRestrictions[assoc.id] = [];
+                            }
+                            
+                            setFormData({
+                              ...formData,
+                              selectedAssociationIds: updatedIds,
+                              associationPitchRestrictions: updatedRestrictions
+                            });
+                          }}
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <Label htmlFor={`assoc-${assoc.id}`} className="font-normal cursor-pointer">
+                          {assoc.name}
+                        </Label>
+                      </div>
+
+                      {isChecked && venuePitches.length > 0 && (
+                        <div className="pl-6 space-y-1.5">
+                          <div className="text-[12px] text-muted-foreground">
+                            Allowed pitches (leave all unticked for no restriction)
+                          </div>
+                          {pitchesLoadingForDialog ? (
+                            <Skeleton className="h-5 w-24" />
+                          ) : (
+                            <div className="space-y-1">
+                              {venuePitches.map((pitch) => {
+                                const isPitchChecked = formData.associationPitchRestrictions[assoc.id]?.includes(pitch.id) || false;
+                                return (
+                                  <div key={pitch.id} className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      id={`pitch-${assoc.id}-${pitch.id}`}
+                                      checked={isPitchChecked}
+                                      onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        const currentPitches = formData.associationPitchRestrictions[assoc.id] || [];
+                                        const updatedPitches = checked
+                                          ? [...currentPitches, pitch.id]
+                                          : currentPitches.filter((id) => id !== pitch.id);
+                                        setFormData({
+                                          ...formData,
+                                          associationPitchRestrictions: {
+                                            ...formData.associationPitchRestrictions,
+                                            [assoc.id]: updatedPitches,
+                                          }
+                                        });
+                                      }}
+                                      className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                                    />
+                                    <Label htmlFor={`pitch-${assoc.id}-${pitch.id}`} className="text-xs font-normal cursor-pointer">
+                                      {pitch.name}
+                                    </Label>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Available Times</Label>
