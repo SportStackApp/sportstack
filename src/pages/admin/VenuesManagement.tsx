@@ -97,7 +97,7 @@ const VenuesManagement = () => {
       supabase.from("venues").select("*").order("name"),
       supabase.from("pitches").select("venue_id"),
       supabase.from("associations").select("*").order("name"),
-      supabase.from("venue_associations").select("id, venue_id, association_id, allowed_pitch_ids"),
+      supabase.from("venue_associations" as any).select("id, venue_id, association_id, allowed_pitch_ids"),
     ]);
 
     const allAssoc = assocRes.data || [];
@@ -240,7 +240,7 @@ const VenuesManagement = () => {
     if (saveSuccess) {
       try {
         const { error: deleteError } = await supabase
-          .from("venue_associations")
+          .from("venue_associations" as any)
           .delete()
           .eq("venue_id", venueId);
 
@@ -258,7 +258,7 @@ const VenuesManagement = () => {
             };
           });
           const { error: insertError } = await supabase
-            .from("venue_associations")
+            .from("venue_associations" as any)
             .insert(rowsToInsert);
 
           if (insertError) {
@@ -401,22 +401,42 @@ const VenuesManagement = () => {
       {/* Table */}
       {loading ? (
         <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
-      ) : (venues.filter(v => filterAssociation === "all" || v.associationIds.includes(filterAssociation))).length === 0 ? (
+      ) : filteredVenues.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">No venues found.</div>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Suburb</TableHead>
-                <TableHead>Association</TableHead>
-                <TableHead>Pitches</TableHead>
-                {canEdit && <TableHead className="text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(venues.filter(v => filterAssociation === "all" || v.associationIds.includes(filterAssociation))).map((venue) => (
+        <div className="space-y-4">
+          <div className="flex justify-end gap-2 items-center">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
+            <Select
+              value={String(rowsPerPage)}
+              onValueChange={(val) => {
+                setRowsPerPage(Number(val));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Suburb</TableHead>
+                  <TableHead>Association</TableHead>
+                  <TableHead>Pitches</TableHead>
+                  {canEdit && <TableHead className="text-right">Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedVenues.map((venue) => (
                 <Collapsible key={venue.id} open={expandedVenueId === venue.id} asChild>
                   <>
                     <TableRow>

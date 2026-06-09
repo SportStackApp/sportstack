@@ -141,7 +141,7 @@ export default function Requests() {
       const { error: insertError } = await supabase.from("team_memberships").insert({
         user_id: request.target_user_id,
         team_id: request.team_id,
-        membership_type: request.membership_type as any,
+        membership_type: request.membership_type as Database["public"]["Enums"]["membership_type"],
         status: "ACTIVE",
       });
 
