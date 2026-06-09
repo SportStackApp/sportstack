@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,12 @@ const CompetitionsManagement = () => {
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterAssociation, setFilterAssociation] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterAssociation]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCompetition, setEditingCompetition] = useState<Competition | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -72,7 +78,7 @@ const CompetitionsManagement = () => {
     setLoading(true);
 
     const [competitionsRes, associationsRes, seasonsRes] = await Promise.all([
-      supabase.from("competitions").select("*").order("name"),
+      supabase.from("competitions" as any).select("*").order("name"),
       supabase.from("associations").select("*").order("name"),
       supabase.from("seasons").select("*").order("name"),
     ]);
@@ -103,6 +109,11 @@ const CompetitionsManagement = () => {
     }
     return true;
   });
+
+  const paginatedCompetitions = useMemo(() => {
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    return filteredCompetitions.slice(startIdx, startIdx + rowsPerPage);
+  }, [filteredCompetitions, currentPage, rowsPerPage]);
 
   const canAdd = isSuperAdmin || scopedAssociationIds.length > 0;
   const canDelete = isSuperAdmin || scopedAssociationIds.length > 0;
@@ -212,7 +223,7 @@ const CompetitionsManagement = () => {
 
     if (editingCompetition) {
       const { error } = await supabase
-        .from("competitions")
+        .from("competitions" as any)
         .update(payload)
         .eq("id", editingCompetition.id);
 
@@ -225,7 +236,7 @@ const CompetitionsManagement = () => {
       }
     } else {
       const { error } = await supabase
-        .from("competitions")
+        .from("competitions" as any)
         .insert(payload);
 
       if (error) {
@@ -242,7 +253,7 @@ const CompetitionsManagement = () => {
   const handleDelete = async () => {
     if (!deletingCompetition) return;
     const { error } = await supabase
-      .from("competitions")
+      .from("competitions" as any)
       .delete()
       .eq("id", deletingCompetition.id);
 
@@ -283,7 +294,7 @@ const CompetitionsManagement = () => {
                   <Label>Association *</Label>
                   <Select
                     value={formData.association_id}
-                    onValueChange={(v) => setFormData({ ...formData, association_id: v, season_id: "__none__" })}
+                    onValueChange={(v) => setFormData({ ...formData, association_id: v })}
                   >
                     <SelectTrigger><SelectValue placeholder="Select association" /></SelectTrigger>
                     <SelectContent>
@@ -347,9 +358,30 @@ const CompetitionsManagement = () => {
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5" />Competitions</CardTitle>
-          <CardDescription>{filteredCompetitions.length} competition(s)</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5" />Competitions</CardTitle>
+            <CardDescription>{filteredCompetitions.length} competition(s)</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
+            <Select
+              value={String(rowsPerPage)}
+              onValueChange={(val) => {
+                setRowsPerPage(Number(val));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -357,6 +389,7 @@ const CompetitionsManagement = () => {
           ) : filteredCompetitions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No competitions found.</div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -368,7 +401,7 @@ const CompetitionsManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCompetitions.map((comp) => {
+                {paginatedCompetitions.map((comp) => {
                   const assocName = associations.find((a) => a.id === comp.association_id)?.name || "-";
                   const seasonName = seasons.find((s) => s.id === comp.season_id)?.year?.toString() ?? "-";
                   return (
@@ -396,6 +429,34 @@ const CompetitionsManagement = () => {
                 })}
               </TableBody>
             </Table>
+            {(() => {
+              const totalPages = Math.ceil(filteredCompetitions.length / rowsPerPage);
+              if (totalPages <= 1) return null;
+              return (
+                <div className="flex items-center justify-between mt-4 py-4 border-t px-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground font-medium">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              );
+            })()}
+            </>
           )}
         </CardContent>
       </Card>

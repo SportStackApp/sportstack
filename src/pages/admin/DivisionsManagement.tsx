@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,12 @@ const DivisionsManagement = () => {
   // Filters
   const [filterAssociation, setFilterAssociation] = useState<string>("all");
   const [filterCompetition, setFilterCompetition] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterAssociation, filterCompetition]);
 
   // Dialog State
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -92,9 +98,9 @@ const DivisionsManagement = () => {
     setLoading(true);
 
     const [divisionsRes, associationsRes, competitionsRes] = await Promise.all([
-      supabase.from("divisions").select("*").order("name"),
+      supabase.from("divisions" as any).select("*").order("name"),
       supabase.from("associations").select("*").order("name"),
-      supabase.from("competitions").select("*").order("name"),
+      supabase.from("competitions" as any).select("*").order("name"),
     ]);
 
     if (divisionsRes.error) {
@@ -141,6 +147,11 @@ const DivisionsManagement = () => {
     }
     return true;
   });
+
+  const paginatedDivisions = useMemo(() => {
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    return filteredDivisions.slice(startIdx, startIdx + rowsPerPage);
+  }, [filteredDivisions, currentPage, rowsPerPage]);
 
   const handleOpenDialog = (div?: Division) => {
     if (div) {
@@ -202,7 +213,7 @@ const DivisionsManagement = () => {
 
     if (editingDivision) {
       const { error } = await supabase
-        .from("divisions")
+        .from("divisions" as any)
         .update(payload)
         .eq("id", editingDivision.id);
 
@@ -215,7 +226,7 @@ const DivisionsManagement = () => {
       }
     } else {
       const { error } = await supabase
-        .from("divisions")
+        .from("divisions" as any)
         .insert(payload);
 
       if (error) {
@@ -232,7 +243,7 @@ const DivisionsManagement = () => {
   const handleDelete = async () => {
     if (!deletingDivision) return;
     const { error } = await supabase
-      .from("divisions")
+      .from("divisions" as any)
       .delete()
       .eq("id", deletingDivision.id);
 
@@ -426,9 +437,30 @@ const DivisionsManagement = () => {
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><LayoutGrid className="h-5 w-5" />Divisions</CardTitle>
-          <CardDescription>{filteredDivisions.length} division(s)</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2"><LayoutGrid className="h-5 w-5" />Divisions</CardTitle>
+            <CardDescription>{filteredDivisions.length} division(s)</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
+            <Select
+              value={String(rowsPerPage)}
+              onValueChange={(val) => {
+                setRowsPerPage(Number(val));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -436,6 +468,7 @@ const DivisionsManagement = () => {
           ) : filteredDivisions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No divisions found.</div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -448,7 +481,7 @@ const DivisionsManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDivisions.map((div) => {
+                {paginatedDivisions.map((div) => {
                   const compName = competitions.find((c) => c.id === div.competition_id)?.name || "-";
                   const assocName = associations.find((a) => a.id === div.association_id)?.name || "-";
                   return (
@@ -473,6 +506,34 @@ const DivisionsManagement = () => {
                 })}
               </TableBody>
             </Table>
+            {(() => {
+              const totalPages = Math.ceil(filteredDivisions.length / rowsPerPage);
+              if (totalPages <= 1) return null;
+              return (
+                <div className="flex items-center justify-between mt-4 py-4 border-t px-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground font-medium">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              );
+            })()}
+            </>
           )}
         </CardContent>
       </Card>

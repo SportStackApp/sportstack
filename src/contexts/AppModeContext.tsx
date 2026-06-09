@@ -14,6 +14,8 @@ const ROLE_TO_MODE: Record<AppRole, AppMode> = {
   TEAM_MANAGER: "team",
   COACH: "team",
   PLAYER: "player",
+  UMPIRE: "player",
+  VOTER: "player",
 };
 
 // Mode hierarchy from highest to lowest

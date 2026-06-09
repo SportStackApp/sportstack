@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -93,6 +93,12 @@ const ClubsManagement = () => {
   const [associations, setAssociations] = useState<Association[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterAssociation, setFilterAssociation] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterAssociation]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClub, setEditingClub] = useState<Club | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -158,6 +164,11 @@ const ClubsManagement = () => {
   const filteredClubs = filterAssociation === "all"
     ? clubs
     : clubs.filter((c) => c.association_id === filterAssociation);
+
+  const paginatedClubs = useMemo(() => {
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    return filteredClubs.slice(startIdx, startIdx + rowsPerPage);
+  }, [filteredClubs, currentPage, rowsPerPage]);
 
   // Can add clubs if SUPER_ADMIN or ASSOCIATION_ADMIN
   const canAdd = isSuperAdmin || scopedAssociationIds.length > 0;
@@ -244,8 +255,8 @@ const ClubsManagement = () => {
         return;
       }
 
-      const { data: publicUrlData, error: publicUrlError } = supabase.storage.from("logos").getPublicUrl(path);
-      if (publicUrlError || !publicUrlData?.publicUrl) {
+      const { data: publicUrlData } = supabase.storage.from("logos").getPublicUrl(path);
+      if (!publicUrlData?.publicUrl) {
         toast({ title: "Error", description: "Failed to retrieve logo URL", variant: "destructive" });
         return;
       }
@@ -497,8 +508,8 @@ const ClubsManagement = () => {
                     toast({ title: "Error", description: uploadError?.message || "Failed to upload logo", variant: "destructive" });
                     return;
                   }
-                  const { data: publicUrlData, error: publicUrlError } = supabase.storage.from("logos").getPublicUrl(path);
-                  if (publicUrlError || !publicUrlData?.publicUrl) {
+                  const { data: publicUrlData } = supabase.storage.from("logos").getPublicUrl(path);
+                  if (!publicUrlData?.publicUrl) {
                     toast({ title: "Error", description: "Failed to retrieve logo URL", variant: "destructive" });
                     return;
                   }
@@ -535,9 +546,30 @@ const ClubsManagement = () => {
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" />Clubs</CardTitle>
-          <CardDescription>{filteredClubs.length} club(s)</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" />Clubs</CardTitle>
+            <CardDescription>{filteredClubs.length} club(s)</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
+            <Select
+              value={String(rowsPerPage)}
+              onValueChange={(val) => {
+                setRowsPerPage(Number(val));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -545,6 +577,7 @@ const ClubsManagement = () => {
           ) : filteredClubs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No clubs found.</div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -556,7 +589,7 @@ const ClubsManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClubs.map((club) => {
+                {paginatedClubs.map((club) => {
                   const assocName = associations.find((a) => a.id === club.association_id)?.name || "-";
                   return (
                     <TableRow key={club.id}>
@@ -593,6 +626,34 @@ const ClubsManagement = () => {
                 })}
               </TableBody>
             </Table>
+            {(() => {
+              const totalPages = Math.ceil(filteredClubs.length / rowsPerPage);
+              if (totalPages <= 1) return null;
+              return (
+                <div className="flex items-center justify-between mt-4 py-4 border-t px-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground font-medium">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              );
+            })()}
+            </>
           )}
         </CardContent>
       </Card>

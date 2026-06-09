@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +52,12 @@ const TeamsManagement = () => {
   const [filterAssociation, setFilterAssociation] = useState<string>("all");
   const [filterClub, setFilterClub] = useState<string>("all");
   const [filterDivision, setFilterDivision] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterAssociation, filterClub, filterDivision]);
 
   // Dialog State
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -81,7 +87,7 @@ const TeamsManagement = () => {
       supabase.from("clubs").select("*").order("name"),
       supabase.from("associations").select("*").order("name"),
       supabase.from("venues").select("*").order("name"),
-      supabase.from("divisions").select("id, name, association_id, season_id").order("name"),
+      supabase.from("divisions" as any).select("id, name, association_id, season_id").order("name"),
     ]);
 
     if (clubsRes.error) toast({ title: "Error", description: "Failed to load clubs", variant: "destructive" });
@@ -179,6 +185,11 @@ const TeamsManagement = () => {
     }
     return true;
   });
+
+  const paginatedTeams = useMemo(() => {
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    return filteredTeams.slice(startIdx, startIdx + rowsPerPage);
+  }, [filteredTeams, currentPage, rowsPerPage]);
 
   const canAdd = isSuperAdmin || scopedAssociationIds.length > 0 || scopedClubIds.length > 0;
   const canDelete = isSuperAdmin || scopedAssociationIds.length > 0 || scopedClubIds.length > 0;
@@ -438,9 +449,30 @@ const TeamsManagement = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5" />Teams</CardTitle>
-          <CardDescription>{filteredTeams.length} team(s)</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5" />Teams</CardTitle>
+            <CardDescription>{filteredTeams.length} team(s)</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
+            <Select
+              value={String(rowsPerPage)}
+              onValueChange={(val) => {
+                setRowsPerPage(Number(val));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -448,6 +480,7 @@ const TeamsManagement = () => {
           ) : filteredTeams.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No teams found.</div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -460,7 +493,7 @@ const TeamsManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTeams.map((team) => {
+                {paginatedTeams.map((team) => {
                   const clubName = clubs.find((c) => c.id === team.club_id)?.name || "-";
                   const divName = divisions.find((d) => d.id === team.division_id)?.name || team.division || "-";
                   return (
@@ -491,6 +524,34 @@ const TeamsManagement = () => {
                 })}
               </TableBody>
             </Table>
+            {(() => {
+              const totalPages = Math.ceil(filteredTeams.length / rowsPerPage);
+              if (totalPages <= 1) return null;
+              return (
+                <div className="flex items-center justify-between mt-4 py-4 border-t px-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground font-medium">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              );
+            })()}
+            </>
           )}
         </CardContent>
       </Card>
