@@ -104,7 +104,7 @@ const VenuesManagement = () => {
     setAssociations(allAssoc);
 
     const vaData = vaRes.data || [];
-    setVenueAssociations(vaData);
+    setVenueAssociations((vaData as any) || []);
 
     const pitchCounts: Record<string, number> = {};
     (pitchesRes.data || []).forEach((p) => {
