@@ -79,7 +79,7 @@ export const SetPrimaryTeamDialog = ({
       // Extract unique division_ids to populate division dropdown
       const divisionIds = Array.from(new Set(filtered.map((t: any) => t.division_id).filter(Boolean))) as string[];
       if (divisionIds.length > 0) {
-        const { data: divData } = await supabase.from("divisions").select("id, name").in("id", divisionIds).order("name");
+        const { data: divData } = (await supabase.from("divisions" as any).select("id, name").in("id", divisionIds).order("name")) as any;
         setDivisions(divData || []);
       } else {
         setDivisions([]);

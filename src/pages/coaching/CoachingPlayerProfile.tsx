@@ -116,7 +116,7 @@ export default function CoachingPlayerProfile() {
 
         // 4. Load coach assessments
         const { data: assessmentsData } = await supabase
-          .from("coach_position_assessments")
+          .from("coach_position_assessments" as any)
           .select("position_code, assessment, notes")
           .eq("coach_id", user.id)
           .eq("player_id", playerId) as any;
@@ -131,7 +131,7 @@ export default function CoachingPlayerProfile() {
 
         // 5. Load player preferences
         const { data: prefsData } = await supabase
-          .from("player_position_preferences")
+          .from("player_position_preferences" as any)
           .select("position_code, preference")
           .eq("player_id", playerId) as any;
 
@@ -148,14 +148,14 @@ export default function CoachingPlayerProfile() {
         const { data: teamsData } = await supabase.from("teams").select("id, name");
         const teamsMap = new Map((teamsData || []).map(t => [t.id, t.name]));
 
-        const { data: lineupsData } = await supabase
-          .from("lineups")
+        const { data: lineupsData } = await (supabase
+          .from("lineups" as any)
           .select(`
             id, position, is_starting,
             fixtures ( id, fixture_date, home_team_id, away_team_id, home_score, away_score, season_id )
-          `)
+          `) as any)
           .eq("player_id", playerId)
-          .eq("team_id", tId) as any;
+          .eq("team_id", tId);
 
         if (lineupsData) {
           const matches: MatchCard[] = lineupsData.map((row: any) => {
@@ -201,7 +201,7 @@ export default function CoachingPlayerProfile() {
     setAssessments(prev => ({ ...prev, [position]: { ...prev[position], assessment: val } }));
     
     try {
-      await (supabase.from("coach_position_assessments").upsert({
+      await (supabase.from("coach_position_assessments" as any).upsert({
         coach_id: user.id,
         player_id: playerId,
         team_id: teamId,
@@ -219,7 +219,7 @@ export default function CoachingPlayerProfile() {
     if (!user || !playerId || !teamId) return;
     try {
       // Upsert note (assessment might be null if only notes are added first)
-      await (supabase.from("coach_position_assessments").upsert({
+      await (supabase.from("coach_position_assessments" as any).upsert({
         coach_id: user.id,
         player_id: playerId,
         team_id: teamId,

@@ -106,11 +106,11 @@ const DivisionsManagement = () => {
     if (divisionsRes.error) {
       toast({ title: "Error", description: "Failed to load divisions", variant: "destructive" });
     } else {
-      setDivisions((divisionsRes.data as Division[]) || []);
+      setDivisions((divisionsRes.data as any) || []);
     }
 
     if (!associationsRes.error) setAssociations(associationsRes.data || []);
-    if (!competitionsRes.error) setCompetitions((competitionsRes.data as Competition[]) || []);
+    if (!competitionsRes.error) setCompetitions((competitionsRes.data as any) || []);
     setLoading(false);
   };
 

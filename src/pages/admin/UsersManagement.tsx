@@ -115,7 +115,7 @@ const UsersManagement = () => {
   const [assignClubId, setAssignClubId] = useState("");
   const [assignDivision, setAssignDivision] = useState("");
   const [assignDivisionOptions, setAssignDivisionOptions] = useState<{ id: string; name: string }[]>([]);
-  const [assignTeamOptions, setAssignTeamOptions] = useState<{ id: string; name: string; division: string | null }[]>([]);
+  const [assignTeamOptions, setAssignTeamOptions] = useState<any[]>([]);
   const [assignTeamId, setAssignTeamId] = useState("");
   const [assignMembershipType, setAssignMembershipType] = useState<MembershipType>("PRIMARY");
   const [assignSaving, setAssignSaving] = useState(false);

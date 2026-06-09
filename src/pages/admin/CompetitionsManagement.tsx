@@ -86,7 +86,7 @@ const CompetitionsManagement = () => {
     if (competitionsRes.error) {
       toast({ title: "Error", description: "Failed to load competitions", variant: "destructive" });
     } else {
-      setCompetitions((competitionsRes.data as Competition[]) || []);
+      setCompetitions((competitionsRes.data as any) || []);
     }
 
     if (!associationsRes.error) setAssociations(associationsRes.data || []);

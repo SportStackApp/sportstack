@@ -138,9 +138,9 @@ const FixturesManagement = () => {
       if (!selectedAssociationId) {
         const [venueRes, teamRes, pitchRes, divisionRes, associationRes] = await Promise.all([
           supabase.from("venues").select("id, name").order("name"),
-          supabase.from("teams").select("id, name, club_id, division_id, divisions(name, association_id, associations(name))").order("name"),
+          (supabase.from("teams" as any).select("id, name, club_id, division_id, divisions(name, association_id, associations(name))") as any).order("name"),
           supabase.from("pitches").select("id, name, venue_id").order("name"),
-          supabase.from("divisions").select("id, name, association_id").order("name"),
+          supabase.from("divisions" as any).select("id, name, association_id").order("name"),
           supabase.from("associations").select("id, name").order("name"),
         ]);
         setVenues(venueRes.data || []);
@@ -160,7 +160,7 @@ const FixturesManagement = () => {
       const [clubRes, venueRes, divisionRes, associationRes] = await Promise.all([
         supabase.from("clubs").select("id").eq("association_id", selectedAssociationId),
         supabase.from("venues").select("id, name").eq("association_id", selectedAssociationId).order("name"),
-        supabase.from("divisions").select("id, name, association_id").order("name"),
+        supabase.from("divisions" as any).select("id, name, association_id").order("name"),
         supabase.from("associations").select("id, name").order("name"),
       ]);
 
@@ -171,7 +171,7 @@ const FixturesManagement = () => {
       setAllAssociations(associationRes.data || []);
 
       if (clubIds.length > 0) {
-        const { data: teamData } = await supabase.from("teams").select("id, name, club_id, division_id, divisions(name, association_id, associations(name))").in("club_id", clubIds).order("name");
+        const { data: teamData } = await (supabase.from("teams" as any).select("id, name, club_id, division_id, divisions(name, association_id, associations(name))").in("club_id", clubIds) as any).order("name");
         setAllAssocTeams((teamData || []).map((team: any) => ({
           id: team.id,
           name: team.name,
@@ -217,7 +217,7 @@ const FixturesManagement = () => {
     const idsToUse = shouldFetchAll ? null : teamIds.length > 0 ? teamIds : assocTeamIds;
 
     setLoading(true);
-    let query = supabase.from("fixtures").select(FIXTURE_SELECT).order("fixture_date", { ascending: true });
+    let query = (supabase.from("fixtures" as any).select(FIXTURE_SELECT) as any).order("fixture_date", { ascending: true });
 
     if (idsToUse !== null) {
       if (idsToUse.length === 0) {

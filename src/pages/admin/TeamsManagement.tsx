@@ -98,7 +98,7 @@ const TeamsManagement = () => {
     const allClubs = clubsRes.data || [];
     const allAssociations = associationsRes.data || [];
     const allVenues = venuesRes.data || [];
-    const allDivisions = (divisionsRes.data as Division[]) || [];
+    const allDivisions = (divisionsRes.data as any) || [];
 
     setClubs(allClubs);
     setAssociations(allAssociations);

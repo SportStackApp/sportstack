@@ -159,7 +159,7 @@ const BulkImport = () => {
       ]);
       setAssociations(aRes.data || []);
       setClubs(cRes.data || []);
-      setTeams((tRes.data || []).map((team) => ({
+      setTeams(((tRes.data || []) as any[]).map((team: any) => ({
         id: team.id,
         name: team.name,
         club_id: team.club_id,

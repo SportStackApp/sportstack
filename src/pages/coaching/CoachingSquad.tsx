@@ -111,7 +111,7 @@ export default function CoachingSquad() {
 
         // 3. Fetch coach assessments for this team
         const { data: assessmentsData, error: assessmentsError } = await supabase
-          .from("coach_position_assessments")
+          .from("coach_position_assessments" as any)
           .select("player_id, position_code, assessment")
           .eq("coach_id", user.id) as any;
 

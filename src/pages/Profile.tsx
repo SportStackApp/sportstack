@@ -237,11 +237,11 @@ const Profile = () => {
     }
 
     // Fetch pending team requests from requests table
-    const { data: pendingReqsData } = await supabase
-      .from("requests")
+    const { data: pendingReqsData } = (await supabase
+      .from("requests" as any)
       .select("id, team_id, membership_type")
       .eq("target_user_id", user.id)
-      .eq("status", "PENDING");
+      .eq("status", "PENDING")) as any;
 
     const pendingReqsTransformed: Array<{id: string; teamId: string; teamName: string; clubName: string; type: string;}> = [];
     if (pendingReqsData && pendingReqsData.length > 0) {
@@ -814,7 +814,7 @@ const Profile = () => {
           if (id.startsWith("req_")) {
             const actualId = id.replace("req_", "");
             const { error } = await supabase
-              .from("requests")
+              .from("requests" as any)
               .update({ status: "CANCELLED", cancelled_by: user?.id })
               .eq("id", actualId);
             if (error) {

@@ -91,9 +91,9 @@ const Games = () => {
         return;
       }
       setLoading(true);
-      let query = supabase
-        .from("fixtures")
-        .select(FIXTURE_SELECT)
+      let query = (supabase
+        .from("fixtures" as any)
+        .select(FIXTURE_SELECT) as any)
         .or(`home_team_id.eq.${selectedTeamId},away_team_id.eq.${selectedTeamId}`)
         .order("fixture_date", { ascending: true });
 
