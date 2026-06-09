@@ -141,7 +141,7 @@ USING (
 );
 
 -- 7. Create membership_type enum
-CREATE TYPE public.membership_type AS ENUM ('PRIMARY', 'PERMANENT', 'FILL_IN');
+CREATE TYPE public.membership_type AS ENUM ('PRIMARY', 'SECONDARY', 'FILL_IN');
 
 -- 8. Create membership_status enum
 CREATE TYPE public.membership_status AS ENUM ('PENDING', 'APPROVED', 'DECLINED');

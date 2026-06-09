@@ -1,4 +1,4 @@
-﻿import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
           : generateMockEmail(player.first_name, player.last_name);
 
         const isPrimary = player.is_primary_team !== false;
-        const membershipType = isPrimary ? "PRIMARY" : "PERMANENT";
+        const membershipType = isPrimary ? "PRIMARY" : "SECONDARY";
 
         const existingUserId = findUserByEmail(email);
 
@@ -301,7 +301,7 @@ Deno.serve(async (req) => {
             await serviceClient.from("team_memberships").insert({
               user_id: existingUserId,
               team_id: player.team_id,
-              membership_type: "PERMANENT",
+              membership_type: "SECONDARY",
               status: "ACTIVE",
             });
 

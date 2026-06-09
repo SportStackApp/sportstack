@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface TeamAssignment {
   team_id: string;
-  membership_type: "PRIMARY" | "PERMANENT" | "FILL_IN";
+  membership_type: "PRIMARY" | "SECONDARY" | "FILL_IN";
 }
 
 interface PlayerPayload {
