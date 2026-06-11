@@ -7,7 +7,7 @@ the mapping tables, then upserts into the native `fixtures` table.
 
 Conflict key: revsports_match_url (one fixture per scraped game URL)
 
-Associations handled: Hockey Ballarat, Sunraysia Hockey Association, Wimmera Hockey Association
+Associations handled: Hockey Ballarat, Sunraysia Hockey Association
 """
 
 import os
@@ -44,7 +44,6 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 ASSOCIATIONS = [
     "Hockey Ballarat",
     "Sunraysia Hockey Association",
-    "Wimmera Hockey Association",
 ]
 
 
@@ -160,17 +159,6 @@ def build_fixture_rows(games: list, team_map: dict, venue_map: dict) -> tuple[li
         else:
             status = "SCHEDULED"
 
-        # Parse round — scraper stores it as e.g. "Round 1", "Round 12"
-        round_raw = game.get("round", "") or ""
-        round_parts = round_raw.strip().split()
-        round_number = None
-        round_name = round_raw.strip() or None
-        if len(round_parts) == 2 and round_parts[0].lower() == "round":
-            try:
-                round_number = int(round_parts[1])
-            except ValueError:
-                pass
-
         resolved.append({
             "home_team_id": home_id,
             "away_team_id": away_id,
@@ -179,8 +167,6 @@ def build_fixture_rows(games: list, team_map: dict, venue_map: dict) -> tuple[li
             "home_score": home_score,
             "away_score": away_score,
             "status": status,
-            "round_number": round_number,   # e.g. 1, 2, 3
-            "round_name": round_name,       # e.g. "Round 1"
             "revsports_match_url": url,     # conflict key — ensures no duplicates
         })
 
