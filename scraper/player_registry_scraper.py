@@ -52,7 +52,10 @@ COMPETITIONS = [
         "base_url":       "https://www.sunraysiahockey.com.au",
         "competition_id": "25775",   # Indoor
     },
-    # WHA — URL and competition ID not yet confirmed
+    # WHA — player data is login-protected on RevSports (requires association login)
+    # URL: https://www.revolutionise.com.au/wimmeraha
+    # Competition ID: 26593  (Wimmera Hockey Association 2026)
+    # To enable: obtain WHA login credentials and add authenticated scraping support
 ]
 
 PAGE_LOAD_TIMEOUT = 15000  # milliseconds
