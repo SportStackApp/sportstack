@@ -33,12 +33,12 @@ const DivisionDashboard = () => {
         return;
       }
 
-      const { data } = await supabase
-        .from("fixtures")
+      const { data } = (await supabase
+        .from("fixtures" as any)
         .select("id, round_number, round_name, game_date, status, team_id, opponent_name, venue_id")
         .in("team_id", teamIds)
         .order("game_date", { ascending: true })
-        .limit(20);
+        .limit(20)) as any;
 
       setFixtures(data || []);
       setLoading(false);

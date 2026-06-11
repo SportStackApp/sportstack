@@ -6,7 +6,7 @@
 export type Role = "PLAYER" | "COACH" | "CLUB_ADMIN" | "ASSOCIATION_ADMIN" | "SYSTEM_ADMIN";
 export type AvailabilityStatus = "AVAILABLE" | "UNAVAILABLE" | "UNSURE";
 export type GameStatus = "SCHEDULED" | "FINALISED";
-export type MembershipType = "PRIMARY" | "PERMANENT" | "FILL_IN";
+export type MembershipType = "PRIMARY" | "SECONDARY" | "FILL_IN";
 export type InviteStatus = "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED";
 export type RequestStatus = "PENDING" | "ACCEPTED" | "DECLINED";
 
@@ -29,7 +29,7 @@ export interface TeamInvite {
   teamId: string;
   teamName: string;
   clubName: string;
-  type: "PERMANENT" | "FILL_IN";
+  type: "SECONDARY" | "FILL_IN";
   gameId?: string;
   gameDate?: string;
   sentBy: string;
@@ -315,7 +315,7 @@ export const currentUser: PlayerProfile = {
       clubName: "Grampians Hockey Club",
       associationId: "1",
       associationName: "Ballarat Hockey Association",
-      type: "PERMANENT",
+      type: "SECONDARY",
       position: "Left Wing",
       jerseyNumber: 11,
     },

@@ -22,6 +22,7 @@ export type Database = {
           logo_url: string | null
           name: string
           updated_at: string
+          website_url: string | null
         }
         Insert: {
           abbreviation?: string | null
@@ -30,6 +31,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           updated_at?: string
+          website_url?: string | null
         }
         Update: {
           abbreviation?: string | null
@@ -38,6 +40,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           updated_at?: string
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -54,6 +57,7 @@ export type Database = {
           primary_colour: string | null
           secondary_colour: string | null
           updated_at: string
+          website_url: string | null
         }
         Insert: {
           abbreviation?: string | null
@@ -67,6 +71,7 @@ export type Database = {
           primary_colour?: string | null
           secondary_colour?: string | null
           updated_at?: string
+          website_url?: string | null
         }
         Update: {
           abbreviation?: string | null
@@ -80,6 +85,7 @@ export type Database = {
           primary_colour?: string | null
           secondary_colour?: string | null
           updated_at?: string
+          website_url?: string | null
         }
         Relationships: [
           {
@@ -487,6 +493,7 @@ export type Database = {
           name: string
           start_date: string | null
           updated_at: string | null
+          year: number | null
         }
         Insert: {
           association_id: string
@@ -497,6 +504,7 @@ export type Database = {
           name: string
           start_date?: string | null
           updated_at?: string | null
+          year?: number | null
         }
         Update: {
           association_id?: string
@@ -507,6 +515,7 @@ export type Database = {
           name?: string
           start_date?: string | null
           updated_at?: string | null
+          year?: number | null
         }
         Relationships: [
           {
@@ -606,6 +615,7 @@ export type Database = {
           club_id: string
           created_at: string
           division: string | null
+          division_id: string | null
           gender: string | null
           home_venue_id: string | null
           id: string
@@ -619,6 +629,7 @@ export type Database = {
           club_id: string
           created_at?: string
           division?: string | null
+          division_id?: string | null
           gender?: string | null
           home_venue_id?: string | null
           id?: string
@@ -632,6 +643,7 @@ export type Database = {
           club_id?: string
           created_at?: string
           division?: string | null
+          division_id?: string | null
           gender?: string | null
           home_venue_id?: string | null
           id?: string
@@ -806,8 +818,9 @@ export type Database = {
         | "ASSOCIATION_ADMIN"
         | "SUPER_ADMIN"
         | "VOTER"
-      membership_status: "ACTIVE" | "INACTIVE" | "PENDING" | "INVITED" | "CANCELLED"
-      membership_type: "PRIMARY" | "PERMANENT" | "FILL_IN"
+        | "UMPIRE"
+      membership_status: "ACTIVE" | "INACTIVE" | "PENDING" | "INVITED" | "CANCELLED" | "DECLINED"
+      membership_type: "PRIMARY" | "SECONDARY" | "FILL_IN"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -943,9 +956,10 @@ export const Constants = {
         "ASSOCIATION_ADMIN",
         "SUPER_ADMIN",
         "VOTER",
+        "UMPIRE",
       ],
-      membership_status: ["ACTIVE", "INACTIVE", "PENDING", "INVITED", "CANCELLED"],
-      membership_type: ["PRIMARY", "PERMANENT", "FILL_IN"],
+      membership_status: ["ACTIVE", "INACTIVE", "PENDING", "INVITED", "CANCELLED", "DECLINED"],
+      membership_type: ["PRIMARY", "SECONDARY", "FILL_IN"],
     },
   },
 } as const

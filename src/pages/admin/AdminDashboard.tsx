@@ -38,10 +38,10 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const fetchUnmatched = async () => {
-      const { count } = await supabase
-        .from("revsports_unmatched_items")
+      const { count } = (await supabase
+        .from("revsports_unmatched_items" as any)
         .select("id", { count: "exact", head: true })
-        .eq("status", "unmatched");
+        .eq("status", "unmatched")) as any;
       setUnmatchedCount(count ?? 0);
     };
     fetchUnmatched();
@@ -96,22 +96,22 @@ const AdminDashboard = () => {
       const teamsRes = await teamsQuery;
 
       // Divisions
-      let divisionsQuery = supabase.from("divisions").select("id", { count: "exact", head: true });
+      let divisionsQuery = supabase.from("divisions" as any).select("id", { count: "exact", head: true }) as any;
       if (selectedClubId) {
         divisionsQuery = divisionsQuery.eq("club_id", selectedClubId);
       } else if (selectedAssociationId) {
         divisionsQuery = divisionsQuery.eq("association_id", selectedAssociationId);
       }
-      const divisionsRes = await divisionsQuery;
+      const divisionsRes = (await divisionsQuery) as any;
 
       // Venues
-      let venuesQuery = supabase.from("venues").select("id", { count: "exact", head: true });
+      let venuesQuery = supabase.from("venues").select("id", { count: "exact", head: true }) as any;
       if (selectedClubId) {
         venuesQuery = venuesQuery.eq("club_id", selectedClubId);
       } else if (selectedAssociationId) {
         venuesQuery = venuesQuery.eq("association_id", selectedAssociationId);
       }
-      const venuesRes = await venuesQuery;
+      const venuesRes = (await venuesQuery) as any;
 
       // Users and Pending Memberships
       let usersCount = 0;

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 interface Request {
@@ -35,19 +36,24 @@ interface Request {
 
 export default function Requests() {
   const { user } = useAuth();
-  const { scopeLoading, isSuperAdmin, isAssociationAdmin, isClubAdmin, isTeamManager, scopedAssociationIds, scopedClubIds, scopedTeamIds } = useAdminScope();
+  const { scopeLoading, isSuperAdmin, scopedRoles, scopedAssociationIds, scopedClubIds, scopedTeamIds } = useAdminScope();
+  const isAssociationAdmin = scopedRoles.some((r) => r.role === "ASSOCIATION_ADMIN");
+  const isClubAdmin = scopedRoles.some((r) => r.role === "CLUB_ADMIN");
+  const isTeamManager = scopedRoles.some((r) => r.role === "TEAM_MANAGER");
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState<Request[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("PENDING");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
 
   const loadData = async () => {
     if (!user || scopeLoading) return;
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.from("requests").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("requests" as any).select("*").order("created_at", { ascending: false });
 
       if (error) throw error;
 
@@ -121,7 +127,7 @@ export default function Requests() {
     try {
       // Update request status
       const { error: updateError } = await supabase
-        .from("requests")
+        .from("requests" as any)
         .update({
           status: "APPROVED",
           responded_by: user?.id,
@@ -135,7 +141,7 @@ export default function Requests() {
       const { error: insertError } = await supabase.from("team_memberships").insert({
         user_id: request.target_user_id,
         team_id: request.team_id,
-        membership_type: request.membership_type,
+        membership_type: request.membership_type as any,
         status: "ACTIVE",
       });
 
@@ -151,7 +157,7 @@ export default function Requests() {
   const handleDecline = async (request: Request) => {
     try {
       const { error } = await supabase
-        .from("requests")
+        .from("requests" as any)
         .update({
           status: "DECLINED",
           responded_by: user?.id,
@@ -171,7 +177,7 @@ export default function Requests() {
   const handleCancel = async (request: Request) => {
     try {
       const { error } = await supabase
-        .from("requests")
+        .from("requests" as any)
         .update({
           status: "CANCELLED",
           cancelled_by: user?.id,
@@ -192,6 +198,11 @@ export default function Requests() {
     if (statusFilter === "ALL") return true;
     return r.status === statusFilter;
   });
+
+  const paginatedRequests = (() => {
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    return visibleRequests.slice(startIdx, startIdx + rowsPerPage);
+  })();
 
   const formatDate = (d: string | null) =>
     d ? new Date(d).toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" }) : "—";
@@ -244,7 +255,10 @@ export default function Requests() {
           <Button
             key={status}
             variant={statusFilter === status ? "default" : "outline"}
-            onClick={() => setStatusFilter(status)}
+            onClick={() => {
+              setStatusFilter(status);
+              setCurrentPage(1);
+            }}
           >
             {status.charAt(0) + status.slice(1).toLowerCase()}
           </Button>
@@ -254,7 +268,30 @@ export default function Requests() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2 bg-muted/30">
           <CardTitle className="text-lg font-display">Requests</CardTitle>
-          {!loading && <Badge variant="secondary">{visibleRequests.length} requests</Badge>}
+          {!loading && (
+            <div className="flex items-center gap-4">
+              <Badge variant="secondary">{visibleRequests.length} requests</Badge>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
+                <Select
+                  value={String(rowsPerPage)}
+                  onValueChange={(val) => {
+                    setRowsPerPage(Number(val));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-[80px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="pt-6">
           {loading ? (
@@ -269,79 +306,108 @@ export default function Requests() {
               <p>No requests found</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Player</TableHead>
-                    <TableHead>Team</TableHead>
-                    <TableHead>Club</TableHead>
-                    <TableHead>Membership Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visibleRequests.map((request) => (
-                    <TableRow key={request.id}>
-                      <TableCell className="text-xs text-muted-foreground">{formatDate(request.created_at)}</TableCell>
-                      <TableCell className="text-xs">
-                        {request.request_type === "TEAM_INVITE" ? "Team Invite" : "Player Request"}
-                      </TableCell>
-                      <TableCell className="font-medium text-sm">
-                        {request.target_user_name}
-                        <p className="text-xs text-muted-foreground font-normal mt-0.5">
-                          Sent by {request.requester_name}
-                        </p>
-                      </TableCell>
-                      <TableCell className="text-sm">{request.team_name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{request.club_name}</TableCell>
-                      <TableCell className="text-xs">{request.membership_type}</TableCell>
-                      <TableCell>{renderStatusBadge(request.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          {request.status === "PENDING" && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-green-600 border-green-200 hover:bg-green-50 h-7 px-2 text-xs"
-                                onClick={() => handleApprove(request)}
-                              >
-                                <CheckCircle2 className="h-3 w-3 mr-1" /> Approve
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-red-600 border-red-200 hover:bg-red-50 h-7 px-2 text-xs"
-                                onClick={() => handleDecline(request)}
-                              >
-                                <XCircle className="h-3 w-3 mr-1" /> Decline
-                              </Button>
-                              {canCancelRequest(request) && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-muted-foreground h-7 px-2 text-xs"
-                                  onClick={() => handleCancel(request)}
-                                >
-                                  Cancel
-                                </Button>
-                              )}
-                            </>
-                          )}
-                          {request.status === "CANCELLED" && (
-                            <Badge variant="outline" className="bg-gray-50 text-xs">Cancelled</Badge>
-                          )}
-                        </div>
-                      </TableCell>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Player</TableHead>
+                      <TableHead>Team</TableHead>
+                      <TableHead>Club</TableHead>
+                      <TableHead>Membership Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedRequests.map((request) => (
+                      <TableRow key={request.id}>
+                        <TableCell className="text-xs text-muted-foreground">{formatDate(request.created_at)}</TableCell>
+                        <TableCell className="text-xs">
+                          {request.request_type === "TEAM_INVITE" ? "Team Invite" : "Player Request"}
+                        </TableCell>
+                        <TableCell className="font-medium text-sm">
+                          {request.target_user_name}
+                          <p className="text-xs text-muted-foreground font-normal mt-0.5">
+                            Sent by {request.requester_name}
+                          </p>
+                        </TableCell>
+                        <TableCell className="text-sm">{request.team_name}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{request.club_name}</TableCell>
+                        <TableCell className="text-xs">{request.membership_type}</TableCell>
+                        <TableCell>{renderStatusBadge(request.status)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            {request.status === "PENDING" && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-green-600 border-green-200 hover:bg-green-50 h-7 px-2 text-xs"
+                                  onClick={() => handleApprove(request)}
+                                >
+                                  <CheckCircle2 className="h-3 w-3 mr-1" /> Approve
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-red-600 border-red-200 hover:bg-red-50 h-7 px-2 text-xs"
+                                  onClick={() => handleDecline(request)}
+                                >
+                                  <XCircle className="h-3 w-3 mr-1" /> Decline
+                                </Button>
+                                {canCancelRequest(request) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-muted-foreground h-7 px-2 text-xs"
+                                    onClick={() => handleCancel(request)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                            {request.status === "CANCELLED" && (
+                              <Badge variant="outline" className="bg-gray-50 text-xs">Cancelled</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {(() => {
+                const totalPages = Math.ceil(visibleRequests.length / rowsPerPage);
+                if (totalPages <= 1) return null;
+                return (
+                  <div className="flex items-center justify-between mt-4 py-4 border-t px-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-muted-foreground font-medium">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                );
+              })()}
+            </>
           )}
         </CardContent>
       </Card>

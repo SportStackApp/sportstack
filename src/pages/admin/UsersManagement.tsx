@@ -43,6 +43,7 @@ interface Membership {
   status: string;
   membership_type: string;
   team_name?: string;
+  club_id?: string;
 }
 
 interface UserWithRoles extends Profile {
@@ -57,7 +58,7 @@ interface RoleWithScope {
   team_id: string | null;
 }
 
-const ALL_ROLES: AppRole[] = ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "ASSOCIATION_ADMIN", "SUPER_ADMIN", "VOTER"];
+const ALL_ROLES: AppRole[] = ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "ASSOCIATION_ADMIN", "SUPER_ADMIN", "UMPIRE", "VOTER"];
 
 const ROLES_NEEDING_SCOPE: Record<string, string> = {
   ASSOCIATION_ADMIN: "association",
@@ -77,11 +78,28 @@ const UsersManagement = () => {
   const [clubs, setClubs] = useState<{ id: string; name: string; association_id: string }[]>([]);
   const [associations, setAssociations] = useState<{ id: string; name: string }[]>([]);
   const [divisions, setDivisions] = useState<{ id: string; name: string }[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [associationFilter, setAssociationFilter] = useState<string>("all");
   const [clubFilter, setClubFilter] = useState<string>("all");
+  const [divisionFilter, setDivisionFilter] = useState("all");
+  const [teamFilter, setTeamFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+
+  const availableTeamsForFilter = useMemo(() => {
+    if (divisionFilter === "all") return teams;
+    return teams.filter((t) => t.division_id === divisionFilter);
+  }, [teams, divisionFilter]);
+
+  const [hidePlaceholders, setHidePlaceholders] = useState(true);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, associationFilter, clubFilter, divisionFilter, teamFilter, hidePlaceholders]);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
@@ -97,7 +115,7 @@ const UsersManagement = () => {
   const [assignClubId, setAssignClubId] = useState("");
   const [assignDivision, setAssignDivision] = useState("");
   const [assignDivisionOptions, setAssignDivisionOptions] = useState<{ id: string; name: string }[]>([]);
-  const [assignTeamOptions, setAssignTeamOptions] = useState<{ id: string; name: string; division: string | null }[]>([]);
+  const [assignTeamOptions, setAssignTeamOptions] = useState<any[]>([]);
   const [assignTeamId, setAssignTeamId] = useState("");
   const [assignMembershipType, setAssignMembershipType] = useState<MembershipType>("PRIMARY");
   const [assignSaving, setAssignSaving] = useState(false);
@@ -132,11 +150,11 @@ const UsersManagement = () => {
       // Query divisions that have teams in this club
       let divisions: { id: string; name: string }[] = [];
       if (divisionIds.length > 0) {
-        const { data: divData, error: divError } = await supabase
+        const { data: divData, error: divError } = (await supabase
           .from("divisions" as any)
           .select("id, name")
           .in("id", divisionIds)
-          .order("name");
+          .order("name")) as any;
 
         if (!divError) {
           divisions = divData || [];
@@ -166,12 +184,12 @@ const UsersManagement = () => {
       supabase.from("associations").select("id, name"),
       supabase.from("divisions" as any).select("id, name"),
     ]);
-    setTeams(teamsRes.data || []);
-    setClubs(clubsRes.data || []);
-    setAssociations(assocRes.data || []);
-    setDivisions(divsRes.data || []);
+    setTeams((teamsRes.data as any) || []);
+    setClubs((clubsRes.data as any) || []);
+    setAssociations((assocRes.data as any) || []);
+    setDivisions((divsRes.data as any) || []);
 
-    const teamsList = teamsRes.data || [];
+    const teamsList = (teamsRes.data as any) || [];
     const teamsToShow = isSuperAdmin ? teamsList.map((t) => t.id) : scopedTeamIds;
 
     let membershipsData: any[] = [];
@@ -201,13 +219,17 @@ const UsersManagement = () => {
       roles: (userRoles || []).filter((r) => r.user_id === profile.id).map((r) => r.role),
       memberships: membershipsData
         .filter((m) => m.user_id === profile.id)
-        .map((m) => ({
-          id: m.id,
-          team_id: m.team_id,
-          status: m.status,
-          membership_type: m.membership_type,
-          team_name: teamsList.find((t) => t.id === m.team_id)?.name,
-        })),
+        .map((m) => {
+          const team = teamsList.find((t) => t.id === m.team_id);
+          return {
+            id: m.id,
+            team_id: m.team_id,
+            status: m.status,
+            membership_type: m.membership_type,
+            team_name: team?.name,
+            club_id: team?.club_id,
+          };
+        }),
     }));
 
     setUsers(usersWithRoles);
@@ -294,8 +316,21 @@ const UsersManagement = () => {
       const clubTeamIds = teams.filter((t) => t.club_id === clubFilter).map((t) => t.id);
       if (!user.memberships.some((m) => clubTeamIds.includes(m.team_id))) return false;
     }
+    if (divisionFilter !== "all") {
+      const divisionTeamIds = teams.filter((t) => t.division_id === divisionFilter).map((t) => t.id);
+      if (!user.memberships.some((m) => divisionTeamIds.includes(m.team_id))) return false;
+    }
+    if (teamFilter !== "all") {
+      if (!user.memberships.some((m) => m.team_id === teamFilter)) return false;
+    }
+    if (hidePlaceholders && (user as any).is_placeholder === true) return false;
     return true;
   });
+
+  const paginatedUsers = useMemo(() => {
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    return filteredUsers.slice(startIdx, startIdx + rowsPerPage);
+  }, [filteredUsers, currentPage, rowsPerPage]);
 
   const availableAssociations = isSuperAdmin
     ? associations
@@ -586,10 +621,10 @@ const UsersManagement = () => {
   const handleMakePrimary = async (membershipId: string) => {
     if (!selectedUser) return;
 
-    // Downgrade any existing PRIMARY to PERMANENT first
+    // Downgrade any existing PRIMARY to SECONDARY first
     const { error: downgradeError } = await supabase
       .from("team_memberships")
-      .update({ membership_type: "PERMANENT" })
+      .update({ membership_type: "SECONDARY" })
       .eq("user_id", selectedUser.id)
       .eq("membership_type", "PRIMARY");
 
@@ -661,7 +696,7 @@ const UsersManagement = () => {
               <div className="space-y-1 col-span-1">
                 <Label className="text-xs text-muted-foreground">Association</Label>
                 <Select value={scope.association_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "association_id", v)}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
                     {associations.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                   </SelectContent>
@@ -670,7 +705,7 @@ const UsersManagement = () => {
               <div className="space-y-1 col-span-1">
                 <Label className="text-xs text-muted-foreground">Club</Label>
                 <Select value={scope.club_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "club_id", v)} disabled={!scope.association_id}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
                     {getClubsForAssociation(scope.association_id).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
@@ -679,7 +714,7 @@ const UsersManagement = () => {
               <div className="space-y-1 col-span-1">
                 <Label className="text-xs text-muted-foreground">Division</Label>
                 <Select value={scope.division_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "division_id", v)} disabled={!scope.club_id}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
                     {availableDivisions.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                   </SelectContent>
@@ -688,7 +723,7 @@ const UsersManagement = () => {
               <div className="space-y-1 col-span-1">
                 <Label className="text-xs text-muted-foreground">Team</Label>
                 <Select value={scope.team_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "team_id", v)} disabled={!scope.division_id}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
                     {teamsForDivision.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                   </SelectContent>
@@ -726,7 +761,7 @@ const UsersManagement = () => {
             <div className="space-y-1 col-span-1">
               <Label className="text-xs text-muted-foreground">Association</Label>
               <Select value={scope.association_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "association_id", v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   {associations.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                 </SelectContent>
@@ -735,7 +770,7 @@ const UsersManagement = () => {
             <div className="space-y-1 col-span-1">
               <Label className="text-xs text-muted-foreground">Club</Label>
               <Select value={scope.club_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "club_id", v)} disabled={!scope.association_id}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   {getClubsForAssociation(scope.association_id).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
@@ -773,7 +808,7 @@ const UsersManagement = () => {
             <div className="space-y-1 col-span-1">
               <Label className="text-xs text-muted-foreground">Association</Label>
               <Select value={scope.association_id} onValueChange={(v) => handleScopeChange(setScopes, scope.id, "association_id", v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs overflow-hidden"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   {associations.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                 </SelectContent>
@@ -883,6 +918,40 @@ const UsersManagement = () => {
               ))}
             </SelectContent>
           </Select>
+          <Select
+            value={divisionFilter}
+            onValueChange={(v) => {
+              setDivisionFilter(v);
+              setTeamFilter("all");
+            }}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Division" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Divisions</SelectItem>
+              {divisions.map((d) => (
+                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={teamFilter} onValueChange={setTeamFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Team" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Teams</SelectItem>
+              {availableTeamsForFilter.map((t) => (
+                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant={hidePlaceholders ? "secondary" : "outline"}
+            onClick={() => setHidePlaceholders(prev => !prev)}
+          >
+            Hide placeholders
+          </Button>
         </div>
 
         {/* Pending Primary Team Change Requests */}
@@ -923,12 +992,33 @@ const UsersManagement = () => {
 
         {/* Table */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Users
-            </CardTitle>
-            <CardDescription>{filteredUsers.length} user(s)</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Users
+              </CardTitle>
+              <CardDescription>{filteredUsers.length} user(s)</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
+              <Select
+                value={String(rowsPerPage)}
+                onValueChange={(val) => {
+                  setRowsPerPage(Number(val));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[80px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -938,19 +1028,19 @@ const UsersManagement = () => {
             ) : filteredUsers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">No users found.</div>
             ) : (
+              <>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Player Status</TableHead>
-                    <TableHead>Team(s)</TableHead>
+                    <TableHead>Association / Club / Team</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Roles</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.map((u) => (
+                  {paginatedUsers.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-1.5">
@@ -968,65 +1058,104 @@ const UsersManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant="secondary"
-                          className={
-                            (u as any).status === "Suspended"
-                              ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                              : (u as any).status === "Inactive"
-                              ? "bg-muted text-muted-foreground"
-                              : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                          }
-                        >
-                          {(u as any).status || "Active"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {u.memberships.length === 0 ? (
-                            <span className="text-muted-foreground text-sm">Unassigned</span>
-                          ) : (
-                            u.memberships.map((m) => (
-                              <Badge key={m.id} variant="outline" className="text-xs">
-                                {m.team_name || "Unknown"}
-                              </Badge>
-                            ))
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {u.memberships.length === 0 ? (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          ) : (
-                            u.memberships.map((m) => (
-                              <div key={m.id} className="flex items-center gap-1">
-                                <Badge
-                                  variant="secondary"
-                                  className={
-                                    m.status === "PENDING"
-                                      ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300"
-                                      : m.status === "ACTIVE"
-                                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                                  }
-                                >
-                                  {m.status}
+                        {u.memberships.length === 0 ? (
+                          <span className="text-muted-foreground text-sm">Unassigned</span>
+                        ) : (
+                          <div className="space-y-1">
+                            {(() => {
+                              const primaryMembership = u.memberships.find(m => m.membership_type === "PRIMARY");
+                              if (!primaryMembership) return null;
+                              const primaryTeam = teams.find((t) => t.id === primaryMembership.team_id);
+                              const primaryClub = primaryTeam ? clubs.find((c) => c.id === primaryTeam.club_id) : undefined;
+                              const primaryAssociation = primaryClub ? associations.find((a) => a.id === primaryClub.association_id) : undefined;
+                              const divisionId = primaryTeam?.division_id;
+                              const primaryDivisionName = divisionId ? divisions.find((d) => d.id === divisionId)?.name : undefined;
+                              
+                              const primaryParts = [];
+                              if (primaryAssociation?.name) primaryParts.push(primaryAssociation.name);
+                              if (primaryClub?.name) primaryParts.push(primaryClub.name);
+                              if (primaryDivisionName) primaryParts.push(primaryDivisionName);
+                              if (primaryMembership.team_name) primaryParts.push(primaryMembership.team_name);
+                              
+                              const primaryDisplayText = primaryParts.join(" / ") || "Unknown";
+                              return (
+                                <Badge variant="outline" className="text-xs">
+                                  {primaryDisplayText}
                                 </Badge>
-                                {m.status === "PENDING" && (
-                                  <div className="flex gap-0.5">
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleApproveMembership(m.id)}>
-                                      <Check className="h-3 w-3 text-green-600" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDeclineMembership(m.id)}>
-                                      <X className="h-3 w-3 text-destructive" />
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            ))
-                          )}
-                        </div>
+                              );
+                            })()}
+                            
+                            {(() => {
+                              const nonPrimaryMemberships = u.memberships.filter((m) => m.membership_type !== "PRIMARY");
+                              if (nonPrimaryMemberships.length === 0) return null;
+                              
+                              return (
+                                <>
+                                  <button
+                                    onClick={() => setExpandedUserId(expandedUserId === u.id ? null : u.id)}
+                                    className="text-xs text-muted-foreground hover:underline block mt-1"
+                                  >
+                                    +{nonPrimaryMemberships.length} more
+                                  </button>
+                                  {expandedUserId === u.id && (
+                                    <div className="flex flex-col gap-1 mt-1 pl-2 border-l border-muted">
+                                      {nonPrimaryMemberships.map((m) => {
+                                        const team = teams.find((t) => t.id === m.team_id);
+                                        const club = team ? clubs.find((c) => c.id === team.club_id) : undefined;
+                                        const parts = [];
+                                        if (club?.name) parts.push(club.name);
+                                        if (m.team_name) parts.push(m.team_name);
+                                        const displayText = parts.join(" / ") || "Unknown";
+                                        return (
+                                          <div key={m.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                            <span>{displayText}</span>
+                                            <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded uppercase font-semibold">
+                                              {m.membership_type}
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const primaryMembership = u.memberships.find(m => m.membership_type === "PRIMARY") ?? u.memberships[0];
+                          if (!primaryMembership) {
+                            return <span className="text-muted-foreground text-sm">-</span>;
+                          }
+                          return (
+                            <div className="flex items-center gap-1">
+                              <Badge
+                                variant="secondary"
+                                className={
+                                  primaryMembership.status === "PENDING"
+                                    ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300"
+                                    : primaryMembership.status === "ACTIVE"
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                }
+                              >
+                                {primaryMembership.status}
+                              </Badge>
+                              {primaryMembership.status === "PENDING" && (
+                                <div className="flex gap-0.5">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleApproveMembership(primaryMembership.id)}>
+                                    <Check className="h-3 w-3 text-green-600" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDeclineMembership(primaryMembership.id)}>
+                                    <X className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
@@ -1051,6 +1180,34 @@ const UsersManagement = () => {
                   ))}
                 </TableBody>
               </Table>
+              {(() => {
+                const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
+                if (totalPages <= 1) return null;
+                return (
+                  <div className="flex items-center justify-between mt-4 py-4 border-t px-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-muted-foreground font-medium">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                );
+              })()}
+              </>
             )}
           </CardContent>
         </Card>
@@ -1182,7 +1339,7 @@ const UsersManagement = () => {
                           setAssignTeamId("");
                         }}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs overflow-hidden">
                           <SelectValue placeholder="Select association" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1207,7 +1364,7 @@ const UsersManagement = () => {
                         }}
                         disabled={!assignAssociationId}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs overflow-hidden">
                           <SelectValue placeholder="Select club" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1229,7 +1386,7 @@ const UsersManagement = () => {
                         }}
                         disabled={!assignClubId || assignDivisionOptions.length === 0}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs overflow-hidden">
                           <SelectValue placeholder="Select division" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1252,7 +1409,7 @@ const UsersManagement = () => {
                         onValueChange={setAssignTeamId}
                         disabled={!assignDivision}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs overflow-hidden">
                           <SelectValue placeholder="Select team" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1270,12 +1427,12 @@ const UsersManagement = () => {
                         value={assignMembershipType}
                         onValueChange={(v) => setAssignMembershipType(v as MembershipType)}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs overflow-hidden">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="PRIMARY">Primary</SelectItem>
-                          <SelectItem value="PERMANENT">Secondary (Permanent)</SelectItem>
+                          <SelectItem value="SECONDARY">Secondary</SelectItem>
                           <SelectItem value="FILL_IN">Fill-in</SelectItem>
                         </SelectContent>
                       </Select>

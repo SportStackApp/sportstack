@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,12 @@ const CompetitionsManagement = () => {
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterAssociation, setFilterAssociation] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterAssociation]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCompetition, setEditingCompetition] = useState<Competition | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -57,7 +63,7 @@ const CompetitionsManagement = () => {
   const [formData, setFormData] = useState({
     name: "",
     association_id: "__none__",
-    season_id: "__none__",
+    year: new Date().getFullYear().toString(),
     is_active: true,
   });
   const [saving, setSaving] = useState(false);
@@ -72,7 +78,7 @@ const CompetitionsManagement = () => {
     setLoading(true);
 
     const [competitionsRes, associationsRes, seasonsRes] = await Promise.all([
-      supabase.from("competitions").select("*").order("name"),
+      supabase.from("competitions" as any).select("*").order("name"),
       supabase.from("associations").select("*").order("name"),
       supabase.from("seasons").select("*").order("name"),
     ]);
@@ -80,7 +86,7 @@ const CompetitionsManagement = () => {
     if (competitionsRes.error) {
       toast({ title: "Error", description: "Failed to load competitions", variant: "destructive" });
     } else {
-      setCompetitions((competitionsRes.data as Competition[]) || []);
+      setCompetitions((competitionsRes.data as any) || []);
     }
 
     if (!associationsRes.error) setAssociations(associationsRes.data || []);
@@ -104,6 +110,11 @@ const CompetitionsManagement = () => {
     return true;
   });
 
+  const paginatedCompetitions = useMemo(() => {
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    return filteredCompetitions.slice(startIdx, startIdx + rowsPerPage);
+  }, [filteredCompetitions, currentPage, rowsPerPage]);
+
   const canAdd = isSuperAdmin || scopedAssociationIds.length > 0;
   const canDelete = isSuperAdmin || scopedAssociationIds.length > 0;
 
@@ -111,18 +122,17 @@ const CompetitionsManagement = () => {
     ? associations
     : associations.filter((a) => scopedAssociationIds.includes(a.id));
 
-  // Filter seasons based on selected association in dialog
-  const dialogSeasons = seasons.filter(
-    (s) => s.association_id === formData.association_id
-  );
+
 
   const handleOpenDialog = (comp?: Competition) => {
     if (comp) {
       setEditingCompetition(comp);
+      const compSeason = seasons.find(s => s.id === comp.season_id);
+      const yearVal = compSeason?.year?.toString() || new Date().getFullYear().toString();
       setFormData({
         name: comp.name,
         association_id: comp.association_id || "__none__",
-        season_id: comp.season_id || "__none__",
+        year: yearVal,
         is_active: comp.is_active ?? true,
       });
     } else {
@@ -131,7 +141,7 @@ const CompetitionsManagement = () => {
       setFormData({
         name: "",
         association_id: defaultAssocId,
-        season_id: "__none__",
+        year: new Date().getFullYear().toString(),
         is_active: true,
       });
     }
@@ -147,22 +157,73 @@ const CompetitionsManagement = () => {
       toast({ title: "Error", description: "Association is required", variant: "destructive" });
       return;
     }
-    if (formData.season_id === "__none__") {
-      toast({ title: "Error", description: "Season is required", variant: "destructive" });
+
+    const yearNum = parseInt(formData.year, 10);
+    if (!formData.year || isNaN(yearNum) || yearNum < 2020 || yearNum > 2040 || formData.year.trim().length !== 4) {
+      toast({ title: "Error", description: "Please enter a valid year", variant: "destructive" });
       return;
     }
 
     setSaving(true);
+
+    let seasonId: string;
+    try {
+      const { data: existingSeasons, error: findError } = await supabase
+        .from("seasons")
+        .select("id")
+        .eq("association_id", formData.association_id)
+        .eq("year", yearNum);
+
+      if (findError) {
+        toast({ title: "Error", description: `Failed to search seasons: ${findError.message}`, variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
+      if (existingSeasons && existingSeasons.length > 0) {
+        seasonId = existingSeasons[0].id;
+      } else {
+        const { data: newSeason, error: insertError } = await supabase
+          .from("seasons")
+          .insert({
+            name: yearNum.toString(),
+            association_id: formData.association_id,
+            year: yearNum,
+            is_active: true
+          })
+          .select("id")
+          .single();
+
+        if (insertError) {
+          toast({ title: "Error", description: `Failed to create season: ${insertError.message}`, variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+
+        if (!newSeason) {
+          toast({ title: "Error", description: "No season returned after insertion", variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+
+        seasonId = newSeason.id;
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "An unexpected error occurred", variant: "destructive" });
+      setSaving(false);
+      return;
+    }
+
     const payload = {
       name: formData.name.trim(),
       association_id: formData.association_id,
-      season_id: formData.season_id,
+      season_id: seasonId,
       is_active: formData.is_active,
     };
 
     if (editingCompetition) {
       const { error } = await supabase
-        .from("competitions")
+        .from("competitions" as any)
         .update(payload)
         .eq("id", editingCompetition.id);
 
@@ -175,7 +236,7 @@ const CompetitionsManagement = () => {
       }
     } else {
       const { error } = await supabase
-        .from("competitions")
+        .from("competitions" as any)
         .insert(payload);
 
       if (error) {
@@ -192,7 +253,7 @@ const CompetitionsManagement = () => {
   const handleDelete = async () => {
     if (!deletingCompetition) return;
     const { error } = await supabase
-      .from("competitions")
+      .from("competitions" as any)
       .delete()
       .eq("id", deletingCompetition.id);
 
@@ -233,7 +294,7 @@ const CompetitionsManagement = () => {
                   <Label>Association *</Label>
                   <Select
                     value={formData.association_id}
-                    onValueChange={(v) => setFormData({ ...formData, association_id: v, season_id: "__none__" })}
+                    onValueChange={(v) => setFormData({ ...formData, association_id: v })}
                   >
                     <SelectTrigger><SelectValue placeholder="Select association" /></SelectTrigger>
                     <SelectContent>
@@ -243,20 +304,14 @@ const CompetitionsManagement = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Season *</Label>
-                  <Select
-                    value={formData.season_id}
-                    onValueChange={(v) => setFormData({ ...formData, season_id: v })}
-                    disabled={formData.association_id === "__none__"}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={formData.association_id === "__none__" ? "Select association first" : "Select season"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Select season</SelectItem>
-                      {dialogSeasons.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label>Year *</Label>
+                  <Input
+                    type="number"
+                    min="2020"
+                    max="2040"
+                    value={formData.year}
+                    onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Name *</Label>
@@ -303,9 +358,30 @@ const CompetitionsManagement = () => {
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5" />Competitions</CardTitle>
-          <CardDescription>{filteredCompetitions.length} competition(s)</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5" />Competitions</CardTitle>
+            <CardDescription>{filteredCompetitions.length} competition(s)</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
+            <Select
+              value={String(rowsPerPage)}
+              onValueChange={(val) => {
+                setRowsPerPage(Number(val));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -313,6 +389,7 @@ const CompetitionsManagement = () => {
           ) : filteredCompetitions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No competitions found.</div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -324,9 +401,9 @@ const CompetitionsManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCompetitions.map((comp) => {
+                {paginatedCompetitions.map((comp) => {
                   const assocName = associations.find((a) => a.id === comp.association_id)?.name || "-";
-                  const seasonName = seasons.find((s) => s.id === comp.season_id)?.name || "-";
+                  const seasonName = seasons.find((s) => s.id === comp.season_id)?.year?.toString() ?? "-";
                   return (
                     <TableRow key={comp.id}>
                       <TableCell className="font-medium">{comp.name}</TableCell>
@@ -352,6 +429,34 @@ const CompetitionsManagement = () => {
                 })}
               </TableBody>
             </Table>
+            {(() => {
+              const totalPages = Math.ceil(filteredCompetitions.length / rowsPerPage);
+              if (totalPages <= 1) return null;
+              return (
+                <div className="flex items-center justify-between mt-4 py-4 border-t px-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground font-medium">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              );
+            })()}
+            </>
           )}
         </CardContent>
       </Card>

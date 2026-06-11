@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,12 @@ const DivisionsManagement = () => {
   // Filters
   const [filterAssociation, setFilterAssociation] = useState<string>("all");
   const [filterCompetition, setFilterCompetition] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterAssociation, filterCompetition]);
 
   // Dialog State
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -77,6 +83,8 @@ const DivisionsManagement = () => {
     competition_id: "__none__",
     gender: "__none__",
     age_group: "",
+    min_age: "",
+    max_age: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -90,19 +98,19 @@ const DivisionsManagement = () => {
     setLoading(true);
 
     const [divisionsRes, associationsRes, competitionsRes] = await Promise.all([
-      supabase.from("divisions").select("*").order("name"),
+      supabase.from("divisions" as any).select("*").order("name"),
       supabase.from("associations").select("*").order("name"),
-      supabase.from("competitions").select("*").order("name"),
+      supabase.from("competitions" as any).select("*").order("name"),
     ]);
 
     if (divisionsRes.error) {
       toast({ title: "Error", description: "Failed to load divisions", variant: "destructive" });
     } else {
-      setDivisions((divisionsRes.data as Division[]) || []);
+      setDivisions((divisionsRes.data as any) || []);
     }
 
     if (!associationsRes.error) setAssociations(associationsRes.data || []);
-    if (!competitionsRes.error) setCompetitions((competitionsRes.data as Competition[]) || []);
+    if (!competitionsRes.error) setCompetitions((competitionsRes.data as any) || []);
     setLoading(false);
   };
 
@@ -140,6 +148,11 @@ const DivisionsManagement = () => {
     return true;
   });
 
+  const paginatedDivisions = useMemo(() => {
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    return filteredDivisions.slice(startIdx, startIdx + rowsPerPage);
+  }, [filteredDivisions, currentPage, rowsPerPage]);
+
   const handleOpenDialog = (div?: Division) => {
     if (div) {
       setEditingDivision(div);
@@ -149,6 +162,8 @@ const DivisionsManagement = () => {
         competition_id: div.competition_id || "__none__",
         gender: div.gender || "__none__",
         age_group: div.age_group || "",
+        min_age: div.min_age !== null && div.min_age !== undefined ? div.min_age.toString() : "",
+        max_age: div.max_age !== null && div.max_age !== undefined ? div.max_age.toString() : "",
       });
     } else {
       setEditingDivision(null);
@@ -159,6 +174,8 @@ const DivisionsManagement = () => {
         competition_id: "__none__",
         gender: "__none__",
         age_group: "",
+        min_age: "",
+        max_age: "",
       });
     }
     setDialogOpen(true);
@@ -190,11 +207,13 @@ const DivisionsManagement = () => {
       season_id: seasonId,
       gender: formData.gender === "__none__" ? null : formData.gender,
       age_group: formData.age_group.trim() || null,
+      min_age: formData.min_age.trim() !== "" ? parseInt(formData.min_age, 10) : null,
+      max_age: formData.max_age.trim() !== "" ? parseInt(formData.max_age, 10) : null,
     };
 
     if (editingDivision) {
       const { error } = await supabase
-        .from("divisions")
+        .from("divisions" as any)
         .update(payload)
         .eq("id", editingDivision.id);
 
@@ -207,7 +226,7 @@ const DivisionsManagement = () => {
       }
     } else {
       const { error } = await supabase
-        .from("divisions")
+        .from("divisions" as any)
         .insert(payload);
 
       if (error) {
@@ -224,7 +243,7 @@ const DivisionsManagement = () => {
   const handleDelete = async () => {
     if (!deletingDivision) return;
     const { error } = await supabase
-      .from("divisions")
+      .from("divisions" as any)
       .delete()
       .eq("id", deletingDivision.id);
 
@@ -308,20 +327,62 @@ const DivisionsManagement = () => {
                     <SelectContent>
                       <SelectItem value="__none__">— None —</SelectItem>
                       <SelectItem value="Open">Open</SelectItem>
-                      <SelectItem value="Women">Women</SelectItem>
-                      <SelectItem value="Men">Men</SelectItem>
-                      <SelectItem value="Mixed">Mixed</SelectItem>
+                      <SelectItem value="Womens">Women's</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Age Group</Label>
-                  <Input
-                    value={formData.age_group}
-                    onChange={(e) => setFormData({ ...formData, age_group: e.target.value })}
-                    placeholder="e.g., Under 16"
-                  />
+                  <Select
+                    value={formData.age_group || "none"}
+                    onValueChange={(v) => {
+                      const val = v === "none" ? "" : v;
+                      setFormData({ ...formData, age_group: val, min_age: "", max_age: "" });
+                    }}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— None —</SelectItem>
+                      <SelectItem value="Juniors">Juniors</SelectItem>
+                      <SelectItem value="Seniors">Seniors</SelectItem>
+                      <SelectItem value="Masters">Masters</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                {(formData.age_group === "Juniors" || formData.age_group === "Masters") && (
+                  <div className="grid grid-cols-2 gap-4">
+                    {formData.age_group === "Juniors" && (
+                      <div className="space-y-2 col-span-2 sm:col-span-1">
+                        <Label>Max Age</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Age on 31 Dec of competition year. Players must be this age or younger.
+                        </p>
+                        <Input
+                          type="number"
+                          min={5}
+                          max={21}
+                          value={formData.max_age}
+                          onChange={(e) => setFormData({ ...formData, max_age: e.target.value })}
+                        />
+                      </div>
+                    )}
+                    {formData.age_group === "Masters" && (
+                      <div className="space-y-2 col-span-2 sm:col-span-1">
+                        <Label>Min Age</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Age on 31 Dec of competition year. Players must have reached this age.
+                        </p>
+                        <Input
+                          type="number"
+                          min={25}
+                          max={80}
+                          value={formData.min_age}
+                          onChange={(e) => setFormData({ ...formData, min_age: e.target.value })}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
@@ -376,9 +437,30 @@ const DivisionsManagement = () => {
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><LayoutGrid className="h-5 w-5" />Divisions</CardTitle>
-          <CardDescription>{filteredDivisions.length} division(s)</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2"><LayoutGrid className="h-5 w-5" />Divisions</CardTitle>
+            <CardDescription>{filteredDivisions.length} division(s)</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
+            <Select
+              value={String(rowsPerPage)}
+              onValueChange={(val) => {
+                setRowsPerPage(Number(val));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -386,6 +468,7 @@ const DivisionsManagement = () => {
           ) : filteredDivisions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No divisions found.</div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -398,7 +481,7 @@ const DivisionsManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDivisions.map((div) => {
+                {paginatedDivisions.map((div) => {
                   const compName = competitions.find((c) => c.id === div.competition_id)?.name || "-";
                   const assocName = associations.find((a) => a.id === div.association_id)?.name || "-";
                   return (
@@ -406,8 +489,10 @@ const DivisionsManagement = () => {
                       <TableCell className="font-medium">{div.name}</TableCell>
                       <TableCell>{compName}</TableCell>
                       <TableCell>{assocName}</TableCell>
-                      <TableCell>{div.gender || "-"}</TableCell>
-                      <TableCell>{div.age_group || "-"}</TableCell>
+                      <TableCell>{div.gender === "Womens" ? "Women's" : (div.gender || "-")}</TableCell>
+                      <TableCell>
+                        {div.age_group ? div.age_group + (div.max_age ? " (U" + div.max_age + ")" : "") + (div.min_age ? " (" + div.min_age + "+)" : "") : "-"}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(div)}>
                           <Pencil className="h-4 w-4" />
@@ -421,6 +506,34 @@ const DivisionsManagement = () => {
                 })}
               </TableBody>
             </Table>
+            {(() => {
+              const totalPages = Math.ceil(filteredDivisions.length / rowsPerPage);
+              if (totalPages <= 1) return null;
+              return (
+                <div className="flex items-center justify-between mt-4 py-4 border-t px-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground font-medium">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              );
+            })()}
+            </>
           )}
         </CardContent>
       </Card>

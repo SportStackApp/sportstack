@@ -86,13 +86,13 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         supabase.from("associations").select("*").order("name"),
         supabase.from("clubs").select("*").order("name"),
         supabase.from("teams").select("*").order("name"),
-        supabase.from("team_divisions").select("*"),
+        supabase.from("team_divisions" as any).select("*"),
       ]);
 
       const assocs = assocRes.data || [];
       const allClubs = clubRes.data || [];
       const allTeams = teamRes.data || [];
-      const allTeamDivisions = tdRes.data || [];
+      const allTeamDivisions = (tdRes.data as any) || [];
       const allDivs: Division[] = [];
 
       setAssociations(assocs);
@@ -118,10 +118,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
     const fetchDivisions = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("divisions")
+      const { data, error } = (await supabase
+        .from("divisions" as any)
         .select("*")
-        .eq("association_id", associationId);
+        .eq("association_id", associationId)) as any;
 
       if (error) {
         console.error("Error fetching divisions:", error);

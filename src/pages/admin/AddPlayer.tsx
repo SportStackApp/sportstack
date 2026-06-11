@@ -21,7 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface AdditionalTeam {
   id: string;
   team_id: string;
-  membership_type: "PERMANENT" | "FILL_IN";
+  membership_type: "SECONDARY" | "FILL_IN";
 }
 
 const AddPlayer = () => {
@@ -60,7 +60,7 @@ const AddPlayer = () => {
   const addAdditionalTeam = () => {
     setAdditionalTeams((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), team_id: "", membership_type: "PERMANENT" },
+      { id: crypto.randomUUID(), team_id: "", membership_type: "SECONDARY" },
     ]);
   };
 
@@ -196,7 +196,7 @@ const AddPlayer = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="PERMANENT">Permanent</SelectItem>
+                      <SelectItem value="SECONDARY">Secondary</SelectItem>
                       <SelectItem value="FILL_IN">Fill-in</SelectItem>
                     </SelectContent>
                   </Select>

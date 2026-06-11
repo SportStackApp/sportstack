@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -103,6 +104,13 @@ const AssociationsManagement = () => {
   
   const [associations, setAssociations] = useState<Association[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+
+  const paginatedAssociations = useMemo(() => {
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    return associations.slice(startIdx, startIdx + rowsPerPage);
+  }, [associations, currentPage, rowsPerPage]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAssociation, setEditingAssociation] = useState<Association | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -241,8 +249,8 @@ const AssociationsManagement = () => {
         return;
       }
 
-      const { data: publicUrlData, error: publicUrlError } = supabase.storage.from("logos").getPublicUrl(path);
-      if (publicUrlError || !publicUrlData?.publicUrl) {
+      const { data: publicUrlData } = supabase.storage.from("logos").getPublicUrl(path);
+      if (!publicUrlData?.publicUrl) {
         toast({ title: "Error", description: "Failed to retrieve logo URL", variant: "destructive" });
         return;
       }
@@ -554,8 +562,8 @@ const AssociationsManagement = () => {
                     toast({ title: "Error", description: uploadError?.message || "Failed to upload logo", variant: "destructive" });
                     return;
                   }
-                  const { data: publicUrlData, error: publicUrlError } = supabase.storage.from("logos").getPublicUrl(path);
-                  if (publicUrlError || !publicUrlData?.publicUrl) {
+                  const { data: publicUrlData } = supabase.storage.from("logos").getPublicUrl(path);
+                  if (!publicUrlData?.publicUrl) {
                     toast({ title: "Error", description: "Failed to retrieve logo URL", variant: "destructive" });
                     return;
                   }
@@ -577,12 +585,33 @@ const AssociationsManagement = () => {
 
       {/* Table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            All Associations
-          </CardTitle>
-          <CardDescription>{associations.length} association(s)</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              All Associations
+            </CardTitle>
+            <CardDescription>{associations.length} association(s)</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
+            <Select
+              value={String(rowsPerPage)}
+              onValueChange={(val) => {
+                setRowsPerPage(Number(val));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -596,6 +625,7 @@ const AssociationsManagement = () => {
               No associations yet. Create your first one!
             </div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -607,7 +637,7 @@ const AssociationsManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {associations.map((association) => {
+                {paginatedAssociations.map((association) => {
                   return (
                     <TableRow key={association.id}>
                       <TableCell className="font-medium">
@@ -656,6 +686,34 @@ const AssociationsManagement = () => {
                 })}
               </TableBody>
             </Table>
+            {(() => {
+              const totalPages = Math.ceil(associations.length / rowsPerPage);
+              if (totalPages <= 1) return null;
+              return (
+                <div className="flex items-center justify-between mt-4 py-4 border-t px-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground font-medium">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              );
+            })()}
+            </>
           )}
         </CardContent>
       </Card>

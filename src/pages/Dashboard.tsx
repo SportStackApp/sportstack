@@ -91,12 +91,12 @@ const Dashboard = () => {
     const fetchTeamRequests = async () => {
       setLoadingRequests(true);
       try {
-        const { data, error } = await supabase
-          .from("requests")
+        const { data, error } = (await supabase
+          .from("requests" as any)
           .select("*")
           .eq("target_user_id", user.id)
           .eq("status", "PENDING")
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })) as any;
 
         if (error) throw error;
 
@@ -233,13 +233,13 @@ const Dashboard = () => {
       await supabase.from("team_memberships").insert({
         user_id: user.id,
         team_id: request.team_id,
-        membership_type: finalMembershipType,
+        membership_type: finalMembershipType as any,
         status: "ACTIVE",
       });
 
       // Update request status
       await supabase
-        .from("requests")
+        .from("requests" as any)
         .update({ status: "APPROVED", responded_by: user.id })
         .eq("id", request.id);
 
@@ -265,7 +265,7 @@ const Dashboard = () => {
 
     try {
       await supabase
-        .from("requests")
+        .from("requests" as any)
         .update({ status: "DECLINED", responded_by: user.id })
         .eq("id", requestId);
 

@@ -121,7 +121,7 @@ export const RequestAdditionalTeamDialog = ({
       const { error: membershipError } = await supabase.from("team_memberships").insert({
         user_id: user.id,
         team_id: selectedTeam,
-        membership_type: "PERMANENT",
+        membership_type: "SECONDARY",
         status: "PENDING",
         is_player: true,
       });

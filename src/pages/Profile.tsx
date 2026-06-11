@@ -31,7 +31,7 @@ import type { Database } from "@/integrations/supabase/types";
 type AppRole = Database["public"]["Enums"]["app_role"];
 type MembershipType = Database["public"]["Enums"]["membership_type"];
 
-const ALL_ROLES: AppRole[] = ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "ASSOCIATION_ADMIN", "SUPER_ADMIN"];
+const ALL_ROLES: AppRole[] = ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "ASSOCIATION_ADMIN", "SUPER_ADMIN", "UMPIRE", "VOTER"];
 
 const getRoleDisplayName = (role: AppRole): string => {
   const names: Record<AppRole, string> = {
@@ -41,6 +41,8 @@ const getRoleDisplayName = (role: AppRole): string => {
     CLUB_ADMIN: "Club Admin",
     ASSOCIATION_ADMIN: "Association Admin",
     SUPER_ADMIN: "Super Admin",
+    UMPIRE: "Umpire",
+    VOTER: "Voter",
   };
   return names[role];
 };
@@ -53,6 +55,8 @@ const getRoleEmoji = (role: AppRole): string => {
     CLUB_ADMIN: "🏢",
     ASSOCIATION_ADMIN: "🏛️",
     SUPER_ADMIN: "👑",
+    UMPIRE: "🏳️",
+    VOTER: "🗳️",
   };
   return emojis[role];
 };
@@ -233,11 +237,11 @@ const Profile = () => {
     }
 
     // Fetch pending team requests from requests table
-    const { data: pendingReqsData } = await supabase
-      .from("requests")
+    const { data: pendingReqsData } = (await supabase
+      .from("requests" as any)
       .select("id, team_id, membership_type")
       .eq("target_user_id", user.id)
-      .eq("status", "PENDING");
+      .eq("status", "PENDING")) as any;
 
     const pendingReqsTransformed: Array<{id: string; teamId: string; teamName: string; clubName: string; type: string;}> = [];
     if (pendingReqsData && pendingReqsData.length > 0) {
@@ -491,11 +495,11 @@ const Profile = () => {
   const handleConfirmChange = async () => {
     if (!user || !pendingChangeRequest || pendingChangeRequest.status !== "ADMIN_APPROVED") return;
 
-    // Downgrade old PRIMARY to PERMANENT
+    // Downgrade old PRIMARY to SECONDARY
     if (pendingChangeRequest.from_team_id) {
       await supabase
         .from("team_memberships")
-        .update({ membership_type: "PERMANENT" })
+        .update({ membership_type: "SECONDARY" })
         .eq("user_id", user.id)
         .eq("team_id", pendingChangeRequest.from_team_id)
         .eq("membership_type", "PRIMARY");
@@ -669,7 +673,7 @@ const Profile = () => {
     clubName: m.team.club.name,
     associationId: m.team.club.association.id,
     associationName: m.team.club.association.name,
-    type: m.membership_type as "PRIMARY" | "PERMANENT" | "FILL_IN",
+    type: m.membership_type as "PRIMARY" | "SECONDARY" | "FILL_IN",
     position: m.position || undefined,
     jerseyNumber: m.jersey_number || undefined,
   }));
@@ -810,7 +814,7 @@ const Profile = () => {
           if (id.startsWith("req_")) {
             const actualId = id.replace("req_", "");
             const { error } = await supabase
-              .from("requests")
+              .from("requests" as any)
               .update({ status: "CANCELLED", cancelled_by: user?.id })
               .eq("id", actualId);
             if (error) {

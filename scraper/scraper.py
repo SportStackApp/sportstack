@@ -731,41 +731,82 @@ def main():
                     match["round"] = rnd["round_label"]
                     all_results.append(match)
 
-                    for team in match.get("teams", []):
-                        if only_team and only_team.lower() not in team["team_name"].lower():
-                            continue
-                        for player in team["players"]:
-                            csv_rows.append({
-                                "association":         ASSOCIATION_NAME,
-                                "competition_name":    grade.get("competition_name", ASSOCIATION_NAME),
-                                "grade":               grade["name"],
-                                "round":               rnd["round_label"],
-                                "game_date":           match["date"],
-                                "game_time":           match["time"],
-                                "venue":               match["venue"],
-                                "pitch":               match["pitch"],
-                                "home_team":           match["home_team"],
-                                "away_team":           match["away_team"],
-                                "home_score":          match["home_score"],
-                                "away_score":          match["away_score"],
-                                "umpire_1":            match["umpires"][0] if len(match["umpires"]) > 0 else "",
-                                "umpire_2":            match["umpires"][1] if len(match["umpires"]) > 1 else "",
-                                "team":                team["team_name"],
-                                "club_name":           team["club_name"],
-                                "player_name":         player["name"],
-                                "jersey":              player["jersey"],
-                                "role":                player["role"],
-                                "attended":            player["attended"],
-                                "is_fillin":           player["is_fillin"],   # True = Fill-in player
-                                "is_removed":          player["is_removed"],  # True = Removed from team
-                                "revsports_player_id": player["revsports_player_id"],
-                                "goals":               player["goals"],
-                                "green_cards":         player["green_cards"],
-                                "yellow_cards":        player["yellow_cards"],
-                                "red_cards":           player["red_cards"],
-                                "match_url":           game_info["game_url"],
-                                "scraped_at":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            })
+                    # Build CSV rows — one per player if player data exists,
+                    # or one "fixture-only" row per match if player cards are hidden (e.g. WHA).
+                    teams = match.get("teams", [])
+                    has_players = any(len(t.get("players", [])) > 0 for t in teams)
+
+                    if has_players:
+                        # Normal case — one row per player per team
+                        for team in teams:
+                            if only_team and only_team.lower() not in team["team_name"].lower():
+                                continue
+                            for player in team["players"]:
+                                csv_rows.append({
+                                    "association":         ASSOCIATION_NAME,
+                                    "competition_name":    grade.get("competition_name", ASSOCIATION_NAME),
+                                    "grade":               grade["name"],
+                                    "round":               rnd["round_label"],
+                                    "game_date":           match["date"],
+                                    "game_time":           match["time"],
+                                    "venue":               match["venue"],
+                                    "pitch":               match["pitch"],
+                                    "home_team":           match["home_team"],
+                                    "away_team":           match["away_team"],
+                                    "home_score":          match["home_score"],
+                                    "away_score":          match["away_score"],
+                                    "umpire_1":            match["umpires"][0] if len(match["umpires"]) > 0 else "",
+                                    "umpire_2":            match["umpires"][1] if len(match["umpires"]) > 1 else "",
+                                    "team":                team["team_name"],
+                                    "club_name":           team["club_name"],
+                                    "player_name":         player["name"],
+                                    "jersey":              player["jersey"],
+                                    "role":                player["role"],
+                                    "attended":            player["attended"],
+                                    "is_fillin":           player["is_fillin"],
+                                    "is_removed":          player["is_removed"],
+                                    "revsports_player_id": player["revsports_player_id"],
+                                    "goals":               player["goals"],
+                                    "green_cards":         player["green_cards"],
+                                    "yellow_cards":        player["yellow_cards"],
+                                    "red_cards":           player["red_cards"],
+                                    "match_url":           game_info["game_url"],
+                                    "scraped_at":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                })
+                    else:
+                        # Fixture-only case — player cards not accessible (e.g. WHA login-protected).
+                        # Write one row per match with fixture data and blank player columns.
+                        csv_rows.append({
+                            "association":         ASSOCIATION_NAME,
+                            "competition_name":    grade.get("competition_name", ASSOCIATION_NAME),
+                            "grade":               grade["name"],
+                            "round":               rnd["round_label"],
+                            "game_date":           match["date"],
+                            "game_time":           match["time"],
+                            "venue":               match["venue"],
+                            "pitch":               match["pitch"],
+                            "home_team":           match["home_team"],
+                            "away_team":           match["away_team"],
+                            "home_score":          match["home_score"],
+                            "away_score":          match["away_score"],
+                            "umpire_1":            match["umpires"][0] if len(match["umpires"]) > 0 else "",
+                            "umpire_2":            match["umpires"][1] if len(match["umpires"]) > 1 else "",
+                            "team":                "",
+                            "club_name":           "",
+                            "player_name":         "NO_PLAYERS",
+                            "jersey":              None,
+                            "role":                None,
+                            "attended":            None,
+                            "is_fillin":           None,
+                            "is_removed":          None,
+                            "revsports_player_id": None,
+                            "goals":               None,
+                            "green_cards":         None,
+                            "yellow_cards":        None,
+                            "red_cards":           None,
+                            "match_url":           game_info["game_url"],
+                            "scraped_at":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        })
 
                     print(f"    ✓ {match.get('home_team','?')} {match.get('home_score','?')}"
                           f" – {match.get('away_score','?')} {match.get('away_team','?')}"
@@ -784,11 +825,13 @@ def main():
             writer = csv.DictWriter(f, fieldnames=csv_rows[0].keys())
             writer.writeheader()
             writer.writerows(csv_rows)
-        print(f"\n✅ CSV: {csv_path}  ({len(csv_rows)} rows)")
+        fixture_only = sum(1 for r in csv_rows if r.get("player_name") == "NO_PLAYERS")
+        player_rows  = len(csv_rows) - fixture_only
+        print(f"\n✅ CSV: {csv_path}  ({len(csv_rows)} rows — {player_rows} player rows, {fixture_only} fixture-only rows)")
         # ── Run data quality check ────────────────────────────
         run_quality_check(csv_rows, OUTPUT_DIR, ASSOCIATION_NAME)
     else:
-        print("\n⚠ No rows scraped — CSV not written.")
+        print("\n⚠ No matches scraped — CSV not written.")
 
     # ── Save JSON ─────────────────────────────────────────────
     json_path = os.path.join(OUTPUT_DIR, f"{assoc_slug}_results.json")

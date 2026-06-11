@@ -209,7 +209,7 @@ export default function UmpireVoteSubmit() {
               ?.map((f: any) => f.round_number)
               .filter((r: any): r is number => r !== null) || []
           )
-        ).sort((a: any, b: any) => a - b);
+        ).sort((a: any, b: any) => a - b) as number[];
 
         setRounds(uniqueRounds);
       } catch (err: any) {
