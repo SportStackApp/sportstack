@@ -1,10 +1,20 @@
 DATA QUALITY REPORT — Sunraysia Hockey Association
-Generated: 2026-06-10 18:50:44
+Generated: 2026-06-11 19:06:09
 ────────────────────────────────────────────────────────────
-Total rows scraped : 2,224
-Rows with issues   : 0  (0.0%)
+Total rows scraped : 2,267
+Rows with issues   : 43  (1.9%)
 
 COLUMN ISSUES:
-  ✅ No issues found — all columns look clean!
+  away_team                 — 2 row(s) failing 'required' rule
+  team                      — 43 row(s) failing 'required' rule
+  revsports_player_id       — 43 row(s) failing 'required' rule
+  club_name                 — 43 row(s) failing 'required' rule
+
+SAMPLE PROBLEM ROWS (first 5):
+  Row  360: grade='Indoor Mixed'       team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
+  Row  361: grade='Indoor Mixed'       team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
+  Row  362: grade='Indoor Mixed'       team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
+  Row  363: grade='Indoor Mixed'       team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
+  Row  364: grade='Indoor Mixed'       team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
 
 ────────────────────────────────────────────────────────────
