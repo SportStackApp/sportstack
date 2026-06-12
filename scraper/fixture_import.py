@@ -160,8 +160,6 @@ def build_fixture_rows(games: list, team_map: dict, venue_map: dict) -> tuple[li
         else:
             status = "SCHEDULED"
 
-<<<<<<< HEAD
-=======
         # Parse round — scraper stores it as e.g. "Round 1", "Round 12"
         round_raw = game.get("round", "") or ""
         round_parts = round_raw.strip().split()
@@ -173,7 +171,6 @@ def build_fixture_rows(games: list, team_map: dict, venue_map: dict) -> tuple[li
             except ValueError:
                 pass
 
->>>>>>> dev
         resolved.append({
             "home_team_id": home_id,
             "away_team_id": away_id,
@@ -182,11 +179,8 @@ def build_fixture_rows(games: list, team_map: dict, venue_map: dict) -> tuple[li
             "home_score": home_score,
             "away_score": away_score,
             "status": status,
-<<<<<<< HEAD
-=======
             "round_number": round_number,   # e.g. 1, 2, 3
             "round_name": round_name,       # e.g. "Round 1"
->>>>>>> dev
             "revsports_match_url": url,     # conflict key — ensures no duplicates
         })
 
