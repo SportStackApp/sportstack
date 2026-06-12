@@ -7,8 +7,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Koowinda Indoor",
     "away_team": "Rivaside Blue Indoor",
-    "home_score": "8",
-    "away_score": "1",
+    "home_score": 8,
+    "away_score": 1,
     "umpires": [
       "Mark Lohmeyer"
     ],
@@ -323,8 +323,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Mildura Wanderers Gold Indoor",
     "away_team": "Waratahs White Indoor",
-    "home_score": "2",
-    "away_score": "2",
+    "home_score": 2,
+    "away_score": 2,
     "umpires": [
       "Sam Megson"
     ],
@@ -561,8 +561,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Waratahs Blue Indoor",
     "away_team": "Rivaside Red Indoor",
-    "home_score": "3",
-    "away_score": "0",
+    "home_score": 3,
+    "away_score": 0,
     "umpires": [
       "Taj Flentjar"
     ],
@@ -864,8 +864,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Waratahs White Indoor",
     "away_team": "Mildura Wanderers White Indoor",
-    "home_score": "2",
-    "away_score": "3",
+    "home_score": 2,
+    "away_score": 3,
     "umpires": [
       "Sam Megson"
     ],
@@ -1128,8 +1128,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Rivaside Blue Indoor",
     "away_team": "Waratahs Blue Indoor",
-    "home_score": "5",
-    "away_score": "9",
+    "home_score": 5,
+    "away_score": 9,
     "umpires": [
       "Regan Taylor"
     ],
@@ -1392,8 +1392,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Rivaside Red Indoor",
     "away_team": "Mildura Wanderers Gold Indoor",
-    "home_score": "0",
-    "away_score": "4",
+    "home_score": 0,
+    "away_score": 4,
     "umpires": [
       "Mitchell Simms"
     ],
@@ -1669,8 +1669,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Waratahs Blue Indoor",
     "away_team": "Koowinda Indoor",
-    "home_score": "4",
-    "away_score": "4",
+    "home_score": 4,
+    "away_score": 4,
     "umpires": [
       "Cooper Topp"
     ],
@@ -2011,8 +2011,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Mildura Wanderers White Indoor",
     "away_team": "Rivaside Red Indoor",
-    "home_score": "7",
-    "away_score": "1",
+    "home_score": 7,
+    "away_score": 1,
     "umpires": [
       "Taj Flentjar"
     ],
@@ -2314,8 +2314,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Mildura Wanderers Gold Indoor",
     "away_team": "Rivaside Blue Indoor",
-    "home_score": "7",
-    "away_score": "2",
+    "home_score": 7,
+    "away_score": 2,
     "umpires": [
       "Sam Megson"
     ],
@@ -2578,8 +2578,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Rivaside Red Indoor",
     "away_team": "Waratahs White Indoor",
-    "home_score": "2",
-    "away_score": "6",
+    "home_score": 2,
+    "away_score": 6,
     "umpires": [
       "Sam Megson"
     ],
@@ -2829,8 +2829,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Koowinda Indoor",
     "away_team": "Mildura Wanderers Gold Indoor",
-    "home_score": "4",
-    "away_score": "4",
+    "home_score": 4,
+    "away_score": 4,
     "umpires": [
       "Sam Megson"
     ],
@@ -3171,8 +3171,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Rivaside Blue Indoor",
     "away_team": "Mildura Wanderers White Indoor",
-    "home_score": "4",
-    "away_score": "9",
+    "home_score": 4,
+    "away_score": 9,
     "umpires": [
       "Sam Megson"
     ],
@@ -3461,8 +3461,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Mildura Wanderers Gold Indoor",
     "away_team": "Waratahs Blue Indoor",
-    "home_score": "3",
-    "away_score": "2",
+    "home_score": 3,
+    "away_score": 2,
     "umpires": [
       "Taj Flentjar"
     ],
@@ -3725,8 +3725,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Waratahs White Indoor",
     "away_team": "Rivaside Blue Indoor",
-    "home_score": "4",
-    "away_score": "3",
+    "home_score": 4,
+    "away_score": 3,
     "umpires": [
       "Taj Flentjar"
     ],
@@ -3976,8 +3976,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Mildura Wanderers White Indoor",
     "away_team": "Koowinda Indoor",
-    "home_score": "2",
-    "away_score": "9",
+    "home_score": 2,
+    "away_score": 9,
     "umpires": [
       "Joshua Fleming"
     ],
@@ -4331,8 +4331,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Rivaside Blue Indoor",
     "away_team": "Rivaside Red Indoor",
-    "home_score": "4",
-    "away_score": "1",
+    "home_score": 4,
+    "away_score": 1,
     "umpires": [
       "Sam Megson"
     ],
@@ -4608,8 +4608,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Waratahs Blue Indoor",
     "away_team": "Mildura Wanderers White Indoor",
-    "home_score": "3",
-    "away_score": "7",
+    "home_score": 3,
+    "away_score": 7,
     "umpires": [
       "Mitchell Simms"
     ],
@@ -4911,8 +4911,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Koowinda Indoor",
     "away_team": "Waratahs White Indoor",
-    "home_score": "5",
-    "away_score": "4",
+    "home_score": 5,
+    "away_score": 4,
     "umpires": [
       "Rehan Offer"
     ],
@@ -5246,7 +5246,12 @@
     "away_team": "Waratahs Blue Indoor",
     "home_score": null,
     "away_score": null,
-    "umpires": [],
+    "umpires": [
+      "Taj Flentjar",
+      "Sponsors",
+      "We Support",
+      "Contacts"
+    ],
     "teams": [],
     "grade": "Indoor Mixed",
     "round": "Round 7"
@@ -5259,8 +5264,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Koowinda Indoor",
     "away_team": "Rivaside Blue Indoor",
-    "home_score": "8",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Mark Lohmeyer",
       "Details",
@@ -5279,8 +5284,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Mildura Wanderers Gold Indoor",
     "away_team": "Waratahs White Indoor",
-    "home_score": "2",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Sam Megson",
       "Details",
@@ -5299,8 +5304,8 @@
     "pitch": "Indoor Court 1",
     "home_team": "Waratahs Blue Indoor",
     "away_team": "Rivaside Red Indoor",
-    "home_score": "3",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Taj Flentjar",
       "Details",
@@ -5424,8 +5429,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Under 16",
     "away_team": "Waratahs Blue Under 16",
-    "home_score": "4",
-    "away_score": "4",
+    "home_score": 4,
+    "away_score": 4,
     "umpires": [
       "Alewyn Hugo",
       "Mitchell Simms"
@@ -5780,8 +5785,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside Under 16 Mixed",
     "away_team": "Waratahs White Under 16",
-    "home_score": "0",
-    "away_score": "1",
+    "home_score": 0,
+    "away_score": 1,
     "umpires": [
       "Ryan Saunders",
       "Tully Shields"
@@ -6175,8 +6180,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Blue Under 16",
     "away_team": "Rivaside Under 16 Mixed",
-    "home_score": "7",
-    "away_score": "2",
+    "home_score": 7,
+    "away_score": 2,
     "umpires": [
       "Alewyn Hugo",
       "Dafydd Scholes"
@@ -6583,8 +6588,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs White Under 16",
     "away_team": "Koowinda Under 16",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": 1,
+    "away_score": 2,
     "umpires": [
       "Mitchell Simms",
       "Tully Shields"
@@ -6926,8 +6931,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Blue Under 16",
     "away_team": "Waratahs White Under 16",
-    "home_score": "0",
-    "away_score": "4",
+    "home_score": 0,
+    "away_score": 4,
     "umpires": [
       "Jenna Hollow"
     ],
@@ -7268,8 +7273,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside Under 16 Mixed",
     "away_team": "Koowinda Under 16",
-    "home_score": "0",
-    "away_score": "1",
+    "home_score": 0,
+    "away_score": 1,
     "umpires": [
       "Rehan Offer",
       "Sam Megson"
@@ -7663,8 +7668,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Under 16",
     "away_team": "Waratahs Blue Under 16",
-    "home_score": "4",
-    "away_score": "2",
+    "home_score": 4,
+    "away_score": 2,
     "umpires": [
       "Kara Taylor",
       "Sam Megson"
@@ -8019,8 +8024,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside Under 16 Mixed",
     "away_team": "Waratahs White Under 16",
-    "home_score": "4",
-    "away_score": "3",
+    "home_score": 4,
+    "away_score": 3,
     "umpires": [
       "Mitchell Simms"
     ],
@@ -8374,8 +8379,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs Blue Under 16",
     "away_team": "Rivaside Under 16 Mixed",
-    "home_score": "1",
-    "away_score": "1",
+    "home_score": 1,
+    "away_score": 1,
     "umpires": [
       "Robert Thompson"
     ],
@@ -8781,8 +8786,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs White Under 16",
     "away_team": "Koowinda Under 16",
-    "home_score": "1",
-    "away_score": "3",
+    "home_score": 1,
+    "away_score": 3,
     "umpires": [
       "Mitchell Simms",
       "Robert Thompson"
@@ -9124,8 +9129,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs Blue Under 16",
     "away_team": "Waratahs White Under 16",
-    "home_score": "3",
-    "away_score": "3",
+    "home_score": 3,
+    "away_score": 3,
     "umpires": [
       "Kara Taylor",
       "Ryan Saunders"
@@ -9467,8 +9472,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside Under 16 Mixed",
     "away_team": "Koowinda Under 16",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": 1,
+    "away_score": 2,
     "umpires": [
       "Mark Lohmeyer",
       "Sam Megson"
@@ -9849,8 +9854,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Under 16",
     "away_team": "Waratahs Blue Under 16",
-    "home_score": "4",
-    "away_score": "4",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Mitchell Simms;                                                                     Alewyn Hugo",
       "Details",
@@ -9869,8 +9874,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside Under 16 Mixed",
     "away_team": "Waratahs White Under 16",
-    "home_score": "0",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Tully Shields;                                                                     Ryan Saunders",
       "Details",
@@ -9889,8 +9894,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs Blue Under 16",
     "away_team": "Rivaside Under 16 Mixed",
-    "home_score": "7",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Dafydd Scholes;                                                                     Alewyn Hugo",
       "Details",
@@ -9909,8 +9914,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs White Under 16",
     "away_team": "Koowinda Under 16",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Tully Shields;                                                                     Mitchell Simms",
       "Details",
@@ -13081,8 +13086,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Under 13 Girls",
     "away_team": "Rivaside/Wanderers Under 13 Girls",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": 0,
+    "away_score": 0,
     "umpires": [
       "Annalise Hunt",
       "Sam Megson"
@@ -13320,8 +13325,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Under 13 Girls",
     "away_team": "Waratahs Under 13 Girls",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": 0,
+    "away_score": 0,
     "umpires": [
       "Aurora Taylor",
       "Kara Taylor"
@@ -13598,8 +13603,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Under 13 Girls",
     "away_team": "Rivaside/Wanderers Under 13 Girls",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": 0,
+    "away_score": 0,
     "umpires": [
       "Piper Ellis",
       "Vicki Ellis"
@@ -13876,8 +13881,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Under 13 Girls",
     "away_team": "Rivaside/Wanderers Under 13 Girls",
-    "home_score": "3",
-    "away_score": "3",
+    "home_score": 3,
+    "away_score": 3,
     "umpires": [
       "Hanna Flentjar",
       "Slade Blandford"
@@ -14154,8 +14159,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Under 13 Girls",
     "away_team": "Koowinda Under 13 Girls",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": 0,
+    "away_score": 0,
     "umpires": [
       "April Nyabonda",
       "Aurora Taylor"
@@ -14432,8 +14437,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside/Wanderers Under 13 Girls",
     "away_team": "Koowinda Under 13 Girls",
-    "home_score": "3",
-    "away_score": "2",
+    "home_score": 3,
+    "away_score": 2,
     "umpires": [
       "Conan Dowdy",
       "Sam Megson"
@@ -14671,8 +14676,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Under 13 Girls",
     "away_team": "Waratahs Under 13 Girls",
-    "home_score": "0",
-    "away_score": "1",
+    "home_score": 0,
+    "away_score": 1,
     "umpires": [
       "Jenna Hollow"
     ],
@@ -14948,8 +14953,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside/Wanderers Under 13 Girls",
     "away_team": "Rivaside/Wanderers Under 13 Girls",
-    "home_score": "5",
-    "away_score": "0",
+    "home_score": 5,
+    "away_score": 0,
     "umpires": [
       "Monty Clarke"
     ],
@@ -15186,8 +15191,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Under 13 Girls",
     "away_team": "Rivaside/Wanderers Under 13 Girls",
-    "home_score": "4",
-    "away_score": "3",
+    "home_score": 4,
+    "away_score": 3,
     "umpires": [
       "Piper Ellis",
       "Shingirai Nyabonda"
@@ -15464,8 +15469,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside/Wanderers Under 13 Girls",
     "away_team": "Koowinda Under 13 Girls",
-    "home_score": "0",
-    "away_score": "1",
+    "home_score": 0,
+    "away_score": 1,
     "umpires": [
       "Andrew Giddings",
       "Belinda Seekamp"
@@ -15703,8 +15708,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Under 13 Girls",
     "away_team": "Waratahs Under 13 Girls",
-    "home_score": "1",
-    "away_score": "0",
+    "home_score": 1,
+    "away_score": 0,
     "umpires": [
       "Belinda Seekamp",
       "Sonya Drew"
@@ -15981,8 +15986,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Under 13 Girls",
     "away_team": "Waratahs Under 13 Girls",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": 1,
+    "away_score": 2,
     "umpires": [
       "Brayden Lloyd",
       "Kara Taylor"
@@ -16259,8 +16264,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Under 13 Girls",
     "away_team": "Waratahs Under 13 Girls",
-    "home_score": "0",
-    "away_score": "2",
+    "home_score": 0,
+    "away_score": 2,
     "umpires": [
       "Kara Taylor",
       "Shingirai Nyabonda"
@@ -16537,8 +16542,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside/Wanderers Under 13 Girls",
     "away_team": "Rivaside/Wanderers Under 13 Girls",
-    "home_score": "2",
-    "away_score": "3",
+    "home_score": 2,
+    "away_score": 3,
     "umpires": [
       "Dafydd Scholes",
       "Hanna Flentjar"
@@ -16815,8 +16820,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside/Wanderers Under 13 Girls",
     "away_team": "Koowinda Under 13 Girls",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": 2,
+    "away_score": 1,
     "umpires": [
       "Callum Beckwith",
       "Wendy Finn"
@@ -17054,8 +17059,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Under 13 Girls",
     "away_team": "Rivaside/Wanderers Under 13 Girls",
-    "home_score": "0",
-    "away_score": "2",
+    "home_score": 0,
+    "away_score": 2,
     "umpires": [
       "Ashleigh Gray",
       "Robert Thompson"
@@ -17332,8 +17337,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Under 13 Girls",
     "away_team": "Koowinda Under 13 Girls",
-    "home_score": "3",
-    "away_score": "0",
+    "home_score": 3,
+    "away_score": 0,
     "umpires": [
       "Ivy Underwood",
       "Kaitlyn Hellwege"
@@ -17571,8 +17576,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Under 13 Girls",
     "away_team": "Waratahs Under 13 Girls",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": 0,
+    "away_score": 0,
     "umpires": [
       "Dafydd Scholes",
       "Kara Taylor"
@@ -17849,8 +17854,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Under 13 Girls",
     "away_team": "Waratahs Under 13 Girls",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Kara Taylor;                                                                     Aurora Taylor",
       "Details",
@@ -17869,8 +17874,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside/Wanderers Under 13 Girls",
     "away_team": null,
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Annalise Hunt;                                                                     Sam Megson",
       "Details",
@@ -17889,8 +17894,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs Under 13 Girls",
     "away_team": "Rivaside/Wanderers Under 13 Girls",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Vicki Ellis;                                                                     Piper Ellis",
       "Details",
@@ -17909,8 +17914,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Under 13 Girls",
     "away_team": "Rivaside/Wanderers Under 13 Girls",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Annalise Hunt;                                                                     Sam Megson",
       "Details",
@@ -17929,8 +17934,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Under 13 Girls",
     "away_team": null,
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Vicki Ellis;                                                                     Piper Ellis",
       "Details",
@@ -17949,8 +17954,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Under 13 Girls",
     "away_team": "Koowinda Under 13 Girls",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Kara Taylor;                                                                     Aurora Taylor",
       "Details",
@@ -17969,8 +17974,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside Under 13 Boys",
     "away_team": "Waratahs Under 13 Boys",
-    "home_score": "0",
-    "away_score": "3",
+    "home_score": 0,
+    "away_score": 3,
     "umpires": [
       "Brayden Lloyd",
       "Ryan Saunders"
@@ -18286,8 +18291,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Mildura Wanderers Under 13 Boys",
     "away_team": "Koowinda Under 13 Boys",
-    "home_score": "3",
-    "away_score": "1",
+    "home_score": 3,
+    "away_score": 1,
     "umpires": [
       "Jenna Hollow",
       "Sam Megson"
@@ -18655,8 +18660,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Under 13 Boys",
     "away_team": "Rivaside Under 13 Boys",
-    "home_score": "0",
-    "away_score": "8",
+    "home_score": 0,
+    "away_score": 8,
     "umpires": [
       "Mark Lohmeyer",
       "Sam Megson"
@@ -18998,8 +19003,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Under 13 Boys",
     "away_team": "Mildura Wanderers Under 13 Boys",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": 0,
+    "away_score": 0,
     "umpires": [
       "Dafydd Scholes",
       "Mitchell Simms"
@@ -19380,8 +19385,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside Under 13 Boys",
     "away_team": "Mildura Wanderers Under 13 Boys",
-    "home_score": "0",
-    "away_score": "2",
+    "home_score": 0,
+    "away_score": 2,
     "umpires": [
       "Sam Megson",
       "Susan Wakefield"
@@ -19749,8 +19754,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Under 13 Boys",
     "away_team": "Waratahs Under 13 Boys",
-    "home_score": "1",
-    "away_score": "1",
+    "home_score": 0,
+    "away_score": 3,
     "umpires": [
       "Mitchell Simms",
       "Ryan Hawke"
@@ -20092,8 +20097,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Mildura Wanderers Under 13 Boys",
     "away_team": "Koowinda Under 13 Boys",
-    "home_score": "3",
-    "away_score": "0",
+    "home_score": 3,
+    "away_score": 0,
     "umpires": [
       "Annalise Hunt",
       "Sam Megson"
@@ -20474,8 +20479,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside Under 13 Boys",
     "away_team": "Waratahs Under 13 Boys",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": 1,
+    "away_score": 2,
     "umpires": [
       "Mark Lohmeyer",
       "Mitchell Simms"
@@ -20830,8 +20835,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Under 13 Boys",
     "away_team": "Rivaside Under 13 Boys",
-    "home_score": "2",
-    "away_score": "3",
+    "home_score": 2,
+    "away_score": 3,
     "umpires": [
       "Mark Lohmeyer",
       "Shingirai Nyabonda"
@@ -21173,8 +21178,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Under 13 Boys",
     "away_team": "Mildura Wanderers Under 13 Boys",
-    "home_score": "3",
-    "away_score": "1",
+    "home_score": 3,
+    "away_score": 1,
     "umpires": [
       "Mitchell Simms",
       "Wendy Finn"
@@ -21555,8 +21560,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Under 13 Boys",
     "away_team": "Waratahs Under 13 Boys",
-    "home_score": "0",
-    "away_score": "6",
+    "home_score": 0,
+    "away_score": 6,
     "umpires": [
       "Robert Thompson",
       "Ryan Hawke"
@@ -21911,8 +21916,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside Under 13 Boys",
     "away_team": "Mildura Wanderers Under 13 Boys",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": 0,
+    "away_score": 0,
     "umpires": [
       "Hanna Flentjar",
       "Sam Megson"
@@ -22293,8 +22298,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Mildura Wanderers Under 13 Boys",
     "away_team": "Koowinda Under 13 Boys",
-    "home_score": "3",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Sam Megson;                                                                     Jenna Hollow",
       "Details",
@@ -22313,8 +22318,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside Under 13 Boys",
     "away_team": "Waratahs Under 13 Boys",
-    "home_score": "0",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Ryan Saunders;                                                                     Brayden Lloyd",
       "Details",
@@ -22333,8 +22338,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Under 13 Boys",
     "away_team": "Rivaside Under 13 Boys",
-    "home_score": "0",
-    "away_score": "8",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Mark Lohmeyer;                                                                     Sam Megson",
       "Details",
@@ -22353,8 +22358,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Under 13 Boys",
     "away_team": "Mildura Wanderers Under 13 Boys",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Dafydd Scholes;                                                                     Mitchell Simms",
       "Details",
@@ -22493,8 +22498,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Blue Women",
     "away_team": "Koowinda Women",
-    "home_score": "3",
-    "away_score": "4",
+    "home_score": 3,
+    "away_score": 4,
     "umpires": [
       "Kara Taylor",
       "Sam Megson"
@@ -22862,8 +22867,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside Women",
     "away_team": "Waratahs White Women",
-    "home_score": "0",
-    "away_score": "3",
+    "home_score": 0,
+    "away_score": 3,
     "umpires": [
       "Jenna Hollow",
       "Wendy Finn"
@@ -23270,8 +23275,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Women",
     "away_team": "Rivaside Women",
-    "home_score": "0",
-    "away_score": "2",
+    "home_score": 0,
+    "away_score": 2,
     "umpires": [
       "Wendy Finn"
     ],
@@ -23664,8 +23669,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs White Women",
     "away_team": "Waratahs Blue Women",
-    "home_score": "11",
-    "away_score": "1",
+    "home_score": 11,
+    "away_score": 1,
     "umpires": [
       "Alewyn Hugo",
       "Jessica Melsen"
@@ -24072,8 +24077,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Women",
     "away_team": "Waratahs White Women",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": 1,
+    "away_score": 2,
     "umpires": [
       "Jenna Hollow",
       "Kaitlyn Hellwege"
@@ -24454,8 +24459,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside Women",
     "away_team": "Waratahs Blue Women",
-    "home_score": "3",
-    "away_score": "1",
+    "home_score": 3,
+    "away_score": 1,
     "umpires": [
       "Mark Lohmeyer",
       "Taj Flentjar"
@@ -24927,8 +24932,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside Women",
     "away_team": "Waratahs White Women",
-    "home_score": "7",
-    "away_score": "0",
+    "home_score": 7,
+    "away_score": 0,
     "umpires": [
       "Jenna Hollow",
       "Sam Megson"
@@ -25400,8 +25405,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs Blue Women",
     "away_team": "Koowinda Women",
-    "home_score": "3",
-    "away_score": "4",
+    "home_score": 3,
+    "away_score": 0,
     "umpires": [
       "Kara Taylor;                                                                     Sam Megson",
       "Details",
@@ -25771,8 +25776,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs White Women",
     "away_team": "Waratahs Blue Women",
-    "home_score": "2",
-    "away_score": "3",
+    "home_score": 2,
+    "away_score": 3,
     "umpires": [
       "Daniel Longo",
       "Jenna Hollow"
@@ -26257,8 +26262,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Women",
     "away_team": "Rivaside Women",
-    "home_score": "0",
-    "away_score": "6",
+    "home_score": 0,
+    "away_score": 6,
     "umpires": [
       "Rory Giddings",
       "Sam Megson"
@@ -26704,8 +26709,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Women",
     "away_team": "Waratahs White Women",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": 1,
+    "away_score": 2,
     "umpires": [
       "Hannah Benson",
       "Jenna Hollow"
@@ -27086,8 +27091,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside Women",
     "away_team": "Waratahs Blue Women",
-    "home_score": "14",
-    "away_score": "2",
+    "home_score": 14,
+    "away_score": 2,
     "umpires": [
       "Hanna Flentjar",
       "Kaitlyn Hellwege"
@@ -27546,8 +27551,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs Blue Women",
     "away_team": "Koowinda Women",
-    "home_score": "3",
-    "away_score": "4",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Kara Taylor;                                                                     Sam Megson",
       "Details",
@@ -27566,8 +27571,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside Women",
     "away_team": "Waratahs White Women",
-    "home_score": "0",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Wendy Finn;                                                                     Jenna Hollow",
       "Details",
@@ -27586,8 +27591,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Women",
     "away_team": "Rivaside Women",
-    "home_score": "0",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Wendy Finn",
       "Details",
@@ -27606,8 +27611,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs White Women",
     "away_team": "Waratahs Blue Women",
-    "home_score": "11",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jessica Melsen;                                                                     Alewyn Hugo",
       "Details",
@@ -27626,8 +27631,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Purple Men",
     "away_team": "Rivaside Blue Men",
-    "home_score": "2",
-    "away_score": "4",
+    "home_score": 2,
+    "away_score": 4,
     "umpires": [
       "Sam Megson",
       "Taj Flentjar"
@@ -27995,8 +28000,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs Men",
     "away_team": "Koowinda Blue Men",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": 0,
+    "away_score": 0,
     "umpires": [
       "Robert Thompson",
       "Slade Blandford"
@@ -28481,8 +28486,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Blue Men",
     "away_team": "Koowinda Purple Men",
-    "home_score": "2",
-    "away_score": "4",
+    "home_score": 2,
+    "away_score": 4,
     "umpires": [
       "Luke Dejong",
       "Robert Thompson"
@@ -28915,8 +28920,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside Blue Men",
     "away_team": "Rivaside Red Men",
-    "home_score": "1",
-    "away_score": "5",
+    "home_score": 1,
+    "away_score": 5,
     "umpires": [
       "Ashleigh Gray",
       "Daniel Longo"
@@ -29206,8 +29211,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Purple Men",
     "away_team": "Waratahs Men",
-    "home_score": "8",
-    "away_score": "0",
+    "home_score": 8,
+    "away_score": 0,
     "umpires": [
       "Mitchell Simms",
       "Robert Thompson"
@@ -29666,8 +29671,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside Red Men",
     "away_team": "Koowinda Blue Men",
-    "home_score": "6",
-    "away_score": "0",
+    "home_score": 6,
+    "away_score": 0,
     "umpires": [
       "Mark Lohmeyer",
       "Sam Megson"
@@ -30074,8 +30079,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Waratahs Men",
     "away_team": "Rivaside Red Men",
-    "home_score": "4",
-    "away_score": "6",
+    "home_score": 4,
+    "away_score": 6,
     "umpires": [
       "Mark Lohmeyer",
       "Sonya Drew"
@@ -30534,8 +30539,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Blue Men",
     "away_team": "Rivaside Blue Men",
-    "home_score": "4",
-    "away_score": "2",
+    "home_score": 4,
+    "away_score": 2,
     "umpires": [
       "Joshua Fleming",
       "Sam Megson"
@@ -30994,8 +30999,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside Blue Men",
     "away_team": "Waratahs Men",
-    "home_score": "0",
-    "away_score": "3",
+    "home_score": 0,
+    "away_score": 3,
     "umpires": [],
     "teams": [
       {
@@ -31373,8 +31378,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside Red Men",
     "away_team": "Koowinda Purple Men",
-    "home_score": "6",
-    "away_score": "0",
+    "home_score": 6,
+    "away_score": 0,
     "umpires": [
       "Sam Megson",
       "Sonya Drew"
@@ -31833,8 +31838,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Purple Men",
     "away_team": "Rivaside Blue Men",
-    "home_score": "3",
-    "away_score": "0",
+    "home_score": 3,
+    "away_score": 0,
     "umpires": [
       "Rory Giddings",
       "Sam Megson"
@@ -32176,8 +32181,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Waratahs Men",
     "away_team": "Koowinda Blue Men",
-    "home_score": "2",
-    "away_score": "0",
+    "home_score": 2,
+    "away_score": 0,
     "umpires": [
       "Robert Thompson",
       "Sonya Drew"
@@ -32636,8 +32641,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Koowinda Blue Men",
     "away_team": "Koowinda Purple Men",
-    "home_score": "2",
-    "away_score": "4",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Robert Thompson;                                                                     Luke Dejong",
       "Details",
@@ -32656,8 +32661,8 @@
     "pitch": "Old Aero Ovals - Pitch 2-Turf",
     "home_team": "Rivaside Blue Men",
     "away_team": "Rivaside Red Men",
-    "home_score": "1",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Ashleigh Gray;                                                                     Daniel Longo",
       "Details",
@@ -32676,8 +32681,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Rivaside Red Men",
     "away_team": "Koowinda Blue Men",
-    "home_score": "6",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Sam Megson;                                                                     Mark Lohmeyer",
       "Details",
@@ -32696,8 +32701,8 @@
     "pitch": "Old Aero Ovals - Pitch 1-11th St",
     "home_team": "Koowinda Purple Men",
     "away_team": "Waratahs Men",
-    "home_score": "8",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Robert Thompson;                                                                     Mitchell Simms",
       "Details",

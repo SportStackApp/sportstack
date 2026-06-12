@@ -1,20 +1,19 @@
 DATA QUALITY REPORT — Sunraysia Hockey Association
-Generated: 2026-06-11 19:06:09
+Generated: 2026-06-12 17:39:06
 ────────────────────────────────────────────────────────────
 Total rows scraped : 2,267
 Rows with issues   : 43  (1.9%)
 
 COLUMN ISSUES:
   away_team                 — 2 row(s) failing 'required' rule
-  team                      — 43 row(s) failing 'required' rule
   revsports_player_id       — 43 row(s) failing 'required' rule
   club_name                 — 43 row(s) failing 'required' rule
 
 SAMPLE PROBLEM ROWS (first 5):
-  Row  360: grade='Indoor Mixed'       team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
-  Row  361: grade='Indoor Mixed'       team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
-  Row  362: grade='Indoor Mixed'       team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
-  Row  363: grade='Indoor Mixed'       team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
-  Row  364: grade='Indoor Mixed'       team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
+  Row  360: grade='Indoor Mixed'       team='NO_PLAYERS'         player='NO_PLAYERS'         | BAD COLUMNS: revsports_player_id, club_name
+  Row  361: grade='Indoor Mixed'       team='NO_PLAYERS'         player='NO_PLAYERS'         | BAD COLUMNS: revsports_player_id, club_name
+  Row  362: grade='Indoor Mixed'       team='NO_PLAYERS'         player='NO_PLAYERS'         | BAD COLUMNS: revsports_player_id, club_name
+  Row  363: grade='Indoor Mixed'       team='NO_PLAYERS'         player='NO_PLAYERS'         | BAD COLUMNS: revsports_player_id, club_name
+  Row  364: grade='Indoor Mixed'       team='NO_PLAYERS'         player='NO_PLAYERS'         | BAD COLUMNS: revsports_player_id, club_name
 
 ────────────────────────────────────────────────────────────
