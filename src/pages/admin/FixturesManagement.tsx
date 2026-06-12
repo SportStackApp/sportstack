@@ -125,6 +125,9 @@ const FixturesManagement = () => {
   const [pitches, setPitches] = useState<{ id: string; name: string; venue_id: string }[]>([]);
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [filterRound, setFilterRound] = useState("");
+  const [filterAssociation, setFilterAssociation] = useState("ALL");
+  const [filterDivision, setFilterDivision] = useState("ALL");
+  const [filterTeam, setFilterTeam] = useState("ALL");
   const [assocTeamIds, setAssocTeamIds] = useState<string[]>([]);
 
   const teamIds = selectedTeamId
@@ -399,7 +402,11 @@ const FixturesManagement = () => {
   const displayFixtures = fixtures.filter((fixture) => {
     const matchesStatus = filterStatus === "ALL" || fixture.status === filterStatus;
     const matchesRound = !filterRound || fixture.round_number?.toString() === filterRound;
-    return matchesStatus && matchesRound;
+    const homeTeamInfo = allAssocTeams.find((t) => t.id === fixture.home_team_id);
+    const matchesAssociation = filterAssociation === "ALL" || homeTeamInfo?.associationName === filterAssociation;
+    const matchesDivision = filterDivision === "ALL" || homeTeamInfo?.divisionName === filterDivision;
+    const matchesTeam = filterTeam === "ALL" || fixture.home_team_id === filterTeam || fixture.away_team_id === filterTeam;
+    return matchesStatus && matchesRound && matchesAssociation && matchesDivision && matchesTeam;
   });
 
   return (
@@ -430,6 +437,49 @@ const FixturesManagement = () => {
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Label>Association:</Label>
+          <Select value={filterAssociation} onValueChange={(v) => { setFilterAssociation(v); setFilterDivision("ALL"); setFilterTeam("ALL"); }}>
+            <SelectTrigger className="w-48 min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All</SelectItem>
+              {allAssociations.map((a) => (
+                <SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label>Division:</Label>
+          <Select value={filterDivision} onValueChange={(v) => { setFilterDivision(v); setFilterTeam("ALL"); }}>
+            <SelectTrigger className="w-44 min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All</SelectItem>
+              {allDivisions
+                .filter((d) => filterAssociation === "ALL" || allAssociations.find((a) => a.name === filterAssociation)?.id === d.association_id)
+                .map((d) => (
+                  <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label>Team:</Label>
+          <Select value={filterTeam} onValueChange={setFilterTeam}>
+            <SelectTrigger className="w-40 min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All</SelectItem>
+              {allAssocTeams
+                .filter((t) =>
+                  (filterAssociation === "ALL" || t.associationName === filterAssociation) &&
+                  (filterDivision === "ALL" || t.divisionName === filterDivision)
+                )
+                .map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex items-center gap-2">
           <Label>Status:</Label>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
