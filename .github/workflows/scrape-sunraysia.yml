@@ -96,6 +96,10 @@ jobs:
     permissions:
       contents: write
 
+    # Force GitHub Actions to use Node.js 24 (required after June 2026 deprecation)
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -128,3 +132,9 @@ jobs:
           git diff --cached --quiet || git commit -m "scrape(sunraysia): $(date '+%Y-%m-%d %H:%M') AEST"
           git pull --rebase -X theirs
           git push
+
+      - name: Run fixture import
+        env:
+          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scraper/fixture_import.py
