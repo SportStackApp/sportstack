@@ -7,8 +7,8 @@
     "pitch": "1/2 Pitch North",
     "home_team": "U11 Blaze Red",
     "away_team": "Bobcats Maroon",
-    "home_score": "0",
-    "away_score": "9",
+    "home_score": 0,
+    "away_score": 9,
     "umpires": [
       "Quinn McClelland"
     ],
@@ -258,8 +258,8 @@
     "pitch": "1/2 Pitch South",
     "home_team": "U11 Blaze Orange",
     "away_team": "Bobcats White",
-    "home_score": "2",
-    "away_score": "9",
+    "home_score": 2,
+    "away_score": 9,
     "umpires": [
       "Harry Sturmfels",
       "Sebastian Hogan"
@@ -510,8 +510,8 @@
     "pitch": "North End",
     "home_team": "U11 Blaze Pink",
     "away_team": "EGC Blue",
-    "home_score": "3",
-    "away_score": "3",
+    "home_score": 3,
+    "away_score": 3,
     "umpires": [
       "Edmund Horner-Dawson",
       "Jordan Shepherd"
@@ -801,8 +801,8 @@
     "pitch": "South End",
     "home_team": "U11 Blaze Yellow",
     "away_team": "U11",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": 1,
+    "away_score": 2,
     "umpires": [
       "Harley Shepherd",
       "Sebastian Pougnault"
@@ -1027,8 +1027,8 @@
     "pitch": "Full Pitch",
     "home_team": "U11 Blaze Green",
     "away_team": "EGC Gold",
-    "home_score": "4",
-    "away_score": "1",
+    "home_score": 4,
+    "away_score": 1,
     "umpires": [
       "Heath McClelland",
       "Lukas Heemann"
@@ -1318,8 +1318,8 @@
     "pitch": "1/2 Pitch North",
     "home_team": "U11 Blaze Black",
     "away_team": "Bobcats White",
-    "home_score": "1",
-    "away_score": "11",
+    "home_score": 1,
+    "away_score": 11,
     "umpires": [
       "Heath McClelland",
       "Lewis Ryan"
@@ -1557,8 +1557,8 @@
     "pitch": "1/2 Pitch South",
     "home_team": "U11 Blaze Pink",
     "away_team": "U11 Blaze Green",
-    "home_score": "3",
-    "away_score": "4",
+    "home_score": 3,
+    "away_score": 4,
     "umpires": [
       "Harry Sturmfels",
       "Sebastian Hogan"
@@ -1796,8 +1796,8 @@
     "pitch": "Full Pitch",
     "home_team": "U11 Blaze Yellow",
     "away_team": "EGC Gold",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": 0,
+    "away_score": 0,
     "umpires": [
       "Lukas Heemann",
       "William Stapleton"
@@ -2061,8 +2061,8 @@
     "pitch": "North End",
     "home_team": "U11 Blaze Red",
     "away_team": "EGC Blue",
-    "home_score": "0",
-    "away_score": "5",
+    "home_score": 0,
+    "away_score": 5,
     "umpires": [
       "Manav Kler"
     ],
@@ -2338,8 +2338,8 @@
     "pitch": "South End",
     "home_team": "U11 Blaze Orange",
     "away_team": "U11",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": 1,
+    "away_score": 2,
     "umpires": [
       "Jordan Shepherd",
       "Sebastian Hogan"
@@ -2577,8 +2577,8 @@
     "pitch": "1/2 Pitch South",
     "home_team": "U11 Blaze Red",
     "away_team": "U11 Blaze Green",
-    "home_score": "1",
-    "away_score": "5",
+    "home_score": 1,
+    "away_score": 5,
     "umpires": [
       "Heath McClelland",
       "Sebastian Hogan"
@@ -2816,8 +2816,8 @@
     "pitch": "1/2 Pitch North",
     "home_team": "U11 Blaze Yellow",
     "away_team": "U11 Blaze Pink",
-    "home_score": "1",
-    "away_score": "1",
+    "home_score": 1,
+    "away_score": 1,
     "umpires": [
       "Harry Sturmfels",
       "Lukas Heemann"
@@ -3042,8 +3042,8 @@
     "pitch": "Full Pitch",
     "home_team": "U11 Blaze Orange",
     "away_team": "EGC Gold",
-    "home_score": "2",
-    "away_score": "0",
+    "home_score": 2,
+    "away_score": 0,
     "umpires": [
       "Lukas Heemann",
       "Quinn McClelland"
@@ -3320,8 +3320,8 @@
     "pitch": "North End",
     "home_team": "Bobcats White",
     "away_team": "U11",
-    "home_score": "1",
-    "away_score": "3",
+    "home_score": 1,
+    "away_score": 3,
     "umpires": [],
     "teams": [
       {
@@ -3569,8 +3569,8 @@
     "pitch": "South End",
     "home_team": "U11 Blaze Black",
     "away_team": "Bobcats Maroon",
-    "home_score": "0",
-    "away_score": "5",
+    "home_score": 0,
+    "away_score": 5,
     "umpires": [
       "Sebastian Pougnault",
       "William Stapleton"
@@ -3795,8 +3795,8 @@
     "pitch": "1/2 Pitch South",
     "home_team": "Bobcats White",
     "away_team": "EGC Gold",
-    "home_score": "4",
-    "away_score": "1",
+    "home_score": 4,
+    "away_score": 1,
     "umpires": [
       "Lewis Ryan",
       "William Stapleton"
@@ -4086,8 +4086,8 @@
     "pitch": "1/2 Pitch North",
     "home_team": "U11 Blaze Orange",
     "away_team": "U11 Blaze Pink",
-    "home_score": "4",
-    "away_score": "3",
+    "home_score": 4,
+    "away_score": 3,
     "umpires": [
       "Harry Sturmfels",
       "Sebastian Hogan"
@@ -4325,8 +4325,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Blue",
     "away_team": "Bobcats Maroon",
-    "home_score": "0",
-    "away_score": "1",
+    "home_score": 0,
+    "away_score": 1,
     "umpires": [
       "Aarav Kler",
       "Manav Kler"
@@ -4616,8 +4616,8 @@
     "pitch": "North End",
     "home_team": "U11",
     "away_team": "U11 Blaze Black",
-    "home_score": "9",
-    "away_score": "0",
+    "home_score": 9,
+    "away_score": 0,
     "umpires": [
       "Heath McClelland",
       "Jordan Shepherd"
@@ -4842,8 +4842,8 @@
     "pitch": "South End",
     "home_team": "U11 Blaze Red",
     "away_team": "U11 Blaze Yellow",
-    "home_score": "0",
-    "away_score": "6",
+    "home_score": 0,
+    "away_score": 6,
     "umpires": [
       "Lukas Heemann",
       "Sebastian Pougnault"
@@ -13692,8 +13692,8 @@
     "pitch": "1/2 Pitch South",
     "home_team": "Bobcats White",
     "away_team": "U11 Blaze Orange",
-    "home_score": "2",
-    "away_score": "9",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Harry Sturmfels;                                                                     Sebastian Hogan",
       "Details",
@@ -13946,8 +13946,8 @@
     "pitch": "1/2 Pitch North",
     "home_team": "Bobcats Maroon",
     "away_team": "U11 Blaze Red",
-    "home_score": "0",
-    "away_score": "9",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Quinn McClelland",
       "Details",
@@ -14187,8 +14187,8 @@
     "pitch": "1/2 Pitch North",
     "home_team": "U11",
     "away_team": "U11 Blaze Yellow",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Sebastian Pougnault;                                                                     Harley Shepherd",
       "Details",
@@ -14415,8 +14415,8 @@
     "pitch": "North End",
     "home_team": "EGC Blue",
     "away_team": "U11 Blaze Pink",
-    "home_score": "3",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Edmund Horner-Dawson;                                                                     Jordan Shepherd",
       "Details",
@@ -14695,8 +14695,8 @@
     "pitch": "South End",
     "home_team": "EGC Gold",
     "away_team": "U11 Blaze Green",
-    "home_score": "4",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Heath McClelland;                                                                     Lukas Heemann",
       "Details",
@@ -14962,8 +14962,8 @@
     "pitch": "1/2 Pitch South",
     "home_team": "EGC Gold",
     "away_team": "U11 Blaze Yellow",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "William Stapleton;                                                                     Lukas Heemann",
       "Details",
@@ -15229,8 +15229,8 @@
     "pitch": "1/2 Pitch North",
     "home_team": "U11 Blaze Green",
     "away_team": "U11 Blaze Pink",
-    "home_score": "3",
-    "away_score": "4",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Harry Sturmfels;                                                                     Sebastian Hogan",
       "Details",
@@ -15457,8 +15457,8 @@
     "pitch": "1/2 Pitch North",
     "home_team": "EGC Blue",
     "away_team": "U11 Blaze Red",
-    "home_score": "0",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Manav Kler",
       "Details",
@@ -15737,8 +15737,8 @@
     "pitch": "North End",
     "home_team": "U11",
     "away_team": "U11 Blaze Orange",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jordan Shepherd;                                                                     Sebastian Hogan",
       "Details",
@@ -15978,8 +15978,8 @@
     "pitch": "South End",
     "home_team": "Bobcats White",
     "away_team": "U11 Blaze Black",
-    "home_score": "1",
-    "away_score": "11",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Heath McClelland;                                                                     Lewis Ryan",
       "Details",
@@ -16219,8 +16219,8 @@
     "pitch": "1/2 Pitch South",
     "home_team": "EGC Gold",
     "away_team": "U11 Blaze Orange",
-    "home_score": "2",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Quinn McClelland;                                                                     Lukas Heemann",
       "Details",
@@ -16499,8 +16499,8 @@
     "pitch": "1/2 Pitch North",
     "home_team": "U11 Blaze Green",
     "away_team": "U11 Blaze Red",
-    "home_score": "1",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Sebastian Hogan;                                                                     Heath McClelland",
       "Details",
@@ -16727,8 +16727,8 @@
     "pitch": "1/2 Pitch North",
     "home_team": "U11",
     "away_team": "Bobcats White",
-    "home_score": "1",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [],
     "teams": [
       {
@@ -16976,8 +16976,8 @@
     "pitch": "North End",
     "home_team": "Bobcats Maroon",
     "away_team": "U11 Blaze Black",
-    "home_score": "0",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Sebastian Pougnault;                                                                     William Stapleton",
       "Details",
@@ -17204,8 +17204,8 @@
     "pitch": "South End",
     "home_team": "U11 Blaze Pink",
     "away_team": "U11 Blaze Yellow",
-    "home_score": "1",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Harry Sturmfels;                                                                     Lukas Heemann",
       "Details",
@@ -17432,8 +17432,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14 Blaze Orange",
     "away_team": "U14",
-    "home_score": "9",
-    "away_score": "0",
+    "home_score": 9,
+    "away_score": 0,
     "umpires": [
       "Ethan Oldaker",
       "Mitchell Stevens"
@@ -17537,7 +17537,7 @@
           {
             "name": "Jackson M.",
             "jersey": "7",
-            "role": null,
+            "role": "Captain",
             "attended": true,
             "is_fillin": false,
             "is_removed": false,
@@ -17602,7 +17602,7 @@
           {
             "name": "Sebastian H.",
             "jersey": null,
-            "role": null,
+            "role": "Captain",
             "attended": true,
             "is_fillin": false,
             "is_removed": false,
@@ -17853,8 +17853,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 14 Open",
     "away_team": "U14",
-    "home_score": "2",
-    "away_score": "3",
+    "home_score": 2,
+    "away_score": 3,
     "umpires": [
       "Harley Shepherd",
       "Lachlan Hargreaves"
@@ -18274,8 +18274,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14 Blaze Orange",
     "away_team": "Under 14 Open",
-    "home_score": "2",
-    "away_score": "0",
+    "home_score": 2,
+    "away_score": 0,
     "umpires": [
       "Harley Shepherd",
       "Quinn McClelland"
@@ -18379,7 +18379,7 @@
           {
             "name": "Jackson M.",
             "jersey": "7",
-            "role": null,
+            "role": "Captain",
             "attended": true,
             "is_fillin": false,
             "is_removed": false,
@@ -18444,7 +18444,7 @@
           {
             "name": "Sebastian H.",
             "jersey": null,
-            "role": null,
+            "role": "Captain",
             "attended": true,
             "is_fillin": false,
             "is_removed": false,
@@ -18708,8 +18708,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14 Blaze Black",
     "away_team": "U14",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": 2,
+    "away_score": 1,
     "umpires": [],
     "teams": [
       {
@@ -19139,8 +19139,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14 Blaze Black",
     "away_team": "U14",
-    "home_score": "1",
-    "away_score": "5",
+    "home_score": 1,
+    "away_score": 5,
     "umpires": [
       "Harley Shepherd",
       "Mitchell Stevens"
@@ -19573,8 +19573,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14",
     "away_team": "Under 14 Open",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": 1,
+    "away_score": 2,
     "umpires": [
       "Aarav Kler",
       "Olivia Hargreaves"
@@ -19994,8 +19994,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14 Blaze Black",
     "away_team": "Under 14 Open",
-    "home_score": "1",
-    "away_score": "0",
+    "home_score": 1,
+    "away_score": 0,
     "umpires": [
       "Harley Shepherd",
       "Mitchell Stevens"
@@ -20441,8 +20441,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14 Blaze Orange",
     "away_team": "U14",
-    "home_score": "5",
-    "away_score": "1",
+    "home_score": 5,
+    "away_score": 1,
     "umpires": [
       "Joshua Sly",
       "Quinn McClelland"
@@ -20546,7 +20546,7 @@
           {
             "name": "Jackson M.",
             "jersey": "7",
-            "role": null,
+            "role": "Captain",
             "attended": true,
             "is_fillin": false,
             "is_removed": false,
@@ -20611,7 +20611,7 @@
           {
             "name": "Sebastian H.",
             "jersey": null,
-            "role": null,
+            "role": "Captain",
             "attended": true,
             "is_fillin": false,
             "is_removed": false,
@@ -21317,7 +21317,7 @@
           {
             "name": "Jackson M.",
             "jersey": "7",
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -21382,7 +21382,7 @@
           {
             "name": "Sebastian H.",
             "jersey": null,
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -21646,8 +21646,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14",
     "away_team": "U14 Blaze Orange",
-    "home_score": "9",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Ethan Oldaker;                                                                     Mitchell Stevens",
       "Details",
@@ -21915,7 +21915,7 @@
           {
             "name": "Jackson M.",
             "jersey": "7",
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -21980,7 +21980,7 @@
           {
             "name": "Sebastian H.",
             "jersey": null,
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -22030,8 +22030,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14",
     "away_team": "Under 14 Open",
-    "home_score": "2",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Harley Shepherd;                                                                     Lachlan Hargreaves",
       "Details",
@@ -22440,8 +22440,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 14 Open",
     "away_team": "U14 Blaze Orange",
-    "home_score": "2",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Harley Shepherd;                                                                     Quinn McClelland",
       "Details",
@@ -22748,7 +22748,7 @@
           {
             "name": "Jackson M.",
             "jersey": "7",
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -22813,7 +22813,7 @@
           {
             "name": "Sebastian H.",
             "jersey": null,
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -22863,8 +22863,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14",
     "away_team": "U14 Blaze Black",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [],
     "teams": [
       {
@@ -23255,8 +23255,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14",
     "away_team": "U14 Blaze Black",
-    "home_score": "1",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Harley Shepherd;                                                                     Mitchell Stevens",
       "Details",
@@ -23678,8 +23678,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 14 Open",
     "away_team": "U14",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Olivia Hargreaves;                                                                     Aarav Kler",
       "Details",
@@ -24062,8 +24062,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 14 Open",
     "away_team": "U14 Blaze Black",
-    "home_score": "1",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Harley Shepherd;                                                                     Mitchell Stevens",
       "Details",
@@ -24498,8 +24498,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14",
     "away_team": "U14 Blaze Orange",
-    "home_score": "5",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Joshua Sly;                                                                     Quinn McClelland",
       "Details",
@@ -24793,7 +24793,7 @@
           {
             "name": "Jackson M.",
             "jersey": "7",
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -24858,7 +24858,7 @@
           {
             "name": "Sebastian H.",
             "jersey": null,
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -25010,7 +25010,7 @@
           {
             "name": "Jackson M.",
             "jersey": "7",
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -25075,7 +25075,7 @@
           {
             "name": "Sebastian H.",
             "jersey": null,
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -25705,8 +25705,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14",
     "away_team": "Under 14 Open",
-    "home_score": "2",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Harley Shepherd;                                                                     Lachlan Hargreaves",
       "Details",
@@ -26115,8 +26115,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14",
     "away_team": "U14 Blaze Orange",
-    "home_score": "9",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Ethan Oldaker;                                                                     Mitchell Stevens",
       "Details",
@@ -26384,7 +26384,7 @@
           {
             "name": "Jackson M.",
             "jersey": "7",
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -26449,7 +26449,7 @@
           {
             "name": "Sebastian H.",
             "jersey": null,
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -26499,8 +26499,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 14 Open",
     "away_team": "U14 Blaze Orange",
-    "home_score": "2",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Harley Shepherd;                                                                     Quinn McClelland",
       "Details",
@@ -26807,7 +26807,7 @@
           {
             "name": "Jackson M.",
             "jersey": "7",
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -26872,7 +26872,7 @@
           {
             "name": "Sebastian H.",
             "jersey": null,
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -26922,8 +26922,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14",
     "away_team": "U14 Blaze Black",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [],
     "teams": [
       {
@@ -27314,8 +27314,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14",
     "away_team": "U14 Blaze Black",
-    "home_score": "1",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Harley Shepherd;                                                                     Mitchell Stevens",
       "Details",
@@ -27737,8 +27737,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 14 Open",
     "away_team": "U14",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Olivia Hargreaves;                                                                     Aarav Kler",
       "Details",
@@ -28121,8 +28121,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 14 Open",
     "away_team": "U14 Blaze Black",
-    "home_score": "1",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Harley Shepherd;                                                                     Mitchell Stevens",
       "Details",
@@ -28557,8 +28557,8 @@
     "pitch": "Full Pitch",
     "home_team": "U14 Blaze Orange",
     "away_team": "U14",
-    "home_score": "5",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Joshua Sly;                                                                     Quinn McClelland",
       "Details",
@@ -28664,7 +28664,7 @@
           {
             "name": "Jackson M.",
             "jersey": "7",
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -28729,7 +28729,7 @@
           {
             "name": "Sebastian H.",
             "jersey": null,
-            "role": null,
+            "role": "Captain",
             "attended": false,
             "is_fillin": false,
             "is_removed": false,
@@ -28967,8 +28967,8 @@
     "pitch": "Full Pitch",
     "home_team": "U16",
     "away_team": "Under 16 Open",
-    "home_score": "4",
-    "away_score": "2",
+    "home_score": 4,
+    "away_score": 2,
     "umpires": [
       "Jeff Sly"
     ],
@@ -29543,8 +29543,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 16 Open",
     "away_team": "U16 Blaze",
-    "home_score": "2",
-    "away_score": "5",
+    "home_score": 2,
+    "away_score": 5,
     "umpires": [
       "Jeff Sly",
       "Joshua Sly"
@@ -29990,8 +29990,8 @@
     "pitch": "Full Pitch",
     "home_team": "U16",
     "away_team": "U16 Blaze",
-    "home_score": "2",
-    "away_score": "2",
+    "home_score": 2,
+    "away_score": 2,
     "umpires": [
       "Craig Stevens",
       "Fionn Zele"
@@ -30502,8 +30502,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 16 Open",
     "away_team": "U16",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": 1,
+    "away_score": 2,
     "umpires": [
       "Ben Sturmfels",
       "Ethan Oldaker"
@@ -31040,8 +31040,8 @@
     "pitch": "Full Pitch",
     "home_team": "U16 Blaze",
     "away_team": "Under 16 Open",
-    "home_score": "2",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jeff Sly;                                                                     Joshua Sly",
       "Details",
@@ -31463,8 +31463,8 @@
     "pitch": "Full Pitch",
     "home_team": "U16 Blaze",
     "away_team": "U16",
-    "home_score": "2",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Fionn Zele;                                                                     Craig Stevens",
       "Details",
@@ -31951,8 +31951,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 16 Open",
     "away_team": "U16",
-    "home_score": "4",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jeff Sly",
       "Details",
@@ -32491,8 +32491,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 16 Open",
     "away_team": "U16 Blaze",
-    "home_score": "2",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jeff Sly;                                                                     Joshua Sly",
       "Details",
@@ -32914,8 +32914,8 @@
     "pitch": "Full Pitch",
     "home_team": "U16 Blaze",
     "away_team": "U16",
-    "home_score": "2",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Fionn Zele;                                                                     Craig Stevens",
       "Details",
@@ -33402,8 +33402,8 @@
     "pitch": "Full Pitch",
     "home_team": "U16",
     "away_team": "Under 16 Open",
-    "home_score": "4",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jeff Sly",
       "Details",
@@ -33942,8 +33942,8 @@
     "pitch": "Full Pitch",
     "home_team": "U16 Blaze",
     "away_team": "Under 16 Open",
-    "home_score": "2",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jeff Sly;                                                                     Joshua Sly",
       "Details",
@@ -34365,8 +34365,8 @@
     "pitch": "Full Pitch",
     "home_team": "U16 Blaze",
     "away_team": "U16",
-    "home_score": "2",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Fionn Zele;                                                                     Craig Stevens",
       "Details",
@@ -34853,8 +34853,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 16 Open",
     "away_team": "U16",
-    "home_score": "4",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jeff Sly",
       "Details",
@@ -35393,8 +35393,8 @@
     "pitch": "Full Pitch",
     "home_team": "Under 16 Open",
     "away_team": "U16 Blaze",
-    "home_score": "2",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jeff Sly;                                                                     Joshua Sly",
       "Details",
@@ -35816,8 +35816,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 1 Men",
     "away_team": "Div 1 Men",
-    "home_score": "3",
-    "away_score": "1",
+    "home_score": 3,
+    "away_score": 1,
     "umpires": [
       "Craig Stevens",
       "Jeff Sly"
@@ -36523,8 +36523,8 @@
     "pitch": "Full Pitch",
     "home_team": "Division 1 Men",
     "away_team": "Ducks Men",
-    "home_score": "7",
-    "away_score": "0",
+    "home_score": 7,
+    "away_score": 0,
     "umpires": [
       "Craig Stevens",
       "Daniel Ryan"
@@ -36996,8 +36996,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Men",
     "away_team": "Div 1 Men",
-    "home_score": "0",
-    "away_score": "5",
+    "home_score": 0,
+    "away_score": 5,
     "umpires": [
       "Jeff Sly",
       "Joshua Sly"
@@ -37625,8 +37625,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 1 Men",
     "away_team": "Division 1 Men",
-    "home_score": "2",
-    "away_score": "2",
+    "home_score": 2,
+    "away_score": 2,
     "umpires": [
       "Craig Stevens",
       "Lee Drury"
@@ -38085,8 +38085,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 1 Men",
     "away_team": "Div 1 Men",
-    "home_score": "4",
-    "away_score": "3",
+    "home_score": 4,
+    "away_score": 3,
     "umpires": [
       "Craig Stevens",
       "Jeff Sly"
@@ -38688,8 +38688,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Men",
     "away_team": "Div 1 Men",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": 2,
+    "away_score": 1,
     "umpires": [
       "Daniel Ryan",
       "Tucker Kooloos"
@@ -39187,8 +39187,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 1 Men",
     "away_team": "Blaze Div 1 Men",
-    "home_score": "6",
-    "away_score": "4",
+    "home_score": 6,
+    "away_score": 4,
     "umpires": [
       "Fionn Zele"
     ],
@@ -39750,8 +39750,8 @@
     "pitch": "Full Pitch",
     "home_team": "Division 1 Men",
     "away_team": "Div 1 Men",
-    "home_score": "1",
-    "away_score": "4",
+    "home_score": 1,
+    "away_score": 4,
     "umpires": [
       "Craig Stevens",
       "Jason Hargreaves"
@@ -40379,8 +40379,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Men",
     "away_team": "Blaze Div 1 Men",
-    "home_score": "2",
-    "away_score": "4",
+    "home_score": 2,
+    "away_score": 4,
     "umpires": [
       "Toby Hoy"
     ],
@@ -40838,8 +40838,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 1 Men",
     "away_team": "Division 1 Men",
-    "home_score": "0",
-    "away_score": "5",
+    "home_score": 0,
+    "away_score": 5,
     "umpires": [
       "Craig Stevens",
       "Daniel Ryan"
@@ -41402,8 +41402,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 1 Men",
     "away_team": "Div 1 Men",
-    "home_score": "3",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jeff Sly;                                                                     Craig Stevens",
       "Details",
@@ -42007,8 +42007,8 @@
     "pitch": "Full Pitch",
     "home_team": "Division 1 Men",
     "away_team": "Ducks Men",
-    "home_score": "7",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens;                                                                     Daniel Ryan",
       "Details",
@@ -42482,8 +42482,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Men",
     "away_team": "Div 1 Men",
-    "home_score": "0",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jeff Sly;                                                                     Joshua Sly",
       "Details",
@@ -43061,8 +43061,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 1 Men",
     "away_team": "Division 1 Men",
-    "home_score": "2",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Lee Drury;                                                                     Craig Stevens",
       "Details",
@@ -43523,8 +43523,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 1 Men",
     "away_team": "Ducks Men",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Daniel Ryan;                                                                     Tucker Kooloos",
       "Details",
@@ -43998,8 +43998,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 1 Men",
     "away_team": "Div 1 Men",
-    "home_score": "4",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens;                                                                     Jeff Sly",
       "Details",
@@ -44564,8 +44564,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 1 Men",
     "away_team": "Division 1 Men",
-    "home_score": "1",
-    "away_score": "4",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens;                                                                     Jason Hargreaves",
       "Details",
@@ -45169,8 +45169,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 1 Men",
     "away_team": "Div 1 Men",
-    "home_score": "6",
-    "away_score": "4",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Fionn Zele",
       "Details",
@@ -45631,8 +45631,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Men",
     "away_team": "Blaze Div 1 Men",
-    "home_score": "2",
-    "away_score": "4",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Toby Hoy",
       "Details",
@@ -46067,8 +46067,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 1 Men",
     "away_team": "Division 1 Men",
-    "home_score": "0",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Daniel Ryan;                                                                     Craig Stevens",
       "Details",
@@ -46568,8 +46568,8 @@
     "pitch": "Full Pitch",
     "home_team": "Division 1 Men",
     "away_team": "Ducks Men",
-    "home_score": "7",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens;                                                                     Daniel Ryan",
       "Details",
@@ -47043,8 +47043,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 1 Men",
     "away_team": "Div 1 Men",
-    "home_score": "3",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jeff Sly;                                                                     Craig Stevens",
       "Details",
@@ -47648,8 +47648,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Men",
     "away_team": "Div 1 Men",
-    "home_score": "0",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jeff Sly;                                                                     Joshua Sly",
       "Details",
@@ -48227,8 +48227,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 1 Men",
     "away_team": "Division 1 Men",
-    "home_score": "2",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Lee Drury;                                                                     Craig Stevens",
       "Details",
@@ -48689,8 +48689,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Men",
     "away_team": "Div 1 Men",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Daniel Ryan;                                                                     Tucker Kooloos",
       "Details",
@@ -49164,8 +49164,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 1 Men",
     "away_team": "Div 1 Men",
-    "home_score": "4",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens;                                                                     Jeff Sly",
       "Details",
@@ -49730,8 +49730,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 1 Men",
     "away_team": "Div 1 Men",
-    "home_score": "6",
-    "away_score": "4",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Fionn Zele",
       "Details",
@@ -50192,8 +50192,8 @@
     "pitch": "Full Pitch",
     "home_team": "Division 1 Men",
     "away_team": "Div 1 Men",
-    "home_score": "1",
-    "away_score": "4",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens;                                                                     Jason Hargreaves",
       "Details",
@@ -50797,8 +50797,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 1 Men",
     "away_team": "Ducks Men",
-    "home_score": "2",
-    "away_score": "4",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Toby Hoy",
       "Details",
@@ -51233,8 +51233,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 1 Men",
     "away_team": "Division 1 Men",
-    "home_score": "0",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Daniel Ryan;                                                                     Craig Stevens",
       "Details",
@@ -51734,8 +51734,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Blue",
     "away_team": "Ducks Women",
-    "home_score": "0",
-    "away_score": "3",
+    "home_score": 0,
+    "away_score": 3,
     "umpires": [
       "Aliyah Kochi",
       "Nicholas Hargreaves"
@@ -52129,8 +52129,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women Blaze Orange",
     "away_team": "Bobcats Women",
-    "home_score": "1",
-    "away_score": "7",
+    "home_score": 1,
+    "away_score": 7,
     "umpires": [
       "Ben Sturmfels"
     ],
@@ -52640,8 +52640,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Gold",
     "away_team": "Women",
-    "home_score": "8",
-    "away_score": "1",
+    "home_score": 8,
+    "away_score": 1,
     "umpires": [
       "Stephen Matthews"
     ],
@@ -53229,8 +53229,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women Blaze Black",
     "away_team": "Bobcats Women",
-    "home_score": "3",
-    "away_score": "0",
+    "home_score": 3,
+    "away_score": 0,
     "umpires": [
       "Aliyah Kochi",
       "Ethan Oldaker"
@@ -53754,8 +53754,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women Blaze Orange",
     "away_team": "Ducks Women",
-    "home_score": "1",
-    "away_score": "0",
+    "home_score": 1,
+    "away_score": 0,
     "umpires": [
       "Craig Stevens",
       "Mitchell Ryan"
@@ -54149,8 +54149,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Gold",
     "away_team": "EGC Blue",
-    "home_score": "1",
-    "away_score": "12",
+    "home_score": 1,
+    "away_score": 12,
     "umpires": [
       "Tucker Kooloos"
     ],
@@ -54608,8 +54608,8 @@
     "pitch": "Full Pitch",
     "home_team": "Bobcats Women",
     "away_team": "Ducks Women",
-    "home_score": "1",
-    "away_score": "1",
+    "home_score": 1,
+    "away_score": 1,
     "umpires": [
       "Daniel Ryan",
       "Tucker Kooloos"
@@ -55107,8 +55107,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women Blaze Orange",
     "away_team": "EGC Gold",
-    "home_score": "5",
-    "away_score": "0",
+    "home_score": 5,
+    "away_score": 0,
     "umpires": [
       "Ethan Oldaker",
       "Timothy O'Sullivan"
@@ -55645,8 +55645,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women Blaze Black",
     "away_team": "Women",
-    "home_score": "5",
-    "away_score": "2",
+    "home_score": 5,
+    "away_score": 2,
     "umpires": [
       "Ben Sturmfels",
       "Craig Stevens"
@@ -56131,8 +56131,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women Blaze Black",
     "away_team": "Ducks Women",
-    "home_score": "1",
-    "away_score": "3",
+    "home_score": 1,
+    "away_score": 3,
     "umpires": [
       "Mitchell Stevens",
       "Nicholas Hargreaves"
@@ -56565,8 +56565,8 @@
     "pitch": "Full Pitch",
     "home_team": "Bobcats Women",
     "away_team": "EGC Gold",
-    "home_score": "0",
-    "away_score": "1",
+    "home_score": 0,
+    "away_score": 1,
     "umpires": [
       "Tucker Kooloos"
     ],
@@ -57141,8 +57141,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women",
     "away_team": "EGC Blue",
-    "home_score": "3",
-    "away_score": "3",
+    "home_score": 3,
+    "away_score": 3,
     "umpires": [
       "Ethan Oldaker",
       "Hayden Bourne"
@@ -57614,8 +57614,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Women",
     "away_team": "EGC Gold",
-    "home_score": "3",
-    "away_score": "0",
+    "home_score": 3,
+    "away_score": 0,
     "umpires": [
       "Anthony McBride",
       "Ben Sturmfels"
@@ -58087,8 +58087,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women Blaze Black",
     "away_team": "EGC Blue",
-    "home_score": "8",
-    "away_score": "0",
+    "home_score": 8,
+    "away_score": 0,
     "umpires": [
       "Craig Stevens",
       "Fionn Zele"
@@ -58560,8 +58560,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women",
     "away_team": "Women Blaze Orange",
-    "home_score": "0",
-    "away_score": "1",
+    "home_score": 0,
+    "away_score": 1,
     "umpires": [
       "Daniel Ryan",
       "Ethan Oldaker"
@@ -61749,8 +61749,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Women",
     "away_team": "EGC Blue",
-    "home_score": "0",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Aliyah Kochi;                                                                     Nicholas Hargreaves",
       "Details",
@@ -62120,8 +62120,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Gold",
     "away_team": "Women",
-    "home_score": "8",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Stephen Matthews",
       "Details",
@@ -62647,8 +62647,8 @@
     "pitch": "Full Pitch",
     "home_team": "Bobcats Women",
     "away_team": "Women Blaze Orange",
-    "home_score": "1",
-    "away_score": "7",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Ben Sturmfels",
       "Details",
@@ -63148,8 +63148,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Women",
     "away_team": "Women Blaze Orange",
-    "home_score": "1",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Mitchell Ryan;                                                                     Craig Stevens",
       "Details",
@@ -63532,8 +63532,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Blue",
     "away_team": "EGC Gold",
-    "home_score": "1",
-    "away_score": "12",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Tucker Kooloos",
       "Details",
@@ -63994,8 +63994,8 @@
     "pitch": "Full Pitch",
     "home_team": "Bobcats Women",
     "away_team": "Women Blaze Black",
-    "home_score": "3",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Aliyah Kochi;                                                                     Ethan Oldaker",
       "Details",
@@ -64495,8 +64495,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Women",
     "away_team": "Bobcats Women",
-    "home_score": "1",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Daniel Ryan;                                                                     Tucker Kooloos",
       "Details",
@@ -64983,8 +64983,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Gold",
     "away_team": "Women Blaze Orange",
-    "home_score": "5",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Timothy O'Sullivan;                                                                     Ethan Oldaker",
       "Details",
@@ -65458,8 +65458,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women",
     "away_team": "Women Blaze Black",
-    "home_score": "5",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens;                                                                     Ben Sturmfels",
       "Details",
@@ -65907,8 +65907,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Blue",
     "away_team": "Women",
-    "home_score": "3",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Ethan Oldaker;                                                                     Hayden Bourne",
       "Details",
@@ -66343,8 +66343,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Gold",
     "away_team": "Bobcats Women",
-    "home_score": "0",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Tucker Kooloos",
       "Details",
@@ -66922,8 +66922,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Women",
     "away_team": "Women Blaze Black",
-    "home_score": "1",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Nicholas Hargreaves;                                                                     Mitchell Stevens",
       "Details",
@@ -67306,8 +67306,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women Blaze Orange",
     "away_team": "Women",
-    "home_score": "0",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Daniel Ryan;                                                                     Ethan Oldaker",
       "Details",
@@ -67755,8 +67755,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women Blaze Black",
     "away_team": "EGC Blue",
-    "home_score": "8",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens;                                                                     Fionn Zele",
       "Details",
@@ -68139,8 +68139,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Women",
     "away_team": "EGC Gold",
-    "home_score": "3",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Anthony McBride;                                                                     Ben Sturmfels",
       "Details",
@@ -71304,8 +71304,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women Blaze Orange",
     "away_team": "Bobcats Women",
-    "home_score": "1",
-    "away_score": "7",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Ben Sturmfels",
       "Details",
@@ -71805,8 +71805,8 @@
     "pitch": "Full Pitch",
     "home_team": "Women",
     "away_team": "EGC Gold",
-    "home_score": "8",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Stephen Matthews",
       "Details",
@@ -72332,8 +72332,8 @@
     "pitch": "Full Pitch",
     "home_team": "Ducks Women",
     "away_team": "EGC Blue",
-    "home_score": "0",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Aliyah Kochi;                                                                     Nicholas Hargreaves",
       "Details",
@@ -72703,8 +72703,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 2 Men",
     "away_team": "Div 2 Men",
-    "home_score": "0",
-    "away_score": "4",
+    "home_score": 0,
+    "away_score": 4,
     "umpires": [
       "Daniel Ryan",
       "Mitchell Ryan"
@@ -73384,8 +73384,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Blue",
     "away_team": "Division 2 Men",
-    "home_score": "0",
-    "away_score": "7",
+    "home_score": 0,
+    "away_score": 7,
     "umpires": [
       "Judith Yates"
     ],
@@ -73817,8 +73817,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Gold",
     "away_team": "Div 2 Men",
-    "home_score": "3",
-    "away_score": "0",
+    "home_score": 3,
+    "away_score": 0,
     "umpires": [
       "Craig Stevens"
     ],
@@ -74367,8 +74367,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Gold",
     "away_team": "EGC Blue",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": 2,
+    "away_score": 1,
     "umpires": [
       "Ben Sturmfels",
       "Mitchell Ryan"
@@ -74736,8 +74736,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "Division 2 Men",
-    "home_score": "5",
-    "away_score": "3",
+    "home_score": 5,
+    "away_score": 3,
     "umpires": [],
     "teams": [
       {
@@ -75401,8 +75401,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 2 Men",
     "away_team": "Div 2 Men",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": 2,
+    "away_score": 1,
     "umpires": [
       "Craig Stevens",
       "Nicholas Jolly"
@@ -76030,8 +76030,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "EGC Blue",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": 1,
+    "away_score": 2,
     "umpires": [
       "Callum Bridge",
       "Lee Drury"
@@ -76555,8 +76555,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "EGC Gold",
-    "home_score": "2",
-    "away_score": "2",
+    "home_score": 2,
+    "away_score": 2,
     "umpires": [
       "Fionn Zele",
       "Lee Drury"
@@ -77197,8 +77197,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 2 Men",
     "away_team": "Division 2 Men",
-    "home_score": "1",
-    "away_score": "3",
+    "home_score": 1,
+    "away_score": 3,
     "umpires": [
       "Fionn Zele",
       "Timothy O'Sullivan"
@@ -77709,8 +77709,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 2 Men",
     "away_team": "EGC Blue",
-    "home_score": "2",
-    "away_score": "3",
+    "home_score": 2,
+    "away_score": 3,
     "umpires": [
       "Ben Shipham"
     ],
@@ -78194,8 +78194,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "Div 2 Men",
-    "home_score": "0",
-    "away_score": "7",
+    "home_score": 0,
+    "away_score": 7,
     "umpires": [
       "Ben Sturmfels",
       "Craig Stevens"
@@ -78888,8 +78888,8 @@
     "pitch": "Full Pitch",
     "home_team": "Division 2 Men",
     "away_team": "EGC Gold",
-    "home_score": "14",
-    "away_score": "0",
+    "home_score": 14,
+    "away_score": 0,
     "umpires": [
       "Aaron Luttrell",
       "Stephen Matthews"
@@ -79348,8 +79348,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 2 Men",
     "away_team": "EGC Gold",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": 2,
+    "away_score": 1,
     "umpires": [
       "Anthony McBride",
       "Ben Sturmfels"
@@ -79873,8 +79873,8 @@
     "pitch": "Full Pitch",
     "home_team": "Division 2 Men",
     "away_team": "Div 2 Men",
-    "home_score": "1",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Jeff Sly",
       "Joshua Sly"
@@ -80320,8 +80320,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Blue",
     "away_team": "Div 2 Men",
-    "home_score": "2",
-    "away_score": "5",
+    "home_score": 2,
+    "away_score": 5,
     "umpires": [
       "Daniel Ryan",
       "Timothy O'Sullivan"
@@ -81027,8 +81027,8 @@
     "pitch": "Full Pitch",
     "home_team": "Division 2 Men",
     "away_team": "EGC Blue",
-    "home_score": "0",
-    "away_score": "7",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Judith Yates",
       "Details",
@@ -81424,8 +81424,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "EGC Gold",
-    "home_score": "3",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens",
       "Details",
@@ -81795,8 +81795,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "Blaze Div 2 Men",
-    "home_score": "0",
-    "away_score": "4",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Mitchell Ryan;                                                                     Daniel Ryan",
       "Details",
@@ -82478,8 +82478,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Blue",
     "away_team": "EGC Gold",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Mitchell Ryan;                                                                     Ben Sturmfels",
       "Details",
@@ -82836,8 +82836,8 @@
     "pitch": "Full Pitch",
     "home_team": "Division 2 Men",
     "away_team": "Div 2 Men",
-    "home_score": "5",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [],
     "teams": [
       {
@@ -83475,8 +83475,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "Blaze Div 2 Men",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens;                                                                     Nicholas Jolly",
       "Details",
@@ -83924,8 +83924,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Blue",
     "away_team": "Div 2 Men",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Callum Bridge;                                                                     Lee Drury",
       "Details",
@@ -84308,8 +84308,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Gold",
     "away_team": "Div 2 Men",
-    "home_score": "2",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Fionn Zele;                                                                     Lee Drury",
       "Details",
@@ -84913,8 +84913,8 @@
     "pitch": "Full Pitch",
     "home_team": "Division 2 Men",
     "away_team": "Blaze Div 2 Men",
-    "home_score": "1",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Fionn Zele;                                                                     Timothy O'Sullivan",
       "Details",
@@ -85375,8 +85375,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Blue",
     "away_team": "Blaze Div 2 Men",
-    "home_score": "2",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Ben Shipham",
       "Details",
@@ -85811,8 +85811,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "Div 2 Men",
-    "home_score": "0",
-    "away_score": "7",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens;                                                                     Ben Sturmfels",
       "Details",
@@ -86442,8 +86442,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Gold",
     "away_team": "Division 2 Men",
-    "home_score": "14",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Stephen Matthews;                                                                     Aaron Luttrell",
       "Details",
@@ -86826,8 +86826,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Blue",
     "away_team": "Div 2 Men",
-    "home_score": "2",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Daniel Ryan;                                                                     Timothy O'Sullivan",
       "Details",
@@ -87444,8 +87444,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Gold",
     "away_team": "Blaze Div 2 Men",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Ben Sturmfels;                                                                     Anthony McBride",
       "Details",
@@ -88277,8 +88277,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Blue",
     "away_team": "Division 2 Men",
-    "home_score": "0",
-    "away_score": "7",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Judith Yates",
       "Details",
@@ -88674,8 +88674,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Gold",
     "away_team": "Div 2 Men",
-    "home_score": "3",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens",
       "Details",
@@ -89045,8 +89045,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 2 Men",
     "away_team": "Div 2 Men",
-    "home_score": "0",
-    "away_score": "4",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Mitchell Ryan;                                                                     Daniel Ryan",
       "Details",
@@ -89728,8 +89728,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 2 Men",
     "away_team": "Div 2 Men",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens;                                                                     Nicholas Jolly",
       "Details",
@@ -90177,8 +90177,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "Division 2 Men",
-    "home_score": "5",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [],
     "teams": [
       {
@@ -90816,8 +90816,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Gold",
     "away_team": "EGC Blue",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Mitchell Ryan;                                                                     Ben Sturmfels",
       "Details",
@@ -91174,8 +91174,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "EGC Blue",
-    "home_score": "1",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Callum Bridge;                                                                     Lee Drury",
       "Details",
@@ -91558,8 +91558,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 2 Men",
     "away_team": "Division 2 Men",
-    "home_score": "1",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Fionn Zele;                                                                     Timothy O'Sullivan",
       "Details",
@@ -92020,8 +92020,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "EGC Gold",
-    "home_score": "2",
-    "away_score": "2",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Fionn Zele;                                                                     Lee Drury",
       "Details",
@@ -92625,8 +92625,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "Div 2 Men",
-    "home_score": "0",
-    "away_score": "7",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Craig Stevens;                                                                     Ben Sturmfels",
       "Details",
@@ -93256,8 +93256,8 @@
     "pitch": "Full Pitch",
     "home_team": "Division 2 Men",
     "away_team": "EGC Gold",
-    "home_score": "14",
-    "away_score": "0",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Stephen Matthews;                                                                     Aaron Luttrell",
       "Details",
@@ -93640,8 +93640,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 2 Men",
     "away_team": "EGC Blue",
-    "home_score": "2",
-    "away_score": "3",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Ben Shipham",
       "Details",
@@ -94076,8 +94076,8 @@
     "pitch": "Full Pitch",
     "home_team": "EGC Blue",
     "away_team": "Div 2 Men",
-    "home_score": "2",
-    "away_score": "5",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Daniel Ryan;                                                                     Timothy O'Sullivan",
       "Details",
@@ -95104,8 +95104,8 @@
     "pitch": "Full Pitch",
     "home_team": "Blaze Div 2 Men",
     "away_team": "EGC Gold",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": null,
+    "away_score": null,
     "umpires": [
       "Ben Sturmfels;                                                                     Anthony McBride",
       "Details",
