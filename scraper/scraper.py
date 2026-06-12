@@ -565,13 +565,12 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
                 if lines[k].lower() in STOP: break
                 match["umpires"].append(lines[k])
         # Score extraction is handled below via HTML score cards, not plain text.
-        # (Plain text scanning was unreliable — forfeit/BYE pages have no real scores
-        #  but do contain numbers like jersey numbers that caused false positives.)
+        # Plain text scanning was unreliable — forfeit/BYE pages contain numbers
+        # like jersey numbers that caused false positives.
 
     # ── Score extraction via HTML score cards ────────────────
     # RevSports renders scores inside large card divs with font-size: 5rem.
-    # We look for exactly those elements. On unplayed, forfeit, or BYE games
-    # these elements are empty or absent — so we correctly return None.
+    # These elements are empty on unplayed, forfeit, and BYE games.
     score_cards = soup.find_all("div", style=lambda s: s and "5rem" in s)
     score_values = []
     for card in score_cards:
