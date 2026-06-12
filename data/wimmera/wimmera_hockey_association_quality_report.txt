@@ -1,19 +1,18 @@
 DATA QUALITY REPORT — Wimmera Hockey Association
-Generated: 2026-06-11 19:05:28
+Generated: 2026-06-12 09:50:45
 ────────────────────────────────────────────────────────────
 Total rows scraped : 162
 Rows with issues   : 162  (100.0%)
 
 COLUMN ISSUES:
-  team                      — 162 row(s) failing 'required' rule
   revsports_player_id       — 162 row(s) failing 'required' rule
   club_name                 — 162 row(s) failing 'required' rule
 
 SAMPLE PROBLEM ROWS (first 5):
-  Row    1: grade='Under 16'           team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
-  Row    2: grade='Under 16'           team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
-  Row    3: grade='Under 16'           team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
-  Row    4: grade='Under 16'           team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
-  Row    5: grade='Under 16'           team=''                   player='NO_PLAYERS'         | BAD COLUMNS: team, revsports_player_id, club_name
+  Row    1: grade='Under 16'           team='NO_PLAYERS'         player='NO_PLAYERS'         | BAD COLUMNS: revsports_player_id, club_name
+  Row    2: grade='Under 16'           team='NO_PLAYERS'         player='NO_PLAYERS'         | BAD COLUMNS: revsports_player_id, club_name
+  Row    3: grade='Under 16'           team='NO_PLAYERS'         player='NO_PLAYERS'         | BAD COLUMNS: revsports_player_id, club_name
+  Row    4: grade='Under 16'           team='NO_PLAYERS'         player='NO_PLAYERS'         | BAD COLUMNS: revsports_player_id, club_name
+  Row    5: grade='Under 16'           team='NO_PLAYERS'         player='NO_PLAYERS'         | BAD COLUMNS: revsports_player_id, club_name
 
 ────────────────────────────────────────────────────────────
