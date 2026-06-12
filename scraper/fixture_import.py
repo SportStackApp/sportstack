@@ -7,7 +7,7 @@ the mapping tables, then upserts into the native `fixtures` table.
 
 Conflict key: revsports_match_url (one fixture per scraped game URL)
 
-Associations handled: Hockey Ballarat, Sunraysia Hockey Association
+Associations handled: Hockey Ballarat, Sunraysia Hockey Association, Wimmera Hockey Association
 """
 
 import os
@@ -44,6 +44,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 ASSOCIATIONS = [
     "Hockey Ballarat",
     "Sunraysia Hockey Association",
+    "Wimmera Hockey Association",
 ]
 
 
