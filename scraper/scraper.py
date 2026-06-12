@@ -564,22 +564,18 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
             for k in range(i + 1, min(i + 5, len(lines))):
                 if lines[k].lower() in STOP: break
                 match["umpires"].append(lines[k])
-        # Score extraction is handled below via HTML score cards, not plain text.
-        # Plain text scanning was unreliable — forfeit/BYE pages contain numbers
-        # like jersey numbers that caused false positives.
-
-    # ── Score extraction via HTML score cards ────────────────
-    # RevSports renders scores inside large card divs with font-size: 5rem.
-    # These elements are empty on unplayed, forfeit, and BYE games.
-    score_cards = soup.find_all("div", style=lambda s: s and "5rem" in s)
-    score_values = []
-    for card in score_cards:
-        text = card.get_text(strip=True)
-        if re.match(r"^\d+$", text):
-            score_values.append(int(text))
-    if len(score_values) >= 2:
-        match["home_score"] = score_values[0]
-        match["away_score"] = score_values[1]
+        if any(kw in ll for kw in ("won!", "draw", "forfeit", "walkover")):
+            # Only parse scores when there is a definitive result keyword.
+            # "bye" is intentionally excluded — a BYE page has no real score,
+            # and any numbers found after "bye" would be spurious (jersey numbers,
+            # times, round numbers etc).
+            found = 0
+            for item in lines[i + 1:]:
+                if re.match(r"^\d+$", item):
+                    if found == 0: match["home_score"] = item
+                    elif found == 1: match["away_score"] = item
+                    found += 1
+                    if found == 2: break
 
     # ── Match card tables — one per team ─────────────────────
     tables = soup.find_all("table", class_="table")
