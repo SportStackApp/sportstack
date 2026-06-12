@@ -798,7 +798,7 @@ def main():
                             "role":                None,
                             "attended":            None,
                             "is_fillin":           False,
-                            "is_removed":          None,
+                            "is_removed":          False,
                             "revsports_player_id": None,
                             "goals":               None,
                             "green_cards":         None,
