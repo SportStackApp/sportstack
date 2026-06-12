@@ -564,7 +564,11 @@ def scrape_match(session, game_url, grade_name="", team_urls=None,
             for k in range(i + 1, min(i + 5, len(lines))):
                 if lines[k].lower() in STOP: break
                 match["umpires"].append(lines[k])
-        if any(kw in ll for kw in ("won!", "draw", "forfeit", "walkover", "bye")):
+        if any(kw in ll for kw in ("won!", "draw", "forfeit", "walkover")):
+            # Only parse scores when there is a definitive result keyword.
+            # "bye" is intentionally excluded — a BYE page has no real score,
+            # and any numbers found after "bye" would be spurious (jersey numbers,
+            # times, round numbers etc).
             found = 0
             for item in lines[i + 1:]:
                 if re.match(r"^\d+$", item):
