@@ -545,13 +545,14 @@ const FixturesManagement = () => {
                 <TableBody>
                   {displayFixtures.map((fixture) => {
                     const date = fixture.fixture_date ? new Date(fixture.fixture_date) : null;
+                    const tz = "Australia/Melbourne";
                     const venueName = fixture.venue?.name ?? "TBD";
                     const statusLabel = formatStatusLabel(fixture.status);
 
                     return (
                       <TableRow key={fixture.id}>
                         <TableCell className="whitespace-nowrap text-foreground">
-                          {date ? date.toLocaleDateString("en-AU", { day: "2-digit", month: "short" }) : "TBD"}
+                          {date ? date.toLocaleDateString("en-AU", { day: "2-digit", month: "short", timeZone: tz }) : "TBD"}
                         </TableCell>
                         <TableCell>
                           {allAssocTeams.find((t) => t.id === fixture.home_team_id)?.associationName ?? "-"}
