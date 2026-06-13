@@ -1,5 +1,5 @@
 DATA QUALITY REPORT — Hockey Ballarat
-Generated: 2026-06-13 05:48:01
+Generated: 2026-06-13 06:45:56
 ────────────────────────────────────────────────────────────
 Total rows scraped : 6,800
 Rows with issues   : 0  (0.0%)
