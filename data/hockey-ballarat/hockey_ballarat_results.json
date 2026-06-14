@@ -79900,13 +79900,11 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "Blaze Div 2 Men",
-    "home_score": null,
-    "away_score": null,
+    "home_score": 1,
+    "away_score": 1,
     "umpires": [
-      "Mitchell Ryan;                                                                     Daniel Ryan",
-      "Details",
-      "Round 11",
-      "Sun 26 Jul 2026"
+      "Anthony McBride",
+      "Craig Stevens"
     ],
     "teams": [
       {
@@ -80051,7 +80049,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "j9AXluN",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -80252,8 +80250,8 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "WQrBbUO",
-            "goals": "",
-            "green_cards": "",
+            "goals": "1",
+            "green_cards": "1",
             "yellow_cards": "",
             "red_cards": ""
           },
