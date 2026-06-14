@@ -1,5 +1,5 @@
 DATA QUALITY REPORT — Wimmera Hockey Association
-Generated: 2026-06-14 10:01:32
+Generated: 2026-06-14 10:34:27
 ────────────────────────────────────────────────────────────
 Total rows scraped : 162
 Rows with issues   : 162  (100.0%)
