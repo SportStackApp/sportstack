@@ -79900,8 +79900,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 2 Men",
     "away_team": "Blaze Div 2 Men",
-    "home_score": 1,
-    "away_score": 1,
+    "home_score": 3,
+    "away_score": 2,
     "umpires": [
       "Anthony McBride",
       "Craig Stevens"
@@ -80049,7 +80049,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "j9AXluN",
-            "goals": "1",
+            "goals": "2",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -80114,7 +80114,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "zX68LfB",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -80458,7 +80458,7 @@
             "is_fillin": true,
             "is_removed": false,
             "revsports_player_id": "B201BIJ",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
