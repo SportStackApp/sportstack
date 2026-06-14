@@ -40388,8 +40388,8 @@
     "pitch": "Full Pitch",
     "home_team": "Div 1 Men",
     "away_team": "Div 1 Men",
-    "home_score": null,
-    "away_score": null,
+    "home_score": 5,
+    "away_score": 2,
     "umpires": [
       "Jeff Sly",
       "Joshua Sly"
@@ -40433,7 +40433,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "D1PmqCk",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -40511,7 +40511,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "7yQ12T8",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -40615,7 +40615,7 @@
             "is_fillin": true,
             "is_removed": false,
             "revsports_player_id": "Oy9NXT9",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -40654,7 +40654,7 @@
             "is_fillin": true,
             "is_removed": false,
             "revsports_player_id": "K73Erhm",
-            "goals": "1",
+            "goals": "2",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -40674,7 +40674,7 @@
             "is_removed": false,
             "revsports_player_id": "ayADnU1",
             "goals": "",
-            "green_cards": "",
+            "green_cards": "1",
             "yellow_cards": "",
             "red_cards": ""
           },
@@ -40738,7 +40738,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "kRnWMSR",
-            "goals": "",
+            "goals": "2",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -49846,6 +49846,19 @@
             "red_cards": ""
           },
           {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Jasmine M.",
             "jersey": "26",
             "role": null,
@@ -50921,7 +50934,7 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -50934,7 +50947,7 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -52430,7 +52443,7 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -52443,7 +52456,7 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -52521,6 +52534,19 @@
             "is_removed": false,
             "revsports_player_id": "QlVJefw",
             "goals": "4",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
+            "goals": "",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -53616,7 +53642,7 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
             "attended": true,
             "is_fillin": false,
@@ -53629,7 +53655,7 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -55125,7 +55151,7 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
             "attended": true,
             "is_fillin": false,
@@ -55138,7 +55164,7 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
             "attended": true,
             "is_fillin": false,
@@ -55475,6 +55501,19 @@
             "is_removed": false,
             "revsports_player_id": "QlVJefw",
             "goals": "2",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
+            "goals": "",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -56058,7 +56097,7 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -56071,7 +56110,7 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
             "attended": true,
             "is_fillin": false,
@@ -56407,6 +56446,19 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "QlVJefw",
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
             "goals": "",
             "green_cards": "",
             "yellow_cards": "",
@@ -57093,7 +57145,7 @@
             "name": "Ashleigh B.",
             "jersey": "6",
             "role": "Captain",
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "VOJWlIw",
@@ -57119,7 +57171,7 @@
             "name": "Clarabel W.",
             "jersey": "33",
             "role": null,
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "B2nDqIJ",
@@ -57145,7 +57197,7 @@
             "name": "Emily M.",
             "jersey": "11",
             "role": null,
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "gz3yGTm",
@@ -57158,7 +57210,7 @@
             "name": "Emma M.",
             "jersey": "2",
             "role": null,
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "k7GkgtR",
@@ -57184,7 +57236,7 @@
             "name": "Helen R.",
             "jersey": "1",
             "role": "Goalkeeper",
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "DLzGJsk",
@@ -57197,7 +57249,7 @@
             "name": "Jessica C.",
             "jersey": "17",
             "role": null,
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "bn37bH3",
@@ -57210,7 +57262,7 @@
             "name": "Lana W.",
             "jersey": "59",
             "role": null,
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "VzMEjtw",
@@ -57223,7 +57275,7 @@
             "name": "Meletta D.",
             "jersey": "10",
             "role": null,
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "P21n7CP",
@@ -57236,7 +57288,7 @@
             "name": "Paige K.",
             "jersey": "76",
             "role": null,
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "YzrkZHm",
@@ -57275,7 +57327,7 @@
             "name": "Sophie R.",
             "jersey": "63",
             "role": null,
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "bWvX9T3",
@@ -57286,9 +57338,9 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "ga4DeTm",
@@ -57299,9 +57351,9 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "L8eYksn",
@@ -57314,7 +57366,7 @@
             "name": "Tylah H.",
             "jersey": "18",
             "role": null,
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "MRPD9Ua",
@@ -58115,6 +58167,19 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "QlVJefw",
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
             "goals": "",
             "green_cards": "",
             "yellow_cards": "",
@@ -59310,6 +59375,19 @@
             "red_cards": ""
           },
           {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Jasmine M.",
             "jersey": "26",
             "role": null,
@@ -59973,6 +60051,19 @@
             "red_cards": ""
           },
           {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Jasmine M.",
             "jersey": "26",
             "role": null,
@@ -60339,7 +60430,7 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -60352,7 +60443,7 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -61568,6 +61659,19 @@
             "red_cards": ""
           },
           {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Jasmine M.",
             "jersey": "26",
             "role": null,
@@ -61913,7 +62017,7 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -61926,7 +62030,7 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -63189,7 +63293,7 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -63202,7 +63306,7 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -63930,6 +64034,19 @@
             "red_cards": ""
           },
           {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Jasmine M.",
             "jersey": "26",
             "role": null,
@@ -64523,7 +64640,7 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -64536,7 +64653,7 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -65940,6 +66057,19 @@
             "red_cards": ""
           },
           {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Jasmine M.",
             "jersey": "26",
             "role": null,
@@ -66481,7 +66611,7 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -66494,7 +66624,7 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -67316,6 +67446,19 @@
             "red_cards": ""
           },
           {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
             "name": "Jasmine M.",
             "jersey": "26",
             "role": null,
@@ -67865,7 +68008,7 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -67878,7 +68021,7 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -68655,6 +68798,19 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "QlVJefw",
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
             "goals": "",
             "green_cards": "",
             "yellow_cards": "",
@@ -70173,7 +70329,7 @@
           },
           {
             "name": "Susan W.",
-            "jersey": "41",
+            "jersey": "24",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -70186,7 +70342,7 @@
           },
           {
             "name": "Thais M.",
-            "jersey": "26",
+            "jersey": "41",
             "role": null,
             "attended": false,
             "is_fillin": false,
@@ -70459,6 +70615,19 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "QlVJefw",
+            "goals": "",
+            "green_cards": "",
+            "yellow_cards": "",
+            "red_cards": ""
+          },
+          {
+            "name": "Fionn Z.",
+            "jersey": "95",
+            "role": null,
+            "attended": false,
+            "is_fillin": false,
+            "is_removed": false,
+            "revsports_player_id": "K1BAnFm",
             "goals": "",
             "green_cards": "",
             "yellow_cards": "",
