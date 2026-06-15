@@ -1,5 +1,5 @@
 """
-Match Scraper â€” Headless (GitHub Actions version)
+Match Scraper - Headless (GitHub Actions version)
 ============================================================
 Scrapes match results and player appearances from RevSports.
 Runs without a GUI. Configure via environment variables below.
@@ -9,7 +9,7 @@ Output:
   ../data/{association}_results.json
   ../data/{association}_quality_report.txt
 
-Version: 2026-06-14-team-fields-v3
+Version: 2026-06-15-final-clean-appearance-key-v1
 
 Important model:
   - Round page is the fixture source.
@@ -33,11 +33,11 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-VERSION = "2026-06-15-no-role-flags-unknown-role-warning-v1"
+VERSION = "2026-06-15-final-clean-appearance-key-v1"
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ----------------------------------------------------------------------------
 # CONFIG
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ----------------------------------------------------------------------------
 
 PORTAL_URL = os.getenv("PORTAL_URL", "https://www.revolutionise.com.au/hockeyballarat")
 ASSOCIATION_NAME = os.getenv("ASSOCIATION_NAME", "Hockey Ballarat")
@@ -101,29 +101,31 @@ OUTPUT_COLUMNS = [
 QUALITY_WARNINGS: list[str] = []
 
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ----------------------------------------------------------------------------
 # SMALL HELPERS
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ----------------------------------------------------------------------------
 
 def clean_text(value) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
 
 def build_appearance_key(row: dict) -> str:
-    # Builds one stable identity string per scraped appearance row.
-    # Runs on the raw string row (before "" -> None cleaning), so values are strings.
-    match_url   = (row.get("match_url") or "").strip()
-    player_name = (row.get("player_name") or "").strip()
-    player_id   = (row.get("revsports_player_id") or "").strip()
-    team_id     = (row.get("revsports_team_id") or "").strip()
-    team_url    = (row.get("team_url") or "").strip()
-    team_side   = (row.get("team_side") or "").strip()
-    club_name   = (row.get("club_name") or "").strip()
-    team        = (row.get("team") or "").strip()
-    jersey      = (row.get("jersey") or "").strip()
+    """Build one stable identity string per scraped appearance row.
 
-    # Team identity fallback chain: prefer the RevSports team id,
-    # then the team url, then a composite of side / club / team.
+    The key is used as the Supabase upsert key. It avoids name-only matching
+    so same-named players on the same team can stay separate when RevSports
+    player IDs are available.
+    """
+    match_url = clean_text(row.get("match_url"))
+    player_name = clean_text(row.get("player_name"))
+    player_id = clean_text(row.get("revsports_player_id"))
+    team_id = clean_text(row.get("revsports_team_id"))
+    team_url = clean_text(row.get("team_url"))
+    team_side = clean_text(row.get("team_side"))
+    club_name = clean_text(row.get("club_name"))
+    team = clean_text(row.get("team"))
+    jersey = clean_text(row.get("jersey"))
+
     if team_id:
         team_identity = team_id
     elif team_url:
@@ -131,70 +133,18 @@ def build_appearance_key(row: dict) -> str:
     else:
         team_identity = f"{team_side}/{club_name}/{team}"
 
-    # Fixture-only / placeholder rows (no player data, e.g. WHA).
+    # Fixture-only placeholder row, used when RevSports does not expose players.
     if player_name == "NO_PLAYERS":
         return f"{match_url}|fixture-only"
 
-    # Normal case: player has a unique RevSports player id.
+    # Normal case: RevSports gives each player a unique player ID.
     if player_id:
         return f"{match_url}|{team_identity}|{player_id}"
 
-    # Fallback: player has no id — identify by name + jersey.
-    # Status fields (is_fillin, is_removed) are deliberately excluded so a
-    # status change updates the existing row instead of creating a duplicate.
-    return f"{match_url}|{team_identity}|{player_name}|{jersey}"
-
-
-def merge_by_appearance_key(rows: list) -> list:
-    # Collapses rows that share the same appearance_key into ONE row.
-    # The two source rows never hold conflicting values for the same field
-    # (each real value lives in only one row), so a field-wise combine is lossless.
-    import collections
-
-    BOOLEAN_FLAGS = {"attended", "is_captain", "is_goalkeeper", "is_fillin", "is_removed"}
-    NUMERIC_STATS = {"goals", "green_cards", "yellow_cards", "red_cards"}
-
-    def is_true(v):
-        if isinstance(v, bool):
-            return v
-        return str(v).strip().lower() in ("true", "1", "yes")
-
-    def to_int_or_none(v):
-        s = str(v).strip()
-        return int(s) if s.isdigit() else None
-
-    groups = collections.OrderedDict()
-    for r in rows:
-        groups.setdefault(r.get("appearance_key"), []).append(r)
-
-    merged_rows = []
-    for key, grp in groups.items():
-        if len(grp) == 1:
-            merged_rows.append(grp[0])
-            continue
-
-        out = dict(grp[0])                       # start from the first row
-        all_fields = set()
-        for r in grp:
-            all_fields.update(r.keys())
-
-        for field in all_fields:
-            values = [r.get(field) for r in grp]
-            if field in BOOLEAN_FLAGS:
-                # Any row says yes -> yes.
-                out[field] = any(is_true(v) for v in values)
-            elif field in NUMERIC_STATS:
-                # Keep the highest number present (blank counts as none).
-                nums = [n for n in (to_int_or_none(v) for v in values) if n is not None]
-                out[field] = max(nums) if nums else (out.get(field) or "")
-            else:
-                # Text / context: keep the first non-blank value.
-                non_blank = [v for v in values if str(v).strip() != ""]
-                out[field] = non_blank[0] if non_blank else out.get(field, "")
-
-        merged_rows.append(out)
-
-    return merged_rows
+    # Fallback for rare no-ID player rows. Status fields are deliberately
+    # excluded so status changes update the same row instead of creating a
+    # second appearance.
+    return f"{match_url}|{team_identity}|{player_name.lower()}|{jersey}"
 
 
 def bool_text(value):
@@ -300,67 +250,9 @@ def unknown_role_part(role_text: str) -> str:
     return clean_text(unknown)
 
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ----------------------------------------------------------------------------
 # MERGE / QUALITY HELPERS
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-def player_identity_key(row: dict) -> tuple[str, str, str]:
-    """Collapse duplicate normal/fill-in/removed appearances.
-
-    Use RevSports team ID when available because team names may not be unique.
-    Fallback to team_side + club/team when needed.
-    """
-    player_id = clean_text(row.get("revsports_player_id"))
-    player_identity = player_id if player_id else clean_text(row.get("player_name")).lower()
-
-    team_identity = clean_text(row.get("revsports_team_id"))
-    if not team_identity:
-        team_identity = "|".join([
-            clean_text(row.get("team_side")),
-            clean_text(row.get("club_name")),
-            clean_text(row.get("team")),
-            clean_text(row.get("team_url")),
-        ])
-
-    return (clean_text(row.get("match_url")), team_identity, player_identity)
-
-
-def merge_two_player_rows(base: dict, extra: dict) -> dict:
-    merged = dict(base)
-
-    for field in [
-        "jersey",
-        "revsports_player_id",
-        "player_name",
-        "club_name",
-        "team",
-        "team_label",
-        "team_url",
-        "revsports_team_id",
-        "team_side",
-    ]:
-        if not clean_text(merged.get(field)) and clean_text(extra.get(field)):
-            merged[field] = extra.get(field, "")
-
-    for field in ["goals", "green_cards", "yellow_cards", "red_cards"]:
-        merged[field] = max_numeric_text(merged.get(field), extra.get(field))
-
-    final_is_goalkeeper = bool_from_text(merged.get("is_goalkeeper")) or bool_from_text(extra.get("is_goalkeeper"))
-    final_is_captain = bool_from_text(merged.get("is_captain")) or bool_from_text(extra.get("is_captain"))
-    final_is_fillin = bool_from_text(merged.get("is_fillin")) or bool_from_text(extra.get("is_fillin"))
-    final_is_removed = bool_from_text(merged.get("is_removed")) or bool_from_text(extra.get("is_removed"))
-
-    if final_is_removed:
-        final_attended = False
-    else:
-        final_attended = bool_from_text(merged.get("attended")) or bool_from_text(extra.get("attended")) or final_is_fillin
-
-    merged["attended"] = bool_text(final_attended)
-    merged["is_goalkeeper"] = bool_text(final_is_goalkeeper)
-    merged["is_captain"] = bool_text(final_is_captain)
-    merged["is_fillin"] = bool_text(final_is_fillin)
-    merged["is_removed"] = bool_text(final_is_removed)
-    return merged
+# ----------------------------------------------------------------------------
 
 
 def normalise_boolean_columns(rows: list[dict]) -> list[dict]:
@@ -371,43 +263,119 @@ def normalise_boolean_columns(rows: list[dict]) -> list[dict]:
     return rows
 
 
-def merge_duplicate_player_appearances(rows: list[dict]) -> list[dict]:
-    merged_by_key = {}
-    order = []
-    merge_counts = {}
+def merge_by_appearance_key(rows: list[dict]) -> list[dict]:
+    """Collapse duplicate raw rows that describe the same player appearance.
 
+    RevSports can list a player once in the roster and again in the match-card
+    stats. The appearance_key correctly identifies those as the same player in
+    the same match, so this merge keeps the best data from both rows before the
+    CSV/JSON/Supabase upload step.
+    """
+    import collections
+
+    boolean_or_fields = {"attended", "is_captain", "is_goalkeeper"}
+    numeric_stats = {"goals", "green_cards", "yellow_cards", "red_cards"}
+
+    def is_true(value) -> bool:
+        if isinstance(value, bool):
+            return value
+        return clean_text(value).lower() in {"true", "1", "yes", "y"}
+
+    groups = collections.OrderedDict()
     for row in normalise_boolean_columns(rows):
-        if clean_text(row.get("player_name")) == "NO_PLAYERS" or (
-            not clean_text(row.get("player_name")) and not clean_text(row.get("revsports_player_id"))
-        ):
-            synthetic_key = (clean_text(row.get("match_url")), "fixture-only", f"{len(order)}")
-            merged_by_key[synthetic_key] = row
-            order.append(synthetic_key)
+        key = clean_text(row.get("appearance_key"))
+        groups.setdefault(key, []).append(row)
+
+    merged_rows: list[dict] = []
+
+    for key, group in groups.items():
+        if len(group) == 1:
+            merged_rows.append(group[0])
             continue
 
-        key = player_identity_key(row)
-        if key not in merged_by_key:
-            merged_by_key[key] = row
-            order.append(key)
-        else:
-            merge_counts[key] = merge_counts.get(key, 1) + 1
-            merged_by_key[key] = merge_two_player_rows(merged_by_key[key], row)
+        out = dict(group[0])
+        all_fields = set()
+        for row in group:
+            all_fields.update(row.keys())
 
-    for key, count in merge_counts.items():
-        row = merged_by_key[key]
+        for field in all_fields:
+            values = [row.get(field) for row in group]
+
+            if field in boolean_or_fields:
+                # Any row says yes -> yes.
+                out[field] = bool_text(any(is_true(v) for v in values))
+
+            elif field == "is_fillin":
+                # Only true if every source row says true. If one row is the
+                # normal roster row, the merged player is not a fill-in.
+                present = [is_true(v) for v in values if clean_text(v) != ""]
+                out[field] = bool_text(bool(present) and all(present))
+
+            elif field == "is_removed":
+                # Handled after stats/attended are merged.
+                continue
+
+            elif field in numeric_stats:
+                nums = [n for n in (int_or_none(v) for v in values) if n is not None]
+                out[field] = str(max(nums)) if nums else ""
+
+            else:
+                # Text/context fields: keep the first non-blank value.
+                non_blank = [v for v in values if clean_text(v) != ""]
+                out[field] = non_blank[0] if non_blank else out.get(field, "")
+
+        has_stats = any((int_or_none(out.get(field)) or 0) > 0 for field in numeric_stats)
+        attended = is_true(out.get("attended"))
+        removed_seen = any(is_true(row.get("is_removed")) for row in group)
+
+        # If there is evidence the player played or recorded stats, do not mark
+        # the merged row as removed.
+        final_removed = False if attended or has_stats else removed_seen
+        out["is_removed"] = bool_text(final_removed)
+        if final_removed:
+            out["attended"] = "FALSE"
+
         flags = []
-        if bool_from_text(row.get("is_fillin")):
+        if bool_from_text(out.get("is_fillin")):
             flags.append("fill-in")
-        if bool_from_text(row.get("is_removed")):
+        if bool_from_text(out.get("is_removed")):
             flags.append("removed")
         flag_text = f" ({', '.join(flags)})" if flags else ""
+
         QUALITY_WARNINGS.append(
             "Merged duplicate player appearance: "
-            f"{row.get('player_name', '')} Â· {row.get('club_name', '')} Â· {row.get('team', '')} Â· "
-            f"{row.get('match_url', '')}{flag_text}; {count} source rows became 1 row."
+            f"{out.get('player_name', '')} - {out.get('club_name', '')} - {out.get('team', '')} - "
+            f"{out.get('match_url', '')}{flag_text}; {len(group)} source rows became 1 row."
         )
 
-    return [merged_by_key[key] for key in order]
+        merged_rows.append(out)
+
+    return merged_rows
+
+
+def validate_appearance_keys(rows: list[dict]) -> None:
+    """Fail loudly if appearance_key is missing or duplicated after merging."""
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+    blank_lines: list[int] = []
+
+    for line_number, row in enumerate(rows, start=2):
+        key = clean_text(row.get("appearance_key"))
+        if not key:
+            blank_lines.append(line_number)
+            continue
+        if key in seen:
+            duplicates.add(key)
+        seen.add(key)
+
+    if blank_lines or duplicates:
+        parts = []
+        if blank_lines:
+            parts.append(f"blank appearance_key on CSV line(s): {blank_lines[:20]}")
+        if duplicates:
+            sample = sorted(duplicates)[:10]
+            parts.append(f"duplicate appearance_key value(s): {sample}")
+        raise RuntimeError("Appearance key validation failed - " + "; ".join(parts))
 
 
 def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -> int:
@@ -420,6 +388,7 @@ def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -
         "home_club_name",
         "away_club_name",
         "match_url",
+        "appearance_key",
     ]
     required_player = ["team_side", "club_name", "team_url", "revsports_team_id", "player_name"]
     numeric = ["home_score", "away_score", "goals", "green_cards", "yellow_cards", "red_cards", "jersey"]
@@ -427,6 +396,17 @@ def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -
 
     issues: list[str] = []
     warnings: list[str] = list(QUALITY_WARNINGS)
+
+    seen_appearance_keys: set[str] = set()
+    duplicate_appearance_keys: set[str] = set()
+    for row in csv_rows:
+        key = clean_text(row.get("appearance_key"))
+        if key in seen_appearance_keys:
+            duplicate_appearance_keys.add(key)
+        elif key:
+            seen_appearance_keys.add(key)
+    for key in sorted(duplicate_appearance_keys)[:20]:
+        issues.append(f"Duplicate appearance_key after merge: {key}")
 
     for i, row in enumerate(csv_rows, start=2):
         is_fixture_only = clean_text(row.get("player_name")) == "NO_PLAYERS"
@@ -445,7 +425,7 @@ def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -
             if not clean_text(row.get("revsports_player_id")):
                 warnings.append(
                     f"Line {i}: player has no revsports_player_id: "
-                    f"{row.get('player_name', '')} Â· {row.get('club_name', '')} Â· {row.get('team', '')} Â· {row.get('match_url', '')}"
+                    f"{row.get('player_name', '')} - {row.get('club_name', '')} - {row.get('team', '')} - {row.get('match_url', '')}"
                 )
 
         for field in numeric:
@@ -478,16 +458,16 @@ def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -
         if home_goal_total != home_score or away_goal_total != away_score:
             warnings.append(
                 "RevSports goal total mismatch: "
-                f"{match_url} Â· score "
+                f"{match_url} - score "
                 f"{first.get('home_club_name', '')} {first.get('home_team', '')} {home_score} - {away_score} "
                 f"{first.get('away_club_name', '')} {first.get('away_team', '')}; "
                 f"listed player goals home {home_goal_total} - away {away_goal_total}."
             )
 
     lines = [
-        f"DATA QUALITY REPORT â€” {association}",
+        f"DATA QUALITY REPORT - {association}",
         f"Generated: {datetime.now().isoformat()}",
-        "â”€" * 60,
+        "-" * 60,
         f"Rows checked: {len(csv_rows):,}",
         f"Issues found: {len(issues):,}",
         f"Warnings found: {len(warnings):,}",
@@ -522,14 +502,14 @@ def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -
     os.makedirs(output_dir, exist_ok=True)
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(report_text)
-    print(f"ðŸ“‹ Quality report saved: {report_path}")
+    print(f"Quality report saved: {report_path}")
 
     return len(issues)
 
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ----------------------------------------------------------------------------
 # HTTP / PAGE PARSERS
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ----------------------------------------------------------------------------
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8")
@@ -572,15 +552,17 @@ def split_venue_and_pitch(venue_line: str, pitch_line: str | None = None) -> tup
 
 
 def split_club_and_team(full_name: str, grade_name: str = "") -> tuple[str, str]:
-    """Split team page heading using: competition Â· club grade team.
+    """Split team page heading using: competition - club grade team.
 
     Everything after the dot/bullet contains club + known grade + team.
     Everything before the known grade is club. Everything after is team.
     If there is nothing after the grade, team is blank.
     """
     full_name = clean_text(full_name)
-    if "Â·" in full_name:
-        full_name = clean_text(full_name.split("Â·", 1)[-1])
+    for separator in ["\u00b7", "\u2022", "|"]:
+        if separator in full_name:
+            full_name = clean_text(full_name.split(separator, 1)[-1])
+            break
 
     grade_name = clean_text(grade_name)
     if grade_name:
@@ -616,7 +598,7 @@ def get_team_name_from_draws_page(session: requests.Session, team_url: str, grad
                 club, team = split_club_and_team(full_text, grade_name)
                 return club, team
     except Exception as e:
-        print(f"    âš  Could not fetch team page {team_url}: {e}")
+        print(f"    WARNING: Could not fetch team page {team_url}: {e}")
     return "", ""
 
 
@@ -625,7 +607,7 @@ def get_all_grades(session: requests.Session, base_url: str) -> list[dict]:
     try:
         soup = get_soup(session, games_url)
     except Exception as e:
-        print(f"âš  Could not fetch grades page: {e}")
+        print(f"WARNING: Could not fetch grades page: {e}")
         return []
 
     grades, seen = [], set()
@@ -657,7 +639,7 @@ def get_rounds(session: requests.Session, grade_url: str) -> list[dict]:
     try:
         soup = get_soup(session, grade_url)
     except Exception as e:
-        print(f"  âš  Could not fetch rounds page: {e}")
+        print(f"  WARNING: Could not fetch rounds page: {e}")
         return []
 
     rounds, seen = [], set()
@@ -789,7 +771,7 @@ def get_game_links(session: requests.Session, round_url: str) -> list[dict]:
     try:
         soup = get_soup(session, round_url)
     except Exception as e:
-        print(f"    âš  Skipping round (could not fetch): {e}")
+        print(f"    WARNING: Skipping round (could not fetch): {e}")
         return []
 
     games = []
@@ -809,9 +791,9 @@ def get_game_links(session: requests.Session, round_url: str) -> list[dict]:
     return games
 
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ----------------------------------------------------------------------------
 # MATCH SCRAPER
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ----------------------------------------------------------------------------
 
 def scrape_match(
     session: requests.Session,
@@ -880,7 +862,7 @@ def scrape_match(
         }
         team_info.append(info)
         print(
-            f"      â†’ Side: {info['team_side']}  Club: '{club_name}'  "
+            f"      -> Side: {info['team_side']}  Club: '{club_name}'  "
             f"Team: '{team_name}'  RevSports Team ID: {info['revsports_team_id']}"
         )
 
@@ -1011,9 +993,9 @@ def scrape_match(
             if role_text and unknown_role:
                 QUALITY_WARNINGS.append(
                     "Unknown player role value: "
-                    f"{role_text!r} (unknown part: {unknown_role!r}) · "
-                    f"Player: {player_name} · "
-                    f"Team: {info.get('club_name', '')} {info.get('team_name', '')} · "
+                    f"{role_text!r} (unknown part: {unknown_role!r}) - "
+                    f"Player: {player_name} - "
+                    f"Team: {info.get('club_name', '')} {info.get('team_name', '')} - "
                     f"Match: {game_url}"
                 )
 
@@ -1038,9 +1020,9 @@ def scrape_match(
     return match
 
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ----------------------------------------------------------------------------
 # ROW BUILDING / OUTPUT
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ----------------------------------------------------------------------------
 
 def base_fixture_row(association: str, grade: dict, rnd: dict, match: dict, game_url: str) -> dict:
     return {
@@ -1108,7 +1090,7 @@ def round_matches_filter(round_label: str, selected_rounds: list[str] | None) ->
 
 def main():
     print("=" * 60)
-    print("Hockey Results Scraper â€” Headless")
+    print("Hockey Results Scraper - Headless")
     print(f"Version:     {VERSION}")
     print(f"Started:     {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Portal:      {PORTAL_URL}")
@@ -1130,7 +1112,7 @@ def main():
 
     for grade in grades:
         if only_grades and grade["name"] not in only_grades:
-            print(f"[Grade] {grade['name']} â€” skipped")
+            print(f"[Grade] {grade['name']} - skipped")
             continue
         print(f"\n[Grade] {grade['name']}")
 
@@ -1139,7 +1121,7 @@ def main():
 
         for rnd in rounds:
             if only_rounds and not round_matches_filter(rnd["round_label"], only_rounds):
-                print(f"  [Round] {rnd['round_label']} â€” skipped")
+                print(f"  [Round] {rnd['round_label']} - skipped")
                 continue
             print(f"\n  [Round] {rnd['round_label']}")
 
@@ -1221,27 +1203,28 @@ def main():
                         csv_rows.append(row)
 
                     print(
-                        f"    âœ“ {match.get('home_club_name','?')} {match.get('home_team','')} "
-                        f"{match.get('home_score','?')} â€“ {match.get('away_score','?')} "
+                        f"    OK: {match.get('home_club_name','?')} {match.get('home_team','')} "
+                        f"{match.get('home_score','?')} - {match.get('away_score','?')} "
                         f"{match.get('away_club_name','?')} {match.get('away_team','')}"
                         f"  @ {match.get('venue','?')} / {match.get('pitch','?')}"
                     )
 
                 except Exception as e:
-                    print(f"    âœ— ERROR: {game_info['game_url']} â€” {e}")
+                    print(f"    ERROR: {game_info['game_url']} - {e}")
+
+    quality_issue_count = 0
 
     if csv_rows:
+        # Stamp stable row identity before merging and writing output.
+        for _row in csv_rows:
+            _row["appearance_key"] = build_appearance_key(_row)
+
         before_merge = len(csv_rows)
-        csv_rows = merge_duplicate_player_appearances(csv_rows)
+        csv_rows = merge_by_appearance_key(csv_rows)
+        validate_appearance_keys(csv_rows)
         merged_count = before_merge - len(csv_rows)
         if merged_count:
-            print(f"\nℹ Merged {merged_count} duplicate player appearance row(s).")
-
-    # Stamp a stable appearance_key onto every row (used as the Supabase upsert key).
-    for _row in csv_rows:
-        _row["appearance_key"] = build_appearance_key(_row)
-
-    csv_rows = merge_by_appearance_key(csv_rows)
+            print(f"\nINFO: Merged {merged_count} duplicate player appearance row(s).")
 
     assoc_slug = ASSOCIATION_NAME.lower().replace(" ", "_")
     csv_path = os.path.join(OUTPUT_DIR, f"{assoc_slug}_results.csv")
@@ -1252,27 +1235,30 @@ def main():
             writer.writerows(csv_rows)
         fixture_only = sum(1 for r in csv_rows if r.get("player_name") == "NO_PLAYERS")
         player_rows = len(csv_rows) - fixture_only
-        print(f"\nâœ… CSV: {csv_path}  ({len(csv_rows)} rows â€” {player_rows} player rows, {fixture_only} fixture-only rows)")
-        run_quality_check(csv_rows, OUTPUT_DIR, ASSOCIATION_NAME)
+        print(f"\nOK: CSV: {csv_path}  ({len(csv_rows)} rows - {player_rows} player rows, {fixture_only} fixture-only rows)")
+        quality_issue_count = run_quality_check(csv_rows, OUTPUT_DIR, ASSOCIATION_NAME)
     else:
-        print("\nâš  No matches scraped â€” CSV not written.")
+        print("\nWARNING: No matches scraped - CSV not written.")
 
     json_path = os.path.join(OUTPUT_DIR, f"{assoc_slug}_results.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2, ensure_ascii=False)
-    print(f"âœ… JSON: {json_path}  ({len(all_results)} matches)")
+    print(f"OK: JSON: {json_path}  ({len(all_results)} matches)")
 
-    # Supabase upsert remains off by default. This v3 schema includes new fields, so
-    # make sure the Supabase table has matching columns before turning this on.
+    # Supabase upsert remains off by default. Before turning this on, make sure
+    # public.revsports_players has an appearance_key text column with a unique
+    # constraint/index, plus the is_goalkeeper and is_captain boolean columns.
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
 
     if not UPSERT_SUPABASE:
-        print("\nâ„¹ UPSERT_SUPABASE is not true â€” skipping Supabase upsert.")
+        print("\nINFO: UPSERT_SUPABASE is not true - skipping Supabase upsert.")
     elif not supabase_url or not supabase_key:
-        print("\nâš  SUPABASE_URL or SUPABASE_SERVICE_KEY not set â€” skipping upsert.")
+        raise RuntimeError("UPSERT_SUPABASE is true, but SUPABASE_URL or SUPABASE_SERVICE_KEY is missing.")
     elif not csv_rows:
-        print("\nâš  No rows to upsert â€” skipping.")
+        raise RuntimeError("UPSERT_SUPABASE is true, but there are no rows to upsert.")
+    elif quality_issue_count:
+        raise RuntimeError(f"UPSERT_SUPABASE is true, but the quality check found {quality_issue_count} issue(s).")
     else:
         try:
             from supabase import create_client
@@ -1300,7 +1286,7 @@ def main():
             batch_size = 200
             total_batches = (len(cleaned_rows) + batch_size - 1) // batch_size
             total_upserted = 0
-            print(f"\nâ³ Upserting {len(cleaned_rows)} rows to Supabase in {total_batches} batches...")
+            print(f"\nINFO: Upserting {len(cleaned_rows)} rows to Supabase in {total_batches} batches...")
 
             for i in range(0, len(cleaned_rows), batch_size):
                 batch = cleaned_rows[i:i + batch_size]
@@ -1313,12 +1299,14 @@ def main():
                     ).execute()
                     total_upserted += len(batch)
                 except Exception as e:
-                    print(f"  âœ— Batch {batch_num} failed: {e}")
+                    print(f"  ERROR: Batch {batch_num} failed: {e}")
+                    raise
 
-            print(f"âœ… Supabase upsert complete â€” {total_upserted} rows processed.")
+            print(f"OK: Supabase upsert complete - {total_upserted} rows processed.")
 
         except Exception as e:
-            print(f"âœ— Supabase upsert error: {e}")
+            print(f"ERROR: Supabase upsert error: {e}")
+            raise
 
     print(f"\nDone! {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
