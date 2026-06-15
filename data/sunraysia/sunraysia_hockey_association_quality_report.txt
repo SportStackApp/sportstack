@@ -1,0 +1,60 @@
+DATA QUALITY REPORT - Sunraysia Hockey Association
+Generated: 2026-06-15T13:00:17.563663
+------------------------------------------------------------
+Rows checked: 2,688
+Issues found: 0
+Warnings found: 49
+
+No issues found by the basic checker.
+
+WARNINGS
+------------------------------------------------------------
+Merged duplicate player appearance: Matisse Daniel - Waratahs - Waratahs Blue Indoor - https://www.sunraysiahockey.com.au/game/2519719; 2 source rows became 1 row.
+Merged duplicate player appearance: Regan Taylor - Rivaside - Rivaside Red Indoor - https://www.sunraysiahockey.com.au/game/2519719; 2 source rows became 1 row.
+Merged duplicate player appearance: Patrick Mannes - Rivaside - Rivaside Under 16 Mixed - https://www.sunraysiahockey.com.au/game/2519757; 2 source rows became 1 row.
+Merged duplicate player appearance: Malachy Pyke - Rivaside - Rivaside Under 16 Mixed - https://www.sunraysiahockey.com.au/game/2519757; 2 source rows became 1 row.
+Merged duplicate player appearance: Hamish Regan - Waratahs - Waratahs White Under 16 - https://www.sunraysiahockey.com.au/game/2519757; 2 source rows became 1 row.
+Merged duplicate player appearance: Patrick Mannes - Rivaside - Rivaside Under 16 Mixed - https://www.sunraysiahockey.com.au/game/2519758; 2 source rows became 1 row.
+Merged duplicate player appearance: Malachy Pyke - Rivaside - Rivaside Under 16 Mixed - https://www.sunraysiahockey.com.au/game/2519758; 2 source rows became 1 row.
+Merged duplicate player appearance: Hunter Fotheringham - Rivaside - Rivaside Under 16 Mixed - https://www.sunraysiahockey.com.au/game/2519761; 2 source rows became 1 row.
+Merged duplicate player appearance: Patrick Mannes - Rivaside - Rivaside Under 16 Mixed - https://www.sunraysiahockey.com.au/game/2519761; 2 source rows became 1 row.
+Merged duplicate player appearance: Malachy Pyke - Rivaside - Rivaside Under 16 Mixed - https://www.sunraysiahockey.com.au/game/2519761; 2 source rows became 1 row.
+Merged duplicate player appearance: William Buffon - Rivaside - Rivaside Under 13 Boys - https://www.sunraysiahockey.com.au/game/2491820; 2 source rows became 1 row.
+Merged duplicate player appearance: April Nyabonda - Mildura Wanderers - Mildura Wanderers Under 13 Boys - https://www.sunraysiahockey.com.au/game/2491824; 2 source rows became 1 row.
+Merged duplicate player appearance: William Buffon - Rivaside - Rivaside Under 13 Boys - https://www.sunraysiahockey.com.au/game/2491826; 2 source rows became 1 row.
+Merged duplicate player appearance: Eadie Neagle - Koowinda - Koowinda Women - https://www.sunraysiahockey.com.au/game/2498054; 2 source rows became 1 row.
+Merged duplicate player appearance: Abbey McPhee - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498056; 2 source rows became 1 row.
+Merged duplicate player appearance: Virginia Thompson - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498056; 2 source rows became 1 row.
+Merged duplicate player appearance: Carrie Barlow - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498057; 2 source rows became 1 row.
+Merged duplicate player appearance: Shelby Crisp - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498057; 2 source rows became 1 row.
+Merged duplicate player appearance: Eleen Hugo - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498057; 2 source rows became 1 row.
+Merged duplicate player appearance: Phia Hugo - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498057; 2 source rows became 1 row.
+Merged duplicate player appearance: Abbey McPhee - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498059; 2 source rows became 1 row.
+Merged duplicate player appearance: Virginia Thompson - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498059; 2 source rows became 1 row.
+Merged duplicate player appearance: Wendy Finn - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
+Merged duplicate player appearance: Abbey McPhee - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
+Merged duplicate player appearance: Virginia Thompson - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
+Merged duplicate player appearance: Carrie Barlow - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
+Merged duplicate player appearance: Shelby Crisp - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
+Merged duplicate player appearance: Eleen Hugo - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
+Merged duplicate player appearance: Abbey McPhee - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498062; 2 source rows became 1 row.
+Merged duplicate player appearance: Virginia Thompson - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498062; 2 source rows became 1 row.
+Merged duplicate player appearance: Paige Cavanagh-cook - Waratahs - Waratahs Men - https://www.sunraysiahockey.com.au/game/2498075; 2 source rows became 1 row.
+Merged duplicate player appearance: Tully Shields - Waratahs - Waratahs Men - https://www.sunraysiahockey.com.au/game/2498075; 2 source rows became 1 row.
+Merged duplicate player appearance: Virginia Thompson - Waratahs - Waratahs Men - https://www.sunraysiahockey.com.au/game/2498075; 2 source rows became 1 row.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2519717 - score Koowinda Koowinda Indoor 8 - 1 Rivaside Rivaside Blue Indoor; listed player goals home 6 - away 1.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2519719 - score Waratahs Waratahs Blue Indoor 3 - 0 Rivaside Rivaside Red Indoor; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2519722 - score Rivaside Rivaside Blue Indoor 5 - 9 Waratahs Waratahs Blue Indoor; listed player goals home 5 - away 7.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2519742 - score Rivaside Rivaside Red Indoor 0 - 3 Koowinda Koowinda Indoor; listed player goals home 5 - away 4.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2519759 - score Waratahs Waratahs White Under 16 1 - 2 Koowinda Koowinda Under 16; listed player goals home 1 - away 0.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2519763 - score Rivaside Rivaside Under 16 Mixed 4 - 3 Waratahs Waratahs White Under 16; listed player goals home 4 - away 0.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2519764 - score Waratahs Waratahs Blue Under 16 1 - 1 Rivaside Rivaside Under 16 Mixed; listed player goals home 0 - away 1.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2519765 - score Waratahs Waratahs White Under 16 1 - 3 Koowinda Koowinda Under 16; listed player goals home 0 - away 3.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2496534 - score Koowinda Koowinda Under 13 Girls 0 - 0 Waratahs Waratahs Under 13 Girls; listed player goals home 0 - away 3.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2491822 - score Koowinda Koowinda Under 13 Boys 0 - 3 Waratahs Waratahs Under 13 Boys; listed player goals home 0 - away 6.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2491824 - score Mildura Wanderers Mildura Wanderers Under 13 Boys 3 - 0 Koowinda Koowinda Under 13 Boys; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498052 - score Waratahs Waratahs Blue Women 3 - 4 Koowinda Koowinda Women; listed player goals home 3 - away 0.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498058 - score Waratahs Waratahs Blue Women 3 - 0 Koowinda Koowinda Women; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498065 - score Rivaside Rivaside Women 3 - 0 Waratahs Waratahs White Women; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498076 - score Koowinda Koowinda Purple Men 2 - 4 Rivaside Rivaside Blue Men; listed player goals home 2 - away 0.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498088 - score Rivaside Rivaside Blue Men 0 - 3 Waratahs Waratahs Men; listed player goals home 0 - away 0.
