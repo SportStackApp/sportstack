@@ -33,7 +33,7 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-VERSION = "2026-06-15-no-role-flags-unknown-role-warning-v1"
+VERSION = "2026-06-14-team-fields-v3"
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # CONFIG
@@ -83,8 +83,6 @@ OUTPUT_COLUMNS = [
     "revsports_team_id",
     "player_name",
     "jersey",
-    "is_goalkeeper",
-    "is_captain",
     "attended",
     "is_fillin",
     "is_removed",
@@ -185,32 +183,6 @@ def format_date_from_round_text(text: str) -> str:
         return text
 
 
-def role_flag(role_text: str, pattern: str) -> bool:
-    """Return True when a RevSports bracket label contains a role word."""
-    return bool(re.search(pattern, clean_text(role_text), flags=re.IGNORECASE))
-
-
-def unknown_role_part(role_text: str) -> str:
-    """Return any bracket role text that is not recognised as goalkeeper or captain.
-
-    The role column is not written to the CSV. This helper only lets the
-    quality report warn us when RevSports starts using a new bracket value.
-    """
-    role_text = clean_text(role_text)
-    if not role_text:
-        return ""
-
-    # Remove the role words we understand, then see if anything is left.
-    unknown = re.sub(
-        r"\bgoal\s*keeper\b|\bgoalkeeper\b|\bkeeper\b|\bgk\b|\bcaptain\b",
-        " ",
-        role_text,
-        flags=re.IGNORECASE,
-    )
-    unknown = re.sub(r"[\/\\,;&+|()\[\]{}:_-]+", " ", unknown)
-    return clean_text(unknown)
-
-
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # MERGE / QUALITY HELPERS
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -256,8 +228,6 @@ def merge_two_player_rows(base: dict, extra: dict) -> dict:
     for field in ["goals", "green_cards", "yellow_cards", "red_cards"]:
         merged[field] = max_numeric_text(merged.get(field), extra.get(field))
 
-    final_is_goalkeeper = bool_from_text(merged.get("is_goalkeeper")) or bool_from_text(extra.get("is_goalkeeper"))
-    final_is_captain = bool_from_text(merged.get("is_captain")) or bool_from_text(extra.get("is_captain"))
     final_is_fillin = bool_from_text(merged.get("is_fillin")) or bool_from_text(extra.get("is_fillin"))
     final_is_removed = bool_from_text(merged.get("is_removed")) or bool_from_text(extra.get("is_removed"))
 
@@ -267,8 +237,6 @@ def merge_two_player_rows(base: dict, extra: dict) -> dict:
         final_attended = bool_from_text(merged.get("attended")) or bool_from_text(extra.get("attended")) or final_is_fillin
 
     merged["attended"] = bool_text(final_attended)
-    merged["is_goalkeeper"] = bool_text(final_is_goalkeeper)
-    merged["is_captain"] = bool_text(final_is_captain)
     merged["is_fillin"] = bool_text(final_is_fillin)
     merged["is_removed"] = bool_text(final_is_removed)
     return merged
@@ -276,7 +244,7 @@ def merge_two_player_rows(base: dict, extra: dict) -> dict:
 
 def normalise_boolean_columns(rows: list[dict]) -> list[dict]:
     for row in rows:
-        for field in ["attended", "is_goalkeeper", "is_captain", "is_fillin", "is_removed"]:
+        for field in ["attended", "is_fillin", "is_removed"]:
             value = row.get(field)
             row[field] = "" if value is None or value == "" else bool_text(bool_from_text(value))
     return rows
@@ -334,7 +302,7 @@ def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -
     ]
     required_player = ["team_side", "club_name", "team_url", "revsports_team_id", "player_name"]
     numeric = ["home_score", "away_score", "goals", "green_cards", "yellow_cards", "red_cards", "jersey"]
-    boolean = ["attended", "is_goalkeeper", "is_captain", "is_fillin", "is_removed"]
+    boolean = ["attended", "is_fillin", "is_removed"]
 
     issues: list[str] = []
     warnings: list[str] = list(QUALITY_WARNINGS)
@@ -903,14 +871,6 @@ def scrape_match(
             if jm:
                 jersey = jm.group(1)
 
-            role_text = ""
-            rm = re.search(r"\(([^#\d][^)]*)\)", name_clean)
-            if rm:
-                role_text = clean_text(rm.group(1))
-
-            is_goalkeeper = role_flag(role_text, r"\bgoal\s*keeper\b|\bgoalkeeper\b|\bkeeper\b|\bgk\b")
-            is_captain = role_flag(role_text, r"\bcaptain\b")
-
             player_name = re.sub(r"\s*\([^)]*\)", "", name_clean).strip()
             if not player_name:
                 continue
@@ -918,21 +878,9 @@ def scrape_match(
                 last, first = player_name.split(",", 1)
                 player_name = f"{first.strip()} {last.strip()}"
 
-            unknown_role = unknown_role_part(role_text)
-            if role_text and unknown_role:
-                QUALITY_WARNINGS.append(
-                    "Unknown player role value: "
-                    f"{role_text!r} (unknown part: {unknown_role!r}) · "
-                    f"Player: {player_name} · "
-                    f"Team: {info.get('club_name', '')} {info.get('team_name', '')} · "
-                    f"Match: {game_url}"
-                )
-
             players.append({
                 "name": player_name,
                 "jersey": jersey,
-                "is_goalkeeper": is_goalkeeper,
-                "is_captain": is_captain,
                 "attended": attended,
                 "is_fillin": in_fillins,
                 "is_removed": in_removed,
@@ -1095,8 +1043,6 @@ def main():
                                     "revsports_team_id": team.get("revsports_team_id", ""),
                                     "player_name": player.get("name", ""),
                                     "jersey": player.get("jersey", ""),
-                                    "is_goalkeeper": player.get("is_goalkeeper", False),
-                                    "is_captain": player.get("is_captain", False),
                                     "attended": player.get("attended"),
                                     "is_fillin": player.get("is_fillin"),
                                     "is_removed": player.get("is_removed"),
@@ -1118,8 +1064,6 @@ def main():
                             "revsports_team_id": "",
                             "player_name": "NO_PLAYERS",
                             "jersey": "",
-                            "is_goalkeeper": "FALSE",
-                            "is_captain": "FALSE",
                             "attended": "",
                             "is_fillin": "FALSE",
                             "is_removed": "FALSE",
@@ -1195,7 +1139,7 @@ def main():
                         except (ValueError, TypeError):
                             cleaned[field] = None
 
-                for field in ["attended", "is_goalkeeper", "is_captain", "is_fillin", "is_removed"]:
+                for field in ["attended", "is_fillin", "is_removed"]:
                     if cleaned.get(field) is not None:
                         cleaned[field] = str(cleaned[field]).strip().lower() == "true"
 
