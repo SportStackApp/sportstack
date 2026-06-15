@@ -1,0 +1,15 @@
+DATA QUALITY REPORT â€” Hockey Ballarat
+Generated: 2026-06-15T12:13:13.185451
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+Rows checked: 74
+Issues found: 0
+Warnings found: 4
+
+No issues found by the basic checker.
+
+WARNINGS
+------------------------------------------------------------
+Merged duplicate player appearance: Glyn K. Â· Hockey Ballarat 2026 Winter Competition · Lucas HC Â· Div 1 Men Â· https://www.revolutionise.com.au/hockeyballarat/game/2522116 (fill-in); 2 source rows became 1 row.
+Merged duplicate player appearance: Jason H. Â· Hockey Ballarat 2026 Winter Competition · Lucas HC Â· Div 1 Men Â· https://www.revolutionise.com.au/hockeyballarat/game/2522116 (fill-in, removed); 2 source rows became 1 row.
+Merged duplicate player appearance: Thomas B. Â· Hockey Ballarat 2026 Winter Competition · Lucas HC Â· Div 1 Men Â· https://www.revolutionise.com.au/hockeyballarat/game/2522116 (fill-in, removed); 2 source rows became 1 row.
+Merged duplicate player appearance: Traiyth L. Â· Hockey Ballarat 2026 Winter Competition · Lucas HC Â· Div 1 Men Â· https://www.revolutionise.com.au/hockeyballarat/game/2522116 (fill-in, removed); 2 source rows became 1 row.
