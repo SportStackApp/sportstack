@@ -1,4 +1,4 @@
-"""
+﻿"""
 Match Scraper - Headless (GitHub Actions version)
 ============================================================
 Scrapes match results and player appearances from RevSports.
@@ -385,8 +385,6 @@ def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -
         "grade",
         "round",
         "game_date",
-        "home_club_name",
-        "away_club_name",
         "match_url",
         "appearance_key",
     ]
