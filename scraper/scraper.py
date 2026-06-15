@@ -1,4 +1,4 @@
-﻿"""
+"""
 Match Scraper â€” Headless (GitHub Actions version)
 ============================================================
 Scrapes match results and player appearances from RevSports.
@@ -95,6 +95,7 @@ OUTPUT_COLUMNS = [
     "red_cards",
     "match_url",
     "scraped_at",
+    "appearance_key",
 ]
 
 QUALITY_WARNINGS: list[str] = []
@@ -106,6 +107,94 @@ QUALITY_WARNINGS: list[str] = []
 
 def clean_text(value) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
+
+
+def build_appearance_key(row: dict) -> str:
+    # Builds one stable identity string per scraped appearance row.
+    # Runs on the raw string row (before "" -> None cleaning), so values are strings.
+    match_url   = (row.get("match_url") or "").strip()
+    player_name = (row.get("player_name") or "").strip()
+    player_id   = (row.get("revsports_player_id") or "").strip()
+    team_id     = (row.get("revsports_team_id") or "").strip()
+    team_url    = (row.get("team_url") or "").strip()
+    team_side   = (row.get("team_side") or "").strip()
+    club_name   = (row.get("club_name") or "").strip()
+    team        = (row.get("team") or "").strip()
+    jersey      = (row.get("jersey") or "").strip()
+
+    # Team identity fallback chain: prefer the RevSports team id,
+    # then the team url, then a composite of side / club / team.
+    if team_id:
+        team_identity = team_id
+    elif team_url:
+        team_identity = team_url
+    else:
+        team_identity = f"{team_side}/{club_name}/{team}"
+
+    # Fixture-only / placeholder rows (no player data, e.g. WHA).
+    if player_name == "NO_PLAYERS":
+        return f"{match_url}|fixture-only"
+
+    # Normal case: player has a unique RevSports player id.
+    if player_id:
+        return f"{match_url}|{team_identity}|{player_id}"
+
+    # Fallback: player has no id — identify by name + jersey.
+    # Status fields (is_fillin, is_removed) are deliberately excluded so a
+    # status change updates the existing row instead of creating a duplicate.
+    return f"{match_url}|{team_identity}|{player_name}|{jersey}"
+
+
+def merge_by_appearance_key(rows: list) -> list:
+    # Collapses rows that share the same appearance_key into ONE row.
+    # The two source rows never hold conflicting values for the same field
+    # (each real value lives in only one row), so a field-wise combine is lossless.
+    import collections
+
+    BOOLEAN_FLAGS = {"attended", "is_captain", "is_goalkeeper", "is_fillin", "is_removed"}
+    NUMERIC_STATS = {"goals", "green_cards", "yellow_cards", "red_cards"}
+
+    def is_true(v):
+        if isinstance(v, bool):
+            return v
+        return str(v).strip().lower() in ("true", "1", "yes")
+
+    def to_int_or_none(v):
+        s = str(v).strip()
+        return int(s) if s.isdigit() else None
+
+    groups = collections.OrderedDict()
+    for r in rows:
+        groups.setdefault(r.get("appearance_key"), []).append(r)
+
+    merged_rows = []
+    for key, grp in groups.items():
+        if len(grp) == 1:
+            merged_rows.append(grp[0])
+            continue
+
+        out = dict(grp[0])                       # start from the first row
+        all_fields = set()
+        for r in grp:
+            all_fields.update(r.keys())
+
+        for field in all_fields:
+            values = [r.get(field) for r in grp]
+            if field in BOOLEAN_FLAGS:
+                # Any row says yes -> yes.
+                out[field] = any(is_true(v) for v in values)
+            elif field in NUMERIC_STATS:
+                # Keep the highest number present (blank counts as none).
+                nums = [n for n in (to_int_or_none(v) for v in values) if n is not None]
+                out[field] = max(nums) if nums else (out.get(field) or "")
+            else:
+                # Text / context: keep the first non-blank value.
+                non_blank = [v for v in values if str(v).strip() != ""]
+                out[field] = non_blank[0] if non_blank else out.get(field, "")
+
+        merged_rows.append(out)
+
+    return merged_rows
 
 
 def bool_text(value):
@@ -1146,7 +1235,13 @@ def main():
         csv_rows = merge_duplicate_player_appearances(csv_rows)
         merged_count = before_merge - len(csv_rows)
         if merged_count:
-            print(f"\nâ„¹ Merged {merged_count} duplicate player appearance row(s).")
+            print(f"\nℹ Merged {merged_count} duplicate player appearance row(s).")
+
+    # Stamp a stable appearance_key onto every row (used as the Supabase upsert key).
+    for _row in csv_rows:
+        _row["appearance_key"] = build_appearance_key(_row)
+
+    csv_rows = merge_by_appearance_key(csv_rows)
 
     assoc_slug = ASSOCIATION_NAME.lower().replace(" ", "_")
     csv_path = os.path.join(OUTPUT_DIR, f"{assoc_slug}_results.csv")
@@ -1214,7 +1309,7 @@ def main():
                 try:
                     client.table("revsports_players").upsert(
                         batch,
-                        on_conflict="match_url,revsports_team_id,revsports_player_id",
+                        on_conflict="appearance_key",
                     ).execute()
                     total_upserted += len(batch)
                 except Exception as e:
