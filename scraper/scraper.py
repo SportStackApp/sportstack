@@ -1,4 +1,4 @@
-﻿"""
+"""
 Match Scraper - Headless (GitHub Actions version)
 ============================================================
 Scrapes match results and player appearances from RevSports.
@@ -867,8 +867,8 @@ def scrape_match(
     if len(team_info) >= 1:
         home = team_info[0]
         match.update({
-            "home_club_name": home["club_name"],
-            "home_team": home["team_name"],
+            "home_club_name": home["club_name"] or home["team_name"],
+            "home_team": home["team_name"] or home["club_name"],
             "home_team_label": home["team_label"],
             "home_team_url": home["team_url"],
             "home_revsports_team_id": home["revsports_team_id"],
@@ -876,8 +876,8 @@ def scrape_match(
     if len(team_info) >= 2:
         away = team_info[1]
         match.update({
-            "away_club_name": away["club_name"],
-            "away_team": away["team_name"],
+            "away_club_name": away["club_name"] or away["team_name"],
+            "away_team": away["team_name"] or away["club_name"],
             "away_team_label": away["team_label"],
             "away_team_url": away["team_url"],
             "away_revsports_team_id": away["revsports_team_id"],
