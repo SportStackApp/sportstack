@@ -20,6 +20,11 @@ interface SystemDivision { id: string; name: string; associationName: string; }
 interface SystemClub { id: string; name: string; }
 interface SystemPitch { id: string; name: string; venueName: string; }
 
+const getProfileDisplayName = (profile: SystemProfile) => {
+  const name = `${profile.firstName} ${profile.lastName}`.trim() || "Placeholder user";
+  return profile.isPlaceholder ? `${name} (placeholder)` : name;
+};
+
 // Scraped Data Interfaces
 interface ScrapedTeam { teamName: string; clubName: string; grade: string; association: string; key: string; }
 interface ScrapedGrade { grade: string; association: string; key: string; }
@@ -102,7 +107,7 @@ export default function RevSportsMappings() {
         supabase.from("teams").select("id, name, club_id, division_id"),
         supabase.from("clubs").select("id, name"),
         supabase.from("divisions").select("id, name, associations(name)"),
-        supabase.from("profiles").select("id, first_name, last_name, is_placeholder").eq("is_placeholder" as any, false),
+        supabase.from("profiles").select("id, first_name, last_name, is_placeholder"),
         supabase.from("venues").select("id, name"),
         supabase.from("pitches").select("id, name, venue_id"),
         
@@ -139,8 +144,8 @@ export default function RevSportsMappings() {
         lastName: p.last_name || "",
         isPlaceholder: p.is_placeholder === true
       })).sort((a: SystemProfile, b: SystemProfile) => {
-        const aName = `${a.firstName} ${a.lastName}`.trim();
-        const bName = `${b.firstName} ${b.lastName}`.trim();
+        const aName = getProfileDisplayName(a);
+        const bName = getProfileDisplayName(b);
         return aName.localeCompare(bName);
       });
 
@@ -1038,7 +1043,7 @@ export default function RevSportsMappings() {
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemProfiles.map(profile => (
-                              <SelectItem key={profile.id} value={profile.id}>{profile.firstName} {profile.lastName}</SelectItem>
+                              <SelectItem key={profile.id} value={profile.id}>{getProfileDisplayName(profile)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -1116,7 +1121,7 @@ export default function RevSportsMappings() {
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemProfiles.map(profile => (
-                              <SelectItem key={profile.id} value={profile.id}>{profile.firstName} {profile.lastName}</SelectItem>
+                              <SelectItem key={profile.id} value={profile.id}>{getProfileDisplayName(profile)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
