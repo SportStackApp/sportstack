@@ -1,5 +1,5 @@
 DATA QUALITY REPORT - Hockey Ballarat
-Generated: 2026-06-15T13:04:33.664805
+Generated: 2026-06-16T20:02:01.917247
 ------------------------------------------------------------
 Rows checked: 6,522
 Issues found: 0
@@ -46,4 +46,4 @@ Merged duplicate player appearance: Olivia H. - Lucas HC - Div 2 Men - https://w
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563879 - score Blaze U11 Blaze Orange 7 - 1 Blaze U11 Blaze Red; listed player goals home 7 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563878 - score Bobcats Bobcats Maroon 2 - 1 Blaze U11 Blaze Green; listed player goals home 4 - away 1.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2522120 - score SOBHC Ducks Men 0 - 5 Lucas HC Div 1 Men; listed player goals home 0 - away 6.
-RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2524186 - score Grampians Hockey Club  14 - 0 EGC EGC Gold; listed player goals home 16 - away 0.
+RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2524186 - score Grampians Hockey Club Grampians Hockey Club 14 - 0 EGC EGC Gold; listed player goals home 16 - away 0.
