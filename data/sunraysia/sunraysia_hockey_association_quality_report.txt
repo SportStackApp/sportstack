@@ -1,5 +1,5 @@
 DATA QUALITY REPORT - Sunraysia Hockey Association
-Generated: 2026-06-15T20:08:29.034617
+Generated: 2026-06-16T19:57:34.397274
 ------------------------------------------------------------
 Rows checked: 2,688
 Issues found: 0
