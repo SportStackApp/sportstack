@@ -1,15 +1,16 @@
 DATA QUALITY REPORT - Hockey Ballarat
-Generated: 2026-06-19T18:24:14.561150
+Generated: 2026-06-19T23:11:10.467191
 ------------------------------------------------------------
-Rows checked: 6,522
+Rows checked: 6,535
 Issues found: 0
-Warnings found: 39
+Warnings found: 42
 
 No issues found by the basic checker.
 
 WARNINGS
 ------------------------------------------------------------
 Merged duplicate player appearance: Emile S. - Blaze - U11 Blaze Red - https://www.revolutionise.com.au/hockeyballarat/game/2524210; 2 source rows became 1 row.
+Merged duplicate player appearance: Odie B. - Blaze - U11 Blaze Green - https://www.revolutionise.com.au/hockeyballarat/game/2563884; 2 source rows became 1 row.
 Merged duplicate player appearance: Toby D. - Lucas HC - U14 - https://www.revolutionise.com.au/hockeyballarat/game/2524238; 2 source rows became 1 row.
 Merged duplicate player appearance: Toby D. - Lucas HC - U14 - https://www.revolutionise.com.au/hockeyballarat/game/2524244; 2 source rows became 1 row.
 Merged duplicate player appearance: Hunter K. - Lucas HC - U16 - https://www.revolutionise.com.au/hockeyballarat/game/2524256; 2 source rows became 1 row.
@@ -45,6 +46,8 @@ Merged duplicate player appearance: Troy S. - Bobcats - Div 2 Men - https://www.
 Merged duplicate player appearance: Olivia H. - Lucas HC - Div 2 Men - https://www.revolutionise.com.au/hockeyballarat/game/2524190; 2 source rows became 1 row.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563879 - score Blaze U11 Blaze Orange 7 - 1 Blaze U11 Blaze Red; listed player goals home 7 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563878 - score Bobcats Bobcats Maroon 2 - 1 Blaze U11 Blaze Green; listed player goals home 4 - away 1.
+RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563882 - score Lucas HC U11 5 - 3 Blaze U11 Blaze Pink; listed player goals home 7 - away 3.
+RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563883 - score Blaze U11 Blaze Black 2 - 3 EGC EGC Gold; listed player goals home 2 - away 2.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2564816 - score Blaze U16 Blaze 1 - 2 EGC EGC; listed player goals home 0 - away 2.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2522120 - score SOBHC Ducks Men 0 - 5 Lucas HC Div 1 Men; listed player goals home 0 - away 6.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2524186 - score Grampians Hockey Club Grampians Hockey Club 14 - 0 EGC EGC Gold; listed player goals home 16 - away 0.
