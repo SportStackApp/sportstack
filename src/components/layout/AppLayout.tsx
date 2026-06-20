@@ -151,6 +151,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Core",
       items: [
         { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/mvp-votes", label: "MVP Votes", icon: Vote },
         { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/chat", label: "Chat", icon: MessageCircle },
       ],
@@ -168,6 +169,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Core",
       items: [
         { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/mvp-votes", label: "MVP Votes", icon: Vote },
         { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/roster", label: "Statistics", icon: BarChart3 },
         { path: "/chat", label: "Chat", icon: MessageCircle },
@@ -231,6 +233,8 @@ const AppLayout = () => {
   const [playerAssociationAbbr, setPlayerAssociationAbbr] = useState("");
   const [playerClubName, setPlayerClubName] = useState("");
   const [playerTeamName, setPlayerTeamName] = useState("");
+  const [isVoter, setIsVoter] = useState(false);
+
 
   // Fetch notifications from DB
   useEffect(() => {
@@ -319,6 +323,24 @@ const AppLayout = () => {
     fetchPlayerHeaderContext();
   }, [mode, user]);
 
+  // Fetch VOTER role status
+  useEffect(() => {
+    if (!user) {
+      setIsVoter(false);
+      return;
+    }
+    const checkVoterRole = async () => {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("role", "VOTER")
+        .maybeSingle();
+      setIsVoter(!!data);
+    };
+    checkVoterRole();
+  }, [user]);
+
   // Auto-switch viewingAs based on cascade selection (only if not manually overridden)
   useEffect(() => {
     if (mode !== "super_admin") return;
@@ -348,6 +370,7 @@ const AppLayout = () => {
       if (selectedAssociationId && item.path === "/admin/associations") return false;
       if (selectedClubId && item.path === "/admin/clubs") return false;
       if (selectedTeamId && item.path === "/admin/teams") return false;
+      if (item.path === "/mvp-votes" && !isVoter) return false;
       return true;
     }),
   })).filter((section) => section.items.length > 0);

@@ -762,7 +762,8 @@ const UsersManagement = () => {
 
   const handleCancelInvite = async (requestId: string) => {
     const { error } = await supabase
-      .from("requests" as never)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .from("requests" as any)
       .update({ status: "CANCELLED", cancelled_by: user?.id })
       .eq("id", requestId);
 
