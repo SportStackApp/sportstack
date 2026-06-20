@@ -1,0 +1,8 @@
+entity_type,target_table,total,matched,unmatched,matched_percent
+competition,competitions,4,4,0,100.0%
+club,clubs,34,34,0,100.0%
+team,teams,95,95,0,100.0%
+player,profiles,687,687,0,100.0%
+grade,divisions,19,19,0,100.0%
+venue,venues,10,10,0,100.0%
+pitch,pitches,15,15,0,100.0%

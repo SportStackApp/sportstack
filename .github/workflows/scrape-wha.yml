@@ -101,6 +101,7 @@ jobs:
           ASSOCIATION_NAME:     "Wimmera Hockey Association"
           OUTPUT_DIR:           "data/wimmera"
           UPSERT_SUPABASE:      ${{ env.UPLOAD_TO_SUPABASE }}
+          UPSERT_SUPABASE_V2:   ${{ env.UPLOAD_TO_SUPABASE }}
           COMPETITION_ID:       "26593"
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}

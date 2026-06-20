@@ -97,6 +97,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/admin/users", label: "Users", icon: UserCog },
         { path: "/admin/requests", label: "Requests", icon: ClipboardList },
         { path: "/admin/revsports-mappings", label: "RevSports Mappings", icon: GitMerge },
+        { path: "/admin/revsports-entities", label: "RevSports Review", icon: GitMerge },
       ],
     },
   ],

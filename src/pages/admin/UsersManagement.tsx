@@ -35,7 +35,10 @@ import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 type MembershipType = Database["public"]["Enums"]["membership_type"];
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
+  is_placeholder?: boolean | null;
+  revsports_player_id?: string | null;
+};
 
 interface Membership {
   id: string;
@@ -102,6 +105,7 @@ const UsersManagement = () => {
   }, [searchQuery, statusFilter, associationFilter, clubFilter, divisionFilter, teamFilter, hidePlaceholders]);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
+  const [revsportsPlayerIdDraft, setRevsportsPlayerIdDraft] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
   const [coachScopes, setCoachScopes] = useState<{ id: string, association_id: string, club_id: string, team_id: string }[]>([]);
   const [managerScopes, setManagerScopes] = useState<{ id: string, association_id: string, club_id: string, team_id: string }[]>([]);
@@ -424,6 +428,7 @@ const UsersManagement = () => {
 
   const handleOpenRoleDialog = async (u: UserWithRoles) => {
     setSelectedUser(u);
+    setRevsportsPlayerIdDraft(u.revsports_player_id || "");
     const { data: rolesData } = await supabase
       .from("user_roles")
       .select("role, association_id, club_id, team_id")
@@ -512,6 +517,21 @@ const UsersManagement = () => {
   const handleSaveRoles = async () => {
     if (!selectedUser) return;
     setSaving(true);
+
+    if (isSuperAdmin) {
+      const cleanRevSportsId = revsportsPlayerIdDraft.trim();
+      const profileUpdate: Partial<Profile> = { revsports_player_id: cleanRevSportsId || null };
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update(profileUpdate)
+        .eq("id", selectedUser.id);
+
+      if (profileError) {
+        toast({ title: "Error", description: profileError.message, variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+    }
 
     const p_coach_scopes = selectedRoles.includes("COACH")
       ? coachScopes
@@ -1223,6 +1243,25 @@ const UsersManagement = () => {
             </DialogHeader>
 
             <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">RevSports Link</h4>
+                {isSuperAdmin ? (
+                  <div className="space-y-1">
+                    <Label htmlFor="revsports-player-id">External player ID</Label>
+                    <Input
+                      id="revsports-player-id"
+                      value={revsportsPlayerIdDraft}
+                      onChange={(event) => setRevsportsPlayerIdDraft(event.target.value)}
+                      placeholder="RevSports player ID"
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-md border bg-muted/40 px-3 py-2 font-mono text-sm">
+                    {selectedUser?.revsports_player_id || "Not linked"}
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Roles</h4>
                 <div className="flex flex-wrap gap-2">

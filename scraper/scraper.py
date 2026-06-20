@@ -27,7 +27,7 @@ import os
 import re
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 import requests
@@ -47,6 +47,7 @@ ONLY_TEAM = os.getenv("ONLY_TEAM", "")
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "../data")
 DELAY = float(os.getenv("SCRAPE_DELAY", "0.8") or "0.8")
 UPSERT_SUPABASE = os.getenv("UPSERT_SUPABASE", "false").strip().lower() in {"1", "true", "yes", "y"}
+UPSERT_SUPABASE_V2 = os.getenv("UPSERT_SUPABASE_V2", "false").strip().lower() in {"1", "true", "yes", "y"}
 
 only_grades = [g.strip() for g in ONLY_GRADES.split(",") if g.strip()] or None
 only_rounds = [r.strip() for r in ONLY_ROUNDS.split(",") if r.strip()] or None
@@ -73,6 +74,7 @@ OUTPUT_COLUMNS = [
     "away_revsports_team_id",
     "home_score",
     "away_score",
+    "is_bye",
     "umpire_1",
     "umpire_2",
     "team_side",
@@ -171,6 +173,32 @@ def max_numeric_text(*values):
     return str(max(nums)) if nums else ""
 
 
+def nullable_text(value):
+    value_text = clean_text(value)
+    return value_text or None
+
+
+def nullable_int(value):
+    return int_or_none(value)
+
+
+def nullable_time_text(value):
+    value_text = clean_text(value)
+    if not value_text:
+        return None
+    return f"{value_text}:00" if re.match(r"^\d{1,2}:\d{2}$", value_text) else value_text
+
+
+def nullable_bool(value):
+    if value in (None, ""):
+        return None
+    return bool_from_text(value)
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 def normalize_url(href: str, page_url: str) -> str:
     if not href:
         return ""
@@ -202,6 +230,8 @@ def extract_player_id_from_row(row) -> str:
 def build_team_label(club_name: str, team_name: str) -> str:
     club_name = clean_text(club_name)
     team_name = clean_text(team_name)
+    if club_name and team_name and club_name.lower() == team_name.lower():
+        return club_name
     if club_name and team_name:
         return f"{club_name} {team_name}".strip()
     return club_name or team_name
@@ -212,7 +242,14 @@ def split_people(text: str) -> list[str]:
     if not text:
         return []
     people = [clean_text(p) for p in re.split(r";|\n", text)]
-    return [p for p in people if p and p.lower() not in {"umpire", "umpires", "details"}]
+    blocked = {"umpire", "umpires", "details", "venue", "date & time", "match card", "subvenue"}
+    return [
+        p
+        for p in people
+        if p
+        and p.lower() not in blocked
+        and not re.match(r"^round\s+\d+", p, flags=re.IGNORECASE)
+    ]
 
 
 def format_date_from_round_text(text: str) -> str:
@@ -506,6 +543,506 @@ def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -
 
 
 # ----------------------------------------------------------------------------
+# SUPABASE V2 SOURCE WRITER
+# ----------------------------------------------------------------------------
+
+def batched(items: list, size: int = 200):
+    for i in range(0, len(items), size):
+        yield items[i:i + size]
+
+
+def source_value(value):
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
+def fetch_existing_rows(client, table_name: str, key_column: str, keys: list[str]) -> dict[str, dict]:
+    existing: dict[str, dict] = {}
+    clean_keys = sorted({k for k in keys if k})
+    for key_batch in batched(clean_keys, 200):
+        result = client.table(table_name).select("*").in_(key_column, key_batch).execute()
+        for row in result.data or []:
+            existing[str(row.get(key_column))] = row
+    return existing
+
+
+def add_changes(
+    changes: list[dict],
+    existing: dict | None,
+    new_row: dict,
+    tracked_fields: list[str],
+    scrape_run_id: str,
+    source_table: str,
+    source_key: str,
+) -> None:
+    if not existing:
+        return
+
+    for field in tracked_fields:
+        old_value = source_value(existing.get(field))
+        new_value = source_value(new_row.get(field))
+        if old_value != new_value:
+            changes.append({
+                "scrape_run_id": scrape_run_id,
+                "source_table": source_table,
+                "source_row_id": existing.get("id"),
+                "source_key": source_key,
+                "field_name": field,
+                "old_value": old_value,
+                "new_value": new_value,
+                "change_type": "updated",
+            })
+
+
+def build_source_match_rows(csv_rows: list[dict], scrape_run_id: str) -> list[dict]:
+    rows_by_url: dict[str, dict] = {}
+    for row in csv_rows:
+        match_url = clean_text(row.get("match_url"))
+        if not match_url or match_url in rows_by_url:
+            continue
+
+        round_name = nullable_text(row.get("round"))
+        round_number = None
+        if round_name:
+            match = re.search(r"\d+", round_name)
+            round_number = int(match.group(0)) if match else None
+
+        rows_by_url[match_url] = {
+            "scrape_run_id": scrape_run_id,
+            "association_name": clean_text(row.get("association")) or ASSOCIATION_NAME,
+            "competition_name": nullable_text(row.get("competition_name")),
+            "grade": nullable_text(row.get("grade")),
+            "round_name": round_name,
+            "round_number": round_number,
+            "match_url": match_url,
+            "game_date": nullable_text(row.get("game_date")),
+            "game_time": nullable_time_text(row.get("game_time")),
+            "venue_name": nullable_text(row.get("venue")),
+            "pitch_name": nullable_text(row.get("pitch")),
+            "home_club_name": nullable_text(row.get("home_club_name")),
+            "home_team_name": nullable_text(row.get("home_team")),
+            "home_revsports_team_id": nullable_text(row.get("home_revsports_team_id")),
+            "away_club_name": nullable_text(row.get("away_club_name")),
+            "away_team_name": nullable_text(row.get("away_team")),
+            "away_revsports_team_id": nullable_text(row.get("away_revsports_team_id")),
+            "home_score": nullable_int(row.get("home_score")),
+            "away_score": nullable_int(row.get("away_score")),
+            "umpire_1": nullable_text(row.get("umpire_1")),
+            "umpire_2": nullable_text(row.get("umpire_2")),
+            "raw_data": {key: row.get(key) for key in OUTPUT_COLUMNS if key in row},
+            "last_seen_at": utc_now_iso(),
+            "scraped_at": utc_now_iso(),
+        }
+
+    return list(rows_by_url.values())
+
+
+def build_source_match_team_rows(csv_rows: list[dict], match_ids_by_url: dict[str, str]) -> list[dict]:
+    rows_by_key: dict[str, dict] = {}
+    for row in csv_rows:
+        match_url = clean_text(row.get("match_url"))
+        match_id = match_ids_by_url.get(match_url)
+        if not match_id:
+            continue
+
+        team_specs = [
+            {
+                "side": "home",
+                "club_name": nullable_text(row.get("home_club_name")),
+                "team_name": nullable_text(row.get("home_team")),
+                "team_label": nullable_text(row.get("home_team_label")),
+                "revsports_team_id": nullable_text(row.get("home_revsports_team_id")),
+                "team_url": nullable_text(row.get("home_team_url")),
+                "score": nullable_int(row.get("home_score")),
+            },
+            {
+                "side": "away",
+                "club_name": nullable_text(row.get("away_club_name")),
+                "team_name": nullable_text(row.get("away_team")),
+                "team_label": nullable_text(row.get("away_team_label")),
+                "revsports_team_id": nullable_text(row.get("away_revsports_team_id")),
+                "team_url": nullable_text(row.get("away_team_url")),
+                "score": nullable_int(row.get("away_score")),
+            },
+        ]
+
+        for spec in team_specs:
+            if not any(spec.get(field) for field in ("club_name", "team_name", "team_label", "revsports_team_id", "team_url")):
+                continue
+            key = f"{match_id}|{spec['side']}"
+            if key not in rows_by_key:
+                rows_by_key[key] = {
+                    "match_id": match_id,
+                    **spec,
+                    "raw_data": {
+                        "match_url": match_url,
+                        "association": row.get("association"),
+                        "competition_name": row.get("competition_name"),
+                        "grade": row.get("grade"),
+                    },
+                    "last_seen_at": utc_now_iso(),
+                    "scraped_at": utc_now_iso(),
+                }
+
+    return list(rows_by_key.values())
+
+
+def build_source_appearance_rows(
+    csv_rows: list[dict],
+    scrape_run_id: str,
+    match_ids_by_url: dict[str, str],
+    match_team_ids_by_key: dict[str, str],
+) -> list[dict]:
+    rows = []
+    for row in csv_rows:
+        if clean_text(row.get("player_name")) == "NO_PLAYERS":
+            continue
+
+        match_url = clean_text(row.get("match_url"))
+        match_id = match_ids_by_url.get(match_url)
+        side = clean_text(row.get("team_side"))
+        match_team_id = match_team_ids_by_key.get(f"{match_id}|{side}") if match_id else None
+
+        rows.append({
+            "scrape_run_id": scrape_run_id,
+            "match_id": match_id,
+            "match_team_id": match_team_id,
+            "appearance_key": clean_text(row.get("appearance_key")),
+            "team_side": side or None,
+            "club_name": nullable_text(row.get("club_name")),
+            "team_name": nullable_text(row.get("team")),
+            "revsports_team_id": nullable_text(row.get("revsports_team_id")),
+            "player_name": clean_text(row.get("player_name")),
+            "revsports_player_id": nullable_text(row.get("revsports_player_id")),
+            "jersey": nullable_text(row.get("jersey")),
+            "attended": nullable_bool(row.get("attended")),
+            "is_goalkeeper": bool_from_text(row.get("is_goalkeeper")),
+            "is_captain": bool_from_text(row.get("is_captain")),
+            "is_fillin": bool_from_text(row.get("is_fillin")),
+            "is_removed": bool_from_text(row.get("is_removed")),
+            "goals": nullable_int(row.get("goals")) or 0,
+            "green_cards": nullable_int(row.get("green_cards")) or 0,
+            "yellow_cards": nullable_int(row.get("yellow_cards")) or 0,
+            "red_cards": nullable_int(row.get("red_cards")) or 0,
+            "raw_data": {key: row.get(key) for key in OUTPUT_COLUMNS if key in row},
+            "last_seen_at": utc_now_iso(),
+            "scraped_at": utc_now_iso(),
+        })
+
+    return rows
+
+
+def build_external_entity_rows(csv_rows: list[dict]) -> list[dict]:
+    entities: dict[tuple[str, str, str], dict] = {}
+
+    def stable_external_id(*parts: str) -> str:
+        return "|".join(clean_text(part) for part in parts if clean_text(part))
+
+    for row in csv_rows:
+        association = clean_text(row.get("association")) or ASSOCIATION_NAME
+        competition = nullable_text(row.get("competition_name"))
+        grade = nullable_text(row.get("grade"))
+        venue = nullable_text(row.get("venue"))
+        pitch = nullable_text(row.get("pitch"))
+        match_url = clean_text(row.get("match_url"))
+
+        if grade:
+            grade_id = stable_external_id(association, competition or "", "grade", grade)
+            entities[("grade", grade_id, grade)] = {
+                "source": "revsports",
+                "entity_type": "grade",
+                "external_id": grade_id,
+                "external_name": grade,
+                "association_name": association,
+                "competition_name": competition,
+                "grade": grade,
+                "source_url": match_url or None,
+                "raw_data": {"synthetic_external_id": True},
+                "last_seen_at": utc_now_iso(),
+            }
+
+        if venue:
+            venue_id = stable_external_id(association, "venue", venue)
+            entities[("venue", venue_id, venue)] = {
+                "source": "revsports",
+                "entity_type": "venue",
+                "external_id": venue_id,
+                "external_name": venue,
+                "association_name": association,
+                "competition_name": competition,
+                "grade": grade,
+                "source_url": match_url or None,
+                "raw_data": {"synthetic_external_id": True},
+                "last_seen_at": utc_now_iso(),
+            }
+
+        if venue and pitch:
+            pitch_id = stable_external_id(association, "pitch", venue, pitch)
+            entities[("pitch", pitch_id, pitch)] = {
+                "source": "revsports",
+                "entity_type": "pitch",
+                "external_id": pitch_id,
+                "external_name": pitch,
+                "association_name": association,
+                "competition_name": competition,
+                "grade": grade,
+                "source_url": match_url or None,
+                "raw_data": {"synthetic_external_id": True, "venue_name": venue},
+                "last_seen_at": utc_now_iso(),
+            }
+
+        if match_url:
+            entities[("match", match_url, match_url)] = {
+                "source": "revsports",
+                "entity_type": "match",
+                "external_id": match_url,
+                "external_name": match_url,
+                "association_name": association,
+                "competition_name": competition,
+                "grade": grade,
+                "source_url": match_url,
+                "raw_data": {"round": row.get("round"), "game_date": row.get("game_date")},
+                "last_seen_at": utc_now_iso(),
+            }
+
+        for side in ("home", "away"):
+            team_id = clean_text(row.get(f"{side}_revsports_team_id"))
+            team_name = clean_text(row.get(f"{side}_team"))
+            club_name = clean_text(row.get(f"{side}_club_name"))
+            if club_name:
+                club_id = stable_external_id(association, "club", club_name)
+                entities[("club", club_id, club_name)] = {
+                    "source": "revsports",
+                    "entity_type": "club",
+                    "external_id": club_id,
+                    "external_name": club_name,
+                    "association_name": association,
+                    "competition_name": competition,
+                    "grade": grade,
+                    "club_name": club_name,
+                    "source_url": nullable_text(row.get(f"{side}_team_url")) or match_url or None,
+                    "raw_data": {"synthetic_external_id": True},
+                    "last_seen_at": utc_now_iso(),
+                }
+            if team_id and team_name:
+                entities[("team", team_id, team_name)] = {
+                    "source": "revsports",
+                    "entity_type": "team",
+                    "external_id": team_id,
+                    "external_name": team_name,
+                    "association_name": association,
+                    "competition_name": competition,
+                    "grade": grade,
+                    "club_name": club_name or None,
+                    "team_name": team_name,
+                    "source_url": nullable_text(row.get(f"{side}_team_url")),
+                    "raw_data": {"team_label": row.get(f"{side}_team_label")},
+                    "last_seen_at": utc_now_iso(),
+                }
+
+        player_id = clean_text(row.get("revsports_player_id"))
+        player_name = clean_text(row.get("player_name"))
+        if player_id and player_name and player_name != "NO_PLAYERS":
+            entities[("player", player_id, player_name)] = {
+                "source": "revsports",
+                "entity_type": "player",
+                "external_id": player_id,
+                "external_name": player_name,
+                "association_name": association,
+                "competition_name": competition,
+                "grade": grade,
+                "club_name": nullable_text(row.get("club_name")),
+                "team_name": nullable_text(row.get("team")),
+                "raw_data": {"jersey": row.get("jersey"), "is_fillin": row.get("is_fillin")},
+                "last_seen_at": utc_now_iso(),
+            }
+
+    return list(entities.values())
+
+
+def log_source_changes(client, scrape_run_id: str, match_rows: list[dict], team_rows: list[dict], appearance_rows: list[dict]) -> int:
+    changes: list[dict] = []
+
+    existing_matches = fetch_existing_rows(
+        client,
+        "source_revsports_matches",
+        "match_url",
+        [row["match_url"] for row in match_rows],
+    )
+    for row in match_rows:
+        add_changes(
+            changes,
+            existing_matches.get(row["match_url"]),
+            row,
+            [
+                "game_date",
+                "game_time",
+                "venue_name",
+                "pitch_name",
+                "home_club_name",
+                "home_team_name",
+                "away_club_name",
+                "away_team_name",
+                "home_score",
+                "away_score",
+                "umpire_1",
+                "umpire_2",
+            ],
+            scrape_run_id,
+            "source_revsports_matches",
+            row["match_url"],
+        )
+
+    existing_appearances = fetch_existing_rows(
+        client,
+        "source_revsports_player_appearances",
+        "appearance_key",
+        [row["appearance_key"] for row in appearance_rows],
+    )
+    for row in appearance_rows:
+        add_changes(
+            changes,
+            existing_appearances.get(row["appearance_key"]),
+            row,
+            [
+                "team_side",
+                "club_name",
+                "team_name",
+                "revsports_team_id",
+                "player_name",
+                "revsports_player_id",
+                "jersey",
+                "attended",
+                "is_goalkeeper",
+                "is_captain",
+                "is_fillin",
+                "is_removed",
+                "goals",
+                "green_cards",
+                "yellow_cards",
+                "red_cards",
+            ],
+            scrape_run_id,
+            "source_revsports_player_appearances",
+            row["appearance_key"],
+        )
+
+    # Team rows use a composite unique key, so fetch by match IDs and compare in memory.
+    match_ids = sorted({row["match_id"] for row in team_rows if row.get("match_id")})
+    existing_teams: dict[str, dict] = {}
+    for id_batch in batched(match_ids, 200):
+        result = client.table("source_revsports_match_teams").select("*").in_("match_id", id_batch).execute()
+        for row in result.data or []:
+            existing_teams[f"{row.get('match_id')}|{row.get('side')}"] = row
+    for row in team_rows:
+        key = f"{row.get('match_id')}|{row.get('side')}"
+        add_changes(
+            changes,
+            existing_teams.get(key),
+            row,
+            ["club_name", "team_name", "team_label", "revsports_team_id", "team_url", "score"],
+            scrape_run_id,
+            "source_revsports_match_teams",
+            key,
+        )
+
+    for change_batch in batched(changes, 200):
+        client.table("source_revsports_change_log").insert(change_batch).execute()
+
+    return len(changes)
+
+
+def upsert_revsports_v2_source(client, csv_rows: list[dict], quality_issue_count: int) -> None:
+    if not csv_rows:
+        raise RuntimeError("UPSERT_SUPABASE_V2 is true, but there are no rows to upsert.")
+    if quality_issue_count:
+        raise RuntimeError(f"UPSERT_SUPABASE_V2 is true, but the quality check found {quality_issue_count} issue(s).")
+
+    run_started_at = utc_now_iso()
+    run_row = {
+        "source": "revsports",
+        "scraper_name": "fixtures_match_cards",
+        "association_name": ASSOCIATION_NAME,
+        "started_at": run_started_at,
+        "status": "running",
+        "rows_found": len(csv_rows),
+        "source_config": {
+            "portal_url": PORTAL_URL,
+            "only_grades": only_grades,
+            "only_rounds": only_rounds,
+            "only_team": only_team,
+            "version": VERSION,
+        },
+    }
+    run_result = client.table("source_scrape_runs").insert(run_row).execute()
+    scrape_run_id = run_result.data[0]["id"]
+
+    try:
+        match_rows = build_source_match_rows(csv_rows, scrape_run_id)
+        existing_change_count = log_source_changes(client, scrape_run_id, match_rows, [], [])
+
+        for batch in batched(match_rows, 200):
+            client.table("source_revsports_matches").upsert(batch, on_conflict="match_url").execute()
+
+        match_ids_by_url = {}
+        for batch in batched([row["match_url"] for row in match_rows], 200):
+            result = client.table("source_revsports_matches").select("id, match_url").in_("match_url", batch).execute()
+            for row in result.data or []:
+                match_ids_by_url[row["match_url"]] = row["id"]
+
+        team_rows = build_source_match_team_rows(csv_rows, match_ids_by_url)
+        appearance_rows = []
+        team_change_count = log_source_changes(client, scrape_run_id, [], team_rows, [])
+
+        for batch in batched(team_rows, 200):
+            client.table("source_revsports_match_teams").upsert(batch, on_conflict="match_id,side").execute()
+
+        match_team_ids_by_key = {}
+        match_ids = sorted({row["match_id"] for row in team_rows if row.get("match_id")})
+        for batch in batched(match_ids, 200):
+            result = client.table("source_revsports_match_teams").select("id, match_id, side").in_("match_id", batch).execute()
+            for row in result.data or []:
+                match_team_ids_by_key[f"{row['match_id']}|{row['side']}"] = row["id"]
+
+        appearance_rows = build_source_appearance_rows(csv_rows, scrape_run_id, match_ids_by_url, match_team_ids_by_key)
+        appearance_change_count = log_source_changes(client, scrape_run_id, [], [], appearance_rows)
+
+        for batch in batched(appearance_rows, 200):
+            client.table("source_revsports_player_appearances").upsert(batch, on_conflict="appearance_key").execute()
+
+        external_rows = build_external_entity_rows(csv_rows)
+        external_with_ids = [row for row in external_rows if row.get("external_id")]
+        for batch in batched(external_with_ids, 200):
+            client.table("external_entities").upsert(batch, on_conflict="source,entity_type,external_id").execute()
+
+        rows_written = len(match_rows) + len(team_rows) + len(appearance_rows) + len(external_with_ids)
+        change_count = existing_change_count + team_change_count + appearance_change_count
+        client.table("source_scrape_runs").update({
+            "status": "success",
+            "finished_at": utc_now_iso(),
+            "rows_written": rows_written,
+        }).eq("id", scrape_run_id).execute()
+
+        print(
+            "OK: Supabase V2 source upsert complete - "
+            f"{len(match_rows)} matches, {len(team_rows)} match teams, "
+            f"{len(appearance_rows)} appearances, {len(external_with_ids)} external entities, "
+            f"{change_count} change log row(s)."
+        )
+
+    except Exception as e:
+        client.table("source_scrape_runs").update({
+            "status": "failed",
+            "finished_at": utc_now_iso(),
+            "error_message": str(e)[:1000],
+        }).eq("id", scrape_run_id).execute()
+        raise
+
+
+# ----------------------------------------------------------------------------
 # HTTP / PAGE PARSERS
 # ----------------------------------------------------------------------------
 
@@ -554,7 +1091,7 @@ def split_club_and_team(full_name: str, grade_name: str = "") -> tuple[str, str]
 
     Everything after the dot/bullet contains club + known grade + team.
     Everything before the known grade is club. Everything after is team.
-    If there is nothing after the grade, team is blank.
+    If either side is blank, reuse the other side so club and team both stay usable.
     """
     full_name = clean_text(full_name)
     for separator in ["\u00b7", "\u2022", "|"]:
@@ -572,6 +1109,10 @@ def split_club_and_team(full_name: str, grade_name: str = "") -> tuple[str, str]
         if match:
             club = clean_text(full_name[:match.start()])
             team = clean_text(full_name[match.end():])
+            if not club and team:
+                club = team
+            if club and not team:
+                team = club
             return club, team
 
     # Fallback: repeated prefix pattern, e.g. Waratahs Waratahs Men.
@@ -724,6 +1265,8 @@ def extract_round_card_details(card, round_url: str) -> dict:
                 low = candidate.lower()
                 if low in {"details", "venue", "date & time", "match card"}:
                     break
+                if re.match(r"^round\s+\d+", candidate, flags=re.IGNORECASE):
+                    break
                 if candidate in team_label_set:
                     break
                 if re.match(r"^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}\s+\w+\s+\d{4}$", candidate):
@@ -765,6 +1308,72 @@ def extract_round_card_details(card, round_url: str) -> dict:
     return details
 
 
+def build_bye_match_url(association: str, competition: str, grade: str, round_label: str, team_url: str, team_label: str) -> str:
+    team_id = extract_revsports_team_id(team_url)
+    team_key = team_id or team_url or team_label
+    return "|".join([
+        "revsports-bye",
+        clean_text(association),
+        clean_text(competition),
+        clean_text(grade),
+        clean_text(round_label),
+        clean_text(team_key),
+    ])
+
+
+def extract_bye_entries(soup: BeautifulSoup, round_url: str) -> list[dict]:
+    """Find teams listed under a RevSports Byes section on the round page."""
+    entries: list[dict] = []
+    seen: set[str] = set()
+
+    def add_team_link(anchor) -> None:
+        href = normalize_url(anchor["href"], round_url)
+        if href in seen or not path_matches(href, r"/games/team/\d+/\d+$"):
+            return
+        seen.add(href)
+        entries.append({
+            "team_url": href,
+            "team_label": clean_text(anchor.get_text(" ", strip=True)),
+        })
+
+    for label_node in soup.find_all(string=re.compile(r"^\s*byes?\s*$", re.IGNORECASE)):
+        label_parent = label_node.parent
+        if label_parent is None:
+            continue
+
+        # First try the smallest nearby container that only appears to describe byes.
+        node = label_parent
+        for _ in range(5):
+            if node is None or not hasattr(node, "find_all"):
+                break
+            team_links = [
+                a for a in node.find_all("a", href=True)
+                if path_matches(normalize_url(a["href"], round_url), r"/games/team/\d+/\d+$")
+            ]
+            game_links = [
+                a for a in node.find_all("a", href=True)
+                if path_matches(normalize_url(a["href"], round_url), r"/game/\d+$")
+            ]
+            if team_links and not game_links:
+                for anchor in team_links:
+                    add_team_link(anchor)
+                break
+            node = node.parent
+
+        # Fallback for layouts where "Byes" is followed by sibling links.
+        for sibling in label_parent.find_next_siblings():
+            sibling_text = clean_text(sibling.get_text(" ", strip=True)) if hasattr(sibling, "get_text") else clean_text(sibling)
+            if re.match(r"^(?:round\s+\d+|details|umpires?|venue|date & time)$", sibling_text, flags=re.IGNORECASE):
+                break
+            if hasattr(sibling, "find_all"):
+                for anchor in sibling.find_all("a", href=True):
+                    add_team_link(anchor)
+            if len(entries) >= 12:
+                break
+
+    return entries
+
+
 def get_game_links(session: requests.Session, round_url: str) -> list[dict]:
     try:
         soup = get_soup(session, round_url)
@@ -785,6 +1394,9 @@ def get_game_links(session: requests.Session, round_url: str) -> list[dict]:
             fixture_card = find_fixture_card(a, href, round_url)
             card_details = extract_round_card_details(fixture_card, round_url)
             games.append({"game_url": href, **card_details})
+
+    for bye in extract_bye_entries(soup, round_url):
+        games.append({"is_bye": True, **bye})
 
     return games
 
@@ -910,6 +1522,8 @@ def scrape_match(
             for k in range(i + 1, min(i + 5, len(lines))):
                 if lines[k].lower() in STOP:
                     break
+                if re.match(r"^round\s+\d+", lines[k], flags=re.IGNORECASE):
+                    break
                 umpire_bits.append(lines[k])
             match["umpires"] = split_people("; ".join(umpire_bits))[:2]
 
@@ -1018,6 +1632,56 @@ def scrape_match(
     return match
 
 
+def scrape_bye_match(session: requests.Session, game_info: dict, grade: dict, rnd: dict) -> dict:
+    team_url = clean_text(game_info.get("team_url"))
+    team_label = clean_text(game_info.get("team_label"))
+    club_name, team_name = get_team_name_from_draws_page(session, team_url, grade["name"]) if team_url else ("", "")
+    if not team_label:
+        team_label = build_team_label(club_name, team_name)
+
+    match_url = build_bye_match_url(
+        ASSOCIATION_NAME,
+        grade.get("competition_name", ASSOCIATION_NAME),
+        grade["name"],
+        rnd["round_label"],
+        team_url,
+        team_label,
+    )
+
+    team = {
+        "team_side": "home",
+        "club_name": club_name or team_name,
+        "team_name": team_name or club_name,
+        "team_label": team_label,
+        "team_url": team_url,
+        "revsports_team_id": extract_revsports_team_id(team_url),
+        "players": [],
+    }
+
+    return {
+        "url": match_url,
+        "date": "",
+        "time": "",
+        "venue": "",
+        "pitch": "",
+        "home_club_name": team["club_name"],
+        "home_team": team["team_name"],
+        "home_team_label": team["team_label"],
+        "home_team_url": team["team_url"],
+        "home_revsports_team_id": team["revsports_team_id"],
+        "away_club_name": "",
+        "away_team": "",
+        "away_team_label": "BYE",
+        "away_team_url": "",
+        "away_revsports_team_id": "",
+        "home_score": "",
+        "away_score": "",
+        "umpires": [],
+        "teams": [team],
+        "is_bye": True,
+    }
+
+
 # ----------------------------------------------------------------------------
 # ROW BUILDING / OUTPUT
 # ----------------------------------------------------------------------------
@@ -1044,6 +1708,7 @@ def base_fixture_row(association: str, grade: dict, rnd: dict, match: dict, game
         "away_revsports_team_id": match.get("away_revsports_team_id", ""),
         "home_score": match.get("home_score", ""),
         "away_score": match.get("away_score", ""),
+        "is_bye": bool_text(match.get("is_bye", False)),
         "umpire_1": match.get("umpires", [""])[0] if len(match.get("umpires", [])) > 0 else "",
         "umpire_2": match.get("umpires", ["", ""])[1] if len(match.get("umpires", [])) > 1 else "",
         "match_url": game_url,
@@ -1128,20 +1793,25 @@ def main():
 
             for game_info in games:
                 try:
-                    match = scrape_match(
-                        session,
-                        game_info["game_url"],
-                        grade_name=grade["name"],
-                        team_urls=game_info.get("team_urls", []),
-                        team_labels=game_info.get("team_labels", []),
-                        round_venue=game_info.get("round_venue", ""),
-                        round_pitch=game_info.get("round_pitch", ""),
-                        round_date=game_info.get("round_date", ""),
-                        round_time=game_info.get("round_time", ""),
-                        round_home_score=game_info.get("round_home_score", ""),
-                        round_away_score=game_info.get("round_away_score", ""),
-                        round_umpires=game_info.get("round_umpires", []),
-                    )
+                    if game_info.get("is_bye"):
+                        match = scrape_bye_match(session, game_info, grade, rnd)
+                        game_url = match["url"]
+                    else:
+                        game_url = game_info["game_url"]
+                        match = scrape_match(
+                            session,
+                            game_url,
+                            grade_name=grade["name"],
+                            team_urls=game_info.get("team_urls", []),
+                            team_labels=game_info.get("team_labels", []),
+                            round_venue=game_info.get("round_venue", ""),
+                            round_pitch=game_info.get("round_pitch", ""),
+                            round_date=game_info.get("round_date", ""),
+                            round_time=game_info.get("round_time", ""),
+                            round_home_score=game_info.get("round_home_score", ""),
+                            round_away_score=game_info.get("round_away_score", ""),
+                            round_umpires=game_info.get("round_umpires", []),
+                        )
                     match["grade"] = grade["name"]
                     match["round"] = rnd["round_label"]
                     all_results.append(match)
@@ -1154,7 +1824,7 @@ def main():
                             if not should_include_team(team):
                                 continue
                             for player in team["players"]:
-                                row = base_fixture_row(ASSOCIATION_NAME, grade, rnd, match, game_info["game_url"])
+                                row = base_fixture_row(ASSOCIATION_NAME, grade, rnd, match, game_url)
                                 row.update({
                                     "team_side": team.get("team_side", ""),
                                     "club_name": team.get("club_name", ""),
@@ -1177,14 +1847,14 @@ def main():
                                 })
                                 csv_rows.append(row)
                     else:
-                        row = base_fixture_row(ASSOCIATION_NAME, grade, rnd, match, game_info["game_url"])
+                        row = base_fixture_row(ASSOCIATION_NAME, grade, rnd, match, game_url)
                         row.update({
-                            "team_side": "",
-                            "club_name": "",
-                            "team": "NO_PLAYERS",
-                            "team_label": "NO_PLAYERS",
-                            "team_url": "",
-                            "revsports_team_id": "",
+                            "team_side": "home" if match.get("is_bye") else "",
+                            "club_name": match.get("home_club_name", "") if match.get("is_bye") else "",
+                            "team": match.get("home_team", "") if match.get("is_bye") else "NO_PLAYERS",
+                            "team_label": match.get("home_team_label", "") if match.get("is_bye") else "NO_PLAYERS",
+                            "team_url": match.get("home_team_url", "") if match.get("is_bye") else "",
+                            "revsports_team_id": match.get("home_revsports_team_id", "") if match.get("is_bye") else "",
                             "player_name": "NO_PLAYERS",
                             "jersey": "",
                             "is_goalkeeper": "FALSE",
@@ -1208,7 +1878,7 @@ def main():
                     )
 
                 except Exception as e:
-                    print(f"    ERROR: {game_info['game_url']} - {e}")
+                    print(f"    ERROR: {game_info.get('game_url') or game_info.get('team_url')} - {e}")
 
     quality_issue_count = 0
 
@@ -1304,6 +1974,20 @@ def main():
 
         except Exception as e:
             print(f"ERROR: Supabase upsert error: {e}")
+            raise
+
+    if not UPSERT_SUPABASE_V2:
+        print("\nINFO: UPSERT_SUPABASE_V2 is not true - skipping Supabase V2 source upsert.")
+    elif not supabase_url or not supabase_key:
+        raise RuntimeError("UPSERT_SUPABASE_V2 is true, but SUPABASE_URL or SUPABASE_SERVICE_KEY is missing.")
+    else:
+        try:
+            from supabase import create_client
+            client = create_client(supabase_url, supabase_key)
+            print("\nINFO: Writing scrape output to Supabase V2 source tables...")
+            upsert_revsports_v2_source(client, csv_rows, quality_issue_count)
+        except Exception as e:
+            print(f"ERROR: Supabase V2 source upsert error: {e}")
             raise
 
     print(f"\nDone! {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

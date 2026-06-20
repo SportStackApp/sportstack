@@ -77,19 +77,22 @@ def first_present(row: dict, names: list[str]) -> Any:
 
 def load_team_mappings() -> dict:
     """
-    Returns a dict keyed by (revsports_team_name, grade) -> sportstack team_id.
-    A single RevSports team name can appear multiple times with different grades,
-    so we always include grade in the lookup key.
+    Returns mapping dictionaries for RevSports team IDs and fallback team text.
+    RevSports team IDs are preferred because team names can repeat or change.
     """
     log.info("Loading team mappings...")
-    rows = supabase.table("revsports_team_mappings").select("revsports_team_name, grade, team_id").execute().data
-    mapping = {}
+    rows = supabase.table("revsports_team_mappings").select("revsports_team_id, revsports_team_name, grade, team_id").execute().data
+    by_id = {}
+    by_name = {}
     for row in rows:
         if row["team_id"]:
+            revsports_team_id = normalise(row.get("revsports_team_id"))
+            if revsports_team_id:
+                by_id[revsports_team_id] = row["team_id"]
             for key in mapping_keys(row["revsports_team_name"], row["grade"]):
-                mapping[key] = row["team_id"]
-    log.info(f"  Loaded {len(mapping)} team mapping keys")
-    return mapping
+                by_name[key] = row["team_id"]
+    log.info(f"  Loaded {len(by_id)} team ID mapping keys and {len(by_name)} team text mapping keys")
+    return {"by_id": by_id, "by_name": by_name}
 
 
 def load_venue_mappings() -> dict:
@@ -104,6 +107,22 @@ def load_venue_mappings() -> dict:
             for key in mapping_keys(row["revsports_venue_name"]):
                 mapping[key[0]] = row["venue_id"]
     log.info(f"  Loaded {len(mapping)} venue mapping keys")
+    return mapping
+
+
+def load_pitch_mappings() -> dict:
+    """
+    Returns a dict keyed by (revsports_venue_name, revsports_pitch_name) -> sportstack pitch_id.
+    Pitch names are only reliable when paired with their venue.
+    """
+    log.info("Loading pitch mappings...")
+    rows = supabase.table("revsports_pitch_mappings").select("revsports_venue_name, revsports_pitch_name, pitch_id").execute().data
+    mapping = {}
+    for row in rows:
+        if row["pitch_id"]:
+            for key in mapping_keys(row["revsports_venue_name"], row["revsports_pitch_name"]):
+                mapping[key] = row["pitch_id"]
+    log.info(f"  Loaded {len(mapping)} pitch mapping keys")
     return mapping
 
 
@@ -137,7 +156,7 @@ def load_competition_mappings() -> dict:
     mapping = {}
     for row in rows:
         season_id = first_present(row, ["season_id", "competition_id"])
-        competition = first_present(row, ["revsports_competition", "competition", "competition_name", "season", "season_name"])
+        competition = first_present(row, ["revsports_competition_name", "revsports_competition", "competition", "competition_name", "season", "season_name"])
         association = first_present(row, ["association", "association_name"])
         if not season_id or not competition:
             continue
@@ -225,7 +244,7 @@ def resolve_division_id(game: dict, association: str, home_id: str | None, away_
 
 
 def resolve_season_id(game: dict, association: str, competition_map: dict, seasons: list[dict]) -> tuple[str | None, str | None]:
-    competition = first_present(game, ["competition", "competition_name", "season", "season_name"])
+    competition = first_present(game, ["revsports_competition_name", "competition", "competition_name", "season", "season_name"])
     for key in mapping_keys(association, competition) + mapping_keys(None, competition):
         if key in competition_map:
             return competition_map[key], "competition_mapping"
@@ -246,24 +265,52 @@ def resolve_season_id(game: dict, association: str, competition_map: dict, seaso
     return None, "no_competition_or_season_year_mapping"
 
 
+def resolve_pitch_id(game: dict, pitch_map: dict) -> tuple[str | None, str | None]:
+    venue = game.get("venue")
+    pitch = game.get("pitch")
+    if not pitch:
+        return None, "no_pitch_in_scraped_row"
+
+    for key in mapping_keys(venue, pitch):
+        if key in pitch_map:
+            return pitch_map[key], "pitch_mapping"
+    return None, "no_pitch_mapping"
+
+
+def resolve_team_id(team_map: dict, revsports_team_id: Any, team_name: Any, grade: Any) -> tuple[str | None, str | None]:
+    scraped_team_id = normalise(revsports_team_id)
+    if scraped_team_id and scraped_team_id in team_map["by_id"]:
+        return team_map["by_id"][scraped_team_id], "revsports_team_id"
+
+    name_lookup = team_map["by_name"]
+    team_id = name_lookup.get((normalise(team_name), normalise(grade))) or name_lookup.get((normalise(team_name).lower(), normalise(grade).lower()))
+    if team_id:
+        return team_id, "team_name_grade"
+    return None, "no_team_mapping"
+
+
 def safe_sample(game: dict, association: str, reason: str) -> dict:
     """Return a safe unresolved sample without secrets or player details."""
     return {
         "association": association,
         "reason": reason,
         "match_url": game.get("match_url"),
-        "competition": first_present(game, ["competition", "competition_name", "season", "season_name"]),
+        "competition": first_present(game, ["revsports_competition_name", "competition", "competition_name", "season", "season_name"]),
         "grade": game.get("grade"),
         "home_team": game.get("home_team"),
+        "home_revsports_team_id": game.get("home_revsports_team_id"),
         "away_team": game.get("away_team"),
+        "away_revsports_team_id": game.get("away_revsports_team_id"),
+        "venue": game.get("venue"),
+        "pitch": game.get("pitch"),
         "game_date": game.get("game_date"),
         "season_year": first_present(game, ["season_year", "competition_year", "year"]),
     }
 
 
-def build_fixture_rows(games: list, team_map: dict, venue_map: dict, grade_map: dict, competition_map: dict, team_divisions: dict, seasons: list[dict], association: str) -> tuple[list, list, dict]:
+def build_fixture_rows(games: list, team_map: dict, venue_map: dict, pitch_map: dict, grade_map: dict, competition_map: dict, team_divisions: dict, seasons: list[dict], association: str) -> tuple[list, list, dict]:
     """
-    For each game, resolve home_team, away_team, venue, division and season to SportStack UUIDs.
+    For each game, resolve home_team, away_team, venue, pitch, division and season to SportStack UUIDs.
     Returns (resolved_rows, skipped_rows, dry_run_report).
     """
     resolved = []
@@ -280,12 +327,13 @@ def build_fixture_rows(games: list, team_map: dict, venue_map: dict, grade_map: 
         venue_name = game.get("venue", "")
 
         # Look up IDs
-        home_id = team_map.get((normalise(home_name), normalise(grade))) or team_map.get((normalise(home_name).lower(), normalise(grade).lower()))
-        away_id = team_map.get((normalise(away_name), normalise(grade))) or team_map.get((normalise(away_name).lower(), normalise(grade).lower()))
+        home_id, home_source = resolve_team_id(team_map, game.get("home_revsports_team_id"), home_name, grade)
+        away_id, away_source = resolve_team_id(team_map, game.get("away_revsports_team_id"), away_name, grade)
         venue_id = venue_map.get(normalise(venue_name)) or venue_map.get(normalise(venue_name).lower())
 
         division_id, division_source = resolve_division_id(game, association, home_id, away_id, grade_map, team_divisions)
         season_id, season_source = resolve_season_id(game, association, competition_map, seasons)
+        pitch_id, pitch_source = resolve_pitch_id(game, pitch_map)
         if division_id:
             stats["division_resolved"] += 1
         else:
@@ -298,16 +346,22 @@ def build_fixture_rows(games: list, team_map: dict, venue_map: dict, grade_map: 
             unresolved_reasons[f"season:{season_source}"] += 1
             if len(samples) < SAMPLE_LIMIT:
                 samples.append(safe_sample(game, association, f"season:{season_source}"))
+        if pitch_id:
+            stats["pitch_resolved"] += 1
+        elif pitch_source != "no_pitch_in_scraped_row":
+            unresolved_reasons[f"pitch:{pitch_source}"] += 1
+            if len(samples) < SAMPLE_LIMIT:
+                samples.append(safe_sample(game, association, f"pitch:{pitch_source}"))
 
         # Skip if any required mapping is missing
         if not home_id:
-            log.info(f"  No team mapping for home team '{home_name}' (grade: {grade})")
+            log.info(f"  No team mapping for home team '{home_name}' (grade: {grade}, source: {home_source})")
             log.info(f"    {url}")
             skipped.append({"reason": f"home team '{home_name}'", "url": url})
             continue
 
         if not away_id:
-            log.info(f"  No team mapping for away team '{away_name}' (grade: {grade})")
+            log.info(f"  No team mapping for away team '{away_name}' (grade: {grade}, source: {away_source})")
             log.info(f"    {url}")
             skipped.append({"reason": f"away team '{away_name}'", "url": url})
             continue
@@ -346,12 +400,13 @@ def build_fixture_rows(games: list, team_map: dict, venue_map: dict, grade_map: 
             except ValueError:
                 pass
 
-        # Do not include division_id/season_id in the write payload until the
-        # owner approves applying these dry-run findings to live fixtures.
         resolved.append({
             "home_team_id": home_id,
             "away_team_id": away_id,
             "venue_id": venue_id,           # may be None — that's OK
+            "pitch_id": pitch_id,           # may be None — that's OK
+            "division_id": division_id,
+            "season_id": season_id,
             "fixture_date": fixture_datetime,
             "home_score": home_score,
             "away_score": away_score,
@@ -359,10 +414,11 @@ def build_fixture_rows(games: list, team_map: dict, venue_map: dict, grade_map: 
             "round_number": round_number,   # e.g. 1, 2, 3
             "round_name": round_name,       # e.g. "Round 1"
             "revsports_match_url": url,     # conflict key — ensures no duplicates
-            "_resolved_division_id": division_id,
+            "_resolved_home_team_source": home_source,
+            "_resolved_away_team_source": away_source,
             "_resolved_division_source": division_source,
-            "_resolved_season_id": season_id,
             "_resolved_season_source": season_source,
+            "_resolved_pitch_source": pitch_source,
         })
 
     report = {"stats": stats, "unresolved_reasons": unresolved_reasons, "samples": samples}
@@ -402,6 +458,7 @@ def log_report(label: str, report: dict):
     log.info(f"  fixture rows scanned: {stats['scanned']}")
     log.info(f"  can resolve division_id: {stats['division_resolved']}")
     log.info(f"  can resolve season_id: {stats['season_resolved']}")
+    log.info(f"  can resolve pitch_id: {stats['pitch_resolved']}")
     if report["unresolved_reasons"]:
         log.info("  unresolved by reason:")
         for reason, count in sorted(report["unresolved_reasons"].items()):
@@ -412,9 +469,9 @@ def log_report(label: str, report: dict):
             log.info(f"    {sample}")
 
 
-def build_backfill_report(team_map: dict, venue_map: dict, grade_map: dict, competition_map: dict, team_divisions: dict, seasons: list[dict]) -> dict:
+def build_backfill_report(team_map: dict, venue_map: dict, pitch_map: dict, grade_map: dict, competition_map: dict, team_divisions: dict, seasons: list[dict]) -> dict:
     """Prepare a dry-run-only report for existing fixtures before any backfill update."""
-    fixtures = supabase.table("fixtures").select("id, revsports_match_url, division_id, season_id").execute().data
+    fixtures = supabase.table("fixtures").select("id, revsports_match_url, division_id, season_id, pitch_id").execute().data
     fixture_urls = {row.get("revsports_match_url") for row in fixtures if row.get("revsports_match_url")}
     aggregate = {"stats": Counter(scanned=len(fixtures)), "unresolved_reasons": Counter(), "samples": []}
 
@@ -431,9 +488,10 @@ def build_backfill_report(team_map: dict, venue_map: dict, grade_map: dict, comp
             aggregate["unresolved_reasons"]["fixture:no_matching_staging_row"] += 1
             continue
         association, game = staged
-        _, _, report = build_fixture_rows([game], team_map, venue_map, grade_map, competition_map, team_divisions, seasons, association)
+        _, _, report = build_fixture_rows([game], team_map, venue_map, pitch_map, grade_map, competition_map, team_divisions, seasons, association)
         aggregate["stats"]["division_resolved"] += report["stats"]["division_resolved"]
         aggregate["stats"]["season_resolved"] += report["stats"]["season_resolved"]
+        aggregate["stats"]["pitch_resolved"] += report["stats"]["pitch_resolved"]
         aggregate["unresolved_reasons"].update(report["unresolved_reasons"])
         for sample in report["samples"]:
             if len(aggregate["samples"]) < SAMPLE_LIMIT:
@@ -445,9 +503,9 @@ def build_backfill_report(team_map: dict, venue_map: dict, grade_map: dict, comp
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Import RevSports fixtures into SportStack.")
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--dry-run", action="store_true", help="Report fixture, division and season resolution counts without writing to the DB (default).")
-    mode.add_argument("--apply", action="store_true", help="Write current approved fixture fields to the DB. Does not write division_id/season_id yet.")
-    parser.add_argument("--backfill-dry-run", action="store_true", help="Also report division_id/season_id resolvability for existing fixtures before any update.")
+    mode.add_argument("--dry-run", action="store_true", help="Report fixture, division, season and pitch resolution counts without writing to the DB (default).")
+    mode.add_argument("--apply", action="store_true", help="Write fixture fields to the DB, including resolved division_id, season_id and pitch_id.")
+    parser.add_argument("--backfill-dry-run", action="store_true", help="Also report division_id/season_id/pitch_id resolvability for existing fixtures before any update.")
     return parser.parse_args()
 
 
@@ -457,12 +515,13 @@ def run():
 
     log.info("=" * 60)
     log.info("SportStack Fixture Import — starting")
-    log.info("Mode: %s", "DRY RUN (no DB writes)" if dry_run else "APPLY (writes approved fixture fields only)")
+    log.info("Mode: %s", "DRY RUN (no DB writes)" if dry_run else "APPLY (writes fixture fields)")
     log.info("=" * 60)
 
     # Load mappings once (shared across associations)
     team_map = load_team_mappings()
     venue_map = load_venue_mappings()
+    pitch_map = load_pitch_mappings()
     grade_map = load_grade_mappings()
     competition_map = load_competition_mappings()
     team_divisions = load_team_division_lookup()
@@ -476,7 +535,7 @@ def run():
         log.info(f"\n--- Processing: {association} ---")
 
         games = load_scraped_games(association)
-        resolved, skipped, report = build_fixture_rows(games, team_map, venue_map, grade_map, competition_map, team_divisions, seasons, association)
+        resolved, skipped, report = build_fixture_rows(games, team_map, venue_map, pitch_map, grade_map, competition_map, team_divisions, seasons, association)
 
         log.info(f"  Resolved import rows: {len(resolved)} | Skipped import rows: {len(skipped)}")
         log_report(association, report)
@@ -501,7 +560,7 @@ def run():
     log_report("TOTAL", grand_report)
 
     if args.backfill_dry_run:
-        backfill_report = build_backfill_report(team_map, venue_map, grade_map, competition_map, team_divisions, seasons)
+        backfill_report = build_backfill_report(team_map, venue_map, pitch_map, grade_map, competition_map, team_divisions, seasons)
         log.info("\n" + "=" * 60)
         log_report("Existing fixtures backfill", backfill_report)
         log.info("Backfill dry run only — no fixture rows updated")

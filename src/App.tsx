@@ -40,6 +40,7 @@ import VenuesManagement from "./pages/admin/VenuesManagement";
 import Requests from "./pages/admin/Requests";
 import RevSportsMappings from "./pages/admin/RevSportsMappings";
 import RevSportsUnmatched from "./pages/admin/RevSportsUnmatched";
+import RevSportsEntityReview from "./pages/admin/RevSportsEntityReview";
 import MvpVotingAdmin from "./pages/admin/MvpVotingAdmin";
 
 // Entity Dashboards
@@ -109,6 +110,7 @@ const App = () => (
                       <Route path="/admin/bulk-import" element={<BulkImport />} />
                       <Route path="/admin/revsports-mappings" element={<RevSportsMappings />} />
                       <Route path="/admin/revsports-unmatched" element={<RevSportsUnmatched />} />
+                      <Route path="/admin/revsports-entities" element={<RevSportsEntityReview />} />
                       <Route path="/admin/fixtures" element={<FixturesManagement />} />
                       <Route path="/admin/fixture-import" element={<FixtureImport />} />
                       <Route path="/admin/venues" element={<VenuesManagement />} />
