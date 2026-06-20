@@ -1,0 +1,27 @@
+entity_type,mapping_status,scraped_item,association,competition,grade,club,team,external_id,target_table,source_url,last_seen_at
+grade,no_link,walking hockey - mixed social,Sunraysia Hockey Association,2026 - Indoor Competition - Irymple Leisure Centre,walking hockey - mixed social,,,Sunraysia Hockey Association|2026 - Indoor Competition - Irymple Leisure Centre|grade|walking hockey - mixed social,divisions,https://www.sunraysiahockey.com.au/game/2578148,2026-06-18T14:52:56.496753+00:00
+player,no_link,Rachel A.,Hockey Ballarat,Hockey Ballarat 2026 Winter Competition,Womens,Blaze,Women Blaze Black,WlzOECO,profiles,,2026-06-18T13:21:13.151419+00:00
+player,no_link,Isla L.,Hockey Ballarat,Hockey Ballarat 2026 Winter Competition,Womens,Blaze,Women Blaze Orange,e0K6Ps3,profiles,,2026-06-18T13:21:13.152607+00:00
+player,no_link,Jarrod K.,Hockey Ballarat,Hockey Ballarat 2026 Winter Competition,Division 2 Men,Bobcats,Div 2 Men,vy8GAfZ,profiles,,2026-06-18T13:21:13.191109+00:00
+player,no_link,Stephen B.,Hockey Ballarat,Hockey Ballarat 2026 Winter Competition,Division 2 Men,Bobcats,Div 2 Men,03yNJu3,profiles,,2026-06-18T13:21:13.172983+00:00
+player,no_link,Tom F.,Hockey Ballarat,Hockey Ballarat 2026 Winter Competition,Division 2 Men,Bobcats,Div 2 Men,DOj0ztk,profiles,,2026-06-18T13:21:13.191211+00:00
+player,no_link,Ben S.,Hockey Ballarat,Hockey Ballarat 2026 Winter Competition,Division 2 Men,EGC,EGC Blue,Vz3w9fw,profiles,,2026-06-18T13:21:13.190491+00:00
+player,no_link,Ben S.,Hockey Ballarat,Hockey Ballarat 2026 Winter Competition,Division 2 Men,EGC,EGC Gold,XeRO3I8,profiles,,2026-06-18T13:21:13.177021+00:00
+player,no_link,Chris B.,Hockey Ballarat,Hockey Ballarat 2026 Winter Competition,Division 2 Men,Lucas HC,Div 2 Men,nGjbZi8,profiles,,2026-06-18T13:21:13.190705+00:00
+player,no_link,Amy R.,Hockey Ballarat,Hockey Ballarat 2026 Winter Competition,Womens,Lucas HC,Women,QlRl2fw,profiles,,2026-06-18T13:21:13.151708+00:00
+player,no_link,Hazel P.,Hockey Ballarat,Hockey Ballarat 2026 Winter Competition,Womens,Lucas HC,Women,meygDHP,profiles,,2026-06-18T13:21:13.165383+00:00
+player,no_link,Ben F.,Hockey Ballarat,Hockey Ballarat 2026 Winter Competition,Division 1 Men,SOBHC,Ducks Men,2DVVWH2,profiles,,2026-06-18T13:21:13.141788+00:00
+player,no_link,David F.,Hockey Ballarat,Hockey Ballarat 2026 Winter Competition,Division 1 Men,SOBHC,Ducks Men,G8vrwtB,profiles,,2026-06-18T13:21:13.141848+00:00
+player,no_link,John Ellis,Sunraysia Hockey Association,2026 - Grass Field Competition - Oval 4,Men,Koowinda,Koowinda Blue Men,wkgYOHX,profiles,,2026-06-18T14:52:56.604744+00:00
+player,no_link,Hamish Archibald,Sunraysia Hockey Association,2026 - Grass Field Competition - Oval 4,Men,Koowinda,Koowinda Purple Men,J210DI1,profiles,,2026-06-18T14:52:56.605523+00:00
+player,no_link,Joshua Thompson,Sunraysia Hockey Association,2026 - Grass Field Competition - Oval 4,U13 Boys,Rivaside,Rivaside Under 13 Boys,xy2OEfD,profiles,,2026-06-18T14:52:56.564839+00:00
+player,no_link,Lincoln Tate,Sunraysia Hockey Association,2026 - Grass Field Competition - Oval 4,U13 Boys,Rivaside,Rivaside Under 13 Boys,MDJ4ASa,profiles,,2026-06-18T14:52:56.564693+00:00
+team,no_link,Koowinda Indoor,Sunraysia Hockey Association,2026 - Indoor Competition - Irymple Leisure Centre,Indoor Mixed,Koowinda,Koowinda Indoor,408906,teams,https://www.sunraysiahockey.com.au/games/team/25775/408906,2026-06-18T14:52:56.496118+00:00
+team,no_link,Mildura Wanderers Gold Indoor,Sunraysia Hockey Association,2026 - Indoor Competition - Irymple Leisure Centre,Indoor Mixed,Mildura Wanderers,Mildura Wanderers Gold Indoor,408913,teams,https://www.sunraysiahockey.com.au/games/team/25775/408913,2026-06-18T14:52:56.496202+00:00
+team,no_link,Mildura Wanderers White Indoor,Sunraysia Hockey Association,2026 - Indoor Competition - Irymple Leisure Centre,Indoor Mixed,Mildura Wanderers,Mildura Wanderers White Indoor,408911,teams,https://www.sunraysiahockey.com.au/games/team/25775/408911,2026-06-18T14:52:56.496154+00:00
+team,no_link,Rivaside Blue Indoor,Sunraysia Hockey Association,2026 - Indoor Competition - Irymple Leisure Centre,Indoor Mixed,Rivaside,Rivaside Blue Indoor,408912,teams,https://www.sunraysiahockey.com.au/games/team/25775/408912,2026-06-18T14:52:56.496212+00:00
+team,no_link,Rivaside Red Indoor,Sunraysia Hockey Association,2026 - Indoor Competition - Irymple Leisure Centre,Indoor Mixed,Rivaside,Rivaside Red Indoor,414017,teams,https://www.sunraysiahockey.com.au/games/team/25775/414017,2026-06-18T14:52:56.496165+00:00
+team,no_link,Team A,Sunraysia Hockey Association,2026 - Indoor Competition - Irymple Leisure Centre,walking hockey - mixed social,Sunraysia HA,Team A,408904,teams,https://www.sunraysiahockey.com.au/games/team/25775/408904,2026-06-18T14:52:56.496787+00:00
+team,no_link,Team B,Sunraysia Hockey Association,2026 - Indoor Competition - Irymple Leisure Centre,walking hockey - mixed social,Sunraysia HA,Team B,408905,teams,https://www.sunraysiahockey.com.au/games/team/25775/408905,2026-06-18T14:52:56.496777+00:00
+team,no_link,Waratahs Blue Indoor,Sunraysia Hockey Association,2026 - Indoor Competition - Irymple Leisure Centre,Indoor Mixed,Waratahs,Waratahs Blue Indoor,408910,teams,https://www.sunraysiahockey.com.au/games/team/25775/408910,2026-06-18T14:52:56.496108+00:00
+team,no_link,Waratahs White Indoor,Sunraysia Hockey Association,2026 - Indoor Competition - Irymple Leisure Centre,Indoor Mixed,Waratahs,Waratahs White Indoor,408908,teams,https://www.sunraysiahockey.com.au/games/team/25775/408908,2026-06-18T14:52:56.495958+00:00

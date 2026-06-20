@@ -97,6 +97,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/admin/users", label: "Users", icon: UserCog },
         { path: "/admin/requests", label: "Requests", icon: ClipboardList },
         { path: "/admin/revsports-mappings", label: "RevSports Mappings", icon: GitMerge },
+        { path: "/admin/revsports-entities", label: "RevSports Review", icon: GitMerge },
       ],
     },
   ],
@@ -373,7 +374,7 @@ const AppLayout = () => {
     <>
       {/* Viewing As dropdown — Super Admin only */}
       {mode === "super_admin" && (
-        <div className="px-3 pt-3 pb-1">
+        <div className="shrink-0 px-3 pt-3 pb-1">
           <p className="text-xs font-medium text-muted-foreground mb-1 px-1">Viewing as</p>
           <select
             value={viewingAs}
@@ -396,7 +397,7 @@ const AppLayout = () => {
           </select>
         </div>
       )}
-      <nav className="flex-1 py-2">
+      <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2">
         {visibleSections.map((section) => (
           <div key={section.heading} className="mb-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-2">
@@ -440,7 +441,7 @@ const AppLayout = () => {
         ))}
       </nav>
 
-      <div className="p-4 space-y-2">
+      <div className="shrink-0 p-4 space-y-2">
         {/* Mode Switcher */}
         {canSwitchMode && (
           <div className="relative">
@@ -760,7 +761,7 @@ const AppLayout = () => {
 
       <div className="flex flex-1">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:flex flex-col w-56 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto bg-accent border-r border-border">
+        <aside className="hidden lg:flex flex-col w-56 sticky top-14 h-[calc(100vh-3.5rem)] min-h-0 overflow-hidden bg-accent border-r border-border">
           {renderSidebar(false)}
         </aside>
 
@@ -771,7 +772,7 @@ const AppLayout = () => {
               className="absolute inset-0 bg-black/50"
               onClick={() => setIsMobileMenuOpen(false)}
             />
-            <aside className="absolute left-0 top-14 bottom-0 w-64 bg-accent animate-slide-in-right flex flex-col">
+            <aside className="absolute left-0 top-14 bottom-0 w-64 min-h-0 bg-accent animate-slide-in-right flex flex-col overflow-hidden">
               {renderSidebar(true)}
             </aside>
           </div>

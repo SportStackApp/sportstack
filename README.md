@@ -1,43 +1,67 @@
 # SportStack
 
-A comprehensive sports management platform designed to streamline operations for clubs, associations, and teams.
+SportStack is a private React + TypeScript + Vite sports management app for clubs, associations, teams, players, fixtures, rosters, line-ups, venues, and admin workflows. It uses Tailwind CSS, shadcn/ui, and Supabase.
 
-## Features
+## Start here
 
-- **Entity Management**: Hierarchical management of Associations, Clubs, and Teams.
-- **Role-Based Access**: Specialized views and capabilities for Players, Coaches, Team Managers, Club Admins, and Super Admins.
-- **Fixtures & Venues**: Comprehensive scheduling and venue management.
-- **Roster Management**: Manage players and team line-ups.
+Read these documents before making changes:
 
-## Development
+- [Agent instructions](AGENTS.md)
+- [Project brief](docs/project-brief.md)
+- [Technical specification and system handoff](TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md)
+- [Project scope, UI/UX, and implementation plan](PROJECT_SCOPE_UI_UX_AND_IMPLEMENTATION_PLAN.md)
+- [Codex handoff extras](CODEX_HANDOFF_EXTRAS.md)
 
-This project is built with React, Vite, and Tailwind CSS, leveraging Supabase for the backend.
+## Local setup
 
-### Prerequisites
-
-- Node.js (v18+)
-- npm
-- Supabase account and local CLI (optional, for local DB)
-
-### Running Locally
-
-1. Clone the repository
-2. Run `npm install`
-3. Start the dev server: `npm run dev`
-
-### Environment Variables
-
-You need to set up the following environment variables in your `.env` file:
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
 ```
-VITE_SUPABASE_PROJECT_ID=your_project_id
-VITE_SUPABASE_PUBLISHABLE_KEY=your_anon_key
+
+The local development server runs at:
+
+```text
+http://localhost:8081
+```
+
+## Environment variables
+
+Only browser-safe Supabase variables should be used by the frontend:
+
+```bash
 VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+VITE_SUPABASE_PROJECT_ID=your_project_id
 ```
 
-## Deployment
+Do not commit `.env.local` or any real environment values.
 
-This application is ready to be deployed to Vercel. Connect your repository to Vercel and set the required environment variables in the Vercel dashboard.
+## Safety warnings
 
-## Authentication
+- Never expose Supabase service keys or any other server-only secrets.
+- The live Supabase database is shared for dev and prod, so treat all data as real.
+- Do not touch database schema/data, RLS, auth, Edge Functions, or anything that deploys to `main` without owner confirmation.
 
-Google Single Sign-On (SSO) is supported. Ensure that the Google OAuth provider is enabled in your Supabase project settings, and that your production URL is added to the Supabase Redirect URLs.
+## Quality commands
+
+Run these checks before completing work:
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+There is no automated test suite yet. Perform the relevant manual smoke test for any user-facing change.
+
+## Future documentation
+
+Add these docs when they are created:
+
+- [Contributing guide](CONTRIBUTING.md)
+- [Testing guide](TESTING.md)
+- [Security policy](SECURITY.md)
+- [Database guide](DATABASE.md)
+- [Deployment guide](DEPLOYMENT.md)

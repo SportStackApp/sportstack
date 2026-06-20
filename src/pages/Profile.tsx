@@ -71,6 +71,7 @@ interface ProfileData {
   avatar_url: string | null;
   gender: string | null;
   hockey_vic_number: string | null;
+  revsports_player_id?: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   emergency_contact_relationship: string | null;
@@ -845,6 +846,25 @@ const Profile = () => {
         onCancel={handleCancel}
         onEdit={handleStartEdit}
       />
+
+      {profile?.revsports_player_id && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">RevSports Link</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              <Label>External player ID</Label>
+              <div className="rounded-md border bg-muted/40 px-3 py-2 font-mono text-sm">
+                {profile.revsports_player_id}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                This links your SportStack profile to scraped RevSports data.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Security */}
       <Card>

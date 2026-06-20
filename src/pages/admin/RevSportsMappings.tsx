@@ -20,13 +20,53 @@ interface SystemDivision { id: string; name: string; associationName: string; }
 interface SystemClub { id: string; name: string; }
 interface SystemPitch { id: string; name: string; venueName: string; }
 
+const getProfileDisplayName = (profile: SystemProfile) => {
+  const name = `${profile.firstName} ${profile.lastName}`.trim() || "Placeholder user";
+  return profile.isPlaceholder ? `${name} (placeholder)` : name;
+};
+
+const getRevsportsPlayerKey = (playerId: string | null | undefined) => {
+  const trimmed = (playerId || "").trim();
+  return trimmed ? `player:${trimmed}` : "";
+};
+
+const getTeamKey = (association: string, teamName: string, grade: string, revsportsTeamId = "") => {
+  const trimmedId = revsportsTeamId.trim();
+  return trimmedId ? `team:${trimmedId}` : `${association}|||${teamName}|||${grade}`;
+};
+
+const isLikelyUmpireName = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (/^round\s+\d+/i.test(trimmed)) return false;
+  return !["umpire", "umpires", "details", "venue", "date & time", "match card", "subvenue"].includes(trimmed.toLowerCase());
+};
+
+const fetchAllRows = async (tableName: string, selectColumns: string) => {
+  const pageSize = 1000;
+  const rows: any[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select(selectColumns)
+      .range(from, from + pageSize - 1);
+
+    if (error) return { data: null, error };
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+
+  return { data: rows, error: null };
+};
+
 // Scraped Data Interfaces
-interface ScrapedTeam { teamName: string; clubName: string; grade: string; association: string; key: string; }
+interface ScrapedTeam { teamName: string; revsportsTeamId: string; clubName: string; grade: string; association: string; key: string; }
 interface ScrapedGrade { grade: string; association: string; key: string; }
 interface ScrapedClub { clubName: string; key: string; }
 interface ScrapedVenue { venueName: string; key: string; }
 interface ScrapedPitch { pitchName: string; venueName: string; key: string; }
-interface ScrapedPlayer { playerName: string; clubName: string; team: string; grade: string; jersey: string; isFillin: boolean; key: string; }
+interface ScrapedPlayer { playerName: string; revsportsPlayerId: string; clubName: string; team: string; grade: string; jersey: string; isFillin: boolean; key: string; }
 interface ScrapedUmpire { umpireName: string; key: string; }
 
 export default function RevSportsMappings() {
@@ -59,6 +99,7 @@ export default function RevSportsMappings() {
   const [pitchMappings, setPitchMappings] = useState<Record<string, string>>({});
   const [playerMappings, setPlayerMappings] = useState<Record<string, string>>({});
   const [umpireMappings, setUmpireMappings] = useState<Record<string, string>>({});
+  const [existingPlayerMappingIds, setExistingPlayerMappingIds] = useState<Set<string>>(new Set());
 
   // Filters
   const [teamFilters, setTeamFilters] = useState({ grades: [] as string[], clubs: [] as string[] });
@@ -98,11 +139,11 @@ export default function RevSportsMappings() {
         { data: plMapData },
         { data: uMapData }
       ] = await Promise.all([
-        supabase.from("revsports_players").select("team, player_name, grade, home_team, away_team, venue, club_name, jersey, umpire_1, umpire_2, pitch, association, is_fillin"),
+        fetchAllRows("revsports_players", "team, revsports_team_id, player_name, revsports_player_id, grade, home_team, home_revsports_team_id, away_team, away_revsports_team_id, venue, club_name, jersey, umpire_1, umpire_2, pitch, association, is_fillin"),
         supabase.from("teams").select("id, name, club_id, division_id"),
         supabase.from("clubs").select("id, name"),
         supabase.from("divisions").select("id, name, associations(name)"),
-        supabase.from("profiles").select("id, first_name, last_name, is_placeholder").eq("is_placeholder" as any, false),
+        supabase.from("profiles").select("id, first_name, last_name, is_placeholder"),
         supabase.from("venues").select("id, name"),
         supabase.from("pitches").select("id, name, venue_id"),
         
@@ -139,8 +180,8 @@ export default function RevSportsMappings() {
         lastName: p.last_name || "",
         isPlaceholder: p.is_placeholder === true
       })).sort((a: SystemProfile, b: SystemProfile) => {
-        const aName = `${a.firstName} ${a.lastName}`.trim();
-        const bName = `${b.firstName} ${b.lastName}`.trim();
+        const aName = getProfileDisplayName(a);
+        const bName = getProfileDisplayName(b);
         return aName.localeCompare(bName);
       });
 
@@ -183,37 +224,36 @@ export default function RevSportsMappings() {
       const sUmpiresMap = new Map<string, ScrapedUmpire>();
 
       if (playersData) {
-        // Simple deduplication: key by team name, read club and grade from the same row
-        playersData.forEach((row: any) => {
-          const tName = row.team;
-          if (!tName) return;
-          if (!sTeamsMap.has(tName)) {
-            sTeamsMap.set(tName, {
-              teamName: tName,
-              clubName: row.club_name || "",
-              grade: row.grade || "",
-              association: row.association || "",
-              key: tName
-            });
-          }
-        });
-
-        // Also ensure home_team and away_team appear in the list, even if they have no matching team rows
-        playersData.forEach((row: any) => {
-          [row.home_team, row.away_team].filter(Boolean).forEach((tName: string) => {
-            if (!sTeamsMap.has(tName)) {
-              sTeamsMap.set(tName, { teamName: tName, clubName: "", grade: "", association: row.association || "", key: tName });
-            }
-          });
-        });
-
         playersData.forEach((row: any) => {
           const clubName = row.club_name || "";
           const grade = row.grade || "";
+          const association = row.association || "";
+
+          const addScrapedTeam = (teamName: string, revsportsTeamId = "", sourceClubName = "") => {
+            const cleanedTeamName = (teamName || "").trim();
+            if (!cleanedTeamName || cleanedTeamName === "NO_PLAYERS") return;
+            const cleanedTeamId = (revsportsTeamId || "").trim();
+
+            const key = getTeamKey(association, cleanedTeamName, grade, cleanedTeamId);
+            const existing = sTeamsMap.get(key);
+            if (!existing || (!existing.clubName && sourceClubName)) {
+              sTeamsMap.set(key, {
+                teamName: cleanedTeamName,
+                revsportsTeamId: cleanedTeamId,
+                clubName: sourceClubName,
+                grade,
+                association,
+                key
+              });
+            }
+          };
+
+          addScrapedTeam(row.team, row.revsports_team_id, clubName);
+          addScrapedTeam(row.home_team, row.home_revsports_team_id);
+          addScrapedTeam(row.away_team, row.away_revsports_team_id);
 
           // Grades
           if (grade) {
-            const association = row.association || "";
             const gradeKey = `${association}|||${grade}`;
             if (!sGradesMap.has(gradeKey)) {
               sGradesMap.set(gradeKey, { grade, association, key: gradeKey });
@@ -241,9 +281,10 @@ export default function RevSportsMappings() {
             const tName = row.team || "";
             const jersey = row.jersey || "";
             const isFillin = row.is_fillin === true;
-            const key = `${row.player_name}|||${clubName}|||${grade}|||${tName}|||${jersey}|||${isFillin}`;
+            const revsportsPlayerId = (row.revsports_player_id || "").trim();
+            const key = getRevsportsPlayerKey(revsportsPlayerId) || `${row.player_name}|||${clubName}|||${grade}|||${tName}|||${jersey}|||${isFillin}`;
             if (!sPlayersMap.has(key)) {
-              sPlayersMap.set(key, { playerName: row.player_name, clubName, team: tName, grade, jersey, isFillin, key });
+              sPlayersMap.set(key, { playerName: row.player_name, revsportsPlayerId, clubName, team: tName, grade, jersey, isFillin, key });
             }
           }
 
@@ -251,7 +292,7 @@ export default function RevSportsMappings() {
           if (row.umpire_1) {
             row.umpire_1.split(";").forEach((uName: string) => {
               const trimmed = uName.trim();
-              if (trimmed && !sUmpiresMap.has(trimmed)) {
+              if (isLikelyUmpireName(trimmed) && !sUmpiresMap.has(trimmed)) {
                 sUmpiresMap.set(trimmed, { umpireName: trimmed, key: trimmed });
               }
             });
@@ -259,7 +300,7 @@ export default function RevSportsMappings() {
           if (row.umpire_2) {
             row.umpire_2.split(";").forEach((uName: string) => {
               const trimmed = uName.trim();
-              if (trimmed && !sUmpiresMap.has(trimmed)) {
+              if (isLikelyUmpireName(trimmed) && !sUmpiresMap.has(trimmed)) {
                 sUmpiresMap.set(trimmed, { umpireName: trimmed, key: trimmed });
               }
             });
@@ -295,7 +336,14 @@ export default function RevSportsMappings() {
 
       if (tMapData) {
         tMapData.forEach((m: any) => {
-          if (m.team_id) initTeamMappings[m.revsports_team_name] = m.team_id;
+          if (!m.team_id) return;
+          const idKey = m.revsports_team_id ? `team:${String(m.revsports_team_id).trim()}` : "";
+          if (idKey) initTeamMappings[idKey] = m.team_id;
+          sortedTeams
+            .filter(team => !team.revsportsTeamId && team.teamName === m.revsports_team_name && team.grade === (m.grade || ""))
+            .forEach(team => {
+              initTeamMappings[team.key] = m.team_id;
+            });
         });
       }
       if (gMapData) {
@@ -313,11 +361,18 @@ export default function RevSportsMappings() {
         pMapData.forEach((m: any) => { if (m.pitch_id) initPitchMappings[`${m.revsports_venue_name}|||${m.revsports_pitch_name}`] = m.pitch_id; });
       }
       if (plMapData) {
+        setExistingPlayerMappingIds(new Set(
+          plMapData
+            .map((m: any) => (m.revsports_player_id || "").trim())
+            .filter(Boolean)
+        ));
         plMapData.forEach((m: any) => {
           if (m.profile_id) {
             const isFillin = m.is_fillin === true;
+            const idKey = getRevsportsPlayerKey(m.revsports_player_id);
+            if (idKey) initPlayerMappings[idKey] = m.profile_id;
             const newKey = `${m.revsports_player_name}|||${m.club_name || ""}|||${m.grade || ""}|||${m.team || ""}|||${m.jersey || ""}|||${isFillin}`;
-            initPlayerMappings[newKey] = m.profile_id;
+            if (!idKey) initPlayerMappings[newKey] = m.profile_id;
           }
         });
       }
@@ -354,7 +409,16 @@ export default function RevSportsMappings() {
     try {
       if (activeTab === "teams") {
         const rowsToUpsert = Object.entries(teamMappings).filter(([_, id]) => id !== "__none__").map(([key, id]) => {
-          return { revsports_team_name: key, club_name: "", division_name: "", team_id: id };
+          const scrapedTeam = scrapedTeams.find((team) => team.key === key);
+          const [, revsports_team_name, grade] = key.split("|||");
+          return {
+            revsports_team_id: scrapedTeam?.revsportsTeamId || null,
+            revsports_team_name: scrapedTeam?.teamName || revsports_team_name,
+            grade: scrapedTeam?.grade || grade || null,
+            club_name: scrapedTeam?.clubName || "",
+            division_name: scrapedTeam?.grade || grade || "",
+            team_id: id
+          };
         });
         if (rowsToUpsert.length > 0) {
           const { error } = await supabase.from("revsports_team_mappings").upsert(rowsToUpsert, { onConflict: "revsports_team_name,club_name,division_name" });
@@ -363,10 +427,10 @@ export default function RevSportsMappings() {
       } else if (activeTab === "grades") {
         const rowsToUpsert = Object.entries(gradeMappings).filter(([_, id]) => id !== "__none__").map(([key, id]) => {
           const [association, revsports_grade] = key.split("|||");
-          return { revsports_grade, division_id: id };
+          return { association, revsports_grade, division_id: id };
         });
         if (rowsToUpsert.length > 0) {
-          const { error } = await supabase.from("revsports_grade_mappings").upsert(rowsToUpsert, { onConflict: "revsports_grade" });
+          const { error } = await supabase.from("revsports_grade_mappings").upsert(rowsToUpsert, { onConflict: "revsports_grade,association" });
           if (error) throw error;
         }
       } else if (activeTab === "clubs") {
@@ -395,14 +459,55 @@ export default function RevSportsMappings() {
           if (error) throw error;
         }
       } else if (activeTab === "players") {
-        const rowsToUpsert = Object.entries(playerMappings).filter(([_, id]) => id !== "none" && id !== "__none__").map(([key, id]) => {
+        const scrapedPlayerByKey = new Map(scrapedPlayers.map((player) => [player.key, player]));
+        const playerRows = Object.entries(playerMappings).filter(([_, id]) => id !== "none" && id !== "__none__").map(([key, id]) => {
+          const player = scrapedPlayerByKey.get(key);
+          if (player) {
+            return {
+              revsports_player_id: player.revsportsPlayerId || null,
+              revsports_player_name: player.playerName,
+              club_name: player.clubName || null,
+              grade: player.grade,
+              team: player.team,
+              jersey: player.jersey || null,
+              is_fillin: player.isFillin,
+              profile_id: id
+            };
+          }
+
           const [revsports_player_name, club_name, grade, team, jersey, is_fillin_str] = key.split("|||");
-          return { revsports_player_name, club_name: club_name || null, grade, team, jersey: jersey || null, is_fillin: is_fillin_str === "true", profile_id: id };
+          return {
+            revsports_player_id: null,
+            revsports_player_name,
+            club_name: club_name || null,
+            grade,
+            team,
+            jersey: jersey || null,
+            is_fillin: is_fillin_str === "true",
+            profile_id: id
+          };
         });
-        if (rowsToUpsert.length > 0) {
-          const { error } = await supabase.from("revsports_player_mappings").upsert(rowsToUpsert, { onConflict: "revsports_player_name,club_name,grade,team,jersey,is_fillin" });
+
+        const rowsToUpdateByPlayerId = playerRows.filter(row => row.revsports_player_id && existingPlayerMappingIds.has(row.revsports_player_id));
+        for (const row of rowsToUpdateByPlayerId) {
+          const { revsports_player_id, ...updateRow } = row;
+          const { error } = await supabase
+            .from("revsports_player_mappings")
+            .update(updateRow)
+            .eq("revsports_player_id", revsports_player_id);
           if (error) throw error;
         }
+
+        const rowsToUpsert = playerRows.filter(row => !row.revsports_player_id || !existingPlayerMappingIds.has(row.revsports_player_id));
+        if (rowsToUpsert.length > 0) {
+          const { error } = await supabase
+            .from("revsports_player_mappings")
+            .upsert(rowsToUpsert, { onConflict: "revsports_player_name,club_name,grade,team,jersey,is_fillin" });
+          if (error) throw error;
+        }
+
+        const savedPlayerIds = playerRows.map(row => row.revsports_player_id).filter(Boolean) as string[];
+        setExistingPlayerMappingIds(prev => new Set([...prev, ...savedPlayerIds]));
       } else if (activeTab === "umpires") {
         const rowsToUpsert = Object.entries(umpireMappings).filter(([_, id]) => id !== "__none__").map(([key, id]) => {
           return { revsports_umpire_name: key, profile_id: id };
@@ -583,7 +688,10 @@ export default function RevSportsMappings() {
                       <TableCell>
                         <div>
                           <div className="font-medium">{entry.teamName}</div>
-                          <div className="text-xs text-muted-foreground">{[entry.clubName, entry.grade].filter(Boolean).join(" • ")}</div>
+                          <div className="text-xs text-muted-foreground">{[entry.association, entry.clubName, entry.grade].filter(Boolean).join(" • ")}</div>
+                          {entry.revsportsTeamId ? (
+                            <div className="text-xs text-muted-foreground font-mono">RevSports Team ID: {entry.revsportsTeamId}</div>
+                          ) : null}
                         </div>
                       </TableCell>
                       <TableCell className="w-64 max-w-xs">
@@ -1031,6 +1139,9 @@ export default function RevSportsMappings() {
                           {entry.jersey ? ` • #${entry.jersey}` : ""}
                           {entry.isFillin ? " (fill-in)" : ""}
                         </span>
+                        {entry.revsportsPlayerId ? (
+                          <span className="text-muted-foreground block text-xs font-mono">RevSports ID: {entry.revsportsPlayerId}</span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="w-64 max-w-xs">
                         <Select value={currentValue} onValueChange={(val) => setPlayerMappings(prev => ({ ...prev, [entry.key]: val }))}>
@@ -1038,12 +1149,12 @@ export default function RevSportsMappings() {
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemProfiles.map(profile => (
-                              <SelectItem key={profile.id} value={profile.id}>{profile.firstName} {profile.lastName}</SelectItem>
+                              <SelectItem key={profile.id} value={profile.id}>{getProfileDisplayName(profile)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">profiles.id</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">revsports_player_mappings.profile_id</TableCell>
                       <TableCell className="text-right pr-6">
                         {isMapped ? <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Mapped</Badge> : <Badge variant="secondary">Unmapped</Badge>}
                       </TableCell>
@@ -1116,7 +1227,7 @@ export default function RevSportsMappings() {
                           <SelectContent>
                             <SelectItem value="__none__">— Not mapped —</SelectItem>
                             {systemProfiles.map(profile => (
-                              <SelectItem key={profile.id} value={profile.id}>{profile.firstName} {profile.lastName}</SelectItem>
+                              <SelectItem key={profile.id} value={profile.id}>{getProfileDisplayName(profile)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>

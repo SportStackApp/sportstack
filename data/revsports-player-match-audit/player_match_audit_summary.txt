@@ -1,0 +1,22 @@
+RevSports player match audit
+Generated: 2026-06-19T01:05:03
+
+Player entities checked: 687
+SportStack profiles checked: 712
+Active team membership contexts used: 1212
+
+By classification:
+- already_mapped: 7
+- no_likely_match: 14
+- review: 32
+- strong: 634
+
+By association:
+- Hockey Ballarat: 447 total, 440 not already mapped
+- Sunraysia Hockey Association: 240 total, 240 not already mapped
+
+Notes:
+- This report is read-only. It does not create or update external_entity_links.
+- Strong means the name and context line up well.
+- Review means there is a reasonable candidate but Aaron should check it.
+- Weak/no_likely_match should not be mapped without manual checking.

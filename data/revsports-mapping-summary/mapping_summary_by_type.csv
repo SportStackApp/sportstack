@@ -1,0 +1,18 @@
+association,entity_type,total,matched,ignored,no_link,unmatched,needs_review,needs_attention
+Hockey Ballarat,club,6,6,0,0,0,0,0
+Hockey Ballarat,team,37,37,0,0,0,0,0
+Hockey Ballarat,player,447,435,0,12,0,0,12
+Hockey Ballarat,grade,6,6,0,0,0,0,0
+Hockey Ballarat,venue,2,2,0,0,0,0,0
+Hockey Ballarat,pitch,6,6,0,0,0,0,0
+Sunraysia Hockey Association,club,5,5,0,0,0,0,0
+Sunraysia Hockey Association,team,35,26,0,9,0,0,9
+Sunraysia Hockey Association,player,240,236,0,4,0,0,4
+Sunraysia Hockey Association,grade,9,8,0,1,0,0,1
+Sunraysia Hockey Association,venue,3,3,0,0,0,0,0
+Sunraysia Hockey Association,pitch,4,4,0,0,0,0,0
+Wimmera Hockey Association,club,23,23,0,0,0,0,0
+Wimmera Hockey Association,team,23,23,0,0,0,0,0
+Wimmera Hockey Association,grade,4,4,0,0,0,0,0
+Wimmera Hockey Association,venue,5,5,0,0,0,0,0
+Wimmera Hockey Association,pitch,5,5,0,0,0,0,0

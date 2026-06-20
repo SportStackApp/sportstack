@@ -127,6 +127,7 @@ jobs:
           ASSOCIATION_NAME:     "Sunraysia Hockey Association"
           OUTPUT_DIR:           "data/sunraysia"
           UPSERT_SUPABASE:      ${{ env.UPLOAD_TO_SUPABASE }}
+          UPSERT_SUPABASE_V2:   ${{ env.UPLOAD_TO_SUPABASE }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           ONLY_GRADES:          ${{ github.event.inputs.only_grades || '' }}
