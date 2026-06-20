@@ -15,7 +15,7 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Download, Calendar, Upload, Pencil, Trash2, Plus, Save, X } from "lucide-react";
+import { Download, Calendar, Upload, Pencil, Trash2, Plus, Save, X, Eye, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTeamContext } from "@/contexts/TeamContext";
@@ -34,9 +34,27 @@ interface FixtureRow {
   away_team_id: string | null;
   venue_id: string | null;
   pitch_id: string | null;
+  revsports_match_url: string | null;
   home_team: { id: string; name: string } | null;
   away_team: { id: string; name: string } | null;
   venue: { id: string; name: string } | null;
+}
+
+interface RevSportsPlayer {
+  id: string;
+  fixture_id: string | null;
+  team_side: "home" | "away";
+  attended: boolean;
+  jersey: string | null;
+  player_name: string | null;
+  is_captain: boolean;
+  is_fillin: boolean;
+  goals: number;
+  green_cards: number;
+  yellow_cards: number;
+  red_cards: number;
+  umpire_1: string | null;
+  umpire_2: string | null;
 }
 
 interface FixtureForm {
@@ -68,7 +86,7 @@ const emptyForm: FixtureForm = {
 };
 
 const FIXTURE_SELECT =
-  "id, fixture_date, status, home_score, away_score, notes, round_number, venue_id, pitch_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
+  "id, fixture_date, status, home_score, away_score, notes, round_number, venue_id, pitch_id, home_team_id, away_team_id, revsports_match_url, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
 
 const splitDateTime = (value: string | null) => {
   if (!value) return { fixture_date: "", game_time: "" };
@@ -115,6 +133,10 @@ const FixturesManagement = () => {
     awayScore: "",
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [detailsFixture, setDetailsFixture] = useState<FixtureRow | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [rosterPlayers, setRosterPlayers] = useState<RevSportsPlayer[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState<FixtureForm>(emptyForm);
@@ -297,6 +319,32 @@ const FixturesManagement = () => {
     setIsEditModalOpen(true);
   };
 
+  const openDetails = async (fixture: FixtureRow) => {
+    setDetailsFixture(fixture);
+    setIsDetailsOpen(true);
+    setDetailsLoading(true);
+    setRosterPlayers([]);
+
+    try {
+      const { data, error } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .from("revsports_players" as any)
+        .select("*")
+        .eq("fixture_id", fixture.id);
+
+      if (error) {
+        toast({ title: "Error fetching details", description: error.message, variant: "destructive" });
+      } else {
+        setRosterPlayers((data as RevSportsPlayer[]) || []);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast({ title: "Error", description: message, variant: "destructive" });
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
   const handleUpdateFixture = async () => {
     if (!selectedFixture) return;
     if (!editForm.homeTeamId || !editForm.date) {
@@ -398,6 +446,35 @@ const FixturesManagement = () => {
       </Select>
     );
   };
+
+  const homePlayers = rosterPlayers
+    .filter((p) => p.team_side === "home" && p.attended === true)
+    .sort((a, b) => {
+      const numA = parseInt(a.jersey, 10);
+      const numB = parseInt(b.jersey, 10);
+      const hasA = !isNaN(numA);
+      const hasB = !isNaN(numB);
+      if (hasA && hasB) return numA - numB;
+      if (hasA) return -1;
+      if (hasB) return 1;
+      return (a.player_name || "").localeCompare(b.player_name || "");
+    });
+
+  const awayPlayers = rosterPlayers
+    .filter((p) => p.team_side === "away" && p.attended === true)
+    .sort((a, b) => {
+      const numA = parseInt(a.jersey, 10);
+      const numB = parseInt(b.jersey, 10);
+      const hasA = !isNaN(numA);
+      const hasB = !isNaN(numB);
+      if (hasA && hasB) return numA - numB;
+      if (hasA) return -1;
+      if (hasB) return 1;
+      return (a.player_name || "").localeCompare(b.player_name || "");
+    });
+
+  const umpire1 = rosterPlayers.length > 0 ? rosterPlayers[0].umpire_1 : null;
+  const umpire2 = rosterPlayers.length > 0 ? rosterPlayers[0].umpire_2 : null;
 
   const displayFixtures = fixtures.filter((fixture) => {
     const matchesStatus = filterStatus === "ALL" || fixture.status === filterStatus;
@@ -580,6 +657,9 @@ const FixturesManagement = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center gap-1 justify-end">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetails(fixture)} aria-label="View match details" title="View match details">
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(fixture)}><Pencil className="h-3 w-3" /></Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setDeleteTarget(fixture.id); setDeleteDialogOpen(true); }}><Trash2 className="h-3 w-3" /></Button>
                           </div>
@@ -820,9 +900,219 @@ const FixturesManagement = () => {
               </div>
             </div>
           </div>
+          <DialogFooter className="flex flex-row justify-between items-center w-full">
+            <div>
+              {selectedFixture?.revsports_match_url && (
+                <a
+                  href={selectedFixture.revsports_match_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:underline"
+                >
+                  View on RevSports
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+              <Button onClick={handleUpdateFixture}>Update</Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Match Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Match Details</DialogTitle>
+            <DialogDescription>
+              Captured RevSports data for this fixture.
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailsLoading ? (
+            <div className="space-y-4 py-4">
+              <Skeleton className="h-10 w-full" />
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-40 w-full" />
+              </div>
+              <Skeleton className="h-8 w-2/3" />
+            </div>
+          ) : rosterPlayers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No RevSports data captured for this match yet.
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Header Context */}
+              <div className="bg-muted/40 p-4 rounded-lg space-y-3">
+                <div className="flex flex-wrap items-center justify-between text-xs text-muted-foreground gap-2">
+                  <span>Round {detailsFixture?.round_number ?? "-"}</span>
+                  <span>
+                    {detailsFixture?.fixture_date
+                      ? new Date(detailsFixture.fixture_date).toLocaleDateString("en-AU", {
+                          weekday: "short",
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          timeZone: "Australia/Melbourne",
+                        })
+                      : "TBD"}
+                  </span>
+                  <span>{detailsFixture?.venue?.name ?? "TBD"}</span>
+                </div>
+                <div className="flex items-center justify-between font-display text-lg">
+                  <span className="font-semibold">{detailsFixture?.home_team?.name ?? "Unknown"}</span>
+                  <span className="font-bold bg-muted px-3 py-1 rounded-md">
+                    {detailsFixture?.home_score !== null && detailsFixture?.away_score !== null
+                      ? `${detailsFixture.home_score} – ${detailsFixture.away_score}`
+                      : "vs"}
+                  </span>
+                  <span className="font-semibold text-right">{detailsFixture?.away_team?.name ?? "BYE"}</span>
+                </div>
+              </div>
+
+              {/* Roster Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Home Team */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm border-b pb-2 text-primary">
+                    {detailsFixture?.home_team?.name ?? "Home Team"}
+                  </h4>
+                  {homePlayers.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">No home players registered</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-2">
+                      {homePlayers.map((player) => (
+                        <div key={player.id} className="flex items-center justify-between text-sm py-1 border-b border-border/20 last:border-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
+                              {player.jersey ? `#${player.jersey}` : "—"}
+                            </span>
+                            <span className="truncate font-medium">{player.player_name}</span>
+                            {player.is_captain && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-300 text-amber-700 bg-amber-50">
+                                C
+                              </Badge>
+                            )}
+                            {player.is_fillin && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-blue-200 text-blue-700 bg-blue-50">
+                                Fill-in
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 text-xs">
+                            {player.goals > 0 && (
+                              <Badge className="bg-green-600 hover:bg-green-600 text-white font-semibold">
+                                {player.goals} {player.goals === 1 ? "Goal" : "Goals"}
+                              </Badge>
+                            )}
+                            {player.green_cards > 0 && (
+                              <span className="w-4 h-5 bg-green-500 rounded flex items-center justify-center text-[10px] text-white font-bold" title="Green Card">
+                                {player.green_cards}
+                              </span>
+                            )}
+                            {player.yellow_cards > 0 && (
+                              <span className="w-4 h-5 bg-yellow-500 rounded flex items-center justify-center text-[10px] text-black font-bold" title="Yellow Card">
+                                {player.yellow_cards}
+                              </span>
+                            )}
+                            {player.red_cards > 0 && (
+                              <span className="w-4 h-5 bg-red-600 rounded flex items-center justify-center text-[10px] text-white font-bold" title="Red Card">
+                                {player.red_cards}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Away Team */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm border-b pb-2 text-primary text-right md:text-left">
+                    {detailsFixture?.away_team?.name ?? "Away Team"}
+                  </h4>
+                  {awayPlayers.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">No away players registered</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-2">
+                      {awayPlayers.map((player) => (
+                        <div key={player.id} className="flex items-center justify-between text-sm py-1 border-b border-border/20 last:border-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
+                              {player.jersey ? `#${player.jersey}` : "—"}
+                            </span>
+                            <span className="truncate font-medium">{player.player_name}</span>
+                            {player.is_captain && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-300 text-amber-700 bg-amber-50">
+                                C
+                              </Badge>
+                            )}
+                            {player.is_fillin && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-blue-200 text-blue-700 bg-blue-50">
+                                Fill-in
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 text-xs">
+                            {player.goals > 0 && (
+                              <Badge className="bg-green-600 hover:bg-green-600 text-white font-semibold">
+                                {player.goals} {player.goals === 1 ? "Goal" : "Goals"}
+                              </Badge>
+                            )}
+                            {player.green_cards > 0 && (
+                              <span className="w-4 h-5 bg-green-500 rounded flex items-center justify-center text-[10px] text-white font-bold" title="Green Card">
+                                {player.green_cards}
+                              </span>
+                            )}
+                            {player.yellow_cards > 0 && (
+                              <span className="w-4 h-5 bg-yellow-500 rounded flex items-center justify-center text-[10px] text-black font-bold" title="Yellow Card">
+                                {player.yellow_cards}
+                              </span>
+                            )}
+                            {player.red_cards > 0 && (
+                              <span className="w-4 h-5 bg-red-600 rounded flex items-center justify-center text-[10px] text-white font-bold" title="Red Card">
+                                {player.red_cards}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Umpires Section */}
+              {(umpire1 || umpire2) && (
+                <div className="border-t pt-4 space-y-2">
+                  <h4 className="font-semibold text-sm text-muted-foreground">Match Umpires</h4>
+                  <div className="flex gap-4 text-sm font-medium">
+                    {umpire1 && (
+                      <div className="bg-muted px-3 py-1.5 rounded-md flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground">Umpire 1:</span>
+                        {umpire1}
+                      </div>
+                    )}
+                    {umpire2 && (
+                      <div className="bg-muted px-3 py-1.5 rounded-md flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground">Umpire 2:</span>
+                        {umpire2}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleUpdateFixture}>Update</Button>
+            <Button onClick={() => setIsDetailsOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

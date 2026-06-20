@@ -49,9 +49,25 @@ interface Membership {
   club_id?: string;
 }
 
+interface PendingInviteRow {
+  id: string;
+  target_user_id: string;
+  team_id: string;
+  membership_type: string;
+}
+
+interface PendingInvite {
+  id: string;
+  team_id: string;
+  team_name?: string;
+  club_id?: string;
+  membership_type: string;
+}
+
 interface UserWithRoles extends Profile {
   roles: AppRole[];
   memberships: Membership[];
+  pendingInvites: PendingInvite[];
 }
 
 interface RoleWithScope {
@@ -205,6 +221,12 @@ const UsersManagement = () => {
       membershipsData = data || [];
     }
 
+    const { data: pendingInvitesData } = await supabase
+      .from("requests" as never)
+      .select("id, target_user_id, team_id, membership_type")
+      .eq("request_type", "TEAM_INVITE")
+      .eq("status", "PENDING");
+
     const memberUserIds = [...new Set(membershipsData.map((m) => m.user_id))];
 
     let profiles: Profile[] = [];
@@ -234,10 +256,23 @@ const UsersManagement = () => {
             club_id: team?.club_id,
           };
         }),
+      pendingInvites: ((pendingInvitesData as unknown as PendingInviteRow[]) || [])
+        .filter((r) => r.target_user_id === profile.id)
+        .map((r) => {
+          const team = teamsList.find((t) => t.id === r.team_id);
+          return {
+            id: r.id,
+            team_id: r.team_id,
+            team_name: team?.name,
+            club_id: team?.club_id,
+            membership_type: r.membership_type,
+          };
+        }),
     }));
 
     setUsers(usersWithRoles);
     setLoading(false);
+    return usersWithRoles;
   };
 
   const fetchPrimaryRequests = async () => {
@@ -412,7 +447,12 @@ const UsersManagement = () => {
       toast({ title: "Error", description: "Failed to approve", variant: "destructive" });
     } else {
       toast({ title: "Approved", description: "Membership approved" });
-      fetchUsers();
+      const freshUsers = await fetchUsers();
+      setSelectedUser((prev) => {
+        if (!prev) return prev;
+        const updated = freshUsers.find((u) => u.id === prev.id);
+        return updated ? { ...updated } : prev;
+      });
     }
   };
 
@@ -422,7 +462,12 @@ const UsersManagement = () => {
       toast({ title: "Error", description: "Failed to decline", variant: "destructive" });
     } else {
       toast({ title: "Declined", description: "Membership declined" });
-      fetchUsers();
+      const freshUsers = await fetchUsers();
+      setSelectedUser((prev) => {
+        if (!prev) return prev;
+        const updated = freshUsers.find((u) => u.id === prev.id);
+        return updated ? { ...updated } : prev;
+      });
     }
   };
 
@@ -607,6 +652,28 @@ const UsersManagement = () => {
           setAssignSaving(false);
           return;
         }
+
+        // Warn if this player already has an active primary team elsewhere —
+        // approving this new invite later will replace it.
+        const { data: existingActivePrimary, error: activeCheckError } = await supabase
+          .from("team_memberships")
+          .select("id, teams(name)")
+          .eq("user_id", selectedUser.id)
+          .eq("membership_type", "PRIMARY")
+          .eq("status", "ACTIVE");
+
+        if (activeCheckError) throw activeCheckError;
+
+        if ((existingActivePrimary || []).length > 0) {
+          const currentPrimaryName = (existingActivePrimary[0] as unknown as { teams: { name: string } | null })?.teams?.name || "their current team";
+          const confirmed = window.confirm(
+            `${selectedUser.first_name} ${selectedUser.last_name} is currently primary for ${currentPrimaryName}. If this new invite is approved, it will replace that as their primary team. Continue?`
+          );
+          if (!confirmed) {
+            setAssignSaving(false);
+            return;
+          }
+        }
       }
 
       const { error } = await supabase.from("requests" as any).insert({
@@ -629,7 +696,12 @@ const UsersManagement = () => {
         setAssignAssociationId("");
         setAssignClubId("");
         setAssignDivision("");
-        fetchUsers();
+        const freshUsers = await fetchUsers();
+        setSelectedUser((prev) => {
+          if (!prev) return prev;
+          const updated = freshUsers.find((u) => u.id === prev.id);
+          return updated ? { ...updated } : prev;
+        });
       }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -680,7 +752,32 @@ const UsersManagement = () => {
     }
 
     toast({ title: "Membership removed" });
-    fetchUsers();
+    const freshUsers = await fetchUsers();
+    setSelectedUser((prev) => {
+      if (!prev) return prev;
+      const updated = freshUsers.find((u) => u.id === prev.id);
+      return updated ? { ...updated } : prev;
+    });
+  };
+
+  const handleCancelInvite = async (requestId: string) => {
+    const { error } = await supabase
+      .from("requests" as never)
+      .update({ status: "CANCELLED", cancelled_by: user?.id })
+      .eq("id", requestId);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Invite cancelled" });
+    const freshUsers = await fetchUsers();
+    setSelectedUser((prev) => {
+      if (!prev) return prev;
+      const updated = freshUsers.find((u) => u.id === prev.id);
+      return updated ? { ...updated } : prev;
+    });
   };
 
   const getClubsForAssociation = (assocId: string | null) => {
@@ -1317,7 +1414,7 @@ const UsersManagement = () => {
                 </Button>
               </div>
 
-              {selectedUser && selectedUser.memberships.length > 0 ? (
+              {selectedUser && (selectedUser.memberships.length > 0 || selectedUser.pendingInvites.length > 0) ? (
                 <div className="space-y-1">
                   {selectedUser.memberships.map((m) => (
                     <div key={m.id} className="flex items-center justify-between gap-2 text-sm py-1 border-b border-border/40 last:border-0">
@@ -1358,6 +1455,34 @@ const UsersManagement = () => {
                       </div>
                     </div>
                   ))}
+
+                  {selectedUser && selectedUser.pendingInvites.length > 0 && (
+                    <div className="space-y-1 mt-1">
+                      {selectedUser.pendingInvites.map((invite) => (
+                        <div key={invite.id} className="flex items-center justify-between gap-2 text-sm py-1 border-b border-border/40 last:border-0">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <Badge variant="outline" className="text-xs shrink-0">
+                              {invite.team_name || "Unknown"}
+                            </Badge>
+                            <Badge className="text-xs shrink-0 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300" variant="secondary">
+                              {invite.membership_type}
+                            </Badge>
+                            <Badge className="text-xs shrink-0" variant="outline">
+                              Pending
+                            </Badge>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs px-2 text-destructive hover:text-destructive"
+                            onClick={() => handleCancelInvite(invite.id)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No team memberships</p>
