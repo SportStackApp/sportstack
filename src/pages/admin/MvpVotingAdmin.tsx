@@ -565,7 +565,7 @@ export default function MvpVotingAdmin() {
                         <span className="text-muted-foreground block text-xs">Voting Opened</span>
                         <span className="font-semibold flex items-center gap-1.5 mt-0.5">
                           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                          {formatDateTimeString(sessionDetails.opens_at)}
+                          {formatDateTimeString(sessionDetails.opened_at)}
                         </span>
                       </div>
                       <div>
