@@ -27,7 +27,7 @@ interface MvpSession {
   home_team: string;
   away_team: string;
   status: string;
-  opens_at: string;
+  opened_at: string;
   closes_at: string;
   votedCount?: number;
   totalVoters?: number;
@@ -46,6 +46,11 @@ interface VoterStatus {
   player_name: string;
 }
 
+interface Shoutout {
+  voterName: string;
+  text: string;
+}
+
 export default function MvpVotingAdmin() {
   const { toast } = useToast();
   const { loading: scopeLoading, isSuperAdmin, highestScopedRole } = useAdminScope();
@@ -62,6 +67,7 @@ export default function MvpVotingAdmin() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [results, setResults] = useState<RankedResult[]>([]);
   const [voters, setVoters] = useState<VoterStatus[]>([]);
+  const [shoutouts, setShoutouts] = useState<Shoutout[]>([]);
 
   // Dialog and action states
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -85,34 +91,29 @@ export default function MvpVotingAdmin() {
         // Fetch eligible voters and votes cast counts per session
         const sessionsWithCounts = await Promise.all(
           data.map(async (session: any) => {
-            // Count total tokens (eligible voters)
-            const { count: tokenCount } = await supabase
-              .from("mvp_vote_tokens")
+            // votedCount = number of people who have submitted (login-based model)
+            const { count: submissionCount } = await supabase
+              .from("mvp_vote_submissions")
               .select("*", { count: "exact", head: true })
               .eq("session_id", session.id);
 
-            // Fetch token IDs to query mvp_votes cast
-            const { data: sessionTokens } = await supabase
-              .from("mvp_vote_tokens")
-              .select("id")
-              .eq("session_id", session.id);
-
-            const tokenIds = (sessionTokens || []).map((t: any) => t.id);
-            let votedCount = 0;
-
-            if (tokenIds.length > 0) {
-              const { data: votesData } = await supabase
-                .from("mvp_votes")
-                .select("token_id")
-                .in("token_id", tokenIds);
-
-              votedCount = new Set((votesData || []).map((v: any) => v.token_id)).size;
+            // totalVoters = eligible pool = distinct attended players in this fixture
+            // who have a linked profile (registered users able to log in and vote)
+            let totalVoters = 0;
+            if (session.fixture_id) {
+              const { data: attendedRows } = await supabase
+                .from("revsports_players")
+                .select("profile_id")
+                .eq("fixture_id", session.fixture_id)
+                .eq("attended", true)
+                .not("profile_id", "is", null);
+              totalVoters = new Set((attendedRows || []).map((r: any) => r.profile_id)).size;
             }
 
             return {
               ...session,
-              votedCount,
-              totalVoters: tokenCount || 0,
+              votedCount: submissionCount || 0,
+              totalVoters,
             };
           })
         );
@@ -145,84 +146,126 @@ export default function MvpVotingAdmin() {
 
       setSessionDetails(sessionRow);
 
-      // 2. Fetch all tokens for this session
-      const { data: tokensData, error: tErr } = await supabase
-        .from("mvp_vote_tokens")
-        .select("*")
+      // 2. Fetch all submissions for this session (login-based model).
+      //    Each row = one voter who has voted, plus their optional shoutout text.
+      const { data: submissionsData, error: subErr } = await supabase
+        .from("mvp_vote_submissions")
+        .select("id, voter_profile_id, shoutout, submitted_at")
         .eq("session_id", sessionId);
 
-      if (tErr) throw tErr;
+      if (subErr) throw subErr;
 
-      const tokenIds = (tokensData || []).map((t: any) => t.id);
-      const playerIds = (tokensData || []).map((t: any) => t.revsports_player_id).filter(Boolean);
+      const submissions = submissionsData || [];
+      const votedProfileIds = new Set(submissions.map((s: any) => s.voter_profile_id));
 
-      // Fetch player names mapping
-      let playersMap: Record<string, string> = {};
-      if (playerIds.length > 0) {
-        const { data: playersData } = await supabase
+      // 3. Build the eligible-voter list = distinct attended players in this fixture
+      //    who have a linked profile. Mark who has voted (has a submission row).
+      let mappedVoters: VoterStatus[] = [];
+      const profileNameMap: Record<string, string> = {};
+      if (sessionRow.fixture_id) {
+        const { data: attendedRows, error: attErr } = await supabase
           .from("revsports_players")
-          .select("id, player_name")
-          .in("id", playerIds);
-        if (playersData) {
-          playersData.forEach((p: any) => {
-            playersMap[p.id] = p.player_name;
+          .select("id, player_name, profile_id")
+          .eq("fixture_id", sessionRow.fixture_id)
+          .eq("attended", true)
+          .not("profile_id", "is", null);
+
+        if (attErr) throw attErr;
+
+        // Resolve real names from profiles for nicer display
+        const profileIds = Array.from(
+          new Set([...(attendedRows || []).map((r: any) => r.profile_id), ...submissions.map((s: any) => s.voter_profile_id)])
+        ).filter(Boolean);
+        if (profileIds.length > 0) {
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, first_name, last_name")
+            .in("id", profileIds);
+          (profs || []).forEach((p: any) => {
+            profileNameMap[p.id] = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
           });
         }
-      }
 
-      // Map voter status list
-      const mappedVoters: VoterStatus[] = (tokensData || []).map((t: any) => ({
-        id: t.id,
-        revsports_player_id: t.revsports_player_id,
-        voted_at: t.voted_at,
-        player_name: playersMap[t.revsports_player_id] || "Unknown Player",
-      }));
+        // Deduplicate by profile_id (a player may appear once per fixture, but be safe)
+        const seen = new Set<string>();
+        mappedVoters = (attendedRows || [])
+          .filter((r: any) => {
+            if (seen.has(r.profile_id)) return false;
+            seen.add(r.profile_id);
+            return true;
+          })
+          .map((r: any) => ({
+            id: r.profile_id,
+            revsports_player_id: r.id,
+            voted_at: votedProfileIds.has(r.profile_id) ? "voted" : null,
+            player_name: profileNameMap[r.profile_id] || r.player_name || "Unknown Player",
+          }));
+      }
       setVoters(mappedVoters);
 
-      // 3. Load votes and calculate ranked leaderboard
+      // 4. Shoutouts (Grampians Champion) = non-empty shoutout text on submissions
+      const mappedShoutouts: Shoutout[] = submissions
+        .filter((s: any) => s.shoutout && s.shoutout.trim() !== "")
+        .map((s: any) => ({
+          voterName: profileNameMap[s.voter_profile_id] || "A teammate",
+          text: s.shoutout.trim(),
+        }));
+      setShoutouts(mappedShoutouts);
+
+      // 5. Load votes for this session and calculate the ranked leaderboard.
+      //    Votes are keyed by session_id (not token_id) in the login-based model.
+      //    player_id points at a revsports_players row id.
       let rankedResults: RankedResult[] = [];
-      if (tokenIds.length > 0) {
-        const { data: votesData, error: vErr } = await supabase
-          .from("mvp_votes")
-          .select("player_id, points")
-          .in("token_id", tokenIds);
+      const { data: votesData, error: vErr } = await supabase
+        .from("mvp_votes")
+        .select("player_id, points")
+        .eq("session_id", sessionId);
 
-        if (vErr) throw vErr;
+      if (vErr) throw vErr;
 
-        if (votesData && votesData.length > 0) {
-          const uniqueRecipients = Array.from(new Set(votesData.map((v: any) => v.player_id)));
-          let recipientNamesMap: Record<string, string> = {};
+      if (votesData && votesData.length > 0) {
+        const uniqueRecipients = Array.from(new Set(votesData.map((v: any) => v.player_id)));
+        const recipientNamesMap: Record<string, string> = {};
 
-          if (uniqueRecipients.length > 0) {
-            const { data: recipientsData } = await supabase
-              .from("revsports_players")
-              .select("id, player_name")
-              .in("id", uniqueRecipients);
+        if (uniqueRecipients.length > 0) {
+          // Get revsports rows (for name + profile link)
+          const { data: recipientsData } = await supabase
+            .from("revsports_players")
+            .select("id, player_name, profile_id")
+            .in("id", uniqueRecipients);
 
-            if (recipientsData) {
-              recipientsData.forEach((r: any) => {
-                recipientNamesMap[r.id] = r.player_name;
-              });
-            }
+          // Prefer the real profile name where we have it, else the scraped name
+          const recProfileIds = (recipientsData || []).map((r: any) => r.profile_id).filter(Boolean);
+          const recProfileNames: Record<string, string> = {};
+          if (recProfileIds.length > 0) {
+            const { data: recProfs } = await supabase
+              .from("profiles")
+              .select("id, first_name, last_name")
+              .in("id", recProfileIds);
+            (recProfs || []).forEach((p: any) => {
+              recProfileNames[p.id] = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
+            });
           }
-
-          // Group and sum points
-          const groups: Record<string, { name: string; points: number }> = {};
-          votesData.forEach((v: any) => {
-            const name = recipientNamesMap[v.player_id] || "Unknown Player";
-            if (!groups[v.player_id]) {
-              groups[v.player_id] = { name, points: 0 };
-            }
-            groups[v.player_id].points += v.points || 0;
+          (recipientsData || []).forEach((r: any) => {
+            recipientNamesMap[r.id] = (r.profile_id && recProfileNames[r.profile_id]) || r.player_name || "Unknown Player";
           });
-
-          // Sort by points descending
-          rankedResults = Object.entries(groups).map(([playerId, val]) => ({
-            playerId,
-            name: val.name,
-            points: val.points,
-          })).sort((a, b) => b.points - a.points);
         }
+
+        // Group and sum points by recipient
+        const groups: Record<string, { name: string; points: number }> = {};
+        votesData.forEach((v: any) => {
+          const name = recipientNamesMap[v.player_id] || "Unknown Player";
+          if (!groups[v.player_id]) {
+            groups[v.player_id] = { name, points: 0 };
+          }
+          groups[v.player_id].points += v.points || 0;
+        });
+
+        rankedResults = Object.entries(groups).map(([playerId, val]) => ({
+          playerId,
+          name: val.name,
+          points: val.points,
+        })).sort((a, b) => b.points - a.points);
       }
       setResults(rankedResults);
 
@@ -302,21 +345,24 @@ export default function MvpVotingAdmin() {
     if (!selectedCancelToken || !sessionDetails) return;
     setActionLoading(true);
     try {
-      // 1. Delete votes
+      // In the login-based model, selectedCancelToken.id holds the voter's PROFILE id.
+      // 1. Delete this voter's three vote rows for this session.
       const { error: delErr } = await supabase
         .from("mvp_votes")
         .delete()
-        .eq("token_id", selectedCancelToken.id);
+        .eq("session_id", sessionDetails.id)
+        .eq("voter_profile_id", selectedCancelToken.id);
 
       if (delErr) throw delErr;
 
-      // 2. Clear voted_at on token
-      const { error: tokErr } = await supabase
-        .from("mvp_vote_tokens")
-        .update({ voted_at: null })
-        .eq("id", selectedCancelToken.id);
+      // 2. Delete their submission row so they show as "Pending" and can re-vote.
+      const { error: subDelErr } = await supabase
+        .from("mvp_vote_submissions")
+        .delete()
+        .eq("session_id", sessionDetails.id)
+        .eq("voter_profile_id", selectedCancelToken.id);
 
-      if (tokErr) throw tokErr;
+      if (subDelErr) throw subDelErr;
 
       // 3. Write audit log
       const { data: { user } } = await supabase.auth.getUser();
@@ -665,7 +711,7 @@ export default function MvpVotingAdmin() {
                   <CardContent className="p-0">
                     {voters.length === 0 ? (
                       <div className="p-8 text-center text-muted-foreground text-sm">
-                        No eligible voter tokens exist for this session.
+                        No eligible voters found for this session.
                       </div>
                     ) : (
                       <Table>
@@ -716,6 +762,32 @@ export default function MvpVotingAdmin() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* GRAMPIANS CHAMPION / SHOUTOUTS SECTION */}
+              <Card className="shadow-sm border-border">
+                <CardHeader className="bg-muted/20 border-b py-4">
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-yellow-500 fill-yellow-500/20" /> Grampians Champion
+                  </CardTitle>
+                  <CardDescription>Off-field shoutouts from voters this round</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {shoutouts.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground text-sm">
+                      No shoutouts submitted for this round.
+                    </div>
+                  ) : (
+                    <ul className="divide-y">
+                      {shoutouts.map((s, idx) => (
+                        <li key={idx} className="p-4">
+                          <p className="text-sm text-foreground">“{s.text}”</p>
+                          <p className="text-xs text-muted-foreground mt-1">— {s.voterName}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
             </>
           )}
         </div>

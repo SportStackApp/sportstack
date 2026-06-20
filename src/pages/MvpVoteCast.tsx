@@ -115,21 +115,30 @@ export default function MvpVoteCast() {
           return;
         }
 
-        // 4. Fetch all other active players in same fixture & team
-        const { data: teammateRows, error: teammateErr } = await supabase
+        // 4. Fetch ALL attended players in this fixture, then filter in JS.
+        // We match on the voter's team value INCLUDING null. PostgREST .eq() cannot
+        // match null (SQL "= null" is never true), and for many Grampians fixtures the
+        // Pumas players come through from the scraper with team = null while the
+        // opposition has a real team name. So we fetch everything and compare in JS,
+        // where null === null works correctly. This keeps the voter on their own side
+        // of the game (teammates + fill-ins) and excludes the opposition.
+        const { data: allRows, error: teammateErr } = await supabase
           .from("revsports_players")
           .select("id, player_name, team, jersey, profile_id")
           .eq("fixture_id", typedSession.fixture_id)
-          .eq("team", voterRow.team)
           .eq("attended", true);
 
         if (teammateErr) throw teammateErr;
 
-        const typedTeammates = (teammateRows as RevsportsPlayer[]) || [];
-        
-        // Filter out voter themselves: matches either their profile_id or revsports_players primary key
-        const eligible = typedTeammates.filter(
-          (p) => p.id !== voterRow.id && p.profile_id !== user.id
+        const typedRows = (allRows as RevsportsPlayer[]) || [];
+
+        // voterRow.team may be null; (a == null && b == null) || a === b handles both cases
+        const sameSide = (rowTeam: string | null) =>
+          (rowTeam == null && voterRow.team == null) || rowTeam === voterRow.team;
+
+        // Eligible = same side as voter, excluding the voter themselves
+        const eligible = typedRows.filter(
+          (p) => sameSide(p.team) && p.id !== voterRow.id && p.profile_id !== user.id
         );
 
         // Sort alphabetically
