@@ -1,7 +1,7 @@
 DATA QUALITY REPORT - Hockey Ballarat
-Generated: 2026-06-19T23:11:10.467191
+Generated: 2026-06-20T00:38:31.930166
 ------------------------------------------------------------
-Rows checked: 6,535
+Rows checked: 6,539
 Issues found: 0
 Warnings found: 42
 
@@ -46,8 +46,8 @@ Merged duplicate player appearance: Troy S. - Bobcats - Div 2 Men - https://www.
 Merged duplicate player appearance: Olivia H. - Lucas HC - Div 2 Men - https://www.revolutionise.com.au/hockeyballarat/game/2524190; 2 source rows became 1 row.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563879 - score Blaze U11 Blaze Orange 7 - 1 Blaze U11 Blaze Red; listed player goals home 7 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563878 - score Bobcats Bobcats Maroon 2 - 1 Blaze U11 Blaze Green; listed player goals home 4 - away 1.
-RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563882 - score Lucas HC U11 5 - 3 Blaze U11 Blaze Pink; listed player goals home 7 - away 3.
-RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563883 - score Blaze U11 Blaze Black 2 - 3 EGC EGC Gold; listed player goals home 2 - away 2.
+RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563883 - score Blaze U11 Blaze Black 2 - 3 EGC EGC Gold; listed player goals home 3 - away 2.
+RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563969 - score Bobcats U14 0 - 2 Blaze U14 Blaze Orange; listed player goals home 0 - away 1.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2564816 - score Blaze U16 Blaze 1 - 2 EGC EGC; listed player goals home 0 - away 2.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2522120 - score SOBHC Ducks Men 0 - 5 Lucas HC Div 1 Men; listed player goals home 0 - away 6.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2524186 - score Grampians Hockey Club Grampians Hockey Club 14 - 0 EGC EGC Gold; listed player goals home 16 - away 0.
