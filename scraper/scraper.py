@@ -98,6 +98,11 @@ OUTPUT_COLUMNS = [
     "match_url",
     "scraped_at",
     "appearance_key",
+    "revsports_competition_id",
+    "revsports_grade_id",
+    "revsports_venue_id",
+    "revsports_venue_url",
+    "revsports_match_id",
 ]
 
 QUALITY_WARNINGS: list[str] = []
@@ -1172,7 +1177,19 @@ def get_all_grades(session: requests.Session, base_url: str) -> list[dict]:
                 seen.add(href)
                 name = clean_text(tag.get_text(" ", strip=True))
                 if name:
-                    grades.append({"name": name, "url": href, "competition_name": current_competition})
+                    comp_id = ""
+                    grade_id = ""
+                    match_ids = re.search(r"/games/(\d+)/(\d+)$", urlparse(href).path)
+                    if match_ids:
+                        comp_id = match_ids.group(1)
+                        grade_id = match_ids.group(2)
+                    grades.append({
+                        "name": name,
+                        "url": href,
+                        "competition_name": current_competition,
+                        "competition_id": comp_id,
+                        "grade_id": grade_id,
+                    })
 
     return grades
 
@@ -1191,7 +1208,21 @@ def get_rounds(session: requests.Session, grade_url: str) -> list[dict]:
             seen.add(href)
             label = clean_text(a.get_text(" ", strip=True))
             if label:
-                rounds.append({"round_label": label, "url": href})
+                comp_id = ""
+                grade_id = ""
+                rnd_num = ""
+                match_ids = re.search(r"/games/(\d+)/(\d+)/round/(\d+)", urlparse(href).path)
+                if match_ids:
+                    comp_id = match_ids.group(1)
+                    grade_id = match_ids.group(2)
+                    rnd_num = match_ids.group(3)
+                rounds.append({
+                    "round_label": label,
+                    "url": href,
+                    "competition_id": comp_id,
+                    "grade_id": grade_id,
+                    "round_number": rnd_num,
+                })
     return rounds
 
 
@@ -1227,6 +1258,8 @@ def extract_round_card_details(card, round_url: str) -> dict:
         "round_home_score": "",
         "round_away_score": "",
         "round_umpires": [],
+        "round_venue_url": "",
+        "round_venue_id": "",
     }
     if card is None:
         return details
@@ -1241,6 +1274,11 @@ def extract_round_card_details(card, round_url: str) -> dict:
             if href not in details["team_urls"]:
                 details["team_urls"].append(href)
                 details["team_labels"].append(label)
+        elif path_matches(href, r"/venues/\d+/\d+$"):
+            details["round_venue_url"] = href
+            venue_match = re.search(r"/venues/\d+/(\d+)$", urlparse(href).path)
+            if venue_match:
+                details["round_venue_id"] = venue_match.group(1)
 
     raw_text = card.get_text("\n", strip=True)
     lines = [clean_text(l) for l in raw_text.split("\n") if clean_text(l)]
@@ -1416,6 +1454,8 @@ def scrape_match(
     team_labels: list[str] | None = None,
     round_venue: str = "",
     round_pitch: str = "",
+    round_venue_url: str = "",
+    round_venue_id: str = "",
     round_date: str = "",
     round_time: str = "",
     round_home_score: str = "",
@@ -1430,6 +1470,8 @@ def scrape_match(
         "time": round_time or "",
         "venue": round_venue or "",
         "pitch": round_pitch or "",
+        "round_venue_url": round_venue_url or "",
+        "round_venue_id": round_venue_id or "",
         "home_club_name": "",
         "home_team": "",
         "home_team_label": "",
@@ -1667,6 +1709,8 @@ def scrape_bye_match(session: requests.Session, game_info: dict, grade: dict, rn
         "time": "",
         "venue": "",
         "pitch": "",
+        "round_venue_url": "",
+        "round_venue_id": "",
         "home_club_name": team["club_name"],
         "home_team": team["team_name"],
         "home_team_label": team["team_label"],
@@ -1690,6 +1734,12 @@ def scrape_bye_match(session: requests.Session, game_info: dict, grade: dict, rn
 # ----------------------------------------------------------------------------
 
 def base_fixture_row(association: str, grade: dict, rnd: dict, match: dict, game_url: str) -> dict:
+    match_id = ""
+    if game_url and "/game/" in game_url:
+        match_id_match = re.search(r"/game/(\d+)$", urlparse(game_url).path)
+        if match_id_match:
+            match_id = match_id_match.group(1)
+
     return {
         "association": association,
         "competition_name": grade.get("competition_name", association),
@@ -1716,6 +1766,11 @@ def base_fixture_row(association: str, grade: dict, rnd: dict, match: dict, game
         "umpire_2": match.get("umpires", ["", ""])[1] if len(match.get("umpires", [])) > 1 else "",
         "match_url": game_url,
         "scraped_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "revsports_competition_id": grade.get("competition_id") or rnd.get("competition_id") or "",
+        "revsports_grade_id": grade.get("grade_id") or rnd.get("grade_id") or "",
+        "revsports_venue_id": match.get("round_venue_id") or "",
+        "revsports_venue_url": match.get("round_venue_url") or "",
+        "revsports_match_id": match_id,
     }
 
 
@@ -1830,6 +1885,8 @@ def main():
                             team_labels=game_info.get("team_labels", []),
                             round_venue=game_info.get("round_venue", ""),
                             round_pitch=game_info.get("round_pitch", ""),
+                            round_venue_url=game_info.get("round_venue_url", ""),
+                            round_venue_id=game_info.get("round_venue_id", ""),
                             round_date=game_info.get("round_date", ""),
                             round_time=game_info.get("round_time", ""),
                             round_home_score=game_info.get("round_home_score", ""),
