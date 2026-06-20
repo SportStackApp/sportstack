@@ -446,7 +446,10 @@ def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -
     for i, row in enumerate(csv_rows, start=2):
         is_fixture_only = clean_text(row.get("player_name")) == "NO_PLAYERS"
 
+        is_bye = bool_from_text(row.get("is_bye"))
         for field in required_fixture:
+            if field == "game_date" and is_bye:
+                continue
             value = clean_text(row.get(field, ""))
             if not value or value.lower() == "details" or value == "0":
                 issues.append(f"Line {i}: missing or junk required fixture field '{field}'")
@@ -1767,6 +1770,27 @@ def main():
     QUALITY_WARNINGS.clear()
     session = make_session()
 
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
+
+    fixtures_lookup = {}
+    missing_fixtures_counter = 0
+
+    # fixture_id links a scraped player row back to the fixtures table so the app can show "who played in this game" when someone clicks on a fixture.
+    if supabase_url and supabase_key:
+        try:
+            from supabase import create_client
+            print("\nFetching fixtures from Supabase...")
+            client_temp = create_client(supabase_url, supabase_key)
+            fixtures_data = client_temp.table("fixtures").select("id, revsports_match_url").execute().data or []
+            for f in fixtures_data:
+                url = f.get("revsports_match_url")
+                if url:
+                    fixtures_lookup[url] = f.get("id")
+            print(f"Loaded {len(fixtures_lookup)} fixtures for matching.")
+        except Exception as e:
+            print(f"WARNING: Could not fetch fixtures from Supabase: {e}")
+
     all_results = []
     csv_rows = []
 
@@ -1933,8 +1957,11 @@ def main():
             client = create_client(supabase_url, supabase_key)
 
             def clean_row(row: dict) -> dict:
+                nonlocal missing_fixtures_counter
                 cleaned = {}
                 for k, v in row.items():
+                    if k == "is_bye":
+                        continue
                     cleaned[k] = None if v == "" or v is None else v
 
                 for field in ["home_score", "away_score", "goals", "green_cards", "yellow_cards", "red_cards"]:
@@ -1947,6 +1974,17 @@ def main():
                 for field in ["attended", "is_goalkeeper", "is_captain", "is_fillin", "is_removed"]:
                     if cleaned.get(field) is not None:
                         cleaned[field] = str(cleaned[field]).strip().lower() == "true"
+
+                # fixture_id links a scraped player row back to the fixtures table so the app can show "who played in this game" when someone clicks on a fixture.
+                match_url = row.get("match_url")
+                if match_url:
+                    match_url = clean_text(match_url)
+                    if match_url in fixtures_lookup:
+                        cleaned["fixture_id"] = fixtures_lookup[match_url]
+                    else:
+                        missing_fixtures_counter += 1
+                else:
+                    missing_fixtures_counter += 1
 
                 return cleaned
 
@@ -1971,6 +2009,8 @@ def main():
                     raise
 
             print(f"OK: Supabase upsert complete - {total_upserted} rows processed.")
+            if missing_fixtures_counter > 0:
+                print(f"WARNING: {missing_fixtures_counter} rows had no matching fixture — check if fixture import has run for this round yet")
 
         except Exception as e:
             print(f"ERROR: Supabase upsert error: {e}")
