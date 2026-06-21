@@ -7500,7 +7500,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "JbY41u1",
-            "goals": "2",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -7514,7 +7514,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "74eyQc8",
-            "goals": "1",
+            "goals": "3",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -7528,7 +7528,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "EwX61UN",
-            "goals": "2",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -44092,7 +44092,7 @@
             "jersey": "16",
             "is_goalkeeper": false,
             "is_captain": false,
-            "attended": true,
+            "attended": false,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "j9AXluN",
@@ -69132,7 +69132,7 @@
     "away_team_url": "https://www.revolutionise.com.au/hockeyballarat/games/team/26298/417804",
     "away_revsports_team_id": "417804",
     "home_score": "1",
-    "away_score": "3",
+    "away_score": "4",
     "umpires": [
       "Ethan Oldaker",
       "Sara Weuffen-Humphrey"
