@@ -34,3 +34,8 @@ __pycache__/
 
 # Local backups and patch scripts
 notes/backups/
+
+# Local scraper test output
+data/*.csv
+data/*.json
+data/*_quality_report.txt
