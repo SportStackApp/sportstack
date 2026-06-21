@@ -1,9 +1,9 @@
 DATA QUALITY REPORT - Hockey Ballarat
-Generated: 2026-06-21T01:52:07.255625
+Generated: 2026-06-21T04:33:28.443613
 ------------------------------------------------------------
-Rows checked: 6,637
+Rows checked: 6,647
 Issues found: 0
-Warnings found: 41
+Warnings found: 43
 
 No issues found by the basic checker.
 
@@ -21,6 +21,7 @@ Merged duplicate player appearance: Jason H. - Lucas HC - Div 1 Men - https://ww
 Merged duplicate player appearance: Thomas B. - Lucas HC - Div 1 Men - https://www.revolutionise.com.au/hockeyballarat/game/2522116; 2 source rows became 1 row.
 Merged duplicate player appearance: Traiyth L. - Lucas HC - Div 1 Men - https://www.revolutionise.com.au/hockeyballarat/game/2522116; 2 source rows became 1 row.
 Merged duplicate player appearance: James V. - Lucas HC - Div 1 Men - https://www.revolutionise.com.au/hockeyballarat/game/2522120; 2 source rows became 1 row.
+Merged duplicate player appearance: Ned J. - Blaze - Blaze Div 1 Men - https://www.revolutionise.com.au/hockeyballarat/game/2563849; 2 source rows became 1 row.
 Merged duplicate player appearance: Annabelle H. - Lucas HC - Women - https://www.revolutionise.com.au/hockeyballarat/game/2524138; 2 source rows became 1 row.
 Merged duplicate player appearance: Belinda H. - Lucas HC - Women - https://www.revolutionise.com.au/hockeyballarat/game/2524138; 2 source rows became 1 row.
 Merged duplicate player appearance: Kerryn P. - Lucas HC - Women - https://www.revolutionise.com.au/hockeyballarat/game/2524138; 2 source rows became 1 row.
@@ -50,3 +51,4 @@ RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/g
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2564816 - score Blaze U16 Blaze 1 - 2 EGC EGC; listed player goals home 0 - away 2.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2522120 - score SOBHC Ducks Men 0 - 5 Lucas HC Div 1 Men; listed player goals home 0 - away 6.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2524186 - score Grampians Hockey Club Grampians Hockey Club 14 - 0 EGC EGC Gold; listed player goals home 16 - away 0.
+RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2564743 - score Grampians Hockey Club Grampians Hockey Club 0 - 0 Lucas HC Div 2 Men; listed player goals home 2 - away 3.
