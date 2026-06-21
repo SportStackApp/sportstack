@@ -453,7 +453,7 @@ def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -
 
         is_bye = bool_from_text(row.get("is_bye"))
         for field in required_fixture:
-            if field == "game_date" and is_bye:
+            if field == "game_date" and (is_bye or is_fixture_only):
                 continue
             value = clean_text(row.get(field, ""))
             if not value or value.lower() == "details" or value == "0":
@@ -1073,14 +1073,21 @@ def make_session() -> requests.Session:
 
 
 def get_soup(session: requests.Session, url: str) -> BeautifulSoup:
-    print(f"  Fetching: {url}")
-    time.sleep(DELAY)
-    resp = session.get(url, timeout=20)
-    resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
-    for hidden in soup.select(".d-none, .d-lg-none"):
-        hidden.decompose()
-    return soup
+    for attempt in range(1, 4):
+        print(f"  Fetching: {url}")
+        time.sleep(DELAY)
+        try:
+            resp = session.get(url, timeout=20)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for hidden in soup.select(".d-none, .d-lg-none"):
+                hidden.decompose()
+            return soup
+        except Exception as e:
+            if attempt == 3:
+                raise
+            print(f"    WARNING: Request failed, retrying ({attempt} of 3): {url}")
+            time.sleep(2)
 
 
 def split_venue_and_pitch(venue_line: str, pitch_line: str | None = None) -> tuple[str, str]:
@@ -1135,7 +1142,9 @@ def split_club_and_team(full_name: str, grade_name: str = "") -> tuple[str, str]
     return "", full_name
 
 
-def get_team_name_from_draws_page(session: requests.Session, team_url: str, grade_name: str) -> tuple[str, str]:
+def get_team_name_from_draws_page(session: requests.Session, team_url: str, grade_name: str, cache: dict | None = None) -> tuple[str, str]:
+    if cache is not None and team_url in cache:
+        return cache[team_url]
     try:
         soup = get_soup(session, team_url)
         for tag in ["h2", "h1", "h3"]:
@@ -1143,6 +1152,8 @@ def get_team_name_from_draws_page(session: requests.Session, team_url: str, grad
             if heading:
                 full_text = heading.get_text(" ", strip=True)
                 club, team = split_club_and_team(full_text, grade_name)
+                if cache is not None:
+                    cache[team_url] = (club, team)
                 return club, team
     except Exception as e:
         print(f"    WARNING: Could not fetch team page {team_url}: {e}")
@@ -1461,6 +1472,7 @@ def scrape_match(
     round_home_score: str = "",
     round_away_score: str = "",
     round_umpires: list[str] | None = None,
+    team_cache: dict | None = None,
 ) -> dict:
     soup = get_soup(session, game_url)
 
@@ -1502,7 +1514,7 @@ def scrape_match(
 
     team_info: list[dict] = []
     for i, team_url in enumerate(team_page_urls[:2]):
-        club_name, team_name = get_team_name_from_draws_page(session, team_url, grade_name)
+        club_name, team_name = get_team_name_from_draws_page(session, team_url, grade_name, team_cache)
         team_label = clean_text(team_labels[i]) if i < len(team_labels) else ""
         if not team_label:
             team_label = build_team_label(club_name, team_name)
@@ -1677,10 +1689,10 @@ def scrape_match(
     return match
 
 
-def scrape_bye_match(session: requests.Session, game_info: dict, grade: dict, rnd: dict) -> dict:
+def scrape_bye_match(session: requests.Session, game_info: dict, grade: dict, rnd: dict, team_cache: dict | None = None) -> dict:
     team_url = clean_text(game_info.get("team_url"))
     team_label = clean_text(game_info.get("team_label"))
-    club_name, team_name = get_team_name_from_draws_page(session, team_url, grade["name"]) if team_url else ("", "")
+    club_name, team_name = get_team_name_from_draws_page(session, team_url, grade["name"], team_cache) if team_url else ("", "")
     if not team_label:
         team_label = build_team_label(club_name, team_name)
 
@@ -1849,6 +1861,7 @@ def main():
     all_results = []
     csv_rows = []
 
+    team_lookup_cache = {}
     grades = get_all_grades(session, PORTAL_URL)
     print(f"\nFound {len(grades)} grades.")
 
@@ -1873,7 +1886,7 @@ def main():
             for game_info in games:
                 try:
                     if game_info.get("is_bye"):
-                        match = scrape_bye_match(session, game_info, grade, rnd)
+                        match = scrape_bye_match(session, game_info, grade, rnd, team_cache=team_lookup_cache)
                         game_url = match["url"]
                     else:
                         game_url = game_info["game_url"]
@@ -1892,6 +1905,7 @@ def main():
                             round_home_score=game_info.get("round_home_score", ""),
                             round_away_score=game_info.get("round_away_score", ""),
                             round_umpires=game_info.get("round_umpires", []),
+                            team_cache=team_lookup_cache,
                         )
                     match["grade"] = grade["name"]
                     match["round"] = rnd["round_label"]
