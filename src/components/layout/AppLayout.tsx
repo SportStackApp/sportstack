@@ -69,7 +69,6 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "MVP Voting",
       items: [
         { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
-        { path: "/voting", label: "Voting Portal", icon: Vote },
       ],
     },
     {
