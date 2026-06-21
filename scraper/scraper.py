@@ -1841,6 +1841,7 @@ def main():
     supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
 
     fixtures_lookup = {}
+    profiles_lookup = {}
     missing_fixtures_counter = 0
 
     # fixture_id links a scraped player row back to the fixtures table so the app can show "who played in this game" when someone clicks on a fixture.
@@ -1857,6 +1858,26 @@ def main():
             print(f"Loaded {len(fixtures_lookup)} fixtures for matching.")
         except Exception as e:
             print(f"WARNING: Could not fetch fixtures from Supabase: {e}")
+
+    # profile_id links a scraped player row to a real SportStack account so the
+    # app knows who actually played (used by MVP voting, fixture rosters, etc).
+    # Matched on revsports_player_id, which RevSports assigns once per person and
+    # never changes - far more reliable than matching on scraped names. Each
+    # profile sets their RevSports ID once (Admin > Users > Roles & Teams), and
+    # every future scrape will link automatically from then on.
+    if supabase_url and supabase_key:
+        try:
+            from supabase import create_client
+            print("\nFetching profiles from Supabase for player linking...")
+            client_temp = create_client(supabase_url, supabase_key)
+            profiles_data = client_temp.table("profiles").select("id, revsports_player_id").execute().data or []
+            for p in profiles_data:
+                rsid = p.get("revsports_player_id")
+                if rsid:
+                    profiles_lookup[rsid] = p.get("id")
+            print(f"Loaded {len(profiles_lookup)} profiles for player linking.")
+        except Exception as e:
+            print(f"WARNING: Could not fetch profiles from Supabase: {e}")
 
     all_results = []
     csv_rows = []
@@ -2056,6 +2077,15 @@ def main():
                         missing_fixtures_counter += 1
                 else:
                     missing_fixtures_counter += 1
+
+
+                # profile_id links a scraped player row to a real SportStack account
+                # (used by MVP voting eligibility, fixture rosters, etc). Matched on
+                # revsports_player_id, which is exact and never changes - far more
+                # reliable than matching on scraped short names like "Jason H.".
+                rs_player_id = cleaned.get("revsports_player_id")
+                if rs_player_id and rs_player_id in profiles_lookup:
+                    cleaned["profile_id"] = profiles_lookup[rs_player_id]
 
                 return cleaned
 
