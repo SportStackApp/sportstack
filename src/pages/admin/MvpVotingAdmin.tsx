@@ -103,11 +103,19 @@ export default function MvpVotingAdmin() {
             if (session.fixture_id) {
               const { data: attendedRows } = await supabase
                 .from("revsports_players")
-                .select("profile_id")
+                .select("profile_id, team")
                 .eq("fixture_id", session.fixture_id)
                 .eq("attended", true)
                 .not("profile_id", "is", null);
-              totalVoters = new Set((attendedRows || []).map((r: any) => r.profile_id)).size;
+              // Grampians/Pumas rows come through the scraper as team = null OR
+              // team = "Grampians Hockey Club" - the opposition always has a real,
+              // different team name. This excludes opposition players (and anyone
+              // else, e.g. an umpire who also has a player profile elsewhere) from
+              // the eligible-voter count.
+              const pumasSide = (attendedRows || []).filter(
+                (r: any) => r.team === null || r.team === "Grampians Hockey Club"
+              );
+              totalVoters = new Set(pumasSide.map((r: any) => r.profile_id)).size;
             }
 
             return {
@@ -163,14 +171,22 @@ export default function MvpVotingAdmin() {
       let mappedVoters: VoterStatus[] = [];
       const profileNameMap: Record<string, string> = {};
       if (sessionRow.fixture_id) {
-        const { data: attendedRows, error: attErr } = await supabase
+        const { data: attendedRowsRaw, error: attErr } = await supabase
           .from("revsports_players")
-          .select("id, player_name, profile_id")
+          .select("id, player_name, profile_id, team")
           .eq("fixture_id", sessionRow.fixture_id)
           .eq("attended", true)
           .not("profile_id", "is", null);
 
         if (attErr) throw attErr;
+
+        // Same Pumas-side rule as loadSessions: team is null or "Grampians Hockey Club"
+        // for our side; the opposition always has a distinct real team name. This keeps
+        // opposition players (and anyone else, e.g. an umpire with an unrelated player
+        // profile) out of the eligible-voter list.
+        const attendedRows = (attendedRowsRaw || []).filter(
+          (r: any) => r.team === null || r.team === "Grampians Hockey Club"
+        );
 
         // Resolve real names from profiles for nicer display
         const profileIds = Array.from(
