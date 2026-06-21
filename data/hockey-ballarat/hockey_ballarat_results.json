@@ -69643,7 +69643,7 @@
     "away_team_url": "https://www.revolutionise.com.au/hockeyballarat/games/team/26298/417795",
     "away_revsports_team_id": "417795",
     "home_score": "0",
-    "away_score": "2",
+    "away_score": "3",
     "umpires": [
       "Ben Sturmfels",
       "Hayden Bourne"
@@ -69956,7 +69956,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "ga6jeCm",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
