@@ -98,6 +98,11 @@ OUTPUT_COLUMNS = [
     "match_url",
     "scraped_at",
     "appearance_key",
+    "revsports_competition_id",
+    "revsports_grade_id",
+    "revsports_venue_id",
+    "revsports_venue_url",
+    "revsports_match_id",
 ]
 
 QUALITY_WARNINGS: list[str] = []
@@ -446,7 +451,10 @@ def run_quality_check(csv_rows: list[dict], output_dir: str, association: str) -
     for i, row in enumerate(csv_rows, start=2):
         is_fixture_only = clean_text(row.get("player_name")) == "NO_PLAYERS"
 
+        is_bye = bool_from_text(row.get("is_bye"))
         for field in required_fixture:
+            if field == "game_date" and (is_bye or is_fixture_only):
+                continue
             value = clean_text(row.get(field, ""))
             if not value or value.lower() == "details" or value == "0":
                 issues.append(f"Line {i}: missing or junk required fixture field '{field}'")
@@ -1065,14 +1073,21 @@ def make_session() -> requests.Session:
 
 
 def get_soup(session: requests.Session, url: str) -> BeautifulSoup:
-    print(f"  Fetching: {url}")
-    time.sleep(DELAY)
-    resp = session.get(url, timeout=20)
-    resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
-    for hidden in soup.select(".d-none, .d-lg-none"):
-        hidden.decompose()
-    return soup
+    for attempt in range(1, 4):
+        print(f"  Fetching: {url}")
+        time.sleep(DELAY)
+        try:
+            resp = session.get(url, timeout=20)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for hidden in soup.select(".d-none, .d-lg-none"):
+                hidden.decompose()
+            return soup
+        except Exception as e:
+            if attempt == 3:
+                raise
+            print(f"    WARNING: Request failed, retrying ({attempt} of 3): {url}")
+            time.sleep(2)
 
 
 def split_venue_and_pitch(venue_line: str, pitch_line: str | None = None) -> tuple[str, str]:
@@ -1127,7 +1142,9 @@ def split_club_and_team(full_name: str, grade_name: str = "") -> tuple[str, str]
     return "", full_name
 
 
-def get_team_name_from_draws_page(session: requests.Session, team_url: str, grade_name: str) -> tuple[str, str]:
+def get_team_name_from_draws_page(session: requests.Session, team_url: str, grade_name: str, cache: dict | None = None) -> tuple[str, str]:
+    if cache is not None and team_url in cache:
+        return cache[team_url]
     try:
         soup = get_soup(session, team_url)
         for tag in ["h2", "h1", "h3"]:
@@ -1135,6 +1152,8 @@ def get_team_name_from_draws_page(session: requests.Session, team_url: str, grad
             if heading:
                 full_text = heading.get_text(" ", strip=True)
                 club, team = split_club_and_team(full_text, grade_name)
+                if cache is not None:
+                    cache[team_url] = (club, team)
                 return club, team
     except Exception as e:
         print(f"    WARNING: Could not fetch team page {team_url}: {e}")
@@ -1169,7 +1188,19 @@ def get_all_grades(session: requests.Session, base_url: str) -> list[dict]:
                 seen.add(href)
                 name = clean_text(tag.get_text(" ", strip=True))
                 if name:
-                    grades.append({"name": name, "url": href, "competition_name": current_competition})
+                    comp_id = ""
+                    grade_id = ""
+                    match_ids = re.search(r"/games/(\d+)/(\d+)$", urlparse(href).path)
+                    if match_ids:
+                        comp_id = match_ids.group(1)
+                        grade_id = match_ids.group(2)
+                    grades.append({
+                        "name": name,
+                        "url": href,
+                        "competition_name": current_competition,
+                        "competition_id": comp_id,
+                        "grade_id": grade_id,
+                    })
 
     return grades
 
@@ -1188,7 +1219,21 @@ def get_rounds(session: requests.Session, grade_url: str) -> list[dict]:
             seen.add(href)
             label = clean_text(a.get_text(" ", strip=True))
             if label:
-                rounds.append({"round_label": label, "url": href})
+                comp_id = ""
+                grade_id = ""
+                rnd_num = ""
+                match_ids = re.search(r"/games/(\d+)/(\d+)/round/(\d+)", urlparse(href).path)
+                if match_ids:
+                    comp_id = match_ids.group(1)
+                    grade_id = match_ids.group(2)
+                    rnd_num = match_ids.group(3)
+                rounds.append({
+                    "round_label": label,
+                    "url": href,
+                    "competition_id": comp_id,
+                    "grade_id": grade_id,
+                    "round_number": rnd_num,
+                })
     return rounds
 
 
@@ -1224,6 +1269,8 @@ def extract_round_card_details(card, round_url: str) -> dict:
         "round_home_score": "",
         "round_away_score": "",
         "round_umpires": [],
+        "round_venue_url": "",
+        "round_venue_id": "",
     }
     if card is None:
         return details
@@ -1238,6 +1285,11 @@ def extract_round_card_details(card, round_url: str) -> dict:
             if href not in details["team_urls"]:
                 details["team_urls"].append(href)
                 details["team_labels"].append(label)
+        elif path_matches(href, r"/venues/\d+/\d+$"):
+            details["round_venue_url"] = href
+            venue_match = re.search(r"/venues/\d+/(\d+)$", urlparse(href).path)
+            if venue_match:
+                details["round_venue_id"] = venue_match.group(1)
 
     raw_text = card.get_text("\n", strip=True)
     lines = [clean_text(l) for l in raw_text.split("\n") if clean_text(l)]
@@ -1413,11 +1465,14 @@ def scrape_match(
     team_labels: list[str] | None = None,
     round_venue: str = "",
     round_pitch: str = "",
+    round_venue_url: str = "",
+    round_venue_id: str = "",
     round_date: str = "",
     round_time: str = "",
     round_home_score: str = "",
     round_away_score: str = "",
     round_umpires: list[str] | None = None,
+    team_cache: dict | None = None,
 ) -> dict:
     soup = get_soup(session, game_url)
 
@@ -1427,6 +1482,8 @@ def scrape_match(
         "time": round_time or "",
         "venue": round_venue or "",
         "pitch": round_pitch or "",
+        "round_venue_url": round_venue_url or "",
+        "round_venue_id": round_venue_id or "",
         "home_club_name": "",
         "home_team": "",
         "home_team_label": "",
@@ -1457,7 +1514,7 @@ def scrape_match(
 
     team_info: list[dict] = []
     for i, team_url in enumerate(team_page_urls[:2]):
-        club_name, team_name = get_team_name_from_draws_page(session, team_url, grade_name)
+        club_name, team_name = get_team_name_from_draws_page(session, team_url, grade_name, team_cache)
         team_label = clean_text(team_labels[i]) if i < len(team_labels) else ""
         if not team_label:
             team_label = build_team_label(club_name, team_name)
@@ -1632,10 +1689,10 @@ def scrape_match(
     return match
 
 
-def scrape_bye_match(session: requests.Session, game_info: dict, grade: dict, rnd: dict) -> dict:
+def scrape_bye_match(session: requests.Session, game_info: dict, grade: dict, rnd: dict, team_cache: dict | None = None) -> dict:
     team_url = clean_text(game_info.get("team_url"))
     team_label = clean_text(game_info.get("team_label"))
-    club_name, team_name = get_team_name_from_draws_page(session, team_url, grade["name"]) if team_url else ("", "")
+    club_name, team_name = get_team_name_from_draws_page(session, team_url, grade["name"], team_cache) if team_url else ("", "")
     if not team_label:
         team_label = build_team_label(club_name, team_name)
 
@@ -1664,6 +1721,8 @@ def scrape_bye_match(session: requests.Session, game_info: dict, grade: dict, rn
         "time": "",
         "venue": "",
         "pitch": "",
+        "round_venue_url": "",
+        "round_venue_id": "",
         "home_club_name": team["club_name"],
         "home_team": team["team_name"],
         "home_team_label": team["team_label"],
@@ -1687,6 +1746,12 @@ def scrape_bye_match(session: requests.Session, game_info: dict, grade: dict, rn
 # ----------------------------------------------------------------------------
 
 def base_fixture_row(association: str, grade: dict, rnd: dict, match: dict, game_url: str) -> dict:
+    match_id = ""
+    if game_url and "/game/" in game_url:
+        match_id_match = re.search(r"/game/(\d+)$", urlparse(game_url).path)
+        if match_id_match:
+            match_id = match_id_match.group(1)
+
     return {
         "association": association,
         "competition_name": grade.get("competition_name", association),
@@ -1713,6 +1778,11 @@ def base_fixture_row(association: str, grade: dict, rnd: dict, match: dict, game
         "umpire_2": match.get("umpires", ["", ""])[1] if len(match.get("umpires", [])) > 1 else "",
         "match_url": game_url,
         "scraped_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "revsports_competition_id": grade.get("competition_id") or rnd.get("competition_id") or "",
+        "revsports_grade_id": grade.get("grade_id") or rnd.get("grade_id") or "",
+        "revsports_venue_id": match.get("round_venue_id") or "",
+        "revsports_venue_url": match.get("round_venue_url") or "",
+        "revsports_match_id": match_id,
     }
 
 
@@ -1767,9 +1837,31 @@ def main():
     QUALITY_WARNINGS.clear()
     session = make_session()
 
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
+
+    fixtures_lookup = {}
+    missing_fixtures_counter = 0
+
+    # fixture_id links a scraped player row back to the fixtures table so the app can show "who played in this game" when someone clicks on a fixture.
+    if supabase_url and supabase_key:
+        try:
+            from supabase import create_client
+            print("\nFetching fixtures from Supabase...")
+            client_temp = create_client(supabase_url, supabase_key)
+            fixtures_data = client_temp.table("fixtures").select("id, revsports_match_url").execute().data or []
+            for f in fixtures_data:
+                url = f.get("revsports_match_url")
+                if url:
+                    fixtures_lookup[url] = f.get("id")
+            print(f"Loaded {len(fixtures_lookup)} fixtures for matching.")
+        except Exception as e:
+            print(f"WARNING: Could not fetch fixtures from Supabase: {e}")
+
     all_results = []
     csv_rows = []
 
+    team_lookup_cache = {}
     grades = get_all_grades(session, PORTAL_URL)
     print(f"\nFound {len(grades)} grades.")
 
@@ -1794,7 +1886,7 @@ def main():
             for game_info in games:
                 try:
                     if game_info.get("is_bye"):
-                        match = scrape_bye_match(session, game_info, grade, rnd)
+                        match = scrape_bye_match(session, game_info, grade, rnd, team_cache=team_lookup_cache)
                         game_url = match["url"]
                     else:
                         game_url = game_info["game_url"]
@@ -1806,11 +1898,14 @@ def main():
                             team_labels=game_info.get("team_labels", []),
                             round_venue=game_info.get("round_venue", ""),
                             round_pitch=game_info.get("round_pitch", ""),
+                            round_venue_url=game_info.get("round_venue_url", ""),
+                            round_venue_id=game_info.get("round_venue_id", ""),
                             round_date=game_info.get("round_date", ""),
                             round_time=game_info.get("round_time", ""),
                             round_home_score=game_info.get("round_home_score", ""),
                             round_away_score=game_info.get("round_away_score", ""),
                             round_umpires=game_info.get("round_umpires", []),
+                            team_cache=team_lookup_cache,
                         )
                     match["grade"] = grade["name"]
                     match["round"] = rnd["round_label"]
@@ -1933,8 +2028,11 @@ def main():
             client = create_client(supabase_url, supabase_key)
 
             def clean_row(row: dict) -> dict:
+                nonlocal missing_fixtures_counter
                 cleaned = {}
                 for k, v in row.items():
+                    if k == "is_bye":
+                        continue
                     cleaned[k] = None if v == "" or v is None else v
 
                 for field in ["home_score", "away_score", "goals", "green_cards", "yellow_cards", "red_cards"]:
@@ -1947,6 +2045,17 @@ def main():
                 for field in ["attended", "is_goalkeeper", "is_captain", "is_fillin", "is_removed"]:
                     if cleaned.get(field) is not None:
                         cleaned[field] = str(cleaned[field]).strip().lower() == "true"
+
+                # fixture_id links a scraped player row back to the fixtures table so the app can show "who played in this game" when someone clicks on a fixture.
+                match_url = row.get("match_url")
+                if match_url:
+                    match_url = clean_text(match_url)
+                    if match_url in fixtures_lookup:
+                        cleaned["fixture_id"] = fixtures_lookup[match_url]
+                    else:
+                        missing_fixtures_counter += 1
+                else:
+                    missing_fixtures_counter += 1
 
                 return cleaned
 
@@ -1971,6 +2080,8 @@ def main():
                     raise
 
             print(f"OK: Supabase upsert complete - {total_upserted} rows processed.")
+            if missing_fixtures_counter > 0:
+                print(f"WARNING: {missing_fixtures_counter} rows had no matching fixture — check if fixture import has run for this round yet")
 
         except Exception as e:
             print(f"ERROR: Supabase upsert error: {e}")

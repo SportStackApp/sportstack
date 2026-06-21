@@ -23,6 +23,10 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import VotingPortal from "./pages/VotingPortal";
 import UmpireVoteSubmit from "./pages/umpire/UmpireVoteSubmit";
+import MvpVotes from "./pages/MvpVotes";
+import MvpVoteCast from "./pages/MvpVoteCast";
+
+
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -96,6 +100,8 @@ const App = () => (
                       <Route path="/chat" element={<Chat />} />
                       <Route path="/umpire/vote" element={<UmpireVoteSubmit />} />
                       <Route path="/voting" element={<VotingPortal />} />
+                      <Route path="/mvp-votes" element={<MvpVotes />} />
+                      <Route path="/mvp-votes/:sessionId" element={<MvpVoteCast />} />
                       <Route path="/profile" element={<Profile />} />
                       
                       {/* Admin Routes */}

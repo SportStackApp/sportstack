@@ -125,9 +125,16 @@ export default function Requests() {
 
   const handleApprove = async (request: Request) => {
     try {
+      if (request.membership_type === "PRIMARY") {
+        const confirmed = window.confirm(
+          `${request.target_user_name} may already have a primary team. Approving this will make "${request.team_name}" their new primary team and downgrade any existing primary team to secondary. Continue?`
+        );
+        if (!confirmed) return;
+      }
+
       // Update request status
       const { error: updateError } = await supabase
-        .from("requests" as any)
+        .from("requests" as never)
         .update({
           status: "APPROVED",
           responded_by: user?.id,
@@ -136,6 +143,18 @@ export default function Requests() {
         .eq("id", request.id);
 
       if (updateError) throw updateError;
+
+      // If this is a new PRIMARY membership, downgrade any existing PRIMARY
+      // membership for this player first, so they never have two primaries.
+      if (request.membership_type === "PRIMARY") {
+        const { error: downgradeError } = await supabase
+          .from("team_memberships")
+          .update({ membership_type: "SECONDARY" })
+          .eq("user_id", request.target_user_id)
+          .eq("membership_type", "PRIMARY");
+
+        if (downgradeError) throw downgradeError;
+      }
 
       // Insert into team_memberships with status = ACTIVE
       const { error: insertError } = await supabase.from("team_memberships").insert({
