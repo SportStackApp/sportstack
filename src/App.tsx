@@ -46,6 +46,7 @@ import RevSportsMappings from "./pages/admin/RevSportsMappings";
 import RevSportsUnmatched from "./pages/admin/RevSportsUnmatched";
 import RevSportsEntityReview from "./pages/admin/RevSportsEntityReview";
 import MvpVotingAdmin from "./pages/admin/MvpVotingAdmin";
+import Analytics from "./pages/admin/Analytics";
 
 // Entity Dashboards
 import AssociationDashboard from "./pages/AssociationDashboard";
@@ -122,6 +123,7 @@ const App = () => (
                       <Route path="/admin/venues" element={<VenuesManagement />} />
                       <Route path="/admin/requests" element={<Requests />} />
                       <Route path="/admin/mvp-voting" element={<MvpVotingAdmin />} />
+                      <Route path="/admin/analytics" element={<Analytics />} />
 
                       {/* Entity Dashboards */}
                       <Route path="/associations/:id" element={<AssociationDashboard />} />
