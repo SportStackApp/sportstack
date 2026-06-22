@@ -134,7 +134,7 @@ export default function Requests() {
 
       // Update request status
       const { error: updateError } = await supabase
-        .from("requests" as never)
+        .from("requests" as any)
         .update({
           status: "APPROVED",
           responded_by: user?.id,
