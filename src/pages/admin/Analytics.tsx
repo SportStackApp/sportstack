@@ -60,6 +60,14 @@ export default function Analytics() {
   const [selectedVoter, setSelectedVoter] = useState<string>("all");
   const [selectedVotedFor, setSelectedVotedFor] = useState<string>("all");
 
+  // Filter States for Individual Votes Log table: Grade, Rounds (multi-select), Date Range, Voter, and Voted For
+  const [logSelectedGrade, setLogSelectedGrade] = useState<string>("all");
+  const [logSelectedRounds, setLogSelectedRounds] = useState<string[]>(["all"]);
+  const [logStartDate, setLogStartDate] = useState<string>("");
+  const [logEndDate, setLogEndDate] = useState<string>("");
+  const [logSelectedVoter, setLogSelectedVoter] = useState<string>("all");
+  const [logSelectedVotedFor, setLogSelectedVotedFor] = useState<string>("all");
+
   // Search query for the individual votes log
   const [individualSearchQuery, setIndividualSearchQuery] = useState<string>("");
 
@@ -317,6 +325,60 @@ export default function Analytics() {
     });
   }, [votes, filteredSessionIds, selectedVoter, selectedVotedFor, revsportsPlayerMap]);
 
+  // Separate filter logic for Individual Votes Log
+  const logFilteredSessions = useMemo(() => {
+    return sessions.filter((session) => {
+      if (logSelectedGrade !== "all" && session.grade !== logSelectedGrade) {
+        return false;
+      }
+      if (!logSelectedRounds.includes("all") && !logSelectedRounds.includes(session.round)) {
+        return false;
+      }
+      if (logStartDate && session.game_date < logStartDate) {
+        return false;
+      }
+      if (logEndDate && session.game_date > logEndDate) {
+        return false;
+      }
+      return true;
+    });
+  }, [sessions, logSelectedGrade, logSelectedRounds, logStartDate, logEndDate]);
+
+  const logFilteredSessionIds = useMemo(() => {
+    return new Set(logFilteredSessions.map((s) => s.id));
+  }, [logFilteredSessions]);
+
+  const logFilteredVotes = useMemo(() => {
+    return votes.filter((vote) => {
+      if (!logFilteredSessionIds.has(vote.session_id)) {
+        return false;
+      }
+      if (logSelectedVoter !== "all" && vote.voter_profile_id !== logSelectedVoter) {
+        return false;
+      }
+      if (logSelectedVotedFor !== "all") {
+        const pId = vote.player_id;
+        let groupKey = "";
+        if (pId) {
+          const pRow = revsportsPlayerMap.get(pId);
+          if (pRow) {
+            if (pRow.profile_id) {
+              groupKey = pRow.profile_id;
+            } else {
+              groupKey = (pRow.player_name || "").trim().toLowerCase();
+            }
+          } else {
+            groupKey = pId;
+          }
+        }
+        if (groupKey !== logSelectedVotedFor) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [votes, logFilteredSessionIds, logSelectedVoter, logSelectedVotedFor, revsportsPlayerMap]);
+
   // 7. COMPILING METRICS (Stats Cards)
   // Compute votes count, voter pool and averages from filtered data
   const totalVotesCount = filteredVotes.length;
@@ -380,13 +442,13 @@ export default function Analytics() {
 
   // 9. AUDITING (Individual Votes - Restricted)
   // Detailed audit list showing how voter profiles allocated points.
-  // This list inherits all active filters because it maps over filteredVotes.
+  // This list inherits all active filters because it maps over logFilteredVotes.
   const individualVotesList = useMemo(() => {
     if (!isPrivilegedAdmin) return [];
 
     const sessionMap = new Map<string, any>(sessions.map((s) => [s.id, s]));
 
-    return filteredVotes.map((vote) => {
+    return logFilteredVotes.map((vote) => {
       const session = sessionMap.get(vote.session_id);
       return {
         id: vote.id,
@@ -396,7 +458,7 @@ export default function Analytics() {
         round: session ? session.round : "Unknown",
       };
     }).sort((a, b) => b.round.localeCompare(a.round, undefined, { numeric: true }) || a.voterName.localeCompare(b.voterName));
-  }, [filteredVotes, sessions, isPrivilegedAdmin, revsportsPlayerMap, profileNameMap]);
+  }, [logFilteredVotes, sessions, isPrivilegedAdmin, revsportsPlayerMap, profileNameMap]);
 
   // Apply search query input to filter the restricted individual votes list.
   const searchedIndividualVotes = useMemo(() => {
@@ -438,6 +500,34 @@ export default function Analytics() {
   };
 
   const hasActiveFilters = selectedGrade !== "all" || !selectedRounds.includes("all") || startDate || endDate || selectedVoter !== "all" || selectedVotedFor !== "all";
+
+  const handleLogRoundToggle = (round: string) => {
+    if (round === "all") {
+      setLogSelectedRounds(["all"]);
+    } else {
+      let next = logSelectedRounds.filter((r) => r !== "all");
+      if (next.includes(round)) {
+        next = next.filter((r) => r !== round);
+      } else {
+        next.push(round);
+      }
+      if (next.length === 0) {
+        next = ["all"];
+      }
+      setLogSelectedRounds(next);
+    }
+  };
+
+  const handleResetLogFilters = () => {
+    setLogSelectedGrade("all");
+    setLogSelectedRounds(["all"]);
+    setLogStartDate("");
+    setLogEndDate("");
+    setLogSelectedVoter("all");
+    setLogSelectedVotedFor("all");
+  };
+
+  const hasActiveLogFilters = logSelectedGrade !== "all" || !logSelectedRounds.includes("all") || logStartDate || logEndDate || logSelectedVoter !== "all" || logSelectedVotedFor !== "all";
 
   // 10. CONDITIONAL RENDERING (Access Denied / Loading screens)
   if (scopeLoading) {
@@ -768,8 +858,141 @@ export default function Analytics() {
                     </Badge>
                   </CardHeader>
                   <CardContent className="p-0 space-y-4">
-                    {/* Search box for individual votes log filtering */}
-                    <div className="px-6 pt-4 pb-0">
+                    {/* Log Filters Bar */}
+                    <div className="px-6 pt-4 space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end bg-muted/30 p-4 rounded-xl border border-border shadow-sm">
+                        
+                        {/* Grade Filter Dropdown */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Grade</Label>
+                          <Select value={logSelectedGrade} onValueChange={setLogSelectedGrade}>
+                            <SelectTrigger className="bg-background">
+                              <SelectValue placeholder="All Grades" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Grades</SelectItem>
+                              {uniqueGrades.map((grade) => (
+                                <SelectItem key={grade} value={grade}>
+                                  {grade}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Rounds Multi-Select Checkbox Popover */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Rounds</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-between bg-background font-normal text-left">
+                                <span className="truncate">
+                                  {logSelectedRounds.includes("all")
+                                    ? "All Rounds"
+                                    : logSelectedRounds.length === 1
+                                    ? logSelectedRounds[0]
+                                    : `${logSelectedRounds.length} Rounds`}
+                                </span>
+                                <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-56 p-2 bg-background border border-border shadow-md" align="start">
+                              <div className="max-h-60 overflow-y-auto space-y-2 p-1">
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id="log-round-all"
+                                    checked={logSelectedRounds.includes("all")}
+                                    onCheckedChange={() => handleLogRoundToggle("all")}
+                                  />
+                                  <label htmlFor="log-round-all" className="text-sm font-medium leading-none cursor-pointer">
+                                    All Rounds
+                                  </label>
+                                </div>
+                                <div className="h-px bg-border my-1" />
+                                {uniqueRounds.map((round) => (
+                                  <div key={round} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`log-round-${round}`}
+                                      checked={logSelectedRounds.includes(round)}
+                                      onCheckedChange={() => handleLogRoundToggle(round)}
+                                    />
+                                    <label htmlFor={`log-round-${round}`} className="text-sm font-medium leading-none cursor-pointer">
+                                      {round}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+
+                        {/* Voter Selector Filter */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Voter</Label>
+                          <Select value={logSelectedVoter} onValueChange={setLogSelectedVoter}>
+                            <SelectTrigger className="bg-background">
+                              <SelectValue placeholder="All Voters" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Voters</SelectItem>
+                              {distinctVotersListAll.map((v) => (
+                                <SelectItem key={v.id} value={v.id}>
+                                  {v.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Voted For Player Selector Filter */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Voted For</Label>
+                          <Select value={logSelectedVotedFor} onValueChange={setLogSelectedVotedFor}>
+                            <SelectTrigger className="bg-background">
+                              <SelectValue placeholder="All Players" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Players</SelectItem>
+                              {leaderboardAll.map((p) => (
+                                <SelectItem key={p.key} value={p.key}>
+                                  {p.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Game Date - Start Date Slicer */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Start Date</Label>
+                          <Input
+                            type="date"
+                            value={logStartDate}
+                            onChange={(e) => setLogStartDate(e.target.value)}
+                            className="bg-background"
+                          />
+                        </div>
+
+                        {/* Game Date - End Date Slicer */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">End Date</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="date"
+                              value={logEndDate}
+                              onChange={(e) => setLogEndDate(e.target.value)}
+                              className="bg-background flex-1"
+                            />
+                            {hasActiveLogFilters && (
+                              <Button variant="ghost" onClick={handleResetLogFilters} size="icon" title="Clear Filters" className="shrink-0 border border-border hover:bg-muted">
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Search box for individual votes log filtering */}
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
