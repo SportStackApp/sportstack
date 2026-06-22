@@ -1,30 +1,30 @@
-﻿# .github/workflows/scrape-sunraysia.yml
+# .github/workflows/scrape-sunraysia.yml
 #
-# Match Scraper â€” Sunraysia Hockey Association
+# Match Scraper — Sunraysia Hockey Association
 # Scrapes match results and player appearances from RevSports.
 # Can write directly to Supabase (revsports_players table) when enabled.
 # Also saves a CSV backup to the /data folder in the repo.
 #
 # Sunraysia runs both grass field and indoor competitions.
-# Indoor rounds are played on Friday evenings â€” extra runs added for those.
+# Indoor rounds are played on Friday evenings — extra runs added for those.
 #
 # Schedule (AEST = UTC+10):
-#   Daily           â€” 2am AEST every day
-#   Sat & Sun       â€” hourly from 7:30am to 7:30pm AEST (on the half hour)
-#   Friday evenings â€” hourly from 4:30pm to 10:30pm AEST (indoor competition)
+#   Daily           — 2am AEST every day
+#   Sat & Sun       — hourly from 7:30am to 7:30pm AEST (on the half hour)
+#   Friday evenings — hourly from 4:30pm to 10:30pm AEST (indoor competition)
 #
 # Staggering: Sunraysia runs on the half hour (:30). HB runs on the hour (:00).
 #
-# Manual trigger: Actions tab â†’ "Scrape â€” Sunraysia Hockey Association" â†’ Run workflow
+# Manual trigger: Actions tab → "Scrape — Sunraysia Hockey Association" → Run workflow
 
-name: Scrape â€” Sunraysia Hockey Association
+name: Scrape — Sunraysia Hockey Association
 
 on:
   schedule:
-    # â”€â”€ Daily 2am AEST (16:00 UTC) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Daily 2am AEST (16:00 UTC) ───────────────────────────
     - cron: "0 16 * * *"
 
-    # â”€â”€ Friday evening hourly 4:30pmâ€“10:30pm AEST (indoor) â”€â”€â”€
+    # ── Friday evening hourly 4:30pm–10:30pm AEST (indoor) ───
     # AEST = UTC+10, so subtract 10hrs
     # 4:30pm Fri AEST  = 06:30 UTC Fri
     # 5:30pm Fri AEST  = 07:30 UTC Fri
@@ -41,9 +41,9 @@ on:
     - cron: "30 11 * * 5"   # 9:30pm Fri
     - cron: "30 12 * * 5"   # 10:30pm Fri
 
-    # â”€â”€ Saturday hourly 7:30amâ€“7:30pm AEST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # Sat 7:30am  AEST = 21:30 UTC Fri â†’ day-of-week 5
-    # Sat 8:30amâ€“7:30pm AEST = 22:30â€“09:30 UTC Sat â†’ day-of-week 6
+    # ── Saturday hourly 7:30am–7:30pm AEST ───────────────────
+    # Sat 7:30am  AEST = 21:30 UTC Fri → day-of-week 5
+    # Sat 8:30am–7:30pm AEST = 22:30–09:30 UTC Sat → day-of-week 6
     - cron: "30 21 * * 5"   # 7:30am Sat
     - cron: "30 22 * * 5"   # 8:30am Sat
     - cron: "30 23 * * 5"   # 9:30am Sat
@@ -58,9 +58,9 @@ on:
     - cron: "30 8  * * 6"   # 6:30pm Sat
     - cron: "30 9  * * 6"   # 7:30pm Sat
 
-    # â”€â”€ Sunday hourly 7:30amâ€“7:30pm AEST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # Sun 7:30am  AEST = 21:30 UTC Sat â†’ day-of-week 6
-    # Sun 8:30amâ€“7:30pm AEST = 22:30â€“09:30 UTC Sun â†’ day-of-week 0
+    # ── Sunday hourly 7:30am–7:30pm AEST ─────────────────────
+    # Sun 7:30am  AEST = 21:30 UTC Sat → day-of-week 6
+    # Sun 8:30am–7:30pm AEST = 22:30–09:30 UTC Sun → day-of-week 0
     - cron: "30 21 * * 6"   # 7:30am Sun
     - cron: "30 22 * * 6"   # 8:30am Sun
     - cron: "30 23 * * 6"   # 9:30am Sun

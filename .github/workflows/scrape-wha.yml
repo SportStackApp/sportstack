@@ -1,25 +1,25 @@
-﻿# .github/workflows/scrape-wha.yml
+# .github/workflows/scrape-wha.yml
 #
-# Match Scraper â€” Wimmera Hockey Association
+# Match Scraper — Wimmera Hockey Association
 # Scrapes fixture and result data from RevSports.
-# Player data is login-protected on WHA â€” fixture/result data only.
+# Player data is login-protected on WHA — fixture/result data only.
 # Can write directly to Supabase (revsports_players table) when enabled.
 # Also saves a CSV backup to the /data folder in the repo.
 #
 # Schedule (AEST = UTC+10):
-#   Daily       â€” 2am AEST every day
-#   Sat & Sun   â€” hourly from 8am to 8pm AEST (on the hour, same as HB)
+#   Daily       — 2am AEST every day
+#   Sat & Sun   — hourly from 8am to 8pm AEST (on the hour, same as HB)
 #
-# Manual trigger: Actions tab â†’ "Scrape â€” Wimmera Hockey Association" â†’ Run workflow
+# Manual trigger: Actions tab → "Scrape — Wimmera Hockey Association" → Run workflow
 
-name: Scrape â€” Wimmera Hockey Association
+name: Scrape — Wimmera Hockey Association
 
 on:
   schedule:
-    # â”€â”€ Daily 2am AEST (16:00 UTC) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Daily 2am AEST (16:00 UTC) ───────────────────────────
     - cron: "0 16 * * *"
 
-    # â”€â”€ Saturday hourly 8amâ€“8pm AEST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Saturday hourly 8am–8pm AEST ─────────────────────────
     - cron: "0 22 * * 5"   # 8:00am Sat
     - cron: "0 23 * * 5"   # 9:00am Sat
     - cron: "0 0  * * 6"   # 10:00am Sat
@@ -34,7 +34,7 @@ on:
     - cron: "0 9  * * 6"   # 7:00pm Sat
     - cron: "0 10 * * 6"   # 8:00pm Sat
 
-    # â”€â”€ Sunday hourly 8amâ€“8pm AEST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Sunday hourly 8am–8pm AEST ────────────────────────────
     - cron: "0 22 * * 6"   # 8:00am Sun
     - cron: "0 23 * * 6"   # 9:00am Sun
     - cron: "0 0  * * 0"   # 10:00am Sun

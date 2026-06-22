@@ -1,28 +1,28 @@
-﻿# .github/workflows/scrape-hb.yml
+# .github/workflows/scrape-hb.yml
 #
-# Match Scraper â€” Hockey Ballarat
+# Match Scraper — Hockey Ballarat
 # Scrapes match results and player appearances from RevSports.
 # Can write directly to Supabase (revsports_players table) when enabled.
 # Also saves a CSV backup to the /data folder in the repo.
 #
 # Schedule (AEST = UTC+10):
-#   Daily       â€” 2am AEST every day
-#   Sat & Sun   â€” hourly from 8am to 8pm AEST (on the hour)
+#   Daily       — 2am AEST every day
+#   Sat & Sun   — hourly from 8am to 8pm AEST (on the hour)
 #
 # Staggering: HB runs on the hour (:00). Sunraysia runs on the half hour (:30).
 #
-# Manual trigger: Actions tab â†’ "Scrape â€” Hockey Ballarat" â†’ Run workflow
+# Manual trigger: Actions tab → "Scrape — Hockey Ballarat" → Run workflow
 
-name: Scrape â€” Hockey Ballarat
+name: Scrape — Hockey Ballarat
 
 on:
   schedule:
-    # â”€â”€ Daily 2am AEST (16:00 UTC) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Daily 2am AEST (16:00 UTC) ───────────────────────────
     - cron: "0 16 * * *"
 
-    # â”€â”€ Saturday hourly 8amâ€“8pm AEST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # Sat 8am  AEST = 22:00 UTC Fri  â†’ day-of-week 5
-    # Sat 9amâ€“8pm AEST = 23:00â€“10:00 UTC Sat â†’ day-of-week 6
+    # ── Saturday hourly 8am–8pm AEST ─────────────────────────
+    # Sat 8am  AEST = 22:00 UTC Fri  → day-of-week 5
+    # Sat 9am–8pm AEST = 23:00–10:00 UTC Sat → day-of-week 6
     - cron: "0 22 * * 5"   # 8:00am Sat
     - cron: "0 23 * * 5"   # 9:00am Sat
     - cron: "0 0  * * 6"   # 10:00am Sat
@@ -37,9 +37,9 @@ on:
     - cron: "0 9  * * 6"   # 7:00pm Sat
     - cron: "0 10 * * 6"   # 8:00pm Sat
 
-    # â”€â”€ Sunday hourly 8amâ€“8pm AEST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # Sun 8am  AEST = 22:00 UTC Sat â†’ day-of-week 6
-    # Sun 9amâ€“8pm AEST = 23:00â€“10:00 UTC Sun â†’ day-of-week 0
+    # ── Sunday hourly 8am–8pm AEST ────────────────────────────
+    # Sun 8am  AEST = 22:00 UTC Sat → day-of-week 6
+    # Sun 9am–8pm AEST = 23:00–10:00 UTC Sun → day-of-week 0
     - cron: "0 22 * * 6"   # 8:00am Sun
     - cron: "0 23 * * 6"   # 9:00am Sun
     - cron: "0 0  * * 0"   # 10:00am Sun
