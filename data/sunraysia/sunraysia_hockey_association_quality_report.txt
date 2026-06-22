@@ -1,5 +1,5 @@
 DATA QUALITY REPORT - Sunraysia Hockey Association
-Generated: 2026-06-21T17:49:31.434026
+Generated: 2026-06-22T11:52:52.084329
 ------------------------------------------------------------
 Rows checked: 3,082
 Issues found: 0
@@ -29,25 +29,25 @@ Merged duplicate player appearance: William Buffon - Rivaside - Rivaside Under 1
 Merged duplicate player appearance: April Nyabonda - Mildura Wanderers - Mildura Wanderers Under 13 Boys - https://www.sunraysiahockey.com.au/game/2491824; 2 source rows became 1 row.
 Merged duplicate player appearance: William Buffon - Rivaside - Rivaside Under 13 Boys - https://www.sunraysiahockey.com.au/game/2491826; 2 source rows became 1 row.
 Merged duplicate player appearance: Eadie Neagle - Koowinda - Koowinda Women - https://www.sunraysiahockey.com.au/game/2498054; 2 source rows became 1 row.
-Merged duplicate player appearance: Abbey McPhee - Mildura Wanderers - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498056; 2 source rows became 1 row.
-Merged duplicate player appearance: Virginia Thompson - Mildura Wanderers - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498056; 2 source rows became 1 row.
+Merged duplicate player appearance: Abbey McPhee - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498056; 2 source rows became 1 row.
+Merged duplicate player appearance: Virginia Thompson - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498056; 2 source rows became 1 row.
 Merged duplicate player appearance: Carrie Barlow - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498057; 2 source rows became 1 row.
 Merged duplicate player appearance: Shelby Crisp - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498057; 2 source rows became 1 row.
 Merged duplicate player appearance: Eleen Hugo - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498057; 2 source rows became 1 row.
 Merged duplicate player appearance: Phia Hugo - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498057; 2 source rows became 1 row.
 Merged duplicate player appearance: AGUSTINA SIMON VIDELA - Rivaside - Rivaside Women - https://www.sunraysiahockey.com.au/game/2498059; 2 source rows became 1 row.
-Merged duplicate player appearance: Abbey McPhee - Mildura Wanderers - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498059; 2 source rows became 1 row.
-Merged duplicate player appearance: Virginia Thompson - Mildura Wanderers - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498059; 2 source rows became 1 row.
-Merged duplicate player appearance: Wendy Finn - Mildura Wanderers - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
-Merged duplicate player appearance: Abbey McPhee - Mildura Wanderers - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
-Merged duplicate player appearance: Virginia Thompson - Mildura Wanderers - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
+Merged duplicate player appearance: Abbey McPhee - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498059; 2 source rows became 1 row.
+Merged duplicate player appearance: Virginia Thompson - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498059; 2 source rows became 1 row.
+Merged duplicate player appearance: Wendy Finn - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
+Merged duplicate player appearance: Abbey McPhee - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
+Merged duplicate player appearance: Virginia Thompson - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
 Merged duplicate player appearance: Carrie Barlow - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
 Merged duplicate player appearance: Shelby Crisp - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
 Merged duplicate player appearance: Eleen Hugo - Waratahs - Waratahs Blue Women - https://www.sunraysiahockey.com.au/game/2498061; 2 source rows became 1 row.
 Merged duplicate player appearance: Jenna Hollow - Rivaside - Rivaside Women - https://www.sunraysiahockey.com.au/game/2498060; 2 source rows became 1 row.
 Merged duplicate player appearance: AGUSTINA SIMON VIDELA - Rivaside - Rivaside Women - https://www.sunraysiahockey.com.au/game/2498060; 2 source rows became 1 row.
-Merged duplicate player appearance: Abbey McPhee - Mildura Wanderers - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498062; 2 source rows became 1 row.
-Merged duplicate player appearance: Virginia Thompson - Mildura Wanderers - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498062; 2 source rows became 1 row.
+Merged duplicate player appearance: Abbey McPhee - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498062; 2 source rows became 1 row.
+Merged duplicate player appearance: Virginia Thompson - Waratahs - Waratahs White Women - https://www.sunraysiahockey.com.au/game/2498062; 2 source rows became 1 row.
 Merged duplicate player appearance: Jenna Hollow - Rivaside - Rivaside Women - https://www.sunraysiahockey.com.au/game/2498063; 2 source rows became 1 row.
 Merged duplicate player appearance: AGUSTINA SIMON VIDELA - Rivaside - Rivaside Women - https://www.sunraysiahockey.com.au/game/2498063; 2 source rows became 1 row.
 Merged duplicate player appearance: Paige Cavanagh-cook - Waratahs - Waratahs Men - https://www.sunraysiahockey.com.au/game/2498075; 2 source rows became 1 row.
@@ -68,6 +68,6 @@ RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2491822 -
 RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2491824 - score Mildura Wanderers Mildura Wanderers Under 13 Boys 3 - 0 Koowinda Koowinda Under 13 Boys; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498052 - score Waratahs Waratahs Blue Women 3 - 4 Koowinda Koowinda Women; listed player goals home 3 - away 0.
 RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498058 - score Waratahs Waratahs Blue Women 3 - 0 Koowinda Koowinda Women; listed player goals home 0 - away 0.
-RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498065 - score Rivaside Rivaside Women 3 - 0 Mildura Wanderers Waratahs White Women; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498065 - score Rivaside Rivaside Women 3 - 0 Waratahs Waratahs White Women; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498076 - score Koowinda Koowinda Purple Men 2 - 4 Rivaside Rivaside Blue Men; listed player goals home 2 - away 0.
 RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498088 - score Rivaside Rivaside Blue Men 0 - 3 Waratahs Waratahs Men; listed player goals home 0 - away 0.
