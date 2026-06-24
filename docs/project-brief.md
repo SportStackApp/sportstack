@@ -30,9 +30,9 @@ Near-term priority areas:
 - MVP voting module
 - Safe, clear admin workflows
 
-## MVP Voting Module Direction
+## MVP Voting Module
 
-The MVP voting module is planned around:
+The MVP voting module is built and live. It works as follows:
 
 - Players voting 3/2/1 for best-on-ground style points
 - Only players who attended a game can vote or be voted for
@@ -44,7 +44,7 @@ The MVP voting module is planned around:
 - Full audit logging for admin changes
 - RevSports scraped data staged before matching to real profiles
 
-Current voting-related database direction:
+Current voting-related database tables:
 
 - `revsports_players` stores scraped player/game data
 - `mvp_voting_sessions` stores one voting session per game
@@ -82,6 +82,7 @@ Public and auth:
 - `/forgot-password`
 - `/reset-password`
 - `/pending`
+- `/vote/:token` (public token-based voting link)
 
 Protected app:
 
@@ -90,23 +91,35 @@ Protected app:
 - `/games/:id`
 - `/games/:id/lineup`
 - `/roster`
+- `/coaching`
+- `/coaching/:playerId`
 - `/chat`
 - `/profile`
+- `/voting`
+- `/mvp-votes`
+- `/mvp-votes/:sessionId`
+- `/umpire/vote`
 
 Admin:
 
 - `/admin`
 - `/admin/associations`
+- `/admin/competitions`
 - `/admin/clubs`
 - `/admin/teams`
 - `/admin/divisions`
 - `/admin/users`
 - `/admin/add-player`
 - `/admin/bulk-import`
+- `/admin/revsports-mappings`
+- `/admin/revsports-unmatched`
+- `/admin/revsports-entities`
 - `/admin/fixtures`
 - `/admin/fixture-import`
 - `/admin/venues`
 - `/admin/requests`
+- `/admin/mvp-voting`
+- `/admin/analytics`
 
 Entity dashboards:
 
@@ -165,4 +178,3 @@ npm run lint
 - Custom formation builder is parked until core features are stable.
 - Multi-sport support is a future goal, not current scope.
 - Root `test_*.js` files may be old investigation scripts and should be reviewed before cleanup.
-

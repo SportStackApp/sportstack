@@ -39,3 +39,6 @@ notes/backups/
 data/*.csv
 data/*.json
 data/*_quality_report.txt
+
+# Throwaway debug/investigation scripts
+scratch/

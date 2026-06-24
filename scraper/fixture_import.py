@@ -141,6 +141,13 @@ def load_grade_mappings() -> dict:
             mapping[key] = division_id
         for key in mapping_keys(None, grade):
             mapping.setdefault(key, division_id)
+
+        # Register a stable ID-based key so grades can be matched by RevSports
+        # grade ID, not just by name. The namespaced tuple avoids colliding with
+        # the (association, grade) name keys registered above.
+        grade_id = row.get("revsports_grade_id")
+        if grade_id:
+            mapping[("revsports_grade_id", str(grade_id).strip())] = division_id
     log.info(f"  Loaded {len(mapping)} grade/division mapping keys")
     return mapping
 
@@ -224,6 +231,13 @@ def load_scraped_games(association: str) -> list:
 
 
 def resolve_division_id(game: dict, association: str, home_id: str | None, away_id: str | None, grade_map: dict, team_divisions: dict) -> tuple[str | None, str | None]:
+    # Prefer matching by stable RevSports grade ID; fall back to name below.
+    grade_id = game.get("revsports_grade_id")
+    if grade_id:
+        id_key = ("revsports_grade_id", str(grade_id).strip())
+        if id_key in grade_map:
+            return grade_map[id_key], "grade_id"
+
     grade = game.get("grade")
     for key in mapping_keys(association, grade) + mapping_keys(None, grade):
         if key in grade_map:

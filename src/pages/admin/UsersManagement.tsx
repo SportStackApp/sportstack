@@ -24,7 +24,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
-import { Users, ArrowLeft, Shield, Search, Check, X, UserPlus, FileSpreadsheet, Download, RefreshCw, Plus, AlertTriangle } from "lucide-react";
+import { Users, ArrowLeft, Shield, Search, Check, X, UserPlus, FileSpreadsheet, Download, RefreshCw, Plus, AlertTriangle, Pencil, GitMerge } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,12 +32,16 @@ import { useAdminScope } from "@/hooks/useAdminScope";
 import { useAuth } from "@/contexts/AuthContext";
 import { getRoleDisplayName, getRoleBadgeColor } from "@/hooks/useUserRole";
 import type { Database } from "@/integrations/supabase/types";
+import { EditUserDetailsDialog } from "@/components/admin/EditUserDetailsDialog";
+import { MergeProfilesDialog } from "@/components/admin/MergeProfilesDialog";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 type MembershipType = Database["public"]["Enums"]["membership_type"];
 type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
   is_placeholder?: boolean | null;
   revsports_player_id?: string | null;
+  street_address?: string | null;
+  email?: string | null;
 };
 
 interface Membership {
@@ -120,7 +124,32 @@ const UsersManagement = () => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter, associationFilter, clubFilter, divisionFilter, teamFilter, hidePlaceholders]);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [selectedMergeIds, setSelectedMergeIds] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
+  
+  const handleOpenEditDialog = (u: UserWithRoles) => {
+    setSelectedUser(u);
+    setEditDialogOpen(true);
+  };
+
+  const handleToggleSelectUser = (userId: string) => {
+    setSelectedMergeIds((prev) => {
+      if (prev.includes(userId)) {
+        return prev.filter((id) => id !== userId);
+      }
+      if (prev.length >= 2) {
+        toast({
+          title: "Selection Limit",
+          description: "You can only select up to 2 profiles to merge.",
+          variant: "destructive",
+        });
+        return prev;
+      }
+      return [...prev, userId];
+    });
+  };
   const [revsportsPlayerIdDraft, setRevsportsPlayerIdDraft] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
   const [coachScopes, setCoachScopes] = useState<{ id: string, association_id: string, club_id: string, team_id: string }[]>([]);
@@ -987,6 +1016,16 @@ const UsersManagement = () => {
               <UserPlus className="h-4 w-4 mr-2" />
               Add Player
             </Button>
+            {isSuperAdmin && (
+              <Button
+                variant="secondary"
+                disabled={selectedMergeIds.length !== 2}
+                onClick={() => setMergeDialogOpen(true)}
+              >
+                <GitMerge className="h-4 w-4 mr-2" />
+                Merge Selected
+              </Button>
+            )}
           </div>
         </div>
 
@@ -1150,6 +1189,7 @@ const UsersManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {isSuperAdmin && <TableHead className="w-12"></TableHead>}
                     <TableHead>Name</TableHead>
                     <TableHead>Association / Club / Team</TableHead>
                     <TableHead>Status</TableHead>
@@ -1160,6 +1200,14 @@ const UsersManagement = () => {
                 <TableBody>
                   {paginatedUsers.map((u) => (
                     <TableRow key={u.id}>
+                      {isSuperAdmin && (
+                        <TableCell className="w-12">
+                          <Checkbox
+                            checked={selectedMergeIds.includes(u.id)}
+                            onCheckedChange={() => handleToggleSelectUser(u.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-1.5">
                           {u.first_name || u.last_name
@@ -1289,10 +1337,27 @@ const UsersManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => handleOpenRoleDialog(u)}>
-                          <Shield className="mr-2 h-4 w-4" />
-                          Roles & Teams
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(u)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit Details
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleOpenRoleDialog(u)}>
+                            <Shield className="mr-2 h-4 w-4" />
+                            Roles & Teams
+                          </Button>
+                          {isSuperAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleSelectUser(u.id)}
+                              className={selectedMergeIds.includes(u.id) ? "bg-muted" : ""}
+                            >
+                              <GitMerge className="mr-2 h-4 w-4" />
+                              Merge
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1329,6 +1394,36 @@ const UsersManagement = () => {
             )}
           </CardContent>
         </Card>
+
+        <EditUserDetailsDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          user={selectedUser}
+          onSuccess={async () => {
+            const freshUsers = await fetchUsers();
+            setSelectedUser((prev) => {
+              if (!prev) return prev;
+              const updated = freshUsers.find((u) => u.id === prev.id);
+              return updated ? { ...updated } : prev;
+            });
+          }}
+        />
+
+        <MergeProfilesDialog
+          open={mergeDialogOpen}
+          onOpenChange={(open) => {
+            setMergeDialogOpen(open);
+            if (!open) {
+              setSelectedMergeIds([]);
+            }
+          }}
+          profileIdA={selectedMergeIds[0]}
+          profileIdB={selectedMergeIds[1]}
+          onSuccess={async () => {
+            await fetchUsers();
+            setSelectedMergeIds([]);
+          }}
+        />
 
         {/* Role Management Dialog */}
         <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
