@@ -1,97 +1,96 @@
-# SportStack — Project Health Review Handover
+# SportStack — Session Handover
 
 **Date:** 24 June 2026
-**Type:** Full project health check (database, data pipeline, features, screen-to-table links)
-**Method:** Live Supabase queries + local code/doc reads. Findings verified against actual schema and data, not assumed.
+**Type:** Full project health review + two confirmed fixes shipped
+**Method:** Live Supabase queries + local code/doc reads, verified independently (not just trusting AI tool summaries).
 
 ---
 
-## Summary
+## TL;DR for next session
 
-A full sweep across four zones. The database is fundamentally healthy (no orphaned records, RLS enabled everywhere). The main risks are: one confirmed live bug, a class of name-only mapping tables, and a votes-privacy rule that exists on screen but not in the database. One fix was made this session (project brief refreshed).
-
-Baseline counts at time of review: 728 profiles, 9,933 revsports_players, 579 fixtures, 135 mvp_votes, 1,227 team_memberships, 682 user_roles.
+Two real bugs fixed and shipped to `dev` this session: the Roles & Teams save bug, and grade mismatch risk in fixture import. Database is fundamentally healthy. Next priority is the votes-privacy RLS gap (#3 below).
 
 ---
 
-## Findings by severity
+## What was DONE and SHIPPED this session (all on `dev`)
 
-### High
+### 1. Fixed: `admin_save_user_roles` save bug — CONFIRMED FIXED
+- Cause: 4 conflicting overloaded versions of the function existed at once; Postgres couldn't reliably resolve which to call.
+- Fix: backed up all 4 definitions, dropped the 3 stale ones, kept the version the app actually calls: `admin_save_user_roles(uuid, text[], jsonb, jsonb, uuid[], jsonb)`.
+- Verified: only the correct version remains in the database.
+- **Still TODO (Aaron):** test the Roles & Teams screen in the app — change a user's roles, save, refresh, confirm it persists.
+- Files: `supabase/migrations/20260624010000_drop_stale_admin_save_user_roles_overloads.sql`, `notes/2026-06-24-admin_save_user_roles-backup.sql` (full restorable backup of all 4 versions). Committed: `5188752`.
 
-**1. `admin_save_user_roles` has 4 conflicting versions (CONFIRMED, NOT FIXED)**
-Four overloaded copies of this function exist at once, with different parameter sets:
-- `(p_user_id, p_roles, p_coach_teams, p_manager_teams)`
-- `(p_user_id, p_roles, p_coach_teams, p_manager_teams, p_association_admin_associations, p_club_admin_clubs)`
-- `(p_user_id, p_roles, p_coach_scopes jsonb, p_manager_scopes jsonb, p_association_admin_associations, p_club_admin_clubs)`
-- `(p_user_id, p_roles, p_coach_scopes jsonb, p_manager_scopes jsonb, p_association_admin_associations, p_club_admin_scopes jsonb)`
+### 2. Fixed: Grade mapping mismatch risk — CONFIRMED FIXED
+- Found: the scraper already captures real RevSports IDs (grade, venue, competition) from page URLs — they were sitting in `revsports_players` unused. No re-scrape was needed.
+- Risk: grade NAMES clash across associations (e.g. "Women" = grade 26290 in Sunraysia, 22776 in Wimmera) — name-only matching could silently mismap divisions, which feed `fixtures`.
+- Fix: added `revsports_grade_id` column to `revsports_grade_mappings`, backfilled all 18 rows (100%, zero ambiguity). Updated `fixture_import.py` (`load_grade_mappings()` + `resolve_division_id()`) to match by grade ID first, falling back to name — verified via Antigravity dry-run: 532/535 fixtures resolved (unchanged), 500 now via the stable `grade_id` path.
+- Verified independently: read the actual diff in `fixture_import.py`, confirmed the ID-key registration and the guarded lookup (`if id_key in grade_map`) are correct and safe.
+- Files: `supabase/migrations/20260624020000_add_revsports_grade_id_to_grade_mappings.sql`, `scraper/fixture_import.py` (modified). Committed: `b88d7ec`.
 
-This is the cause of the "Roles & Teams save reports success but doesn't persist" bug — Postgres can't reliably resolve which version to call. Fix: identify the correct (current) signature, drop the other three. Low risk.
+### 3. Decision made: venue & pitch stay name-based — NOT a bug, documented
+- Investigated using Aaron's screenshots of the RevSports source pages.
+- Finding: **no pitch ID exists anywhere in RevSports** — pitch is always free text. The "venue ID" RevSports exposes is actually pitch-level, and associations use it inconsistently:
+  - WHA: venues only, no pitch breakdown at all.
+  - Sunraysia + HB's John Vernon Field: one venue, pitch as a text label (the sensible model).
+  - HB's Prince of Wales Park: split into 3 separate "venue" IDs (18277 Full, 18279 North, 18280 South) — a HB data-entry anomaly, not the RevSports norm.
+- Decision (Aaron's call, agreed): keep venue + pitch as name/text matching. Adding venue IDs would be messy (3→1 collapse for POW) and pitch IDs don't exist to add.
+- Verified safe: all 3 POW Park pitch values have mapping rows — the 634 half-pitch games (400 North + 234 South) resolve correctly, nothing falling through.
+- Documented in: `notes/2026-06-24-revsports-mapping-id-decisions.md`. Committed: `b88d7ec`.
 
-**2. Six mapping tables match by name only — "Gold bug" class (NOT FIXED)**
-These have no RevSports numeric ID column, so a name change or duplicate name silently mismaps:
-`revsports_grade_mappings`, `revsports_venue_mappings`, `revsports_pitch_mappings`, `revsports_club_mappings`, `revsports_association_mappings`, `revsports_umpire_mappings`.
-- **Grade and venue are the dangerous two** (they feed fixtures).
-- `revsports_competition_mappings` already HAS `revsports_competition_id`, but the import script ignores it — wire it up.
-- Related parked item (`known-issues.md`): duplicate team names in fixture import cause silent wrong-team assignment. Same family of problem.
+### 4. Fixed: stale `project-brief.md` — CONFIRMED FIXED
+- Was missing ~13 live routes (coaching, MVP voting, umpire portal, RevSports admin pages) and described MVP voting as "planned" when it's built and live.
+- Updated routes list and wording. This file is read first by AI coding tools, so the staleness was feeding them a wrong map of the app.
+- Committed: `4e6bd3f`.
 
-### Medium
-
-**3. Votes-privacy restriction is screen-only, NOT enforced in the database (CONFIRMED, NOT FIXED)**
-RLS is enabled on `mvp_votes` (4 policies), but the policy "Admins full access - mvp_votes" is set to `ALL` and applies to five roles: SUPER_ADMIN, ASSOCIATION_ADMIN, CLUB_ADMIN, COACH, TEAM_MANAGER.
-Per the Analytics design, CLUB_ADMIN / COACH / TEAM_MANAGER should only see the leaderboard — but this policy lets them read every individual vote row directly via the API, bypassing the UI.
-- Severity: medium. Not public; needs a logged-in user with one of those roles querying the API directly.
-- Proper fix (two parts, NOT a quick toggle): (a) serve the leaderboard via a totals-only aggregate view/function that never exposes who-voted-for-whom; (b) then restrict raw `mvp_votes` SELECT to Super/Association Admin only.
-- Caution: the leaderboard for those roles is likely built by reading raw votes in the browser. Tightening RLS naively could blank the leaderboard. Check how Analytics reads votes before changing policies.
-
-**4. 8 duplicate profile name-groups (NOT ACTIONABLE IN-APP YET)**
-Ben S (x4); Claire B, Hamish S, Hayden S, Lachlan M, Nick T, Reuben P, Riley K (x2 each).
-The `admin_merge_profiles` database function exists (Stage 1 done), but the Stage 2 React UI to run it is not built — so these can't be cleaned up in-app yet.
-
-**5. The "384 unlinked scraped players" — diagnosed, mostly a phantom (NOT A BUG)**
-Of 384 revsports_players with no profile_id:
-- 335 are bye / `NO_PLAYERS` / blank rows with no RevSports ID — legitimately exempt, not real players.
-- 49 appearances = only 10 real people. All 10 have a RevSports ID but no row in `revsports_player_mappings`, which is why no profile link was made. Normal "awaiting mapping" backlog, not corruption. None are Wimmera.
-- The 10: Hannah F. (SOBHC), Anthony D. (SOBHC), Demi Atkinson (Rivaside), Kate Madden (Waratahs), abbiegail peters (Koowinda), Willem McGregor (Koowinda), Cooper P. (Blaze), Kayd Divola (Rivaside), Max F. (Blaze), Michael Fotheringham (Rivaside).
-- They ARE reachable: the RevSports Mappings page (`/admin/revsports-mappings` -> Players) lists every scraped player by RevSports ID with no "already matched" filter, so they appear there to be mapped.
-- Minor oddity: the two SOBHC players have a last-seen date of 23 Aug 2026 (future) — possibly season-registration rows rather than match appearances. Worth a glance later.
-
-### Healthy / clean (verified)
-
-- No orphaned records: mvp_votes (player + voter), team_memberships (user + team), user_roles (user) all point to real rows.
-- RLS enabled on all key tables (profiles, mvp_votes, mvp_voting_sessions, team_memberships, user_roles, revsports_players, fixtures).
-- `admin_merge_profiles` and `is_super_admin()` exist and look correct (`is_super_admin()` takes no args).
-- V2 fixture import is clean: docs report 574/574 imported, 0 skipped. Reconciles with the live 579 total (574 + 5 old Wimmera rows deliberately left alone).
-
-### Docs / UX flags
-
-- **project-brief.md was stale — FIXED this session.** It was missing ~13 live routes and described the MVP voting module as "planned". Updated to list all current routes and mark MVP voting as built/live. The AI tools read this file first, so the staleness was feeding them a wrong map.
-- **"Unmatched" page UX trap.** `/admin/revsports-unmatched` reads the `revsports_unmatched_items` table, which only has team/competition/grade columns (no player fields) and is currently empty. It does NOT surface unmatched players — those live on the Mappings page. Consider relabelling, or adding a player section, so the name isn't misleading.
+### 5. Rescued: Profile Merge Tool — now version controlled
+- Found ~1,885 lines of working code sitting untracked, only on Aaron's machine (not backed up to GitHub): `MergeProfilesDialog.tsx`, `EditUserDetailsDialog.tsx`, `get-user-emails` Edge Function, `admin_merge_profiles` migration, modified `UsersManagement.tsx`.
+- Scanned for hardcoded secrets first (clean — service key read via `Deno.env.get()`, the correct pattern).
+- Committed: `4e6bd3f`.
 
 ---
 
-## Pipeline state (scraper -> app)
+## Confirmed findings — NOT yet fixed (priority order for next session)
 
-- V2 fixture import: live and healthy.
-- Lineup promotion: dry-run planner ready (~3,668 attended appearances ready — Hockey Ballarat 2,002 + Sunraysia 1,666; 0 blockers). `--apply` NOT run yet (approval-gated). Decision pending.
-- Wimmera gap: has fixtures but zero player appearances. RevSports keeps Wimmera player stats behind a login; scraper needs authenticated support before Wimmera MVP voting / line-ups can work.
+### 🟠 #3 — Votes privacy is screen-only, not enforced in the database
+RLS is enabled on `mvp_votes`, but the policy "Admins full access - mvp_votes" grants `ALL` (including SELECT) to 5 roles: SUPER_ADMIN, ASSOCIATION_ADMIN, CLUB_ADMIN, COACH, TEAM_MANAGER. Per the Analytics design, Club Admin/Coach/Team Manager should only see the aggregate leaderboard — but this policy lets them read every individual vote row directly via the API, bypassing the UI restriction.
+- **Proper fix (2 parts, not a quick toggle):** (a) build a totals-only leaderboard aggregate view/function that never exposes who-voted-for-whom; (b) then restrict raw `mvp_votes` SELECT to Super/Association Admin only.
+- **Caution:** check how the Analytics screen currently reads votes for those 3 roles before touching RLS — it may read raw votes in the browser, and tightening naively could blank the leaderboard for them.
+- Severity: medium (needs a logged-in user with one of those 3 roles deliberately querying the API).
+
+### 🟠 #4 — 8 duplicate profile name-groups, no UI to merge them yet
+Ben S (×4); Claire B, Hamish S, Hayden S, Lachlan M, Nick T, Reuben P, Riley K (×2 each).
+The `admin_merge_profiles` DB function exists and was used successfully once before (Jason H → Jason Harris) — but the Stage 2 React UI to drive it (`MergeProfilesDialog.tsx`) was only just rescued into git this session, not yet wired up/tested for these 8.
+
+### 🟢 #5 — Smaller items
+- **10 real unmapped players** (of the original 384 "unlinked" — 335 were bye/blank rows, a phantom, not a bug). The 10 are reachable on `/admin/revsports-mappings` → Players (the page literally named "Unmatched" is a UX trap — it only has team/competition columns and is empty; it does NOT surface players).
+- **Lineup promotion** — dry-run ready (~3,668 attended appearances: HB 2,002 + Sunraysia 1,666), `--apply` not yet run. Decision pending.
+- **Wimmera scraper gap** — has fixtures but zero player appearances; stats are behind a login the scraper can't reach yet.
+- **Competition mapping** — already has a `revsports_competition_id` column and the data has the ID, but `fixture_import.py` still matches by name. Same pattern as the grade fix, much smaller risk (names don't currently clash) — easy follow-up whenever.
+- **`/admin/revsports-unmatched` page label** — misleading name, consider relabelling or adding a player section.
 
 ---
 
-## Change made this session
+## Key facts for next session
 
-- Edited `docs/project-brief.md` (routes section + MVP wording). Backup at `docs/project-brief.md.bak`.
-- **Uncommitted.** This is a docs file (not `.yml`), so it goes to the `dev` branch first, then merges to `main`. Delete the `.bak` before committing so it isn't staged.
+- **Live counts (24 June 2026):** 728 profiles, 9,933 revsports_players, 579 fixtures, 135 mvp_votes, 1,227 team_memberships, 682 user_roles.
+- **No orphaned records found anywhere** — votes, memberships, roles all point to real rows. Genuinely healthy.
+- **RLS enabled on all key tables** — but enabled ≠ correctly scoped (see #3 above).
+- **Scraper already captures RevSports grade ID, venue ID, and competition ID** on every row of `revsports_players` (100%, 99%, ~100% coverage respectively) — no re-scrape needed for ID-based matching projects. The gap was always in the mapping tables / importer, not the scraper.
+- **`revsports_player_registry` and `revsports_player_history`** are separate Playwright-based scrapers (season stats + career history) — not reviewed in depth this session, flagged as untouched territory if doing a deeper pipeline pass later.
 
 ---
 
-## Recommended next actions (priority order)
+## Commits this session (all on `dev`, none yet merged to `main`)
+1. `4e6bd3f` — project-brief refresh + Profile Merge Tool rescue + handover note
+2. `5188752` — admin_save_user_roles fix (dropped 3 stale overloads) + backup
+3. `b88d7ec` — grade ID matching in fixture_import.py + migration + decision doc
 
-1. Fix `admin_save_user_roles` — drop the 3 stale versions, keep the correct one. (Quick, confirmed.)
-2. Add RevSports ID columns to the name-only mapping tables (grade + venue first); make the competition import use the ID column it already has.
-3. Votes privacy: build a totals-only leaderboard aggregate, then tighten `mvp_votes` SELECT to Super/Association Admin. (Check Analytics' read path first.)
-4. Build the profile-merge UI (Stage 2), then merge the 8 duplicate profiles.
-5. Map the 10 unmatched players via Mappings -> Players.
-6. Decide on running lineup-promotion `--apply`.
-7. Wimmera authenticated scraping (larger piece of work).
-8. Optional: relabel the "Unmatched" page.
-9. Commit the project-brief update to `dev`; delete the `.bak`.
+Nothing has been merged to `main` / deployed to Vercel yet — that's a separate, deliberate step whenever Aaron's ready.
+
+---
+
+## Recommended next session starting point
+1. Test the Roles & Teams save fix in the app (quick, confirms #1 actually works end-to-end).
+2. Tackle #3 (votes privacy) — start by checking how Analytics currently reads votes for Club Admin/Coach/Team Manager, before touching RLS.
+3. Or: wire up the Profile Merge Tool UI and clean the 8 duplicate profiles (#4).
