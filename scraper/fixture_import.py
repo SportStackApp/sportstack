@@ -14,7 +14,9 @@ import argparse
 import logging
 import os
 from collections import Counter, defaultdict
+from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from supabase import Client, create_client
 
@@ -385,11 +387,23 @@ def build_fixture_rows(games: list, team_map: dict, venue_map: dict, pitch_map: 
             log.info(f"  No venue mapping for '{venue_name}' — will import without venue")
 
         # Build the fixture date+time string
+        # game_date/game_time are in Melbourne LOCAL time (from RevSports).
+        # We must convert to UTC before storing, since fixture_date is a
+        # "timestamp with time zone" column and Postgres assumes UTC for
+        # bare timestamp strings.
         game_date = game.get("game_date", "")
         game_time = game.get("game_time") or "00:00"
         # game_time from scraper may be "HH:MM" or "HH:MM:SS"
+        if len(game_time) == 5:
+            game_time = f"{game_time}:00"
+
         if game_date:
-            fixture_datetime = f"{game_date}T{game_time}:00" if len(game_time) == 5 else f"{game_date}T{game_time}"
+            local_naive_str = f"{game_date}T{game_time}"
+            local_dt = datetime.fromisoformat(local_naive_str).replace(
+                tzinfo=ZoneInfo("Australia/Melbourne")
+            )
+            utc_dt = local_dt.astimezone(ZoneInfo("UTC"))
+            fixture_datetime = utc_dt.isoformat()
         else:
             fixture_datetime = None
 

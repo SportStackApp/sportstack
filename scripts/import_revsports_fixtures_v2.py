@@ -15,6 +15,7 @@ import os
 from collections import Counter
 from datetime import UTC, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from supabase import create_client
 
@@ -58,7 +59,12 @@ def fixture_datetime(match: dict) -> str | None:
     if len(time_value) == 5:
         time_value = f"{time_value}:00"
 
-    return f"{date_value}T{time_value}"
+    local_naive_str = f"{date_value}T{time_value}"
+    local_dt = datetime.fromisoformat(local_naive_str).replace(
+        tzinfo=ZoneInfo("Australia/Melbourne")
+    )
+    utc_dt = local_dt.astimezone(ZoneInfo("UTC"))
+    return utc_dt.isoformat()
 
 
 def is_bye_match(match: dict) -> bool:
