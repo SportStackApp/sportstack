@@ -3,11 +3,16 @@ import { supabase as originalSupabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  Trophy, ChevronLeft, RefreshCw, Mail, XCircle, CheckCircle2, Clock, Users 
+  Trophy, ChevronLeft, ChevronRight, RefreshCw, Mail, XCircle, CheckCircle2, Clock, Users 
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
@@ -53,10 +58,29 @@ interface Shoutout {
 
 export default function MvpVotingAdmin() {
   const { toast } = useToast();
-  const { loading: scopeLoading, isSuperAdmin, highestScopedRole } = useAdminScope();
+  const { loading: scopeLoading, isSuperAdmin, highestScopedRole, scopedAssociationIds } = useAdminScope();
 
   const [view, setView] = useState<"list" | "detail">("list");
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+
+  // Reference data states
+  const [allAssociations, setAllAssociations] = useState<{ id: string; name: string }[]>([]);
+  const [allClubs, setAllClubs] = useState<{ id: string; name: string; association_id: string }[]>([]);
+  const [allDivisions, setAllDivisions] = useState<{ id: string; name: string; association_id: string }[]>([]);
+  const [allTeams, setAllTeams] = useState<{ id: string; name: string; club_id: string; division_id: string | null }[]>([]);
+
+  // Filter states
+  const [filterAssociation, setFilterAssociation] = useState<string>("ALL");
+  const [filterClub, setFilterClub] = useState<string>("ALL");
+  const [filterDivision, setFilterDivision] = useState<string>("ALL");
+  const [filterTeam, setFilterTeam] = useState<string>("ALL");
+  const [filterStatus, setFilterStatus] = useState<string>("OPEN"); // Default OPEN
+  const [filterRound, setFilterRound] = useState<string>("");
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
 
   // List view states
   const [sessions, setSessions] = useState<MvpSession[]>([]);
@@ -76,56 +100,216 @@ export default function MvpVotingAdmin() {
 
   const hasAccess = isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN";
 
+  // Load reference data on mount
+  useEffect(() => {
+    const loadRefData = async () => {
+      try {
+        const [assocRes, clubRes, divRes, teamRes] = await Promise.all([
+          supabase.from("associations").select("id, name").order("name"),
+          supabase.from("clubs").select("id, name, association_id").order("name"),
+          supabase.from("divisions").select("id, name, association_id").order("name"),
+          supabase.from("teams").select("id, name, club_id, division_id").order("name"),
+        ]);
+
+        setAllAssociations(assocRes.data || []);
+        setAllClubs(clubRes.data || []);
+        setAllDivisions(divRes.data || []);
+        setAllTeams(teamRes.data || []);
+      } catch (err) {
+        console.error("Error loading reference data:", err);
+      }
+    };
+    
+    loadRefData();
+  }, []);
+
+  // Initialize and restrict association admin to their scoped association
+  useEffect(() => {
+    if (!isSuperAdmin && scopedAssociationIds && scopedAssociationIds.length > 0) {
+      setFilterAssociation(scopedAssociationIds[0]);
+    }
+  }, [isSuperAdmin, scopedAssociationIds]);
+
+  // Cascading filter handlers
+  const handleAssociationChange = (val: string) => {
+    setFilterAssociation(val);
+    setFilterClub("ALL");
+    setFilterDivision("ALL");
+    setFilterTeam("ALL");
+    setCurrentPage(1);
+  };
+
+  const handleClubChange = (val: string) => {
+    setFilterClub(val);
+    setFilterDivision("ALL");
+    setFilterTeam("ALL");
+    setCurrentPage(1);
+  };
+
+  const handleDivisionChange = (val: string) => {
+    setFilterDivision(val);
+    setFilterTeam("ALL");
+    setCurrentPage(1);
+  };
+
+  // Filter derivations
+  const filteredDivisions = allDivisions.filter((div) => {
+    if (filterAssociation !== "ALL" && div.association_id !== filterAssociation) {
+      return false;
+    }
+    if (filterClub !== "ALL") {
+      return allTeams.some((t) => t.club_id === filterClub && t.division_id === div.id);
+    }
+    return true;
+  });
+
+  const filteredTeams = allTeams.filter((team) => {
+    if (filterClub !== "ALL" && team.club_id !== filterClub) {
+      return false;
+    }
+    if (filterDivision !== "ALL" && team.division_id !== filterDivision) {
+      return false;
+    }
+    if (filterAssociation !== "ALL") {
+      const club = allClubs.find((c) => c.id === team.club_id);
+      if (!club || club.association_id !== filterAssociation) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   // Load session list
   const loadSessions = async () => {
     setListLoading(true);
     try {
-      const { data, error } = await supabase
+      // Resolve Association/Club filters to a list of team IDs first (home OR
+      // away), since clubs.association_id and teams.club_id only exist on the
+      // team row, and a club/association can appear on either side of a
+      // fixture. This avoids a 3-level-deep nested PostgREST filter that
+      // previously only matched the home team and silently hid away games.
+      let teamIdsForClubOrAssoc: string[] | null = null;
+      if (filterAssociation !== "ALL" || filterClub !== "ALL") {
+        let teamQuery = supabase.from("teams").select("id, club_id, clubs!inner(id, association_id)");
+        if (filterClub !== "ALL") {
+          teamQuery = teamQuery.eq("club_id", filterClub);
+        }
+        if (filterAssociation !== "ALL") {
+          teamQuery = teamQuery.eq("clubs.association_id", filterAssociation);
+        }
+        const { data: matchingTeams, error: teamErr } = await teamQuery;
+        if (teamErr) throw teamErr;
+        teamIdsForClubOrAssoc = (matchingTeams || []).map((t: any) => t.id);
+      }
+
+      let query = supabase
         .from("mvp_voting_sessions")
-        .select("*")
-        .order("game_date", { ascending: false });
+        .select(`
+          *,
+          fixtures!inner(
+            id,
+            division_id,
+            home_team_id,
+            away_team_id,
+            round_number
+          )
+        `, { count: "exact" });
+
+      // Apply Filters
+      if (teamIdsForClubOrAssoc !== null) {
+        if (teamIdsForClubOrAssoc.length === 0) {
+          // No teams match this association/club combo — short-circuit to empty results
+          setSessions([]);
+          setTotalCount(0);
+          setListLoading(false);
+          return;
+        }
+        const idList = teamIdsForClubOrAssoc.join(",");
+        query = query.or(`home_team_id.in.(${idList}),away_team_id.in.(${idList})`, { foreignTable: "fixtures" });
+      }
+      if (filterDivision !== "ALL") {
+        query = query.eq("fixtures.division_id", filterDivision);
+      }
+      if (filterTeam !== "ALL") {
+        query = query.or(`home_team_id.eq.${filterTeam},away_team_id.eq.${filterTeam}`, { foreignTable: "fixtures" });
+      }
+      if (filterStatus !== "ALL") {
+        query = query.eq("status", filterStatus);
+      }
+      if (filterRound.trim() !== "") {
+        query = query.ilike("round", `%Round ${filterRound}%`);
+      }
+
+      // Order and Paginate
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("game_date", { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
 
+      setTotalCount(count || 0);
+
       if (data) {
-        // Fetch eligible voters and votes cast counts per session
-        const sessionsWithCounts = await Promise.all(
-          data.map(async (session: any) => {
-            // votedCount = number of people who have submitted (login-based model)
-            const { count: submissionCount } = await supabase
-              .from("mvp_vote_submissions")
-              .select("*", { count: "exact", head: true })
-              .eq("session_id", session.id);
+        // Fetch submission counts and eligible voter counts in bulk for this page's sessions
+        const sessionIds = data.map((s: any) => s.id);
+        const fixtureIds = data.map((s: any) => s.fixture_id).filter(Boolean);
 
-            // totalVoters = eligible pool = distinct attended players in this fixture
-            // who have a linked profile (registered users able to log in and vote)
-            let totalVoters = 0;
-            if (session.fixture_id) {
-              const { data: attendedRows } = await supabase
-                .from("revsports_players")
-                .select("profile_id, team")
-                .eq("fixture_id", session.fixture_id)
-                .eq("attended", true)
-                .not("profile_id", "is", null);
-              // Grampians/Pumas rows come through the scraper as team = null OR
-              // team = "Grampians Hockey Club" - the opposition always has a real,
-              // different team name. This excludes opposition players (and anyone
-              // else, e.g. an umpire who also has a player profile elsewhere) from
-              // the eligible-voter count.
-              const pumasSide = (attendedRows || []).filter(
-                (r: any) => r.team === null || r.team === "Grampians Hockey Club"
-              );
-              totalVoters = new Set(pumasSide.map((r: any) => r.profile_id)).size;
+        // 1. Bulk fetch submission counts (votedCount)
+        const submissionsGroup: Record<string, number> = {};
+        if (sessionIds.length > 0) {
+          const { data: subsData, error: subsErr } = await supabase
+            .from("mvp_vote_submissions")
+            .select("session_id")
+            .in("session_id", sessionIds);
+          
+          if (subsErr) throw subsErr;
+
+          (subsData || []).forEach((sub: any) => {
+            submissionsGroup[sub.session_id] = (submissionsGroup[sub.session_id] || 0) + 1;
+          });
+        }
+
+        // 2. Bulk fetch eligible voters
+        const voterCountsGroup: Record<string, number> = {};
+        if (fixtureIds.length > 0) {
+          const { data: playersData, error: playersErr } = await supabase
+            .from("revsports_players")
+            .select("fixture_id, profile_id, team")
+            .in("fixture_id", fixtureIds)
+            .eq("attended", true)
+            .not("profile_id", "is", null);
+
+          if (playersErr) throw playersErr;
+
+          // Group by fixture_id and count distinct profile_ids for Pumas side (team is null or "Grampians Hockey Club")
+          const fixtureVoterProfiles: Record<string, Set<string>> = {};
+          (playersData || []).forEach((row: any) => {
+            const isPumas = row.team === null || row.team === "Grampians Hockey Club";
+            if (isPumas) {
+              if (!fixtureVoterProfiles[row.fixture_id]) {
+                fixtureVoterProfiles[row.fixture_id] = new Set();
+              }
+              fixtureVoterProfiles[row.fixture_id].add(row.profile_id);
             }
+          });
 
-            return {
-              ...session,
-              votedCount: submissionCount || 0,
-              totalVoters,
-            };
-          })
-        );
+          Object.entries(fixtureVoterProfiles).forEach(([fixId, profSet]) => {
+            voterCountsGroup[fixId] = profSet.size;
+          });
+        }
+
+        const sessionsWithCounts = data.map((session: any) => ({
+          ...session,
+          votedCount: submissionsGroup[session.id] || 0,
+          totalVoters: voterCountsGroup[session.fixture_id] || 0,
+        }));
+
         setSessions(sessionsWithCounts);
+      } else {
+        setSessions([]);
       }
     } catch (err: any) {
       toast({
@@ -301,7 +485,18 @@ export default function MvpVotingAdmin() {
     if (hasAccess && view === "list") {
       loadSessions();
     }
-  }, [hasAccess, view]);
+  }, [
+    hasAccess,
+    view,
+    currentPage,
+    pageSize,
+    filterAssociation,
+    filterClub,
+    filterDivision,
+    filterTeam,
+    filterStatus,
+    filterRound
+  ]);
 
   // Action: Reopen closed session
   const handleReopenSession = async () => {
@@ -495,6 +690,118 @@ export default function MvpVotingAdmin() {
             </Button>
           </div>
 
+          {/* Filters UI */}
+          <div className="flex flex-wrap items-center gap-4 bg-muted/20 p-4 rounded-lg border border-border">
+            {/* Association filter */}
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-semibold">Association:</Label>
+              <Select
+                disabled={!isSuperAdmin}
+                value={filterAssociation}
+                onValueChange={handleAssociationChange}
+              >
+                <SelectTrigger className="w-48 min-w-0 overflow-hidden h-9">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All</SelectItem>
+                  {allAssociations.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Club filter */}
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-semibold">Club:</Label>
+              <Select value={filterClub} onValueChange={handleClubChange}>
+                <SelectTrigger className="w-48 min-w-0 overflow-hidden h-9">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All</SelectItem>
+                  {allClubs
+                    .filter((c) => filterAssociation === "ALL" || c.association_id === filterAssociation)
+                    .map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Division filter */}
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-semibold">Division:</Label>
+              <Select value={filterDivision} onValueChange={handleDivisionChange}>
+                <SelectTrigger className="w-48 min-w-0 overflow-hidden h-9">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All</SelectItem>
+                  {filteredDivisions.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Team filter */}
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-semibold">Team:</Label>
+              <Select value={filterTeam} onValueChange={(v) => { setFilterTeam(v); setCurrentPage(1); }}>
+                <SelectTrigger className="w-48 min-w-0 overflow-hidden h-9">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All</SelectItem>
+                  {filteredTeams.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status filter */}
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-semibold">Status:</Label>
+              <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setCurrentPage(1); }}>
+                <SelectTrigger className="w-36 h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="OPEN">Open</SelectItem>
+                  <SelectItem value="CLOSED">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Round filter */}
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-semibold">Round:</Label>
+              <Input
+                className="h-9 w-20"
+                type="number"
+                placeholder="All"
+                value={filterRound}
+                onChange={(e) => {
+                  setFilterRound(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          </div>
+
           <Card className="shadow-sm border-border bg-card">
             <CardContent className="p-0">
               {listLoading ? (
@@ -505,54 +812,111 @@ export default function MvpVotingAdmin() {
                   <Skeleton className="h-12 w-full" />
                 </div>
               ) : sessions.length === 0 ? (
-                <div className="p-12 text-center text-muted-foreground">
+                <div className="p-12 text-center text-muted-foreground text-sm">
                   No MVP voting sessions found.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-muted/40">
-                      <TableRow>
-                        <TableHead className="font-semibold text-foreground">Grade</TableHead>
-                        <TableHead className="font-semibold text-foreground">Round</TableHead>
-                        <TableHead className="font-semibold text-foreground">Game Date</TableHead>
-                        <TableHead className="font-semibold text-foreground">Teams</TableHead>
-                        <TableHead className="font-semibold text-foreground">Status</TableHead>
-                        <TableHead className="font-semibold text-foreground">Voted</TableHead>
-                        <TableHead className="text-right font-semibold text-foreground">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sessions.map((session) => (
-                        <TableRow key={session.id} className="hover:bg-muted/30 transition-colors">
-                          <TableCell className="font-medium">{session.grade}</TableCell>
-                          <TableCell>{session.round}</TableCell>
-                          <TableCell>{formatDateString(session.game_date)}</TableCell>
-                          <TableCell className="font-semibold">
-                            {session.home_team} <span className="text-muted-foreground font-normal">vs</span> {session.away_team}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(session.status)}</TableCell>
-                          <TableCell className="font-medium text-muted-foreground">
-                            <span className="text-foreground font-bold">{session.votedCount}</span> / {session.totalVoters}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setView("detail");
-                                setSelectedSessionId(session.id);
-                                loadSessionDetails(session.id);
-                              }}
-                            >
-                              View Results
-                            </Button>
-                          </TableCell>
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/40">
+                        <TableRow>
+                          <TableHead className="font-semibold text-foreground">Grade</TableHead>
+                          <TableHead className="font-semibold text-foreground">Round</TableHead>
+                          <TableHead className="font-semibold text-foreground">Game Date</TableHead>
+                          <TableHead className="font-semibold text-foreground">Teams</TableHead>
+                          <TableHead className="font-semibold text-foreground">Status</TableHead>
+                          <TableHead className="font-semibold text-foreground">Voted</TableHead>
+                          <TableHead className="text-right font-semibold text-foreground">Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {sessions.map((session) => (
+                          <TableRow key={session.id} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="font-medium">{session.grade}</TableCell>
+                            <TableCell>{session.round}</TableCell>
+                            <TableCell>{formatDateString(session.game_date)}</TableCell>
+                            <TableCell className="font-semibold">
+                              {session.home_team} <span className="text-muted-foreground font-normal">vs</span> {session.away_team}
+                            </TableCell>
+                            <TableCell>{getStatusBadge(session.status)}</TableCell>
+                            <TableCell className="font-medium text-muted-foreground">
+                              <span className="text-foreground font-bold">{session.votedCount}</span> / {session.totalVoters}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setView("detail");
+                                  setSelectedSessionId(session.id);
+                                  loadSessionDetails(session.id);
+                                }}
+                              >
+                                View Results
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Pagination controls */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t bg-muted/20">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>Show</span>
+                      <Select
+                        value={pageSize.toString()}
+                        onValueChange={(v) => {
+                          setPageSize(Number(v));
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <SelectTrigger className="w-16 h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="25">25</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <span>per page</span>
+                      <span className="ml-2 font-medium">
+                        {totalCount > 0
+                          ? `Showing ${Math.min(totalCount, (currentPage - 1) * pageSize + 1)}-${Math.min(
+                              totalCount,
+                              currentPage * pageSize
+                            )} of ${totalCount}`
+                          : "Showing 0-0 of 0"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="h-8 px-2"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.min(Math.ceil(totalCount / pageSize), p + 1))}
+                        disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+                        className="h-8 px-2"
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
