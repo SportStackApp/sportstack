@@ -1,9 +1,9 @@
 DATA QUALITY REPORT - Hockey Ballarat
-Generated: 2026-06-25T18:22:02.360488
+Generated: 2026-06-26T23:10:05.057760
 ------------------------------------------------------------
-Rows checked: 6,659
+Rows checked: 6,662
 Issues found: 0
-Warnings found: 42
+Warnings found: 43
 
 No issues found by the basic checker.
 
@@ -11,6 +11,7 @@ WARNINGS
 ------------------------------------------------------------
 Merged duplicate player appearance: Emile S. - Blaze - U11 Blaze Red - https://www.revolutionise.com.au/hockeyballarat/game/2524210; 2 source rows became 1 row.
 Merged duplicate player appearance: Odie B. - Blaze - U11 Blaze Green - https://www.revolutionise.com.au/hockeyballarat/game/2563884; 2 source rows became 1 row.
+Merged duplicate player appearance: Odie B. - Blaze - U11 Blaze Green - https://www.revolutionise.com.au/hockeyballarat/game/2563887; 2 source rows became 1 row.
 Merged duplicate player appearance: Toby D. - Lucas HC - U14 - https://www.revolutionise.com.au/hockeyballarat/game/2524238; 2 source rows became 1 row.
 Merged duplicate player appearance: Toby D. - Lucas HC - U14 - https://www.revolutionise.com.au/hockeyballarat/game/2524244; 2 source rows became 1 row.
 Merged duplicate player appearance: Hunter K. - Lucas HC - U16 - https://www.revolutionise.com.au/hockeyballarat/game/2524256; 2 source rows became 1 row.
