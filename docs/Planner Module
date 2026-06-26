@@ -1,0 +1,912 @@
+You are working on the existing SportStack app.
+
+Build a new SportStack module called:
+
+Formation & Lineup Planner
+
+This module replaces the old standalone Lovable “Field Hockey Position Planner” prototype and turns it into a real SportStack feature using Supabase, the existing SportStack admin UI style, and existing team/player data.
+
+Important: do not build this as a separate dark green single-file prototype. It must fit into the current SportStack admin layout: blue sidebar, white cards, clean admin dashboard styling, top selectors, role-based access, and existing Supabase patterns.
+
+Core outcome:
+
+Admins and coaches should be able to create reusable formation templates, then use those templates to assign real eligible players into a team or match lineup.
+
+The module has two connected but separate parts:
+
+1. Formation Builder
+
+   * Used to create reusable visual formation templates.
+   * Lives in the admin/settings area or as a “Formations” admin sidebar page.
+
+2. Lineup Selection
+
+   * Used to assign real players to a selected formation.
+   * Lives in a team or fixture/match context.
+
+These should be designed together because they share the same database structure, but keep the UI responsibilities separate.
+
+---
+
+## First: inspect the current app
+
+Before writing code:
+
+1. Inspect the current project structure.
+2. Identify the routing pattern.
+3. Identify the current admin layout components.
+4. Identify the Supabase client setup.
+5. Identify existing role/permission helpers.
+6. Inspect existing tables/types/migrations.
+7. Inspect the existing `team_memberships` table.
+8. Inspect the existing `lineups` table.
+
+Known from previous review:
+
+* `team_memberships` already links players to teams.
+* It uses membership types like Primary / Permanent / Fill-in.
+* The user originally described these as Primary / Secondary / Fill-in.
+* Use the existing database naming where required, but display labels nicely in the UI.
+* There is an old simple `lineups` table.
+* It was checked and reportedly has 0 rows.
+* No other tables reportedly reference it.
+* Still verify this before replacing it.
+
+If the old `lineups` table is not empty, or another table references it, stop and report the issue instead of performing destructive changes.
+
+---
+
+## Key design decisions
+
+### Formation templates do not store players
+
+A formation template stores layout only:
+
+* formation name
+* optional formation code
+* sport
+* owner level
+* owner ID
+* grid rows
+* grid columns
+* background/pitch image
+* position icons
+* position full names
+* position short codes
+* grid coordinates
+
+A formation template must not store player assignments.
+
+### Lineups store player assignments
+
+A lineup stores:
+
+* team
+* optional fixture/game
+* selected formation
+* assigned players
+* bench players if supported
+* status such as draft or confirmed
+
+The same formation should be reusable across many lineups.
+
+---
+
+## Role and ownership model
+
+The Formation Builder must support formations owned at these levels:
+
+* Super Admin
+* Association Admin
+* Club Admin
+* Team Coach / Manager
+
+Use the current SportStack role system and naming conventions wherever possible.
+
+Each level can create formations relevant to their scope.
+
+Defaults cascade down:
+
+Super Admin default
+↓
+Association default
+↓
+Club default
+↓
+Team default
+
+Default resolution rule:
+
+1. If the team has a default formation, use it.
+2. Otherwise, if the club has a default formation, use it.
+3. Otherwise, if the association has a default formation, use it.
+4. Otherwise, use the Super Admin default.
+
+Each level should be able to override the inherited default by setting its own default.
+
+In the UI, show whether the current default is inherited or locally set.
+
+Example labels:
+
+* “Default inherited from Super Admin”
+* “Default inherited from Club”
+* “Team default”
+
+---
+
+## Database requirements
+
+Use Supabase. Do not use localStorage for the real module.
+
+Create proper migrations.
+
+If an old simple `lineups` table exists and is empty/unreferenced, replace or migrate it into the new formation-aware structure. Prefer a safe migration path. If possible, rename the old table to a legacy name first rather than hard-dropping it immediately.
+
+Recommended tables:
+
+### 1. formations
+
+Stores the saved formation template.
+
+Fields should include:
+
+* id
+* name
+* code, nullable
+* sport, default field_hockey for now
+* owner_level: super / association / club / team
+* owner_id, nullable for super
+* grid_rows
+* grid_columns
+* background_image_url, nullable
+* is_active
+* created_by
+* created_at
+* updated_at
+
+Do not use a simple `is_default` column if that causes conflicts across owner levels. Prefer a separate defaults table.
+
+### 2. formation_positions
+
+Stores each position/icon on a formation.
+
+Fields should include:
+
+* id
+* formation_id
+* name
+* code
+* grid_x
+* grid_y
+* icon_id, nullable
+* custom_icon_url, nullable if needed
+* sort_order
+* notes, nullable
+* created_at
+* updated_at
+
+Important:
+
+* `name` is the full name, for example “Centre Forward”.
+* `code` is the short visible label, for example “CF”.
+* On the grid, show the icon and the code.
+* In the side panel, show the full name and code.
+
+### 3. formation_icons
+
+Stores standard and custom icons.
+
+Fields should include:
+
+* id
+* name
+* icon_url
+* icon_type: standard / custom
+* owner_level, nullable for standard icons
+* owner_id, nullable
+* created_by
+* created_at
+* updated_at
+
+### 4. formation_defaults
+
+Stores the default formation per owner level.
+
+Fields should include:
+
+* id
+* owner_level: super / association / club / team
+* owner_id, nullable for super
+* formation_id
+* created_by
+* created_at
+* updated_at
+
+Add a uniqueness rule so each owner scope can only have one default.
+
+### 5. lineups
+
+Stores one actual lineup using a formation.
+
+Fields should include:
+
+* id
+* team_id
+* fixture_id or game_id, nullable depending on existing app naming
+* formation_id
+* name, nullable
+* status: draft / confirmed / archived
+* created_by
+* created_at
+* updated_at
+
+### 6. lineup_assignments
+
+Stores player assignment to a specific formation position.
+
+Fields should include:
+
+* id
+* lineup_id
+* formation_position_id, nullable only if needed for bench records
+* player_id
+* assignment_type: starting / bench
+* notes, nullable
+* created_at
+* updated_at
+
+Starting players should be linked to a formation position.
+Bench players may not need a formation position.
+
+### 7. player_position_preferences
+
+This supports the old Lovable prototype’s preference matrix, but it can be Phase 2 or Phase 5 if too large for the first build.
+
+Fields should include:
+
+* id
+* player_id
+* team_id, nullable if global preference
+* position_name, nullable
+* position_code, nullable
+* preference: prefers / will_play / only_if_needed / cannot_play
+* notes, nullable
+* created_by
+* created_at
+* updated_at
+
+This table will later support auto-lineup suggestions.
+
+---
+
+## Supabase RLS and permissions
+
+Add RLS policies matching the current SportStack security style.
+
+General intent:
+
+### Super Admin
+
+Can manage all formations, icons, defaults, lineups, and assignments.
+
+### Association Admin
+
+Can manage formations/defaults within their association scope.
+Can view inherited Super formations.
+Can manage lineups for teams in their association if existing permissions allow.
+
+### Club Admin
+
+Can manage formations/defaults within their club scope.
+Can view inherited Association and Super formations.
+Can manage lineups for teams in their club if existing permissions allow.
+
+### Team Coach / Manager
+
+Can create team-level formations for their team.
+Can set a team-level default.
+Can view inherited Club / Association / Super formations.
+Can create and edit lineups for their team.
+
+Do not invent a new permissions system if helpers already exist.
+Reuse existing auth, role, organisation, association, club, and team permission logic.
+
+---
+
+## Storage requirements
+
+The module needs uploaded images.
+
+Support:
+
+1. Formation background images
+
+   * Pitch image
+   * Court image
+   * Custom layout image
+
+2. Position icons
+
+   * Standard built-in icons
+   * Custom uploaded icons
+
+Use Supabase Storage if that is the existing app pattern.
+
+Create storage bucket(s) if needed:
+
+* formation-backgrounds
+* formation-icons
+
+Or use the existing media/assets bucket if the app already has one.
+
+Add upload logic and store the public or signed URL according to the existing app pattern.
+
+---
+
+# UI requirements
+
+Use the current SportStack admin UI style.
+
+Do not use the old Lovable dark green theme.
+
+Match:
+
+* blue sidebar
+* white cards
+* admin dashboard card style
+* blue outline buttons
+* current typography
+* current spacing
+* current role badge style
+* current loading/error states if they exist
+
+---
+
+## Navigation
+
+Add a new admin navigation item:
+
+Formations
+
+Suggested position:
+
+Dashboard
+Associations
+Clubs
+Teams
+Formations
+Fixtures
+Venues
+Users
+Requests
+
+If the app already has a Settings area, it is also acceptable to place this under Settings as a tab, but it must still be easy for admins and coaches to access.
+
+Preferred route examples:
+
+* `/admin/formations`
+* `/admin/teams/:teamId/lineup`
+* `/admin/fixtures/:fixtureId/lineup` if fixture-specific lineups already exist
+
+Use the existing routing conventions.
+
+---
+
+# Formation Builder UI
+
+Create a page or settings tab called:
+
+Formation Builder
+
+Purpose:
+Create reusable formation templates.
+
+Suggested page header:
+
+FORMATION BUILDER
+Create reusable position layouts for teams and lineups
+
+Top summary cards:
+
+* Saved Formations
+* Current Default
+* Custom Icons
+* Draft Formations
+
+Quick actions:
+
+* New Formation
+* Upload Pitch Image
+* Manage Icons
+* Set Default
+
+Main layout:
+
+Left side:
+
+* Saved formation list
+
+Centre:
+
+* Formation editor with background image and grid overlay
+
+Right side:
+
+* Position details side panel
+
+---
+
+## Formation list
+
+Show saved formations available to the current user.
+
+Include:
+
+* formation name
+* owner level
+* inherited/local badge
+* default badge
+* active/draft status
+* duplicate button
+* edit button
+* delete/archive button
+
+Do not hard-delete by default if the app normally archives records.
+
+---
+
+## Formation editor
+
+Fields:
+
+* Formation name
+* Formation code
+* Sport
+* Owner level/scope
+* Grid rows
+* Grid columns
+* Background image upload
+* Save
+* Duplicate
+* Archive/Delete
+* Set as default
+
+Large editor area:
+
+* show uploaded background image
+* overlay grid
+* allow user to add positions
+* show position icons
+* snap icons to grid intersections/corners
+
+Important placement rule:
+
+Icons snap to grid intersections/corners, not the middle of grid cells.
+
+Example:
+If the grid is 10 columns by 14 rows, valid snap points are grid points like x=0..10 and y=0..14, not cell centres.
+
+When the user drags or places an icon, calculate the nearest grid intersection and save `grid_x` and `grid_y`.
+
+If drag-and-drop is too much for first pass, allow click-to-place:
+
+1. Click “Add Position”
+2. Enter name/code/icon
+3. Click the nearest grid point on the formation image
+4. Position is saved there
+
+Drag-and-drop can be added afterwards.
+
+---
+
+## Position side panel
+
+Show all positions in the selected formation.
+
+For each position show:
+
+* icon preview
+* full name
+* short code
+* grid coordinates
+* edit button
+* remove button
+
+Example:
+
+Centre Forward
+Code: CF
+Grid: 5, 2
+
+On the formation grid itself, display:
+
+icon
+short code
+
+Example:
+
+[icon]
+CF
+
+---
+
+## Icon handling
+
+Provide a small standard icon set first.
+
+At minimum:
+
+* default player circle
+* goalkeeper
+* defender
+* midfielder
+* forward
+
+Allow custom icon upload if achievable in this pass.
+
+If custom icon upload is too large, scaffold it clearly and add a visible placeholder button.
+
+---
+
+# Lineup Selection UI
+
+Create a separate lineup screen.
+
+Purpose:
+Assign real players to positions in a selected formation.
+
+Suggested locations:
+
+* team page: Lineup tab/button
+* fixture page: Lineup tab/button
+* or `/admin/teams/:teamId/lineup`
+
+Screen layout:
+
+Top:
+
+* selected team
+* selected fixture/game if applicable
+* selected formation
+* inherited default indicator
+* save draft button
+* confirm lineup button
+
+Main:
+Left/centre:
+
+* formation pitch/grid view
+* clickable positions
+* assigned player name shown on position
+
+Right:
+
+* player search and assignment panel
+
+Bottom:
+
+* Starting lineup list
+* Bench list
+
+---
+
+## Lineup flow
+
+1. User opens a team or fixture lineup page.
+2. App resolves the default formation for that team.
+3. User can change formation if needed.
+4. User clicks a position icon.
+5. Side panel opens.
+6. User searches eligible players.
+7. User selects a player.
+8. Player is assigned to that position.
+9. User can save as draft.
+10. User can confirm lineup.
+
+---
+
+## Player eligibility
+
+Use existing `team_memberships`.
+
+Player eligibility is based on team relationship.
+
+User wording:
+
+* Primary
+* Secondary
+* Fill-in
+
+Existing database wording may be:
+
+* Primary
+* Permanent
+* Fill-in
+
+Use existing database enum values in the code. Display labels clearly.
+
+Player search should show:
+
+* player name
+* primary/permanent/fill-in relationship
+* availability
+* current team
+* other linked teams if available
+* selected/assigned indicator
+
+Leave room for later fields:
+
+* last position played
+* team preference
+* player preference
+* coach preference
+* injury/limited minutes note
+
+---
+
+## Player search ordering
+
+Sort eligible player results like this:
+
+1. Available + Primary team
+2. Available + Permanent/Secondary team
+3. Available + Fill-in team
+4. Unknown availability
+5. Unavailable players, greyed out
+
+Add a “Show all players” toggle.
+
+Default state:
+
+* only show eligible players linked to the selected team
+
+When “Show all players” is on:
+
+* show other players too
+* clearly mark them as outside the selected team’s normal pool
+
+---
+
+## Assignment behaviour
+
+When a player is assigned to a position:
+
+* Save locally in form state first.
+* Do not save to database until user clicks Save Draft or Confirm, unless the app normally autosaves.
+* Prevent the same player being assigned to two starting positions.
+* If assigning an already-used player, ask for confirmation or offer to move them from their old position.
+* Allow removing a player from a position.
+* Allow swapping players between positions.
+
+Bench:
+
+* Show unassigned eligible players as bench/available players.
+* Allow manually adding players to bench.
+* Bench records should use `assignment_type = bench`.
+
+---
+
+# Preference matrix and auto-lineup
+
+The old Lovable prototype had:
+
+* preference matrix
+* bulk paste preferences
+* auto-generate lineup
+* greedy scoring algorithm
+* tap-to-swap
+* bench list
+* stats cards
+
+Do not make the preference matrix and auto-lineup the blocker for the first working module.
+
+Treat these as later enhancements unless they are easy to include after the core data model is working.
+
+However, design the database and components so these can be added later.
+
+Future preference values:
+
+* prefers
+* will_play
+* only_if_needed
+* cannot_play
+
+Possible display labels:
+
+* Prefers
+* Will play
+* Only if needed
+* Cannot play
+
+Auto-lineup later should score based on:
+
+* position preference
+* team relationship
+* availability
+* last position played
+* player/team preference
+
+The first auto-lineup algorithm can be greedy, like the prototype.
+Later it should be improved to solve the full team assignment more intelligently.
+
+---
+
+# Behaviour and validation
+
+Add sensible validation:
+
+Formation:
+
+* name required
+* grid rows required
+* grid columns required
+* grid rows/columns must be positive numbers
+* position name required
+* position code required
+* no duplicate position IDs
+* warn on duplicate position codes within the same formation, but allow if there is a valid reason
+* grid_x and grid_y must be within the grid
+
+Lineup:
+
+* team required
+* formation required
+* starting player cannot appear twice
+* unavailable players should show warning if selected
+* outside-pool players should show warning if selected through “Show all players”
+* confirming lineup should require at least one assigned player
+* ideally warn if not all formation positions are filled
+
+---
+
+# Existing Lovable prototype mapping
+
+Do not copy the Lovable prototype directly.
+
+Map it like this:
+
+* Players tab → replace with SportStack team roster/player search
+* Preferences tab → later Player Position Preferences
+* Lineup tab → new Lineup Selection screen
+* Hard-coded formations → replace with database-backed Formation Builder
+* SVG fixed pitch → replace with uploaded image + grid overlay, but existing SVG pitch can be used as a fallback/default background if useful
+* Tap-to-swap → keep
+* Bench list → keep
+* Stats cards → keep later
+* Dark green styling → do not keep; use SportStack blue/white admin style
+
+---
+
+# Implementation expectations
+
+Please implement this cleanly.
+
+Expected work:
+
+1. Database migrations
+2. Supabase types update if this project uses generated types
+3. Storage setup if needed
+4. Data access functions/hooks
+5. Formation Builder UI
+6. Lineup Selection UI
+7. Navigation/routing updates
+8. RLS policies
+9. Basic validation
+10. Loading, empty, and error states
+11. Basic responsive layout
+
+Use existing project patterns.
+
+Do not introduce unnecessary new libraries unless the project already uses them.
+
+If drag-and-drop support requires a new library, avoid it for the first pass and use click-to-place or simple coordinate controls instead.
+
+---
+
+# Suggested components
+
+Create components similar to these, adjusted to match the existing project structure:
+
+* `FormationsPage`
+* `FormationBuilder`
+* `FormationList`
+* `FormationEditor`
+* `FormationGrid`
+* `FormationPositionPanel`
+* `IconPicker`
+* `LineupPlannerPage`
+* `LineupPitch`
+* `PlayerSearchPanel`
+* `StartingLineupList`
+* `BenchList`
+
+Suggested hooks/services:
+
+* `useFormations`
+* `useFormationDefaults`
+* `useFormationPositions`
+* `useLineup`
+* `useEligiblePlayers`
+* `resolveDefaultFormation`
+* `saveLineupAssignments`
+
+Use existing naming conventions if different.
+
+---
+
+# Suggested default formation seed
+
+Add at least one standard Super Admin formation so a new team has something to inherit.
+
+Example:
+
+Formation name:
+4-3-3 Attack
+
+Positions:
+
+* Goalkeeper, GK
+* Right Back, RB
+* Centre Back Left, CB-L
+* Centre Back Right, CB-R
+* Left Back, LB
+* Right Midfield, RM
+* Centre Midfield, CM
+* Left Midfield, LM
+* Right Wing, RW
+* Centre Forward, CF
+* Left Wing, LW
+
+Use a simple default background if no image is uploaded.
+
+The exact coordinates can be approximate but must be editable through the Formation Builder.
+
+---
+
+# Acceptance criteria
+
+The feature is complete when:
+
+1. A Super Admin can create a formation.
+2. The formation can have a background image.
+3. The formation can have a configurable grid size.
+4. Positions can be added with full names and short codes.
+5. Position icons appear on grid intersections.
+6. The formation can be saved.
+7. A formation can be set as default for an owner scope.
+8. Defaults cascade from Super → Association → Club → Team.
+9. A Team Coach/Manager can open a lineup screen.
+10. The team’s default formation loads automatically.
+11. The coach can click a position.
+12. The coach can search players linked to that team.
+13. Player search sorts by availability and membership type.
+14. The coach can assign a player to a position.
+15. The same player cannot be accidentally assigned to multiple starting positions.
+16. The coach can save a draft lineup.
+17. The saved lineup reloads correctly.
+18. The UI matches the existing SportStack admin style.
+19. No localStorage is used for primary persistence.
+20. The old empty flat `lineups` table is safely replaced or migrated only after confirming it is empty and unreferenced.
+
+---
+
+# Important safety instructions
+
+Before applying destructive database changes:
+
+1. Check whether the old `lineups` table has rows.
+2. Check whether anything references it.
+3. If it has rows or references, stop and report.
+4. If it is empty and unreferenced, proceed with a safe migration.
+
+Do not break existing admin pages.
+
+Do not remove existing team membership functionality.
+
+Do not invent a second player-team linking table if `team_memberships` already supports the requirement.
+
+Do not store players inside formation templates.
+
+Do not build this as a standalone prototype.
+
+Build the real SportStack module.
