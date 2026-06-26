@@ -76,6 +76,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Coaching",
       items: [
         { path: "/coaching", label: "Squad", icon: ClipboardCheck },
+        { path: "/coaching/formations", label: "Formations", icon: LayoutGrid },
         { path: "/roster", label: "Roster", icon: Users },
       ],
     },
@@ -162,6 +163,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       items: [
         { path: "/roster", label: "Roster", icon: Users },
         { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
+        { path: "/coaching/formations", label: "Formations", icon: LayoutGrid },
       ],
     },
   ],
@@ -180,6 +182,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Coaching",
       items: [
         { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
+        { path: "/coaching/formations", label: "Formations", icon: LayoutGrid },
       ],
     },
   ],

@@ -63,10 +63,14 @@ const Lineup = () => {
     );
   }
 
-  const teamName = selectedTeam ? getTeamDisplayName(selectedTeam) : "Team";
   const homeTeam = game.home_team?.name ?? "Unknown";
   const awayTeam = game.away_team?.name ?? "Unknown";
-  const opponentName = selectedTeam?.id === game.away_team_id ? homeTeam : awayTeam;
+  const lineupTeamId =
+    selectedTeam?.id === game.home_team_id || selectedTeam?.id === game.away_team_id
+      ? selectedTeam.id
+      : game.home_team_id;
+  const teamName = selectedTeam ? getTeamDisplayName(selectedTeam) : homeTeam;
+  const opponentName = lineupTeamId === game.away_team_id ? homeTeam : awayTeam;
   const gameDate = new Date(game.fixture_date);
 
   return (
@@ -125,6 +129,7 @@ const Lineup = () => {
 
       <LineupView
         gameId={game.id}
+        teamId={lineupTeamId}
         teamName={teamName}
         opponentName={opponentName}
         isCoach={isCoachView}

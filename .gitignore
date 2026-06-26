@@ -42,3 +42,6 @@ data/*_quality_report.txt
 
 # Throwaway debug/investigation scripts
 scratch/
+
+# Standalone reference apps (Lovable prototypes) - not part of SportStack
+modules/

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, XCircle, Clock, ClipboardList } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ClipboardList, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -173,6 +173,44 @@ export default function Requests() {
     }
   };
 
+
+  // Approve a request but WITHOUT creating a team membership - the person
+  // is approved into the club (or association) only. Useful for volunteers,
+  // committee members, or supporters who shouldn't be assigned to a specific
+  // team. Only meaningful when the request actually has a team_id to skip;
+  // for association/club-only requests this behaves the same as a normal
+  // approval, since there was never a team to assign anyway.
+  const handleApproveClubOnly = async (request: Request) => {
+    try {
+      const confirmed = window.confirm(
+        `Approve ${request.target_user_name} for ${request.club_name || request.association_name} WITHOUT assigning them to "${request.team_name}"? They will need to be added to a team separately later.`
+      );
+      if (!confirmed) return;
+
+      // Update request status - same as a normal approval
+      const { error: updateError } = await supabase
+        .from("requests" as any)
+        .update({
+          status: "APPROVED",
+          responded_by: user?.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", request.id);
+
+      if (updateError) throw updateError;
+
+      // Deliberately NOT inserting into team_memberships here - that's the
+      // whole point of "club only" approval.
+
+      toast({
+        title: "Success",
+        description: "Request approved at club level. No team was assigned.",
+      });
+      loadData();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
   const handleDecline = async (request: Request) => {
     try {
       const { error } = await supabase
@@ -369,6 +407,16 @@ export default function Requests() {
                                 >
                                   <CheckCircle2 className="h-3 w-3 mr-1" /> Approve
                                 </Button>
+                                {request.team_id && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-blue-600 border-blue-200 hover:bg-blue-50 h-7 px-2 text-xs"
+                                    onClick={() => handleApproveClubOnly(request)}
+                                  >
+                                    <Building2 className="h-3 w-3 mr-1" /> Approve (club only)
+                                  </Button>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"

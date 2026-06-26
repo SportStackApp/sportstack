@@ -19,6 +19,7 @@ import Roster from "./pages/Roster";
 import Chat from "./pages/Chat";
 import CoachingSquad from "./pages/coaching/CoachingSquad";
 import CoachingPlayerProfile from "./pages/coaching/CoachingPlayerProfile";
+import FormationBuilder from "./pages/coaching/FormationBuilder";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import VotingPortal from "./pages/VotingPortal";
@@ -44,6 +45,7 @@ import VenuesManagement from "./pages/admin/VenuesManagement";
 import Requests from "./pages/admin/Requests";
 import RevSportsMappings from "./pages/admin/RevSportsMappings";
 import RevSportsUnmatched from "./pages/admin/RevSportsUnmatched";
+import ErrorLogs from "./pages/admin/ErrorLogs";
 import RevSportsEntityReview from "./pages/admin/RevSportsEntityReview";
 import MvpVotingAdmin from "./pages/admin/MvpVotingAdmin";
 import Analytics from "./pages/admin/Analytics";
@@ -97,6 +99,7 @@ const App = () => (
                       <Route path="/games/:id/lineup" element={<Lineup />} />
                       <Route path="/roster" element={<Roster />} />
                       <Route path="/coaching" element={<CoachingSquad />} />
+                      <Route path="/coaching/formations" element={<FormationBuilder />} />
                       <Route path="/coaching/:playerId" element={<CoachingPlayerProfile />} />
                       <Route path="/chat" element={<Chat />} />
                       <Route path="/umpire/vote" element={<UmpireVoteSubmit />} />
@@ -117,6 +120,7 @@ const App = () => (
                       <Route path="/admin/bulk-import" element={<BulkImport />} />
                       <Route path="/admin/revsports-mappings" element={<RevSportsMappings />} />
                       <Route path="/admin/revsports-unmatched" element={<RevSportsUnmatched />} />
+                      <Route path="/admin/error-logs" element={<ErrorLogs />} />
                       <Route path="/admin/revsports-entities" element={<RevSportsEntityReview />} />
                       <Route path="/admin/fixtures" element={<FixturesManagement />} />
                       <Route path="/admin/fixture-import" element={<FixtureImport />} />

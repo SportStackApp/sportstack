@@ -22,6 +22,7 @@ import { Eye, EyeOff, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import fieldBg from "@/assets/Field_1.png";
+import { logError } from "@/lib/logError";
 
 interface Association {
   id: string;
@@ -51,7 +52,8 @@ const Signup = () => {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -171,35 +173,55 @@ const Signup = () => {
       return;
     }
 
-    // Get the new user's session and update profile/team
+    // We need the new user's ID to save their pending signup details.
+    // This works whether or not email confirmation is required - if it IS
+    // required, there's no active session yet, but we can still read the
+    // new user's ID via getUser() right after signing up.
     const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session?.user) {
-      // Parse name into first_name and last_name
-      const nameParts = formData.name.trim().split(" ");
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
+    let newUserId = session?.user?.id ?? null;
 
-      // Update profile with name
-      await supabase
-        .from("profiles")
-        .update({ 
-          first_name: firstName,
-          last_name: lastName,
-        })
-        .eq("id", session.user.id);
+    if (!newUserId) {
+      const { data: userData } = await supabase.auth.getUser();
+      newUserId = userData?.user?.id ?? null;
+    }
 
-      // Create pending team membership if team selected
-      if (formData.teamId) {
-        await supabase
-          .from("team_memberships")
-          .insert({
-            user_id: session.user.id,
-            team_id: formData.teamId,
-            status: "PENDING",
-            membership_type: "PRIMARY",
-          });
+    if (newUserId) {
+      // Save the name + chosen association/club/team into the pending_signups
+      // holding table. This works even when the user is NOT logged in yet
+      // (e.g. waiting on email confirmation), because pending_signups allows
+      // inserts from anyone. Once the user actually logs in for the first
+      // time, the app reads this row, applies it to their real profile and
+      // creates a request, then deletes it.
+      const { error: pendingError } = await supabase
+        .from("pending_signups")
+        .insert({
+          user_id: newUserId,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          association_id: formData.associationId || null,
+          club_id: formData.clubId || null,
+          team_id: formData.teamId || null,
+        });
+
+      if (pendingError) {
+        await logError({
+          context: "Signup - save pending signup",
+          message: "Failed to save pending signup details",
+          error: pendingError,
+        });
+        toast({
+          title: "Some details not saved",
+          description: "Your account was created but your name/team details didn't save. Please update them in your profile.",
+          variant: "destructive",
+        });
       }
+    } else {
+      // Could not determine the new user's ID at all - log this so we can
+      // investigate, but don't block the signup from completing.
+      await logError({
+        context: "Signup - no user id",
+        message: "Could not determine new user's ID after signup; pending signup details were skipped",
+      });
     }
 
     setIsLoading(false);
@@ -310,18 +332,33 @@ const Signup = () => {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="First name"
+                      value={formData.firstName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, firstName: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Last name"
+                      value={formData.lastName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, lastName: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">

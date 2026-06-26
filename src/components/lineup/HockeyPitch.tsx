@@ -4,6 +4,7 @@ import fieldBg from "@/assets/Field_2.png";
 interface HockeyPitchProps {
   children: React.ReactNode;
   className?: string;
+  backgroundUrl?: string | null;
 }
 
 // Field dimensions within the SVG viewBox (0 0 1000 620)
@@ -28,7 +29,7 @@ const DOT_ARC_RADIUS = 130;
 const GOAL_W = 20;
 const GOAL_H = 40;
 
-export const HockeyPitch = ({ children, className }: HockeyPitchProps) => {
+export const HockeyPitch = ({ children, className, backgroundUrl }: HockeyPitchProps) => {
   // Build tick marks along all four sides
   const ticks: React.ReactNode[] = [];
   const TICK_LEN = 6;
@@ -72,7 +73,7 @@ export const HockeyPitch = ({ children, className }: HockeyPitchProps) => {
     >
       {/* Field background image */}
       <img
-        src={fieldBg}
+        src={backgroundUrl || fieldBg}
         alt="Hockey pitch"
         className="absolute inset-0 w-full h-full object-cover"
       />
