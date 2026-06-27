@@ -113,22 +113,22 @@ CREATE INDEX IF NOT EXISTS fixture_lineup_assignments_player_idx
 DROP TRIGGER IF EXISTS update_formation_positions_updated_at ON public.formation_positions;
 CREATE TRIGGER update_formation_positions_updated_at
 BEFORE UPDATE ON public.formation_positions
-FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 DROP TRIGGER IF EXISTS update_user_formation_preferences_updated_at ON public.user_formation_preferences;
 CREATE TRIGGER update_user_formation_preferences_updated_at
 BEFORE UPDATE ON public.user_formation_preferences
-FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 DROP TRIGGER IF EXISTS update_fixture_lineups_updated_at ON public.fixture_lineups;
 CREATE TRIGGER update_fixture_lineups_updated_at
 BEFORE UPDATE ON public.fixture_lineups
-FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 DROP TRIGGER IF EXISTS update_fixture_lineup_assignments_updated_at ON public.fixture_lineup_assignments;
 CREATE TRIGGER update_fixture_lineup_assignments_updated_at
 BEFORE UPDATE ON public.fixture_lineup_assignments
-FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 ALTER TABLE public.formation_icons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.formation_positions ENABLE ROW LEVEL SECURITY;
