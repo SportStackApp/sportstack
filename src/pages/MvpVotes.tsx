@@ -27,7 +27,7 @@ interface MvpSession {
   closes_at: string;
 }
 
-interface LineupRow {
+interface RevsportsPlayerRow {
   fixture_id: string;
 }
 
@@ -65,26 +65,29 @@ export default function MvpVotes() {
 
         setIsVoter(true);
 
-        // 2. Fetch user's lineups and already voted submissions
-        const [lineupsRes, submissionsRes] = await Promise.all([
+        // 2. Fetch user's attended RevSports games and already voted submissions.
+        // The admin MVP screen uses revsports_players.profile_id as the player link,
+        // so the voter page must use the same source instead of the older lineups table.
+        const [playersRes, submissionsRes] = await Promise.all([
           supabase
-            .from("lineups")
+            .from("revsports_players")
             .select("fixture_id")
-            .eq("player_id", user.id),
+            .eq("profile_id", user.id)
+            .eq("attended", true),
           supabase
             .from("mvp_vote_submissions")
             .select("session_id")
             .eq("voter_profile_id", user.id)
         ]);
 
-        if (lineupsRes.error) throw lineupsRes.error;
+        if (playersRes.error) throw playersRes.error;
         if (submissionsRes.error) throw submissionsRes.error;
 
-        const lineupsData = lineupsRes.data as LineupRow[] | null;
+        const playersData = playersRes.data as RevsportsPlayerRow[] | null;
         const submissionsData = submissionsRes.data as SubmissionRow[] | null;
 
         const fixtureIds = Array.from(
-          new Set(lineupsData?.map((l) => l.fixture_id).filter(Boolean) || [])
+          new Set(playersData?.map((p) => p.fixture_id).filter(Boolean) || [])
         );
         const votedSessionIds = new Set(
           submissionsData?.map((s) => s.session_id) || []
