@@ -1,9 +1,9 @@
 DATA QUALITY REPORT - Wimmera Hockey Association
-Generated: 2026-06-27T11:34:31.056824
+Generated: 2026-06-27T17:17:04.517348
 ------------------------------------------------------------
 Rows checked: 177
 Issues found: 0
-Warnings found: 64
+Warnings found: 71
 
 No issues found by the basic checker.
 
@@ -30,6 +30,8 @@ RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560726 - score Kaniva Raiders Kaniva Raiders 0 - 3 Yanac Warriors Yanac Warriors; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560727 - score Dimboola Kangaroos Dimboola Kangaroos 2 - 5 Nhill Leopards Nhill Leopards; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560733 - score Warrack Revengers Warrack Revengers 1 - 5 Horsham Bombers Horsham Bombers; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560740 - score Kaniva Raiders Kaniva Raiders 4 - 1 Horsham Bombers Horsham Bombers; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560741 - score Nhill Leopards Nhill Leopards 8 - 2 Warrack Revengers Warrack Revengers; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560659 - score Dimboola Roos Dimboola Roos 6 - 0 Horsham Jets Horsham Jets; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560661 - score Kaniva Women Kaniva Women 6 - 0 Warrack Women Warrack Women; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560662 - score Nhill Thunderbirds Nhill Thunderbirds 1 - 5 Yanac Women Yanac Women; listed player goals home 0 - away 0.
@@ -51,6 +53,9 @@ RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560734 - score Dimboola Roos Dimboola Roos 9 - 0 Nhill Thunderbirds Nhill Thunderbirds; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560731 - score Kaniva Women Kaniva Women 1 - 3 Yanac Women Yanac Women; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560736 - score Warrack Women Warrack Women 0 - 3 Horsham Jets Horsham Jets; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560739 - score Yanac Women Yanac Women 1 - 3 Dimboola Roos Dimboola Roos; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560745 - score Kaniva Women Kaniva Women 5 - 0 Horsham Jets Horsham Jets; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560748 - score Nhill Thunderbirds Nhill Thunderbirds 6 - 1 Warrack Women Warrack Women; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560664 - score Nhill Rangers Nhill Rangers 0 - 2 Yanac Tigers Yanac Tigers; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560675 - score Yanac Tigers Yanac Tigers 7 - 0 Horsham Hurricanes Horsham Hurricanes; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560672 - score Nhill Rangers Nhill Rangers 1 - 1 Kaniva Cobras Kaniva Cobras; listed player goals home 0 - away 0.
@@ -64,6 +69,8 @@ RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560720 - score Yanac Tigers Yanac Tigers 1 - 1 Nhill Rangers Nhill Rangers; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560735 - score Warrack Hoops Warrack Hoops 2 - 1 Horsham Hurricanes Horsham Hurricanes; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560732 - score Kaniva Cobras Kaniva Cobras 0 - 2 Yanac Tigers Yanac Tigers; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560746 - score Kaniva Cobras Kaniva Cobras 1 - 3 Horsham Hurricanes Horsham Hurricanes; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560747 - score Nhill Rangers Nhill Rangers 2 - 1 Warrack Hoops Warrack Hoops; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560668 - score Nhill Bandits Nhill Bandits 3 - 2 Kaniva Rampagers Kaniva Rampagers; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560669 - score Warrack Avengers Warrack Avengers 3 - 4 Dimboola Kookaburras Dimboola Kookaburras; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.revolutionise.com.au/wimmeraha/game/2560670 - score Yanac Lowan Stars Yanac Lowan Stars 3 - 1 Horsham Black Hawks Horsham Black Hawks; listed player goals home 0 - away 0.
