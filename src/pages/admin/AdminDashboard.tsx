@@ -359,6 +359,14 @@ const AdminDashboard = () => {
               <span>Manage Users</span>
             </Link>
           </Button>
+          {isSuperAdmin && (
+            <Button variant="outline" asChild className="h-auto py-4 flex-col">
+              <Link to="/admin/error-logs">
+                <AlertTriangle className="mb-2 h-6 w-6" />
+                <span>Error Logs</span>
+              </Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>

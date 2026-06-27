@@ -629,7 +629,14 @@ const FixturesManagement = () => {
                     return (
                       <TableRow key={fixture.id}>
                         <TableCell className="whitespace-nowrap text-foreground">
-                          {date ? date.toLocaleDateString("en-AU", { day: "2-digit", month: "short", timeZone: tz }) : "TBD"}
+                          {date ? (
+                            <div className="flex flex-col">
+                              <span>{date.toLocaleDateString("en-AU", { day: "2-digit", month: "short", timeZone: tz })}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {date.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: tz })}
+                              </span>
+                            </div>
+                          ) : "TBD"}
                         </TableCell>
                         <TableCell>
                           {allAssocTeams.find((t) => t.id === fixture.home_team_id)?.associationName ?? "-"}

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { applyPendingSignup } from "@/lib/applyPendingSignup";
 
 interface AuthContextType {
   user: User | null;
@@ -45,6 +46,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // On a fresh sign-in (e.g. clicking the email confirmation link,
+        // or a normal login), check whether this user has pending signup
+        // details (name + chosen association/club/team) waiting to be
+        // applied. Safe to call every time - it does nothing if there is
+        // nothing pending.
+        if (event === "SIGNED_IN" && session?.user) {
+          applyPendingSignup(session.user.id);
+        }
       }
     );
 
