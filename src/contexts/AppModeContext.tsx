@@ -56,6 +56,8 @@ const AppModeContext = createContext<AppModeContextType | undefined>(undefined);
 
 const STORAGE_KEY = "app_mode";
 
+const getStorageKey = (userId: string) => `${STORAGE_KEY}:${userId}`;
+
 export function AppModeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { testRole } = useTestRole();
@@ -66,10 +68,11 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [viewingAs, setViewingAsState] = useState<AppMode>("super_admin");
   const [isViewingAsOverridden, setIsViewingAsOverridden] = useState(false);
+  const userId = user?.id;
 
   // Fetch roles
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setDbRoles([]);
       setLoading(false);
       return;
@@ -80,7 +83,7 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
       const { data } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
 
       const userRoles = (data?.map((r) => r.role) || []) as AppRole[];
       setDbRoles(userRoles);
@@ -88,7 +91,7 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     };
 
     fetchRoles();
-  }, [user?.id]);
+  }, [userId]);
 
   useEffect(() => {
     if (!user) {
@@ -118,8 +121,9 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     const ordered = MODE_HIERARCHY.filter((m) => modesSet.has(m));
     setAvailableModes(ordered);
 
-    // Restore persisted mode or default to highest
-    const stored = localStorage.getItem(STORAGE_KEY) as AppMode | null;
+    // Restore persisted mode per user. A shared key lets one account's mode
+    // leak into another account on the same browser.
+    const stored = localStorage.getItem(getStorageKey(user.id)) as AppMode | null;
     if (stored && ordered.includes(stored)) {
       setModeState(stored);
     } else if (ordered.length > 0) {
@@ -128,9 +132,10 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
   }, [dbRoles, testRole, user]);
 
   const setMode = useCallback((newMode: AppMode) => {
+    if (!user) return;
     setModeState(newMode);
-    localStorage.setItem(STORAGE_KEY, newMode);
-  }, []);
+    localStorage.setItem(getStorageKey(user.id), newMode);
+  }, [user]);
 
   const setViewingAs = useCallback((newMode: AppMode) => {
     setViewingAsState(newMode);
