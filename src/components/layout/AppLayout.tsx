@@ -27,7 +27,6 @@ import {
   ClipboardCheck,
   Users,
   UserCog,
-  Settings,
   Building2,
   Shield,
   Globe,
@@ -38,13 +37,25 @@ import {
   Trophy,
   Vote,
   Layers,
+  MessageSquare,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppMode, MODE_LABELS, type AppMode } from "@/contexts/AppModeContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface NavItem {
   path: string;
@@ -205,11 +216,63 @@ interface Notification {
   created_at: string;
 }
 
+interface VoterTeamMembership {
+  teamId: string;
+  teamName: string;
+  membershipType: "PRIMARY" | "SECONDARY";
+  clubId: string;
+  clubName: string;
+  clubLogoUrl: string | null;
+  associationId: string;
+  associationName: string;
+  associationAbbr: string | null;
+  associationLogoUrl: string | null;
+}
+
+interface VoterAssociationRow {
+  id: string;
+  name: string | null;
+  abbreviation: string | null;
+  logo_url: string | null;
+}
+
+interface VoterClubRow {
+  id: string;
+  name: string | null;
+  logo_url: string | null;
+  associations: VoterAssociationRow | VoterAssociationRow[] | null;
+}
+
+interface VoterTeamRow {
+  id: string;
+  name: string | null;
+  clubs: VoterClubRow | VoterClubRow[] | null;
+}
+
+interface VoterMembershipRow {
+  membership_type: "PRIMARY" | "SECONDARY";
+  teams: VoterTeamRow | VoterTeamRow[] | null;
+}
+
+interface FeedbackInsert {
+  user_id: string;
+  message: string;
+  page_path: string;
+  user_agent: string;
+}
+
+interface FeedbackClient {
+  from: (table: "app_feedback") => {
+    insert: (payload: FeedbackInsert) => Promise<{ error: { message?: string } | null }>;
+  };
+}
+
 const AppLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { mode, setMode, availableModes, canSwitchMode, modeLabel, viewingAs, setViewingAs, isViewingAsOverridden, setIsViewingAsOverridden } = useAppMode();
+  const { toast } = useToast();
+  const { mode, setMode, availableModes, canSwitchMode, modeLabel, roles, viewingAs, setViewingAs, isViewingAsOverridden, setIsViewingAsOverridden } = useAppMode();
   const {
     associations,
     selectedAssociationId,
@@ -237,7 +300,14 @@ const AppLayout = () => {
   const [playerAssociationAbbr, setPlayerAssociationAbbr] = useState("");
   const [playerClubName, setPlayerClubName] = useState("");
   const [playerTeamName, setPlayerTeamName] = useState("");
+  const [playerLogoUrl, setPlayerLogoUrl] = useState<string | null>(null);
+  const [voterTeamMemberships, setVoterTeamMemberships] = useState<VoterTeamMembership[]>([]);
   const [isVoter, setIsVoter] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [isFeedbackSubmitting, setIsFeedbackSubmitting] = useState(false);
+
+  const isVoterOnly = roles.length === 1 && roles[0] === "VOTER";
 
 
   // Fetch notifications from DB
@@ -268,7 +338,7 @@ const AppLayout = () => {
       setPendingRequestCount(count || 0);
     };
     fetchCount();
-  }, [user]);
+  }, [user, mode]);
 
   // Fetch user avatar
   useEffect(() => {
@@ -291,13 +361,15 @@ const AppLayout = () => {
     fetchProfile();
   }, [user]);
 
-  // Fetch player header context from the player's primary team membership
+  // Fetch player header context from active primary/secondary team memberships.
   useEffect(() => {
     const clearPlayerHeaderContext = () => {
       setPlayerAssociationName("");
       setPlayerAssociationAbbr("");
       setPlayerClubName("");
       setPlayerTeamName("");
+      setPlayerLogoUrl(null);
+      setVoterTeamMemberships([]);
     };
 
     if (mode !== "player" || !user) {
@@ -308,24 +380,71 @@ const AppLayout = () => {
     const fetchPlayerHeaderContext = async () => {
       const { data } = await supabase
         .from("team_memberships")
-        .select("teams(name, clubs(name, associations(name, abbreviation)))")
+        .select("team_id, membership_type, teams(id, name, clubs(id, name, logo_url, associations(id, name, abbreviation, logo_url)))")
         .eq("user_id", user.id)
-        .eq("membership_type", "PRIMARY")
         .eq("status", "ACTIVE")
-        .maybeSingle();
+        .in("membership_type", ["PRIMARY", "SECONDARY"]);
 
-      const team = Array.isArray(data?.teams) ? data?.teams[0] : data?.teams;
-      const club = Array.isArray(team?.clubs) ? team?.clubs[0] : team?.clubs;
-      const association = Array.isArray(club?.associations) ? club?.associations[0] : club?.associations;
+      const memberships = ((data || []) as unknown as VoterMembershipRow[])
+        .map((row) => {
+          const team = Array.isArray(row.teams) ? row.teams[0] : row.teams;
+          const club = Array.isArray(team?.clubs) ? team.clubs[0] : team?.clubs;
+          const association = Array.isArray(club?.associations) ? club.associations[0] : club?.associations;
 
-      setPlayerAssociationName(association?.name || "");
-      setPlayerAssociationAbbr(association?.abbreviation || "");
-      setPlayerClubName(club?.name || "");
-      setPlayerTeamName(team?.name || "");
+          if (!team?.id || !club?.id || !association?.id) return null;
+
+          return {
+            teamId: team.id,
+            teamName: team.name || "Team",
+            membershipType: row.membership_type,
+            clubId: club.id,
+            clubName: club.name || "Club",
+            clubLogoUrl: club.logo_url || null,
+            associationId: association.id,
+            associationName: association.name || "Association",
+            associationAbbr: association.abbreviation || null,
+            associationLogoUrl: association.logo_url || null,
+          } satisfies VoterTeamMembership;
+        })
+        .filter((membership): membership is VoterTeamMembership => Boolean(membership))
+        .sort((a, b) => (a.membershipType === "PRIMARY" ? -1 : 1));
+
+      setVoterTeamMemberships(memberships);
+
+      const currentMembership =
+        memberships.find((membership) => membership.teamId === selectedTeamId) ||
+        memberships[0];
+
+      if (!currentMembership) {
+        clearPlayerHeaderContext();
+        return;
+      }
+
+      setPlayerAssociationName(currentMembership.associationName);
+      setPlayerAssociationAbbr(currentMembership.associationAbbr || "");
+      setPlayerClubName(currentMembership.clubName);
+      setPlayerTeamName(currentMembership.teamName);
+      setPlayerLogoUrl(currentMembership.associationLogoUrl || currentMembership.clubLogoUrl);
+
+      if (isVoterOnly && selectedTeamId !== currentMembership.teamId) {
+        setSelectedAssociationId(currentMembership.associationId);
+        setSelectedClubId(currentMembership.clubId);
+        setSelectedDivision("");
+        setSelectedTeamId(currentMembership.teamId);
+      }
     };
 
     fetchPlayerHeaderContext();
-  }, [mode, user]);
+  }, [
+    mode,
+    user,
+    selectedTeamId,
+    isVoterOnly,
+    setSelectedAssociationId,
+    setSelectedClubId,
+    setSelectedDivision,
+    setSelectedTeamId,
+  ]);
 
   // Fetch VOTER role status
   useEffect(() => {
@@ -359,7 +478,7 @@ const AppLayout = () => {
     } else {
       setViewingAs("super_admin");
     }
-  }, [selectedAssociationId, selectedClubId, selectedTeamId, isViewingAsOverridden, mode]);
+  }, [selectedAssociationId, selectedClubId, selectedTeamId, isViewingAsOverridden, mode, setViewingAs]);
 
   const handleAssociationChange = (associationId: string) => {
     setSelectedAssociationId(associationId);
@@ -371,6 +490,7 @@ const AppLayout = () => {
   const visibleSections = baseSections.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
+      if (isVoterOnly && !["/dashboard", "/mvp-votes"].includes(item.path)) return false;
       if (selectedAssociationId && item.path === "/admin/associations") return false;
       if (selectedClubId && item.path === "/admin/clubs") return false;
       if (selectedTeamId && item.path === "/admin/teams") return false;
@@ -395,6 +515,48 @@ const AppLayout = () => {
     setIsModeSwitcherOpen(false);
     const landing = newMode === "super_admin" || newMode === "association" || newMode === "club" ? "/admin" : "/dashboard";
     navigate(landing);
+  };
+
+  const handleVoterTeamChange = (teamId: string) => {
+    const membership = voterTeamMemberships.find((item) => item.teamId === teamId);
+    if (!membership) return;
+
+    setSelectedAssociationId(membership.associationId);
+    setSelectedClubId(membership.clubId);
+    setSelectedDivision("");
+    setSelectedTeamId(membership.teamId);
+    navigate("/dashboard");
+  };
+
+  const handleFeedbackSubmit = async () => {
+    if (!user || !feedbackMessage.trim() || isFeedbackSubmitting) return;
+
+    setIsFeedbackSubmitting(true);
+    const feedbackClient = supabase as unknown as FeedbackClient;
+    const { error } = await feedbackClient.from("app_feedback").insert({
+      user_id: user.id,
+      message: feedbackMessage.trim(),
+      page_path: location.pathname,
+      user_agent: navigator.userAgent,
+    });
+
+    setIsFeedbackSubmitting(false);
+
+    if (error) {
+      toast({
+        title: "Feedback not sent",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFeedbackMessage("");
+    setIsFeedbackOpen(false);
+    toast({
+      title: "Feedback sent",
+      description: "Thanks. Your feedback has been saved.",
+    });
   };
 
   const renderSidebar = (isMobile: boolean) => (
@@ -502,6 +664,14 @@ const AppLayout = () => {
         )}
 
         <button
+          onClick={() => setIsFeedbackOpen(true)}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-accent-foreground hover:bg-accent-foreground/10 transition-all"
+        >
+          <MessageSquare className="h-5 w-5" />
+          Send feedback
+        </button>
+
+        <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-accent-foreground hover:bg-accent-foreground/10 transition-all"
         >
@@ -518,7 +688,7 @@ const AppLayout = () => {
       <header className="sticky top-0 z-50 bg-primary border-b border-primary/20">
         <div className="flex h-14 items-center justify-between px-4">
           {/* Left: Hamburger → Association Logo → Club → Division → Team */}
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
@@ -603,11 +773,11 @@ const AppLayout = () => {
             ) : (
               // Static association logo for non-super_admin modes
               <>
-                <div className="w-10 h-10 rounded-lg overflow-hidden border-2 border-primary-foreground/20">
+                <div className="w-10 h-10 shrink-0 rounded-lg overflow-hidden border-2 border-primary-foreground/20">
                   <Avatar className="w-full h-full rounded-none">
                     <AvatarImage
-                      src={selectedAssociation?.logo_url || undefined}
-                      alt={selectedAssociation?.name}
+                      src={(mode === "player" ? playerLogoUrl : selectedAssociation?.logo_url) || undefined}
+                      alt={mode === "player" ? playerAssociationName || playerClubName : selectedAssociation?.name}
                       className="object-cover"
                     />
                     <AvatarFallback className="rounded-none bg-accent text-accent-foreground text-xs font-semibold">
@@ -617,15 +787,32 @@ const AppLayout = () => {
                     </AvatarFallback>
                   </Avatar>
                 </div>
-                {mode === "player" && playerClubName && (
-                  <div className="h-10 max-w-[140px] lg:max-w-[180px] rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground truncate">
-                    {playerClubName}
-                  </div>
-                )}
-                {mode === "player" && playerTeamName && (
-                  <div className="h-10 max-w-[120px] lg:max-w-[160px] rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground truncate">
-                    {playerTeamName}
-                  </div>
+                {mode === "player" && isVoterOnly && voterTeamMemberships.length > 1 ? (
+                  <Select value={selectedTeamId || voterTeamMemberships[0]?.teamId} onValueChange={handleVoterTeamChange}>
+                    <SelectTrigger className="h-10 w-[190px] max-w-[42vw] min-w-0 bg-accent text-accent-foreground border-0 font-medium">
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border-border">
+                      {voterTeamMemberships.map((membership) => (
+                        <SelectItem key={membership.teamId} value={membership.teamId}>
+                          {membership.teamName} ({membership.membershipType === "PRIMARY" ? "Primary" : "Secondary"})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <>
+                    {mode === "player" && playerClubName && (
+                      <div className="h-10 max-w-[140px] lg:max-w-[180px] min-w-0 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground truncate">
+                        {playerClubName}
+                      </div>
+                    )}
+                    {mode === "player" && playerTeamName && (
+                      <div className="h-10 max-w-[120px] lg:max-w-[160px] min-w-0 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground truncate">
+                        {playerTeamName}
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -810,6 +997,37 @@ const AppLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      <Dialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send feedback</DialogTitle>
+            <DialogDescription>
+              Tell us what is not working or what would make SportStack easier to use.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="feedback-message">Feedback</Label>
+            <Textarea
+              id="feedback-message"
+              value={feedbackMessage}
+              onChange={(event) => setFeedbackMessage(event.target.value)}
+              placeholder="Type your feedback here"
+              className="min-h-32 resize-none"
+              maxLength={1000}
+            />
+            <p className="text-xs text-muted-foreground">{feedbackMessage.length}/1000</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFeedbackOpen(false)} disabled={isFeedbackSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleFeedbackSubmit} disabled={!feedbackMessage.trim() || isFeedbackSubmitting}>
+              {isFeedbackSubmitting ? "Sending..." : "Send feedback"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
 
   );
