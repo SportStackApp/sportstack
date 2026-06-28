@@ -50535,8 +50535,8 @@
     "away_team_label": "Lucas HC Div 1 Men",
     "away_team_url": "https://www.revolutionise.com.au/hockeyballarat/games/team/26298/417789",
     "away_revsports_team_id": "417789",
-    "home_score": "2",
-    "away_score": "1",
+    "home_score": "4",
+    "away_score": "5",
     "umpires": [
       "Callum Bridge"
     ],
@@ -50726,7 +50726,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "B201BIJ",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -50768,7 +50768,7 @@
             "is_fillin": true,
             "is_removed": false,
             "revsports_player_id": "ay6XbU1",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -50835,7 +50835,7 @@
             "is_removed": false,
             "revsports_player_id": "qOnPMiZ",
             "goals": "",
-            "green_cards": "",
+            "green_cards": "1",
             "yellow_cards": "",
             "red_cards": ""
           },
@@ -50932,7 +50932,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "7yQ12T8",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -50974,7 +50974,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "VlwBlfw",
-            "goals": "1",
+            "goals": "2",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -51072,7 +51072,7 @@
             "is_fillin": true,
             "is_removed": false,
             "revsports_player_id": "K73Erhm",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
