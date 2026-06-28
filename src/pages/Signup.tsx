@@ -150,14 +150,50 @@ const Signup = () => {
 
     setIsLoading(true);
 
+    const savePendingSignup = async () => {
+      const { error: pendingError } = await supabase.functions.invoke("save-pending-signup", {
+        body: {
+          email: formData.email,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          association_id: formData.associationId || null,
+          club_id: formData.clubId || null,
+          team_id: formData.teamId || null,
+        },
+      });
+
+      if (pendingError) {
+        await logError({
+          context: "Signup - save pending signup",
+          message: "Failed to save pending signup details",
+          error: pendingError,
+        });
+        toast({
+          title: "Some details not saved",
+          description: "Your account was created but your name/team details didn't save. Please update them in your profile.",
+          variant: "destructive",
+        });
+      }
+    };
+
     const { error } = await signUp(formData.email, formData.password);
 
     if (error) {
+      const errorText = error.message.toLowerCase();
+      const accountAlreadyExists =
+        errorText.includes("user already registered") ||
+        errorText.includes("already been registered") ||
+        errorText.includes("already exists");
+
+      if (accountAlreadyExists) {
+        await savePendingSignup();
+      }
+
       setIsLoading(false);
       
       // Handle specific error cases
       let errorMessage = "An error occurred during signup.";
-      if (error.message.includes("User already registered")) {
+      if (accountAlreadyExists) {
         errorMessage = "An account with this email already exists. Please sign in instead.";
       } else if (error.message.includes("Invalid email")) {
         errorMessage = "Please enter a valid email address.";
@@ -173,56 +209,7 @@ const Signup = () => {
       return;
     }
 
-    // We need the new user's ID to save their pending signup details.
-    // This works whether or not email confirmation is required - if it IS
-    // required, there's no active session yet, but we can still read the
-    // new user's ID via getUser() right after signing up.
-    const { data: { session } } = await supabase.auth.getSession();
-    let newUserId = session?.user?.id ?? null;
-
-    if (!newUserId) {
-      const { data: userData } = await supabase.auth.getUser();
-      newUserId = userData?.user?.id ?? null;
-    }
-
-    if (newUserId) {
-      // Save the name + chosen association/club/team into the pending_signups
-      // holding table. This works even when the user is NOT logged in yet
-      // (e.g. waiting on email confirmation), because pending_signups allows
-      // inserts from anyone. Once the user actually logs in for the first
-      // time, the app reads this row, applies it to their real profile and
-      // creates a request, then deletes it.
-      const { error: pendingError } = await supabase
-        .from("pending_signups")
-        .insert({
-          user_id: newUserId,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          association_id: formData.associationId || null,
-          club_id: formData.clubId || null,
-          team_id: formData.teamId || null,
-        });
-
-      if (pendingError) {
-        await logError({
-          context: "Signup - save pending signup",
-          message: "Failed to save pending signup details",
-          error: pendingError,
-        });
-        toast({
-          title: "Some details not saved",
-          description: "Your account was created but your name/team details didn't save. Please update them in your profile.",
-          variant: "destructive",
-        });
-      }
-    } else {
-      // Could not determine the new user's ID at all - log this so we can
-      // investigate, but don't block the signup from completing.
-      await logError({
-        context: "Signup - no user id",
-        message: "Could not determine new user's ID after signup; pending signup details were skipped",
-      });
-    }
+    await savePendingSignup();
 
     setIsLoading(false);
     toast({

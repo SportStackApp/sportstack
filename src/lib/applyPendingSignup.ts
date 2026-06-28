@@ -1,6 +1,34 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logError } from "@/lib/logError";
 
+interface PendingSignup {
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  association_id: string | null;
+  club_id: string | null;
+  team_id: string | null;
+}
+
+interface UntypedSupabaseTable {
+  select: (columns: string) => {
+    eq: (column: string, value: string) => {
+      maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
+    };
+  };
+  update: (values: Record<string, unknown>) => {
+    eq: (column: string, value: string) => Promise<{ error: unknown }>;
+  };
+  insert: (values: Record<string, unknown>) => Promise<{ error: unknown }>;
+  delete: () => {
+    eq: (column: string, value: string) => Promise<{ error: unknown }>;
+  };
+}
+
+const db = supabase as unknown as {
+  from: (table: string) => UntypedSupabaseTable;
+};
+
 // Checks if this user has a "pending_signups" row waiting for them
 // (saved during signup, before they confirmed their email). If so:
 //   1. Copy their first/last name into their real profile.
@@ -12,8 +40,8 @@ import { logError } from "@/lib/logError";
 // row, it does nothing.
 export async function applyPendingSignup(userId: string) {
   // 1. Look for a pending signup for this user
-  const { data: pending, error: fetchError } = await supabase
-    .from("pending_signups" as any)
+  const { data: pending, error: fetchError } = await db
+    .from("pending_signups")
     .select("*")
     .eq("user_id", userId)
     .maybeSingle();
@@ -30,10 +58,10 @@ export async function applyPendingSignup(userId: string) {
   // Nothing pending - nothing to do
   if (!pending) return;
 
-  const pendingData = pending as any;
+  const pendingData = pending as PendingSignup;
 
   // 2. Copy first/last name into the real profile
-  const { error: profileError } = await supabase
+  const { error: profileError } = await db
     .from("profiles")
     .update({
       first_name: pendingData.first_name,
@@ -52,9 +80,11 @@ export async function applyPendingSignup(userId: string) {
   // 3. Create a request for whichever level they signed up at
   //    (association only, club only, or team). We only create a
   //    request if they actually selected something at signup.
+  let requestCreated = false;
+
   if (pendingData.association_id) {
-    const { error: requestError } = await supabase
-      .from("requests" as any)
+    const { error: requestError } = await db
+      .from("requests")
       .insert({
         request_type: "PLAYER_REQUEST",
         requester_id: userId,
@@ -72,12 +102,19 @@ export async function applyPendingSignup(userId: string) {
         message: "Failed to create membership request from pending signup",
         error: requestError,
       });
+      return;
+    } else {
+      requestCreated = true;
     }
   }
 
+  if (pendingData.association_id && !requestCreated) {
+    return;
+  }
+
   // 4. Clean up - delete the pending row so this never runs again
-  const { error: deleteError } = await supabase
-    .from("pending_signups" as any)
+  const { error: deleteError } = await db
+    .from("pending_signups")
     .delete()
     .eq("user_id", userId);
 
