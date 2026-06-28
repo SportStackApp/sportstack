@@ -1,7 +1,7 @@
 DATA QUALITY REPORT - Hockey Ballarat
-Generated: 2026-06-28T06:18:07.896663
+Generated: 2026-06-28T11:41:17.577925
 ------------------------------------------------------------
-Rows checked: 6,667
+Rows checked: 6,673
 Issues found: 0
 Warnings found: 42
 
