@@ -75,9 +75,9 @@ export default function MvpVoteCast() {
         const typedSession = sessionData as MvpSession;
         setSession(typedSession);
 
-        // Check if session is closed
-        const closesAt = new Date(typedSession.closes_at);
-        const closed = typedSession.status !== "OPEN" || closesAt <= new Date();
+        // Admin controls whether a voting session is open. Some reopened
+        // sessions can have an old closes_at value, so status is the source of truth.
+        const closed = typedSession.status !== "OPEN";
         setIsClosed(closed);
 
         if (closed) {

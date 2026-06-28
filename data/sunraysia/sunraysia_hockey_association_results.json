@@ -8209,8 +8209,7 @@
     "home_score": "",
     "away_score": "",
     "umpires": [
-      "Sam Megson",
-      "Sponsors"
+      "Sam Megson"
     ],
     "teams": [],
     "grade": "Indoor Mixed",
@@ -8237,8 +8236,7 @@
     "home_score": "",
     "away_score": "",
     "umpires": [
-      "Regan Taylor",
-      "Sponsors"
+      "Mark Lohmeyer"
     ],
     "teams": [],
     "grade": "Indoor Mixed",
@@ -8265,8 +8263,7 @@
     "home_score": "",
     "away_score": "",
     "umpires": [
-      "Mitchell Simms",
-      "Sponsors"
+      "Sam Megson"
     ],
     "teams": [],
     "grade": "Indoor Mixed",
@@ -15662,8 +15659,8 @@
     "home_score": "",
     "away_score": "",
     "umpires": [
-      "Ryan Saunders",
-      "Kara Taylor"
+      "Robert Thompson",
+      "Hanna Flentjar"
     ],
     "teams": [],
     "grade": "U16 Mixed",
@@ -15690,8 +15687,8 @@
     "home_score": "",
     "away_score": "",
     "umpires": [
-      "Sam Megson",
-      "Rehan Offer"
+      "Dafydd Scholes",
+      "Sam Megson"
     ],
     "teams": [],
     "grade": "U16 Mixed",
@@ -28041,7 +28038,7 @@
     "away_score": "",
     "umpires": [
       "Vicki Ellis",
-      "Piper Ellis"
+      "Rory Ellis"
     ],
     "teams": [],
     "grade": "U13 Girls",
@@ -28068,8 +28065,8 @@
     "home_score": "",
     "away_score": "",
     "umpires": [
-      "Kara Taylor",
-      "Aurora Taylor"
+      "Rory Ellis",
+      "Andrew Giddings"
     ],
     "teams": [],
     "grade": "U13 Girls",
@@ -28096,7 +28093,7 @@
     "home_score": "",
     "away_score": "",
     "umpires": [
-      "Annalise Hunt",
+      "Mark Lohmeyer",
       "Sam Megson"
     ],
     "teams": [],
@@ -34816,8 +34813,8 @@
     "home_score": "",
     "away_score": "",
     "umpires": [
-      "Ryan Hawke",
-      "Mitchell Simms"
+      "Robert Thompson",
+      "Mark Lohmeyer"
     ],
     "teams": [],
     "grade": "U13 Boys",
@@ -34845,7 +34842,7 @@
     "away_score": "",
     "umpires": [
       "Sam Megson",
-      "Susan Wakefield"
+      "Piper Ellis"
     ],
     "teams": [],
     "grade": "U13 Boys",
@@ -51161,186 +51158,5 @@
     "is_bye": true,
     "grade": "Men",
     "round": "Round 9"
-  },
-  {
-    "url": "https://www.sunraysiahockey.com.au/game/2498103",
-    "date": "2026-07-12",
-    "time": "13:00",
-    "venue": "Old Aerodrome Oval",
-    "pitch": "Old Aero Ovals - Pitch 2-Turf",
-    "round_venue_url": "https://www.sunraysiahockey.com.au/venues/26075/26850",
-    "round_venue_id": "26850",
-    "home_club_name": "Rivaside",
-    "home_team": "Rivaside Blue Men",
-    "home_team_label": "Rivaside Rivaside Blue Men",
-    "home_team_url": "https://www.sunraysiahockey.com.au/games/team/26075/414014",
-    "home_revsports_team_id": "414014",
-    "away_club_name": "Waratahs",
-    "away_team": "Waratahs Men",
-    "away_team_label": "Waratahs Waratahs Men",
-    "away_team_url": "https://www.sunraysiahockey.com.au/games/team/26075/412100",
-    "away_revsports_team_id": "412100",
-    "home_score": "",
-    "away_score": "",
-    "umpires": [],
-    "teams": [],
-    "grade": "Men",
-    "round": "Round 10"
-  },
-  {
-    "url": "https://www.sunraysiahockey.com.au/game/2498102",
-    "date": "2026-07-12",
-    "time": "14:30",
-    "venue": "Old Aerodrome Oval",
-    "pitch": "Old Aero Ovals - Pitch 2-Turf",
-    "round_venue_url": "https://www.sunraysiahockey.com.au/venues/26075/26850",
-    "round_venue_id": "26850",
-    "home_club_name": "Rivaside",
-    "home_team": "Rivaside Red Men",
-    "home_team_label": "Rivaside Rivaside Red Men",
-    "home_team_url": "https://www.sunraysiahockey.com.au/games/team/26075/414015",
-    "home_revsports_team_id": "414015",
-    "away_club_name": "Koowinda",
-    "away_team": "Koowinda Purple Men",
-    "away_team_label": "Koowinda Koowinda Purple Men",
-    "away_team_url": "https://www.sunraysiahockey.com.au/games/team/26075/414321",
-    "away_revsports_team_id": "414321",
-    "home_score": "",
-    "away_score": "",
-    "umpires": [
-      "Sonya Drew",
-      "Sam Megson"
-    ],
-    "teams": [],
-    "grade": "Men",
-    "round": "Round 10"
-  },
-  {
-    "url": "revsports-bye|Sunraysia Hockey Association|2026 - Grass Field Competition - Oval 4|Men|Round 10|414320",
-    "date": "",
-    "time": "",
-    "venue": "",
-    "pitch": "",
-    "round_venue_url": "",
-    "round_venue_id": "",
-    "home_club_name": "Koowinda",
-    "home_team": "Koowinda Blue Men",
-    "home_team_label": "Koowinda Koowinda Blue Men",
-    "home_team_url": "https://www.sunraysiahockey.com.au/games/team/26075/414320",
-    "home_revsports_team_id": "414320",
-    "away_club_name": "",
-    "away_team": "",
-    "away_team_label": "BYE",
-    "away_team_url": "",
-    "away_revsports_team_id": "",
-    "home_score": "",
-    "away_score": "",
-    "umpires": [],
-    "teams": [
-      {
-        "team_side": "home",
-        "club_name": "Koowinda",
-        "team_name": "Koowinda Blue Men",
-        "team_label": "Koowinda Koowinda Blue Men",
-        "team_url": "https://www.sunraysiahockey.com.au/games/team/26075/414320",
-        "revsports_team_id": "414320",
-        "players": []
-      }
-    ],
-    "is_bye": true,
-    "grade": "Men",
-    "round": "Round 10"
-  },
-  {
-    "url": "https://www.sunraysiahockey.com.au/game/2498105",
-    "date": "2026-07-19",
-    "time": "13:00",
-    "venue": "Old Aerodrome Oval",
-    "pitch": "Old Aero Ovals - Pitch 2-Turf",
-    "round_venue_url": "https://www.sunraysiahockey.com.au/venues/26075/26850",
-    "round_venue_id": "26850",
-    "home_club_name": "Waratahs",
-    "home_team": "Waratahs Men",
-    "home_team_label": "Waratahs Waratahs Men",
-    "home_team_url": "https://www.sunraysiahockey.com.au/games/team/26075/412100",
-    "home_revsports_team_id": "412100",
-    "away_club_name": "Koowinda",
-    "away_team": "Koowinda Blue Men",
-    "away_team_label": "Koowinda Koowinda Blue Men",
-    "away_team_url": "https://www.sunraysiahockey.com.au/games/team/26075/414320",
-    "away_revsports_team_id": "414320",
-    "home_score": "",
-    "away_score": "",
-    "umpires": [
-      "Robert Thompson",
-      "Slade Blandford"
-    ],
-    "teams": [],
-    "grade": "Men",
-    "round": "Round 11"
-  },
-  {
-    "url": "https://www.sunraysiahockey.com.au/game/2498106",
-    "date": "2026-07-19",
-    "time": "14:30",
-    "venue": "Old Aerodrome Oval",
-    "pitch": "Old Aero Ovals - Pitch 2-Turf",
-    "round_venue_url": "https://www.sunraysiahockey.com.au/venues/26075/26850",
-    "round_venue_id": "26850",
-    "home_club_name": "Koowinda",
-    "home_team": "Koowinda Purple Men",
-    "home_team_label": "Koowinda Koowinda Purple Men",
-    "home_team_url": "https://www.sunraysiahockey.com.au/games/team/26075/414321",
-    "home_revsports_team_id": "414321",
-    "away_club_name": "Rivaside",
-    "away_team": "Rivaside Blue Men",
-    "away_team_label": "Rivaside Rivaside Blue Men",
-    "away_team_url": "https://www.sunraysiahockey.com.au/games/team/26075/414014",
-    "away_revsports_team_id": "414014",
-    "home_score": "",
-    "away_score": "",
-    "umpires": [
-      "Sam Megson",
-      "Taj Flentjar"
-    ],
-    "teams": [],
-    "grade": "Men",
-    "round": "Round 11"
-  },
-  {
-    "url": "revsports-bye|Sunraysia Hockey Association|2026 - Grass Field Competition - Oval 4|Men|Round 11|414015",
-    "date": "",
-    "time": "",
-    "venue": "",
-    "pitch": "",
-    "round_venue_url": "",
-    "round_venue_id": "",
-    "home_club_name": "Rivaside",
-    "home_team": "Rivaside Red Men",
-    "home_team_label": "Rivaside Rivaside Red Men",
-    "home_team_url": "https://www.sunraysiahockey.com.au/games/team/26075/414015",
-    "home_revsports_team_id": "414015",
-    "away_club_name": "",
-    "away_team": "",
-    "away_team_label": "BYE",
-    "away_team_url": "",
-    "away_revsports_team_id": "",
-    "home_score": "",
-    "away_score": "",
-    "umpires": [],
-    "teams": [
-      {
-        "team_side": "home",
-        "club_name": "Rivaside",
-        "team_name": "Rivaside Red Men",
-        "team_label": "Rivaside Rivaside Red Men",
-        "team_url": "https://www.sunraysiahockey.com.au/games/team/26075/414015",
-        "revsports_team_id": "414015",
-        "players": []
-      }
-    ],
-    "is_bye": true,
-    "grade": "Men",
-    "round": "Round 11"
   }
 ]
