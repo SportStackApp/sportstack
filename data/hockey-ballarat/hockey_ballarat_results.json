@@ -50535,11 +50535,10 @@
     "away_team_label": "Lucas HC Div 1 Men",
     "away_team_url": "https://www.revolutionise.com.au/hockeyballarat/games/team/26298/417789",
     "away_revsports_team_id": "417789",
-    "home_score": "0",
-    "away_score": "0",
+    "home_score": "2",
+    "away_score": "1",
     "umpires": [
-      "Craig Stevens",
-      "Jeff Sly"
+      "Callum Bridge"
     ],
     "teams": [
       {
@@ -50699,7 +50698,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "L3ZNVun",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -50741,7 +50740,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "LOma9Fn",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
@@ -50919,7 +50918,7 @@
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "j9AXluN",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""

@@ -1,5 +1,5 @@
 DATA QUALITY REPORT - Hockey Ballarat
-Generated: 2026-06-28T07:15:39.996997
+Generated: 2026-06-28T07:52:29.570018
 ------------------------------------------------------------
 Rows checked: 6,673
 Issues found: 0
@@ -50,5 +50,5 @@ RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/g
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563890 - score EGC EGC Gold 1 - 1 Blaze U11 Blaze Pink; listed player goals home 0 - away 1.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2564816 - score Blaze U16 Blaze 1 - 2 EGC EGC; listed player goals home 0 - away 2.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2522120 - score SOBHC Ducks Men 0 - 5 Lucas HC Div 1 Men; listed player goals home 0 - away 6.
-RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563853 - score Blaze Blaze Div 1 Men 0 - 0 Lucas HC Div 1 Men; listed player goals home 0 - away 1.
+RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2563853 - score Blaze Blaze Div 1 Men 2 - 1 Lucas HC Div 1 Men; listed player goals home 2 - away 2.
 RevSports goal total mismatch: https://www.revolutionise.com.au/hockeyballarat/game/2524186 - score Grampians Hockey Club Grampians Hockey Club 14 - 0 EGC EGC Gold; listed player goals home 16 - away 0.
