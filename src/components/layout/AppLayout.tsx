@@ -23,6 +23,7 @@ import {
   Menu,
   X,
   Bell,
+  AlertTriangle,
   ClipboardList,
   ClipboardCheck,
   Users,
@@ -39,6 +40,14 @@ import {
   Layers,
   MessageSquare,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -66,6 +75,41 @@ interface NavSection {
   heading: string;
   items: NavItem[];
 }
+
+const ADMIN_DROPDOWN_SECTIONS: NavSection[] = [
+  {
+    heading: "Core Admin",
+    items: [
+      { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
+      { path: "/admin/users", label: "Users", icon: UserCog },
+      { path: "/admin/teams", label: "Teams", icon: Shield },
+      { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
+    ],
+  },
+  {
+    heading: "Data Quality",
+    items: [
+      { path: "/admin/revsports-mappings", label: "RevSports Mappings", icon: GitMerge },
+      { path: "/admin/revsports-entities", label: "RevSports Review", icon: GitMerge },
+      { path: "/admin/revsports-unmatched", label: "Unmatched RevSports", icon: AlertTriangle },
+    ],
+  },
+  {
+    heading: "Support",
+    items: [
+      { path: "/admin/feedback", label: "Feedback", icon: MessageSquare },
+      { path: "/admin/error-logs", label: "Error Logs", icon: AlertTriangle },
+    ],
+  },
+  {
+    heading: "Voting",
+    items: [
+      { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
+      { path: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+    ],
+  },
+];
+
 const NAV_SETS: Record<AppMode, NavSection[]> = {
   super_admin: [
     {
@@ -108,8 +152,6 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/admin/venues", label: "Venues", icon: MapPin },
         { path: "/admin/users", label: "Users", icon: UserCog },
         { path: "/admin/requests", label: "Requests", icon: ClipboardList },
-        { path: "/admin/revsports-mappings", label: "RevSports Mappings", icon: GitMerge },
-        { path: "/admin/revsports-entities", label: "RevSports Review", icon: GitMerge },
       ],
     },
   ],
@@ -504,6 +546,19 @@ const AppLayout = () => {
   // Show selectors based on mode
   const showAssociationSelector = mode === "super_admin";
   const showClubSelector = mode === "super_admin" || mode === "association";
+  const showAdminDropdown = mode === "super_admin" || mode === "association" || mode === "club";
+
+  const visibleAdminDropdownSections = ADMIN_DROPDOWN_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      if (!showAdminDropdown) return false;
+      if (item.path === "/admin/error-logs" && mode !== "super_admin") return false;
+      if (item.path === "/admin/feedback" && mode === "club") return false;
+      if (section.heading === "Data Quality" && mode !== "super_admin") return false;
+      if (section.heading === "Voting" && mode === "club") return false;
+      return true;
+    }),
+  })).filter((section) => section.items.length > 0);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -907,6 +962,39 @@ const AppLayout = () => {
 
           {/* Right: Notifications & User Avatar */}
           <div className="flex items-center gap-1">
+            {showAdminDropdown && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="text-primary-foreground hover:bg-primary-foreground/10"
+                  >
+                    Admin
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  {visibleAdminDropdownSections.map((section, sectionIndex) => (
+                    <div key={section.heading}>
+                      {sectionIndex > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuLabel>{section.heading}</DropdownMenuLabel>
+                      {section.items.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <DropdownMenuItem key={item.path} asChild>
+                            <Link to={item.path} className="flex items-center gap-2">
+                              <Icon className="h-4 w-4" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button
