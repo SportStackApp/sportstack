@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useNavigate } from "react-router-dom";
-import { Building2, Users, Shield, Trophy, ArrowRight, Crown, Clock, AlertTriangle } from "lucide-react";
+import { Building2, Users, Shield, Trophy, ArrowRight, Crown, Clock, AlertTriangle, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { getRoleDisplayName, getRoleBadgeColor } from "@/hooks/useUserRole";
@@ -364,6 +364,14 @@ const AdminDashboard = () => {
               <Link to="/admin/error-logs">
                 <AlertTriangle className="mb-2 h-6 w-6" />
                 <span>Error Logs</span>
+              </Link>
+            </Button>
+          )}
+          {(isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN") && (
+            <Button variant="outline" asChild className="h-auto py-4 flex-col">
+              <Link to="/admin/feedback">
+                <MessageSquare className="mb-2 h-6 w-6" />
+                <span>Feedback</span>
               </Link>
             </Button>
           )}
