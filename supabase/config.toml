@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.clear-test-data]
 verify_jwt = false
+
+[functions.save-pending-signup]
+verify_jwt = false
