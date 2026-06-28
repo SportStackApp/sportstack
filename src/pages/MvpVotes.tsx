@@ -99,14 +99,14 @@ export default function MvpVotes() {
           return;
         }
 
-        // 3. Fetch open and active voting sessions matching those fixtures
-        const now = new Date().toISOString();
+        // 3. Fetch open voting sessions matching those fixtures.
+        // Admin controls whether a session is open. If closes_at is stale but
+        // status is still OPEN, voters should still see the session.
         const { data: sessionsData, error: sessionsError } = await supabase
           .from("mvp_voting_sessions")
           .select("*")
           .in("fixture_id", fixtureIds)
           .eq("status", "OPEN")
-          .gt("closes_at", now)
           .order("game_date", { ascending: true });
 
         if (sessionsError) throw sessionsError;
