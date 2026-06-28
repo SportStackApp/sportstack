@@ -71566,7 +71566,8 @@
     "home_score": "",
     "away_score": "",
     "umpires": [
-      "Ben Sturmfels"
+      "Annabelle Heal",
+      "Callum Bridge"
     ],
     "teams": [
       {
@@ -72156,7 +72157,7 @@
             "is_fillin": true,
             "is_removed": false,
             "revsports_player_id": "JMyADT1",
-            "goals": "",
+            "goals": "1",
             "green_cards": "",
             "yellow_cards": "",
             "red_cards": ""
