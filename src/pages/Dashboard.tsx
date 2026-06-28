@@ -13,8 +13,12 @@ import {
   X,
   HelpCircle,
   AlertCircle,
+  UserPlus,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +33,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getTeamDisplayName } from "@/lib/utils";
+import { useAdminScope } from "@/hooks/useAdminScope";
 
 type AvailabilityStatus = "AVAILABLE" | "UNAVAILABLE" | "UNSURE" | "PENDING";
 
@@ -42,6 +47,7 @@ interface GameRow {
   home_team: { id: string; name: string } | null;
   away_team: { id: string; name: string } | null;
   venue: { id: string; name: string } | null;
+  divisions?: { id: string; name: string } | null;
 }
 
 interface TeamRequest {
@@ -56,12 +62,25 @@ interface TeamRequest {
 }
 
 const FIXTURE_SELECT =
-  "id, fixture_date, status, home_team_id, away_team_id, venue_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
+  "id, fixture_date, status, home_team_id, away_team_id, division_id, venue_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name), divisions:divisions!fixtures_division_id_fkey(id, name)";
 
 const Dashboard = () => {
-  const { selectedTeamId, selectedTeam, selectedClub } = useTeamContext();
+  const {
+    associations,
+    selectedAssociationId,
+    selectedClubId,
+    selectedTeamId,
+    selectedTeam,
+    selectedClub,
+    setSelectedAssociationId,
+    setSelectedClubId,
+    setSelectedTeamId,
+    filteredClubs,
+    filteredTeams,
+  } = useTeamContext();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { canManageClub } = useAdminScope();
   const [games, setGames] = useState<GameRow[]>([]);
   const [availability, setAvailability] = useState<Record<string, AvailabilityStatus>>({});
   const [loading, setLoading] = useState(true);
@@ -71,6 +90,11 @@ const Dashboard = () => {
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [conflictRequest, setConflictRequest] = useState<TeamRequest | null>(null);
   const [showConflictModal, setShowConflictModal] = useState(false);
+  const [accountLoading, setAccountLoading] = useState(true);
+  const [roleCount, setRoleCount] = useState(0);
+  const [activeMembershipCount, setActiveMembershipCount] = useState(0);
+  const [submittingJoinRequest, setSubmittingJoinRequest] = useState(false);
+  const [joinRequestSent, setJoinRequestSent] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -83,6 +107,34 @@ const Dashboard = () => {
       if (data?.first_name) setProfileName(data.first_name);
     };
     fetchProfile();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchAccountState = async () => {
+      setAccountLoading(true);
+      const [rolesRes, membershipsRes, requestsRes] = await Promise.all([
+        supabase.from("user_roles").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase
+          .from("team_memberships")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("status", "ACTIVE"),
+        (supabase as any)
+          .from("requests")
+          .select("id", { count: "exact", head: true })
+          .eq("target_user_id", user.id)
+          .eq("status", "PENDING"),
+      ]);
+
+      setRoleCount(rolesRes.count || 0);
+      setActiveMembershipCount(membershipsRes.count || 0);
+      setJoinRequestSent((requestsRes.count || 0) > 0);
+      setAccountLoading(false);
+    };
+
+    fetchAccountState();
   }, [user]);
 
   // Fetch pending team requests for the player
@@ -153,6 +205,7 @@ const Dashboard = () => {
         .select(FIXTURE_SELECT)
         .or(`home_team_id.eq.${selectedTeamId},away_team_id.eq.${selectedTeamId}`)
         .gte("fixture_date", new Date().toISOString())
+        .eq("status", "SCHEDULED")
         .order("fixture_date", { ascending: true })
         .limit(8);
 
@@ -284,6 +337,38 @@ const Dashboard = () => {
     }
   };
 
+  const handleJoinRequest = async () => {
+    if (!user || !selectedAssociationId || submittingJoinRequest) return;
+
+    setSubmittingJoinRequest(true);
+    const { error } = await (supabase as any).from("requests").insert({
+      request_type: "PLAYER_REQUEST",
+      requester_id: user.id,
+      target_user_id: user.id,
+      association_id: selectedAssociationId,
+      club_id: selectedClubId || null,
+      team_id: selectedTeamId || null,
+      membership_type: "PRIMARY",
+      status: "PENDING",
+    });
+    setSubmittingJoinRequest(false);
+
+    if (error) {
+      toast({
+        title: "Request not sent",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setJoinRequestSent(true);
+    toast({
+      title: "Request sent",
+      description: "An admin can now review your club or team request.",
+    });
+  };
+
   const navigateMonth = (direction: "prev" | "next") => {
     setCalendarMonth((prev) => {
       const newDate = new Date(prev);
@@ -330,6 +415,7 @@ const Dashboard = () => {
   const calendarDays = generateCalendarDays();
   const monthYearLabel = calendarMonth.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
   const teamName = selectedTeam ? getTeamDisplayName(selectedTeam) : "Team";
+  const isBrandNewUser = !accountLoading && roleCount === 0 && activeMembershipCount === 0;
 
   // Club branding
   const clubPrimary = selectedClub?.primary_colour || undefined;
@@ -340,6 +426,99 @@ const Dashboard = () => {
   const brandStyle = clubPrimary
     ? { backgroundColor: clubPrimary, color: clubSecondary || "#fff" }
     : undefined;
+  const canEditCurrentClub = selectedClubId ? canManageClub(selectedClubId) : false;
+
+  if (isBrandNewUser) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-4 animate-fade-in">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" />
+              <CardTitle>Welcome to SportStack</CardTitle>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Choose where you want to join. Your request will go to an admin for approval.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Association</Label>
+              <Select
+                value={selectedAssociationId || undefined}
+                onValueChange={(value) => setSelectedAssociationId(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select association" />
+                </SelectTrigger>
+                <SelectContent>
+                  {associations.map((association) => (
+                    <SelectItem key={association.id} value={association.id}>
+                      {association.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Club</Label>
+              <Select
+                value={selectedClubId || undefined}
+                onValueChange={(value) => setSelectedClubId(value)}
+                disabled={!selectedAssociationId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select club" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredClubs.map((club) => (
+                    <SelectItem key={club.id} value={club.id}>
+                      {club.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Team</Label>
+              <Select
+                value={selectedTeamId || undefined}
+                onValueChange={(value) => setSelectedTeamId(value)}
+                disabled={!selectedClubId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredTeams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {getTeamDisplayName(team)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {joinRequestSent ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                Your request is waiting for admin approval.
+              </div>
+            ) : (
+              <Button
+                className="w-full"
+                onClick={handleJoinRequest}
+                disabled={!selectedAssociationId || submittingJoinRequest}
+              >
+                {submittingJoinRequest ? "Sending..." : "Request to Join"}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -364,6 +543,14 @@ const Dashboard = () => {
             style={!clubBannerUrl ? brandStyle : undefined}
           >
             <CardContent className="flex items-center justify-center h-full py-8 relative">
+              {canEditCurrentClub && (
+                <Link to="/admin/clubs" className="absolute right-3 top-3 z-20">
+                  <Button size="sm" variant="secondary" className="gap-2">
+                    <Pencil className="h-4 w-4" />
+                    Edit branding
+                  </Button>
+                </Link>
+              )}
               {clubBannerUrl ? (
                 <img
                   src={clubBannerUrl}
@@ -405,6 +592,7 @@ const Dashboard = () => {
                   const homeTeam = game.home_team?.name ?? "Unknown";
                   const awayTeam = game.away_team?.name ?? "Unknown";
                   const venueName = game.venue?.name ?? "TBD";
+                  const divisionName = game.divisions?.name;
                   const avail = availability[game.id];
 
                   return (
@@ -420,6 +608,7 @@ const Dashboard = () => {
                         <ChevronRight className="h-4 w-4 text-primary-foreground/50 flex-shrink-0" />
                       </div>
                       <div className="flex items-center gap-3 text-xs text-primary-foreground/70 mb-2">
+                        {divisionName && <span>{divisionName}</span>}
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {gameDate.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}

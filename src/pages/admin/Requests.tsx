@@ -12,14 +12,17 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ensurePlayerRoleForTeam } from "@/lib/playerRoles";
 
 
 interface Request {
+  source: "membership" | "primary_change";
   id: string;
   request_type: string;
   requester_id: string | null;
   target_user_id: string;
-  team_id: string;
+  team_id: string | null;
+  from_team_id?: string | null;
   association_id: string | null;
   club_id: string | null;
   membership_type: string;
@@ -30,6 +33,7 @@ interface Request {
   requester_name: string;
   target_user_name: string;
   team_name: string;
+  from_team_name?: string | null;
   club_name: string;
   association_name: string;
 }
@@ -53,11 +57,16 @@ export default function Requests() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.from("requests" as any).select("*").order("created_at", { ascending: false });
+      const [{ data, error }, { data: primaryData, error: primaryError }] = await Promise.all([
+        supabase.from("requests" as any).select("*").order("created_at", { ascending: false }),
+        supabase.from("primary_change_requests").select("*").order("requested_at", { ascending: false }),
+      ]);
 
       if (error) throw error;
+      if (primaryError) throw primaryError;
 
       const allRequests = data || [];
+      const allPrimaryRequests = primaryData || [];
 
       // Fetch profiles for name lookups
       const { data: profilesData } = await supabase.from("profiles").select("id, first_name, last_name");
@@ -83,18 +92,69 @@ export default function Requests() {
         ])
       );
 
+      const { data: clubsData } = await supabase.from("clubs").select("id, name, association_id, associations(id, name)");
+      const clubMap = new Map(
+        (clubsData || []).map((club: any) => [
+          club.id,
+          {
+            name: club.name,
+            associationId: club.association_id,
+            associationName: club.associations?.name || "",
+          },
+        ])
+      );
+
+      const { data: associationsData } = await supabase.from("associations").select("id, name");
+      const associationMap = new Map((associationsData || []).map((association: any) => [association.id, association.name]));
+
       // Filter requests based on role
-      let filtered = allRequests.map((req: any) => {
-        const teamInfo = teamMap.get(req.team_id);
+      let filtered: Request[] = allRequests.map((req: any) => {
+        const teamInfo = req.team_id ? teamMap.get(req.team_id) : null;
+        const clubInfo = req.club_id ? clubMap.get(req.club_id) : null;
         return {
+          source: "membership",
           ...req,
           requester_name: profileMap.get(req.requester_id) || "Unknown",
           target_user_name: profileMap.get(req.target_user_id) || "Unknown",
-          team_name: teamInfo?.name || "Unknown",
-          club_name: teamInfo?.clubName || "Unknown",
-          association_name: teamInfo?.associationName || "Unknown",
+          team_name: teamInfo?.name || (req.team_id ? "Unknown" : "No team selected"),
+          club_name: teamInfo?.clubName || clubInfo?.name || (req.club_id ? "Unknown" : "No club selected"),
+          association_name:
+            teamInfo?.associationName ||
+            clubInfo?.associationName ||
+            (req.association_id ? associationMap.get(req.association_id) || "Unknown" : "Unknown"),
         };
       });
+
+      const primaryRequests = allPrimaryRequests.map((req: any) => {
+        const toTeamInfo = teamMap.get(req.to_team_id);
+        const fromTeamInfo = req.from_team_id ? teamMap.get(req.from_team_id) : null;
+        return {
+          source: "primary_change" as const,
+          id: req.id,
+          request_type: "PRIMARY_CHANGE",
+          requester_id: req.user_id,
+          target_user_id: req.user_id,
+          team_id: req.to_team_id,
+          from_team_id: req.from_team_id,
+          association_id: toTeamInfo?.associationId || null,
+          club_id: toTeamInfo?.clubId || null,
+          membership_type: "PRIMARY",
+          status: req.status,
+          cancelled_by: null,
+          responded_by: req.resolved_by || null,
+          created_at: req.requested_at,
+          requester_name: profileMap.get(req.user_id) || "Unknown",
+          target_user_name: profileMap.get(req.user_id) || "Unknown",
+          team_name: toTeamInfo?.name || "Unknown",
+          from_team_name: fromTeamInfo?.name || null,
+          club_name: toTeamInfo?.clubName || "Unknown",
+          association_name: toTeamInfo?.associationName || "Unknown",
+        } satisfies Request;
+      });
+
+      filtered = [...filtered, ...primaryRequests].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
 
       // Apply role-based filtering
       if (!isSuperAdmin) {
@@ -125,6 +185,36 @@ export default function Requests() {
 
   const handleApprove = async (request: Request) => {
     try {
+      if (request.source === "primary_change") {
+        const { error: primaryError } = await supabase
+          .from("primary_change_requests")
+          .update({ status: "ADMIN_APPROVED", resolved_by: user?.id })
+          .eq("id", request.id);
+
+        if (primaryError) throw primaryError;
+
+        toast({ title: "Approved", description: "Primary team change approved. User must confirm." });
+        loadData();
+        return;
+      }
+
+      if (!request.team_id) {
+        const { error: updateError } = await supabase
+          .from("requests" as any)
+          .update({
+            status: "APPROVED",
+            responded_by: user?.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", request.id);
+
+        if (updateError) throw updateError;
+
+        toast({ title: "Success", description: "Request approved without a team assignment." });
+        loadData();
+        return;
+      }
+
       if (request.membership_type === "PRIMARY") {
         const confirmed = window.confirm(
           `${request.target_user_name} may already have a primary team. Approving this will make "${request.team_name}" their new primary team and downgrade any existing primary team to secondary. Continue?`
@@ -165,6 +255,7 @@ export default function Requests() {
       });
 
       if (insertError) throw insertError;
+      await ensurePlayerRoleForTeam(request.target_user_id, request.team_id);
 
       toast({ title: "Success", description: "Request approved and membership created." });
       loadData();
@@ -213,6 +304,23 @@ export default function Requests() {
   };
   const handleDecline = async (request: Request) => {
     try {
+      if (request.source === "primary_change") {
+        const { error } = await supabase
+          .from("primary_change_requests")
+          .update({
+            status: "DECLINED",
+            resolved_by: user?.id,
+            resolved_at: new Date().toISOString(),
+          })
+          .eq("id", request.id);
+
+        if (error) throw error;
+
+        toast({ title: "Success", description: "Request declined." });
+        loadData();
+        return;
+      }
+
       const { error } = await supabase
         .from("requests" as any)
         .update({
@@ -233,6 +341,19 @@ export default function Requests() {
 
   const handleCancel = async (request: Request) => {
     try {
+      if (request.source === "primary_change") {
+        const { error } = await supabase
+          .from("primary_change_requests")
+          .update({ status: "CANCELLED" })
+          .eq("id", request.id);
+
+        if (error) throw error;
+
+        toast({ title: "Success", description: "Request cancelled." });
+        loadData();
+        return;
+      }
+
       const { error } = await supabase
         .from("requests" as any)
         .update({
@@ -383,7 +504,11 @@ export default function Requests() {
                       <TableRow key={request.id}>
                         <TableCell className="text-xs text-muted-foreground">{formatDate(request.created_at)}</TableCell>
                         <TableCell className="text-xs">
-                          {request.request_type === "TEAM_INVITE" ? "Team Invite" : "Player Request"}
+                          {request.source === "primary_change"
+                            ? "Primary Change"
+                            : request.request_type === "TEAM_INVITE"
+                              ? "Team Invite"
+                              : "Player Request"}
                         </TableCell>
                         <TableCell className="font-medium text-sm">
                           {request.target_user_name}
@@ -391,7 +516,14 @@ export default function Requests() {
                             Sent by {request.requester_name}
                           </p>
                         </TableCell>
-                        <TableCell className="text-sm">{request.team_name}</TableCell>
+                        <TableCell className="text-sm">
+                          {request.team_name}
+                          {request.from_team_name && (
+                            <p className="text-xs text-muted-foreground font-normal mt-0.5">
+                              From {request.from_team_name}
+                            </p>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{request.club_name}</TableCell>
                         <TableCell className="text-xs">{request.membership_type}</TableCell>
                         <TableCell>{renderStatusBadge(request.status)}</TableCell>

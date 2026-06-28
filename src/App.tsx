@@ -50,6 +50,7 @@ import RevSportsEntityReview from "./pages/admin/RevSportsEntityReview";
 import MvpVotingAdmin from "./pages/admin/MvpVotingAdmin";
 import Analytics from "./pages/admin/Analytics";
 import FeedbackResponses from "./pages/admin/FeedbackResponses";
+import RolesPermissions from "./pages/admin/RolesPermissions";
 
 // Entity Dashboards
 import AssociationDashboard from "./pages/AssociationDashboard";
@@ -130,6 +131,7 @@ const App = () => (
                       <Route path="/admin/requests" element={<Requests />} />
                       <Route path="/admin/mvp-voting" element={<MvpVotingAdmin />} />
                       <Route path="/admin/analytics" element={<Analytics />} />
+                      <Route path="/admin/roles-permissions" element={<RolesPermissions />} />
 
                       {/* Entity Dashboards */}
                       <Route path="/associations/:id" element={<AssociationDashboard />} />

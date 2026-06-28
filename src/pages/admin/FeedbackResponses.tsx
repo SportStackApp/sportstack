@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, MessageSquare, RefreshCw, Save } from "lucide-react";
+import { ArrowLeft, ExternalLink, MessageSquare, RefreshCw, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,11 +18,13 @@ type FeedbackStatus = "OPEN" | "REVIEWED" | "CLOSED";
 interface FeedbackRow {
   id: string;
   user_id: string;
+  submitter_name?: string;
   message: string;
   page_path: string | null;
   user_agent: string | null;
   status: FeedbackStatus;
   admin_notes: string | null;
+  screenshot_path: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -60,6 +62,7 @@ const FeedbackResponses = () => {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, { status: FeedbackStatus; admin_notes: string }>>({});
+  const [screenshotUrls, setScreenshotUrls] = useState<Record<string, string>>({});
 
   const canViewFeedback = isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN";
 
@@ -84,9 +87,48 @@ const FeedbackResponses = () => {
     }
 
     const rows = data || [];
-    setFeedbackRows(rows);
+    const userIds = Array.from(new Set(rows.map((row) => row.user_id).filter(Boolean)));
+    let profileMap = new Map<string, string>();
+
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", userIds);
+
+      profileMap = new Map(
+        (profiles || []).map((profile: any) => [
+          profile.id,
+          `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Unknown user",
+        ])
+      );
+    }
+
+    const rowsWithNames = rows.map((row) => ({
+      ...row,
+      submitter_name: profileMap.get(row.user_id) || "Unknown user",
+    }));
+
+    const screenshotEntries = await Promise.all(
+      rowsWithNames
+        .filter((row) => row.screenshot_path)
+        .map(async (row) => {
+          const { data: signed } = await supabase.storage
+            .from("feedback-screenshots")
+            .createSignedUrl(row.screenshot_path as string, 60 * 10);
+          return [row.id, signed?.signedUrl || ""] as const;
+        })
+    );
+
+    setFeedbackRows(rowsWithNames);
+    setScreenshotUrls(
+      screenshotEntries.reduce<Record<string, string>>((acc, [id, url]) => {
+        if (url) acc[id] = url;
+        return acc;
+      }, {})
+    );
     setDrafts(
-      rows.reduce<Record<string, { status: FeedbackStatus; admin_notes: string }>>((acc, row) => {
+      rowsWithNames.reduce<Record<string, { status: FeedbackStatus; admin_notes: string }>>((acc, row) => {
         acc[row.id] = {
           status: row.status,
           admin_notes: row.admin_notes || "",
@@ -238,8 +280,20 @@ const FeedbackResponses = () => {
                           <p className="whitespace-pre-wrap text-sm">{row.message}</p>
                           <div className="space-y-1 text-xs text-muted-foreground">
                             <p className="break-all">Page: {row.page_path || "-"}</p>
-                            <p className="break-all">User: {row.user_id}</p>
+                            <p>Submitted by: {row.submitter_name}</p>
+                            <p className="break-all">User ID: {row.user_id}</p>
                           </div>
+                          {screenshotUrls[row.id] && (
+                            <a
+                              href={screenshotUrls[row.id]}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              View screenshot
+                            </a>
+                          )}
                           <Badge variant="outline" className={STATUS_STYLES[row.status]}>
                             {STATUS_LABELS[row.status]}
                           </Badge>

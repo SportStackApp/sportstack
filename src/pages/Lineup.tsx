@@ -7,7 +7,9 @@ import { LineupView } from "@/components/lineup/LineupView";
 import { useState, useEffect } from "react";
 import { cn, getTeamDisplayName } from "@/lib/utils";
 import { useTeamContext } from "@/contexts/TeamContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getLineupAccess, type LineupAccess } from "@/lib/lineupAccess";
 
 interface GameRow {
   id: string;
@@ -26,21 +28,31 @@ const FIXTURE_SELECT =
 
 const Lineup = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const { selectedTeam } = useTeamContext();
   const [game, setGame] = useState<GameRow | null>(null);
+  const [access, setAccess] = useState<LineupAccess | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isCoachView, setIsCoachView] = useState(true);
+  const [isCoachView, setIsCoachView] = useState(false);
 
   useEffect(() => {
     const fetchGame = async () => {
       if (!id) return;
       setLoading(true);
       const { data } = await supabase.from("fixtures").select(FIXTURE_SELECT).eq("id", id).single();
-      setGame((data as GameRow) || null);
+      const fixture = (data as GameRow) || null;
+      setGame(fixture);
+      if (fixture) {
+        const accessResult = await getLineupAccess(user?.id, fixture);
+        setAccess(accessResult);
+        setIsCoachView(accessResult.canEdit);
+      } else {
+        setAccess(null);
+      }
       setLoading(false);
     };
     fetchGame();
-  }, [id]);
+  }, [id, user?.id]);
 
   if (loading) {
     return (
@@ -63,13 +75,34 @@ const Lineup = () => {
     );
   }
 
+  if (!access?.canView) {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <Link to={`/games/${id}`}>
+          <Button variant="ghost" size="sm" className="gap-2">
+            <ChevronLeft className="h-4 w-4" />
+            Back to Game
+          </Button>
+        </Link>
+        <div className="rounded-lg border bg-card p-6 text-center">
+          <p className="font-semibold text-foreground">You do not have access to this line-up.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Line-ups are only available to players, coaches, managers, and admins linked to this fixture.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const homeTeam = game.home_team?.name ?? "Unknown";
   const awayTeam = game.away_team?.name ?? "Unknown";
+  const fallbackTeamId = access.visibleTeamIds[0] || game.home_team_id;
   const lineupTeamId =
-    selectedTeam?.id === game.home_team_id || selectedTeam?.id === game.away_team_id
+    selectedTeam?.id && access.visibleTeamIds.includes(selectedTeam.id)
       ? selectedTeam.id
-      : game.home_team_id;
-  const teamName = selectedTeam ? getTeamDisplayName(selectedTeam) : homeTeam;
+      : fallbackTeamId;
+  const isEditableLineup = access.editableTeamIds.includes(lineupTeamId);
+  const teamName = selectedTeam?.id === lineupTeamId ? getTeamDisplayName(selectedTeam) : lineupTeamId === game.away_team_id ? awayTeam : homeTeam;
   const opponentName = lineupTeamId === game.away_team_id ? homeTeam : awayTeam;
   const gameDate = new Date(game.fixture_date);
 
@@ -83,11 +116,13 @@ const Lineup = () => {
           </Button>
         </Link>
         
+        {access.canEdit && (
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">View as:</span>
           <div className="flex rounded-lg border border-border overflow-hidden">
             <button
               onClick={() => setIsCoachView(true)}
+              disabled={!isEditableLineup}
               className={cn(
                 "px-3 py-1 text-xs font-medium transition-colors",
                 isCoachView ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"
@@ -106,6 +141,7 @@ const Lineup = () => {
             </button>
           </div>
         </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
@@ -132,10 +168,10 @@ const Lineup = () => {
         teamId={lineupTeamId}
         teamName={teamName}
         opponentName={opponentName}
-        isCoach={isCoachView}
+        isCoach={isCoachView && isEditableLineup}
       />
 
-      {isCoachView && (
+      {isCoachView && isEditableLineup && (
         <div className="text-center text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
           <p className="font-medium mb-1">Drag & Drop Instructions</p>
           <p>Drag players from the bench onto positions, or swap players by dragging between positions.</p>

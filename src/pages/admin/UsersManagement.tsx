@@ -33,6 +33,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getRoleDisplayName, getRoleBadgeColor } from "@/hooks/useUserRole";
 import type { Database } from "@/integrations/supabase/types";
 import { EditUserDetailsDialog } from "@/components/admin/EditUserDetailsDialog";
+import { ensurePlayerRoleForTeam } from "@/lib/playerRoles";
 import { MergeProfilesDialog } from "@/components/admin/MergeProfilesDialog";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -70,6 +71,7 @@ interface PendingInvite {
 
 interface UserWithRoles extends Profile {
   roles: AppRole[];
+  roleScopes: RoleWithScope[];
   memberships: Membership[];
   pendingInvites: PendingInvite[];
 }
@@ -267,12 +269,15 @@ const UsersManagement = () => {
       profiles = data || [];
     }
 
-    const { data: userRoles } = await supabase.from("user_roles").select("user_id, role");
+    const { data: userRoles } = await supabase
+      .from("user_roles")
+      .select("user_id, role, association_id, club_id, team_id");
 
-    const usersWithRoles: UserWithRoles[] = profiles.map((profile) => ({
-      ...profile,
-      roles: (userRoles || []).filter((r) => r.user_id === profile.id).map((r) => r.role),
-      memberships: membershipsData
+    const usersWithRoles: UserWithRoles[] = profiles.map((profile) => {
+      const profileRoles = ((userRoles || []) as RoleWithScope[] & { user_id: string }[])
+        .filter((r) => r.user_id === profile.id);
+
+      const membershipRows = membershipsData
         .filter((m) => m.user_id === profile.id)
         .map((m) => {
           const team = teamsList.find((t) => t.id === m.team_id);
@@ -284,8 +289,29 @@ const UsersManagement = () => {
             team_name: team?.name,
             club_id: team?.club_id,
           };
-        }),
-      pendingInvites: ((pendingInvitesData as unknown as PendingInviteRow[]) || [])
+        });
+
+      const membershipTeamIds = new Set(membershipRows.map((membership) => membership.team_id));
+      const roleOnlyMembershipRows = profileRoles
+        .filter((role) => ["PLAYER", "COACH", "TEAM_MANAGER"].includes(role.role) && role.team_id && !membershipTeamIds.has(role.team_id))
+        .map((role) => {
+          const team = teamsList.find((t) => t.id === role.team_id);
+          return {
+            id: `role-${profile.id}-${role.role}-${role.team_id}`,
+            team_id: role.team_id as string,
+            status: "ACTIVE",
+            membership_type: "PRIMARY",
+            team_name: team?.name,
+            club_id: team?.club_id || role.club_id || undefined,
+          };
+        });
+
+      return {
+        ...profile,
+        roles: Array.from(new Set(profileRoles.map((r) => r.role))),
+        roleScopes: profileRoles,
+        memberships: [...membershipRows, ...roleOnlyMembershipRows],
+        pendingInvites: ((pendingInvitesData as unknown as PendingInviteRow[]) || [])
         .filter((r) => r.target_user_id === profile.id)
         .map((r) => {
           const team = teamsList.find((t) => t.id === r.team_id);
@@ -297,7 +323,8 @@ const UsersManagement = () => {
             membership_type: r.membership_type,
           };
         }),
-    }));
+      };
+    });
 
     setUsers(usersWithRoles);
     setLoading(false);
@@ -471,10 +498,15 @@ const UsersManagement = () => {
   };
 
   const handleApproveMembership = async (membershipId: string) => {
+    const membership = selectedUser?.memberships.find((item) => item.id === membershipId);
     const { error } = await supabase.from("team_memberships").update({ status: "ACTIVE" }).eq("id", membershipId);
     if (error) {
       toast({ title: "Error", description: "Failed to approve", variant: "destructive" });
     } else {
+      if (selectedUser && membership?.team_id) {
+        await ensurePlayerRoleForTeam(selectedUser.id, membership.team_id);
+      }
+
       toast({ title: "Approved", description: "Membership approved" });
       const freshUsers = await fetchUsers();
       setSelectedUser((prev) => {
@@ -1112,7 +1144,7 @@ const UsersManagement = () => {
         </div>
 
         {/* Pending Primary Team Change Requests */}
-        {primaryRequests.length > 0 && (
+        {primaryRequests.length > 0 && selectedMergeIds.length < 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -1309,16 +1341,6 @@ const UsersManagement = () => {
                               >
                                 {primaryMembership.status}
                               </Badge>
-                              {primaryMembership.status === "PENDING" && (
-                                <div className="flex gap-0.5">
-                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleApproveMembership(primaryMembership.id)}>
-                                    <Check className="h-3 w-3 text-green-600" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDeclineMembership(primaryMembership.id)}>
-                                    <X className="h-3 w-3 text-destructive" />
-                                  </Button>
-                                </div>
-                              )}
                             </div>
                           );
                         })()}
