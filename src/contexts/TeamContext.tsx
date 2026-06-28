@@ -28,6 +28,7 @@ interface Team {
   age_group: string | null;
   gender: string | null;
   division: string | null;
+  division_id?: string | null;
 }
 
 interface Division {
@@ -66,6 +67,9 @@ interface TeamContextType {
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
 
+const selectionKey = (userId: string, key: "association" | "club" | "division" | "team") =>
+  `team_context:${userId}:${key}`;
+
 export function TeamProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [associations, setAssociations] = useState<Association[]>([]);
@@ -73,11 +77,26 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [teamDivisions, setTeamDivisions] = useState<TeamDivision[]>([]);
-  const [selectedAssociationId, setSelectedAssociationId] = useState(() => localStorage.getItem("selectedAssociationId") || "");
-  const [selectedClubId, setSelectedClubId] = useState(() => localStorage.getItem("selectedClubId") || "");
-  const [selectedTeamId, setSelectedTeamId] = useState(() => localStorage.getItem("selectedTeamId") || "");
+  const [selectedAssociationId, setSelectedAssociationId] = useState("");
+  const [selectedClubId, setSelectedClubId] = useState("");
+  const [selectedTeamId, setSelectedTeamId] = useState("");
   const [selectedDivision, setSelectedDivision] = useState("");
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setSelectedAssociationId("");
+      setSelectedClubId("");
+      setSelectedTeamId("");
+      setSelectedDivision("");
+      return;
+    }
+
+    setSelectedAssociationId(localStorage.getItem(selectionKey(user.id, "association")) || "");
+    setSelectedClubId(localStorage.getItem(selectionKey(user.id, "club")) || "");
+    setSelectedDivision(localStorage.getItem(selectionKey(user.id, "division")) || "");
+    setSelectedTeamId(localStorage.getItem(selectionKey(user.id, "team")) || "");
+  }, [user?.id]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -152,47 +171,89 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const filteredTeams = teams.filter(t => {
     if (t.club_id !== selectedClubId) return false;
     if (selectedDivision) {
-      const isInDivision = teamDivisions.some(td => td.team_id === t.id && td.division_id === selectedDivision);
+      const isInDivision = t.division_id === selectedDivision || teamDivisions.some(td => td.team_id === t.id && td.division_id === selectedDivision);
       if (!isInDivision) return false;
     }
     return true;
   });
 
+  useEffect(() => {
+    if (!selectedAssociationId) return;
+    if (!associations.some((association) => association.id === selectedAssociationId)) {
+      handleAssociationChange("");
+    }
+  }, [associations, selectedAssociationId]);
+
+  useEffect(() => {
+    if (!selectedClubId) return;
+    const selectedClub = clubs.find((club) => club.id === selectedClubId);
+    if (!selectedClub || (selectedAssociationId && selectedClub.association_id !== selectedAssociationId)) {
+      handleClubChange("");
+    }
+  }, [clubs, selectedAssociationId, selectedClubId]);
+
+  useEffect(() => {
+    if (!selectedDivision) return;
+    if (filteredDivisions.length > 0 && !filteredDivisions.some((division) => division.id === selectedDivision)) {
+      handleDivisionChange("");
+    }
+  }, [filteredDivisions, selectedDivision]);
+
+  useEffect(() => {
+    if (!selectedTeamId) return;
+    if (filteredTeams.length > 0 && !filteredTeams.some((team) => team.id === selectedTeamId)) {
+      handleTeamChange("");
+    }
+  }, [filteredTeams, selectedTeamId]);
+
   const handleAssociationChange = (id: string) => {
     setSelectedAssociationId(id);
-    if (id) localStorage.setItem("selectedAssociationId", id);
-    else localStorage.removeItem("selectedAssociationId");
+    if (user?.id) {
+      if (id) localStorage.setItem(selectionKey(user.id, "association"), id);
+      else localStorage.removeItem(selectionKey(user.id, "association"));
+    }
     
     setSelectedClubId("");
-    localStorage.removeItem("selectedClubId");
+    if (user?.id) localStorage.removeItem(selectionKey(user.id, "club"));
     
     setSelectedTeamId("");
-    localStorage.removeItem("selectedTeamId");
+    if (user?.id) localStorage.removeItem(selectionKey(user.id, "team"));
     
     setSelectedDivision("");
+    if (user?.id) localStorage.removeItem(selectionKey(user.id, "division"));
   };
 
   const handleClubChange = (id: string) => {
     setSelectedClubId(id);
-    if (id) localStorage.setItem("selectedClubId", id);
-    else localStorage.removeItem("selectedClubId");
+    if (user?.id) {
+      if (id) localStorage.setItem(selectionKey(user.id, "club"), id);
+      else localStorage.removeItem(selectionKey(user.id, "club"));
+    }
     
     setSelectedTeamId("");
-    localStorage.removeItem("selectedTeamId");
+    if (user?.id) localStorage.removeItem(selectionKey(user.id, "team"));
     
     setSelectedDivision("");
+    if (user?.id) localStorage.removeItem(selectionKey(user.id, "division"));
   };
 
   const handleDivisionChange = (d: string) => {
     setSelectedDivision(d);
+    if (user?.id) {
+      if (d) localStorage.setItem(selectionKey(user.id, "division"), d);
+      else localStorage.removeItem(selectionKey(user.id, "division"));
+    }
+
     setSelectedTeamId("");
-    localStorage.removeItem("selectedTeamId");
+    if (user?.id) localStorage.removeItem(selectionKey(user.id, "team"));
   };
 
   const handleTeamChange = (id: string) => {
     setSelectedTeamId(id);
-    if (id) localStorage.setItem("selectedTeamId", id);
-    else localStorage.removeItem("selectedTeamId");
+    if (user?.id) {
+      if (id) localStorage.setItem(selectionKey(user.id, "team"), id);
+      else localStorage.removeItem(selectionKey(user.id, "team"));
+    }
   };
 
   const selectedAssociation = associations.find(a => a.id === selectedAssociationId);

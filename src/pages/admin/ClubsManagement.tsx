@@ -103,11 +103,23 @@ const ClubsManagement = () => {
   const [editingClub, setEditingClub] = useState<Club | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingClub, setDeletingClub] = useState<Club | null>(null);
-  const [formData, setFormData] = useState({ name: "", abbreviation: "", website_url: "", logo_url: "", association_id: "" });
+  const [formData, setFormData] = useState({
+    name: "",
+    abbreviation: "",
+    website_url: "",
+    logo_url: "",
+    banner_url: "",
+    home_ground: "",
+    primary_colour: "",
+    secondary_colour: "",
+    association_id: "",
+  });
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState("");
   const [logoValidation, setLogoValidation] = useState<{ status: "success" | "error"; message: string } | null>(null);
-  const [formErrors, setFormErrors] = useState<{ abbreviation?: string; logo?: string }>({});
+  const [formErrors, setFormErrors] = useState<{ abbreviation?: string; logo?: string; banner?: string; colours?: string }>({});
   const [abbreviationTouched, setAbbreviationTouched] = useState(false);
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [selectedLogoSrc, setSelectedLogoSrc] = useState("");
@@ -123,11 +135,14 @@ const ClubsManagement = () => {
       if (logoPreviewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(logoPreviewUrl);
       }
+      if (bannerPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(bannerPreviewUrl);
+      }
       if (selectedLogoSrc.startsWith("blob:")) {
         URL.revokeObjectURL(selectedLogoSrc);
       }
     };
-  }, [logoPreviewUrl, selectedLogoSrc]);
+  }, [logoPreviewUrl, bannerPreviewUrl, selectedLogoSrc]);
 
   useEffect(() => {
     if (!scopeLoading && !hasAccess) {
@@ -187,15 +202,32 @@ const ClubsManagement = () => {
         abbreviation: club.abbreviation || "",
         website_url: club.website_url || "",
         logo_url: club.logo_url || "",
+        banner_url: club.banner_url || "",
+        home_ground: club.home_ground || "",
+        primary_colour: club.primary_colour || "",
+        secondary_colour: club.secondary_colour || "",
         association_id: club.association_id,
       });
       setLogoPreviewUrl(club.logo_url || "");
+      setBannerPreviewUrl(club.banner_url || "");
     } else {
       setEditingClub(null);
-      setFormData({ name: "", abbreviation: "", website_url: "", logo_url: "", association_id: formAssociations.length === 1 ? formAssociations[0].id : "" });
+      setFormData({
+        name: "",
+        abbreviation: "",
+        website_url: "",
+        logo_url: "",
+        banner_url: "",
+        home_ground: "",
+        primary_colour: "",
+        secondary_colour: "",
+        association_id: formAssociations.length === 1 ? formAssociations[0].id : "",
+      });
       setLogoPreviewUrl("");
+      setBannerPreviewUrl("");
     }
     setLogoFile(null);
+    setBannerFile(null);
     setFormErrors({});
     setAbbreviationTouched(false);
     setDialogOpen(true);
@@ -226,41 +258,63 @@ const ClubsManagement = () => {
       }
     }
 
-    let logoUrl = formData.logo_url.trim();
-    if (logoFile) {
+    const uploadClubImage = async (file: File, folder: "logos" | "banners") => {
       const allowedTypes = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
-      if (!allowedTypes.includes(logoFile.type)) {
-        setFormErrors((prev) => ({ ...prev, logo: "Accepted file types: PNG, JPG, SVG, WebP only." }));
+      if (!allowedTypes.includes(file.type)) {
+        setFormErrors((prev) => ({ ...prev, [folder === "logos" ? "logo" : "banner"]: "Accepted file types: PNG, JPG, SVG, WebP only." }));
         toast({ title: "Error", description: "Invalid file type. Please upload a PNG, JPG, SVG, or WebP image.", variant: "destructive" });
-        return;
+        return null;
       }
-      if (logoFile.size > 2 * 1024 * 1024) {
-        setFormErrors((prev) => ({ ...prev, logo: "File must be under 2MB." }));
+      if (file.size > 2 * 1024 * 1024) {
+        setFormErrors((prev) => ({ ...prev, [folder === "logos" ? "logo" : "banner"]: "File must be under 2MB." }));
         toast({ title: "Error", description: "File is too large. Maximum size is 2MB.", variant: "destructive" });
-        return;
+        return null;
       }
 
       const slug = slugifyName(formData.name);
-      const filename = `${Date.now()}-${sanitizeFileName(logoFile.name)}`;
-      const path = `clubs/${slug}/${filename}`;
+      const filename = `${Date.now()}-${sanitizeFileName(file.name)}`;
+      const path = `clubs/${slug}/${folder}/${filename}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("logos")
-        .upload(path, logoFile, {
-          contentType: logoFile.type,
+        .upload(path, file, {
+          contentType: file.type,
           upsert: true,
         });
 
       if (uploadError || !uploadData) {
-        toast({ title: "Error", description: uploadError?.message || "Failed to upload logo", variant: "destructive" });
-        return;
+        toast({ title: "Error", description: uploadError?.message || `Failed to upload ${folder === "logos" ? "logo" : "banner"}`, variant: "destructive" });
+        return null;
       }
 
       const { data: publicUrlData } = supabase.storage.from("logos").getPublicUrl(path);
       if (!publicUrlData?.publicUrl) {
-        toast({ title: "Error", description: "Failed to retrieve logo URL", variant: "destructive" });
-        return;
+        toast({ title: "Error", description: "Failed to retrieve image URL", variant: "destructive" });
+        return null;
       }
-      logoUrl = publicUrlData.publicUrl;
+      return publicUrlData.publicUrl;
+    };
+
+    let logoUrl = formData.logo_url.trim();
+    if (logoFile) {
+      const uploadedLogo = await uploadClubImage(logoFile, "logos");
+      if (!uploadedLogo) return;
+      logoUrl = uploadedLogo;
+    }
+
+    let bannerUrl = formData.banner_url.trim();
+    if (bannerFile) {
+      const uploadedBanner = await uploadClubImage(bannerFile, "banners");
+      if (!uploadedBanner) return;
+      bannerUrl = uploadedBanner;
+    }
+
+    const hexColour = /^#[0-9A-Fa-f]{6}$/;
+    if (
+      (formData.primary_colour && !hexColour.test(formData.primary_colour)) ||
+      (formData.secondary_colour && !hexColour.test(formData.secondary_colour))
+    ) {
+      setFormErrors((prev) => ({ ...prev, colours: "Colours must use the #RRGGBB format." }));
+      return;
     }
 
     setSaving(true);
@@ -269,6 +323,10 @@ const ClubsManagement = () => {
       abbreviation: abbreviation || null,
       website_url: formData.website_url.trim() || null,
       logo_url: logoUrl.trim() || null,
+      banner_url: bannerUrl.trim() || null,
+      home_ground: formData.home_ground.trim() || null,
+      primary_colour: formData.primary_colour.trim() || null,
+      secondary_colour: formData.secondary_colour.trim() || null,
       association_id: formData.association_id,
     };
 
@@ -305,12 +363,13 @@ const ClubsManagement = () => {
           <h1 className="text-3xl font-bold tracking-tight">Clubs</h1>
           <p className="text-muted-foreground">Manage clubs within associations</p>
         </div>
-        {canAdd && (
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          {canAdd && (
             <DialogTrigger asChild>
               <Button onClick={() => handleOpenDialog()}><Plus className="mr-2 h-4 w-4" />Add Club</Button>
             </DialogTrigger>
-            <DialogContent>
+          )}
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingClub ? "Edit Club" : "Add Club"}</DialogTitle>
                 <DialogDescription>{editingClub ? "Update details" : "Create a new club"}</DialogDescription>
@@ -438,14 +497,98 @@ const ClubsManagement = () => {
                     </Button>
                   </div>
                 )}
+                <div className="space-y-2">
+                  <Label>Home ground / banner caption</Label>
+                  <Input
+                    value={formData.home_ground}
+                    onChange={(e) => setFormData({ ...formData, home_ground: e.target.value })}
+                    placeholder="e.g., Prince of Wales Park"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="banner">Club banner</Label>
+                  <input
+                    id="banner"
+                    type="file"
+                    accept=".png,.jpg,.jpeg,.svg,.webp"
+                    className="block w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground file:border-0 file:bg-transparent file:text-primary"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      if (!file) return;
+                      setBannerFile(file);
+                      setFormData({ ...formData, banner_url: "" });
+                      setBannerPreviewUrl(URL.createObjectURL(file));
+                      setFormErrors((prev) => ({ ...prev, banner: undefined }));
+                    }}
+                  />
+                  <p className="text-sm text-muted-foreground">Accepted formats: PNG, JPG, SVG, WebP. Max size: 2MB. Wide image recommended.</p>
+                  {formErrors.banner && <p className="text-sm text-destructive">{formErrors.banner}</p>}
+                </div>
+                {(bannerPreviewUrl || formData.banner_url) && (
+                  <div className="space-y-2">
+                    <div className="h-28 overflow-hidden rounded border border-muted bg-muted">
+                      <img
+                        src={bannerPreviewUrl || formData.banner_url}
+                        alt="Banner preview"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={() => {
+                        setBannerFile(null);
+                        setBannerPreviewUrl("");
+                        setFormData({ ...formData, banner_url: "" });
+                        setFormErrors((prev) => ({ ...prev, banner: undefined }));
+                      }}
+                    >
+                      Remove banner
+                    </Button>
+                  </div>
+                )}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Primary colour</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={formData.primary_colour || "#3b82f6"}
+                        onChange={(e) => setFormData({ ...formData, primary_colour: e.target.value })}
+                        className="h-10 w-14 p-1"
+                      />
+                      <Input
+                        value={formData.primary_colour}
+                        onChange={(e) => setFormData({ ...formData, primary_colour: e.target.value })}
+                        placeholder="#3B82F6"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Secondary colour</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={formData.secondary_colour || "#ffffff"}
+                        onChange={(e) => setFormData({ ...formData, secondary_colour: e.target.value })}
+                        className="h-10 w-14 p-1"
+                      />
+                      <Input
+                        value={formData.secondary_colour}
+                        onChange={(e) => setFormData({ ...formData, secondary_colour: e.target.value })}
+                        placeholder="#FFFFFF"
+                      />
+                    </div>
+                  </div>
+                </div>
+                {formErrors.colours && <p className="text-sm text-destructive">{formErrors.colours}</p>}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
                 <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : editingClub ? "Update" : "Create"}</Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
-        )}
+        </Dialog>
         <Dialog open={cropDialogOpen} onOpenChange={(open) => {
           setCropDialogOpen(open);
           if (!open && selectedLogoSrc.startsWith("blob:")) {

@@ -129,6 +129,7 @@ const Profile = () => {
   const [statsDialogType, setStatsDialogType] = useState<"games" | "goals">("games");
   const [setPrimaryDialogOpen, setSetPrimaryDialogOpen] = useState(false);
   const [requestAdditionalDialogOpen, setRequestAdditionalDialogOpen] = useState(false);
+  const [latestRevSportsMatchUrl, setLatestRevSportsMatchUrl] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -275,8 +276,20 @@ const Profile = () => {
         }
       }
       setPendingPrimaryRequest(pendingPrimaryFromReqs);
+    } else {
+      setPendingPrimaryRequest([]);
     }
     setPendingRequestTeams(pendingReqsTransformed);
+
+    const { data: latestRevSportsRow } = await (supabase as any)
+      .from("revsports_players")
+      .select("match_url")
+      .eq("profile_id", user.id)
+      .not("match_url", "is", null)
+      .order("game_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setLatestRevSportsMatchUrl(latestRevSportsRow?.match_url || null);
 
     // Fetch all available teams with club and association info
     const [{ data: assocData }, { data: clubData }, { data: teamData }] = await Promise.all([
@@ -506,12 +519,25 @@ const Profile = () => {
         .eq("membership_type", "PRIMARY");
     }
 
-    // Upgrade new team to PRIMARY
-    const { error: upgradeError } = await supabase
+    const { data: existingTargetMembership } = await supabase
       .from("team_memberships")
-      .update({ membership_type: "PRIMARY" })
+      .select("id")
       .eq("user_id", user.id)
-      .eq("team_id", pendingChangeRequest.to_team_id);
+      .eq("team_id", pendingChangeRequest.to_team_id)
+      .maybeSingle();
+
+    const { error: upgradeError } = existingTargetMembership
+      ? await supabase
+      .from("team_memberships")
+          .update({ membership_type: "PRIMARY", status: "ACTIVE" })
+      .eq("user_id", user.id)
+          .eq("team_id", pendingChangeRequest.to_team_id)
+      : await supabase.from("team_memberships").insert({
+          user_id: user.id,
+          team_id: pendingChangeRequest.to_team_id,
+          membership_type: "PRIMARY" as MembershipType,
+          status: "ACTIVE",
+        });
 
     // Mark request as completed
     await supabase
@@ -709,6 +735,7 @@ const Profile = () => {
 
   const displayName = [formData.firstName, formData.lastName].filter(Boolean).join(" ") || user?.email || "User";
   const initials = (formData.firstName?.charAt(0) || user?.email?.charAt(0) || "U").toUpperCase();
+  const showDeveloperTools = import.meta.env.DEV && import.meta.env.VITE_BYPASS_AUTH === "true";
 
   if (loading) {
     return (
@@ -861,6 +888,16 @@ const Profile = () => {
               <p className="text-xs text-muted-foreground">
                 This links your SportStack profile to scraped RevSports data.
               </p>
+              {latestRevSportsMatchUrl && (
+                <a
+                  href={latestRevSportsMatchUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Open latest RevSports match
+                </a>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -880,6 +917,7 @@ const Profile = () => {
       </Card>
 
       {/* Developer Tools - Role Switcher */}
+      {showDeveloperTools && (
       <Card className="border-dashed border-amber-500/50 bg-amber-500/5">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -912,6 +950,7 @@ const Profile = () => {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Preferences */}
       <Card>
