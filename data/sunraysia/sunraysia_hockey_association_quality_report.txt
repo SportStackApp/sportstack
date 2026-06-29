@@ -1,9 +1,9 @@
 DATA QUALITY REPORT - Sunraysia Hockey Association
-Generated: 2026-06-28T17:24:05.411705
+Generated: 2026-06-29T18:22:07.026492
 ------------------------------------------------------------
-Rows checked: 3,076
+Rows checked: 3,594
 Issues found: 0
-Warnings found: 62
+Warnings found: 63
 
 No issues found by the basic checker.
 
@@ -71,3 +71,4 @@ RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498058 -
 RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498065 - score Rivaside Rivaside Women 3 - 0 Waratahs Waratahs White Women; listed player goals home 0 - away 0.
 RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498076 - score Koowinda Koowinda Purple Men 2 - 4 Rivaside Rivaside Blue Men; listed player goals home 2 - away 0.
 RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498088 - score Rivaside Rivaside Blue Men 0 - 3 Waratahs Waratahs Men; listed player goals home 0 - away 0.
+RevSports goal total mismatch: https://www.sunraysiahockey.com.au/game/2498099 - score Koowinda Koowinda Blue Men 3 - 2 Rivaside Rivaside Blue Men; listed player goals home 3 - away 0.
