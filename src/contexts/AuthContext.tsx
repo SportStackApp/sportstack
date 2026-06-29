@@ -1,7 +1,9 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { applyPendingSignup } from "@/lib/applyPendingSignup";
+import { useToast } from "@/hooks/use-toast";
+import { logError } from "@/lib/logError";
 
 interface AuthContextType {
   user: User | null;
@@ -31,12 +33,44 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const claimPlaceholderProfile = useCallback(async () => {
+    const { data, error } = await supabase.functions.invoke("claim-placeholder-profile", {
+      body: {},
+    });
+
+    if (error) {
+      await logError({
+        context: "claimPlaceholderProfile",
+        message: "Failed to check for a placeholder profile claim",
+        error,
+      });
+      return;
+    }
+
+    const result = data as { status?: string; reason?: string } | null;
+
+    if (result?.status === "merged") {
+      toast({
+        title: "Player profile linked",
+        description: "We linked your existing placeholder player record to this account.",
+      });
+    }
+
+    if (result?.status === "ambiguous") {
+      toast({
+        title: "Profile needs admin review",
+        description: "We found more than one possible placeholder profile. An admin needs to review this before linking your account.",
+      });
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (import.meta.env.DEV && import.meta.env.VITE_BYPASS_AUTH === "true") {
       const mockUser = { id: "00000000-0000-0000-0000-000000000000", email: "dev@local.test" } as User;
       setUser(mockUser);
-      setSession({ user: mockUser, access_token: "mock", refresh_token: "mock" } as any);
+      setSession({ user: mockUser, access_token: "mock", refresh_token: "mock" } as unknown as Session);
       setLoading(false);
       return;
     }
@@ -54,6 +88,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // nothing pending.
         if (event === "SIGNED_IN" && session?.user) {
           applyPendingSignup(session.user.id);
+          claimPlaceholderProfile();
         }
       }
     );
@@ -66,7 +101,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [claimPlaceholderProfile]);
 
   const signUp = async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/`;
