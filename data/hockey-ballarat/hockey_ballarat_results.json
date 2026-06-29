@@ -85834,7 +85834,7 @@
             "jersey": "14",
             "is_goalkeeper": false,
             "is_captain": false,
-            "attended": false,
+            "attended": true,
             "is_fillin": false,
             "is_removed": false,
             "revsports_player_id": "zwYaxhB",
@@ -90584,8 +90584,8 @@
     "away_team_label": "Bobcats Div 2 Men",
     "away_team_url": "https://www.revolutionise.com.au/hockeyballarat/games/team/26298/417792",
     "away_revsports_team_id": "417792",
-    "home_score": "",
-    "away_score": "",
+    "home_score": "2",
+    "away_score": "0",
     "umpires": [
       "Jeff Sly",
       "Joshua Sly"
