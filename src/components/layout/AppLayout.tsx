@@ -66,6 +66,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAppMode, MODE_LABELS, type AppMode } from "@/contexts/AppModeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { APP_VERSION } from "@/lib/appVersion";
 
 interface NavItem {
   path: string;
@@ -880,6 +881,10 @@ const AppLayout = () => {
           <LogOut className="h-5 w-5" />
           Logout
         </button>
+
+        <div className="px-4 pt-2 text-xs text-accent-foreground/60">
+          SportStack {APP_VERSION}
+        </div>
       </div>
     </>
   );
@@ -1140,6 +1145,10 @@ const AppLayout = () => {
 
           {/* Right: Notifications & User Avatar */}
           <div className="flex items-center gap-1">
+            <span className="hidden sm:inline-flex rounded-md border border-primary-foreground/20 px-2 py-1 text-xs font-medium text-primary-foreground/75">
+              {APP_VERSION}
+            </span>
+
             {showAdminDropdown && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
