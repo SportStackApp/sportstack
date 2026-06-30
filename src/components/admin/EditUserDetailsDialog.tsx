@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, KeyRound, Loader2, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -58,7 +59,10 @@ interface EditUserDetailsDialogProps {
   onSuccess: () => void;
   onSendAccessLink?: (details: AccessLinkReviewDetails) => Promise<void> | void;
   accessLinkSending?: boolean;
-  onManageRoles?: () => void;
+  rolesContent?: React.ReactNode;
+  teamsContent?: React.ReactNode;
+  onSaveRoles?: () => void;
+  rolesSaving?: boolean;
 }
 
 export const EditUserDetailsDialog = ({
@@ -68,13 +72,17 @@ export const EditUserDetailsDialog = ({
   onSuccess,
   onSendAccessLink,
   accessLinkSending = false,
-  onManageRoles,
+  rolesContent,
+  teamsContent,
+  onSaveRoles,
+  rolesSaving = false,
 }: EditUserDetailsDialogProps) => {
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [activeTab, setActiveTab] = useState("details");
 
   // Form Fields
   const [email, setEmail] = useState("");
@@ -114,6 +122,7 @@ export const EditUserDetailsDialog = ({
     setEmergencyContactPhone(user_emergency_contact_phone || "");
     setEmail(user_email || "");
     setErrorMsg("");
+    setActiveTab("details");
 
     const fetchUserDetails = async () => {
       setLoading(true);
@@ -234,10 +243,40 @@ export const EditUserDetailsDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Details</DialogTitle>
-          <DialogDescription>
-            Update the profile information and email address for this user.
-          </DialogDescription>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <DialogTitle>Edit User</DialogTitle>
+              <DialogDescription>
+                Update details, roles, and team access for this user.
+              </DialogDescription>
+            </div>
+            {onSendAccessLink && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleAccessLinkReview}
+                disabled={saving || accessLinkSending}
+                className="shrink-0"
+              >
+                {accessLinkSending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : user?.is_placeholder ? (
+                  <>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Send Claim Link
+                  </>
+                ) : (
+                  <>
+                    <KeyRound className="mr-2 h-4 w-4" />
+                    Send Password Reset
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         {loading ? (
@@ -254,162 +293,155 @@ export const EditUserDetailsDialog = ({
               </div>
             )}
 
-            {/* Email Field */}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@example.com"
-              />
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="roles">Roles</TabsTrigger>
+                <TabsTrigger value="teams">Teams</TabsTrigger>
+              </TabsList>
 
-            {/* Names */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="first-name">First name</Label>
-                <Input
-                  id="first-name"
-                  required
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="First name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="last-name">Last name</Label>
-                <Input
-                  id="last-name"
-                  required
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Last name"
-                />
-              </div>
-            </div>
-
-            {/* Contact details */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Phone number"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="suburb">Suburb</Label>
-                <Input
-                  id="suburb"
-                  value={suburb}
-                  onChange={(e) => setSuburb(e.target.value)}
-                  placeholder="Suburb"
-                />
-              </div>
-            </div>
-
-            {/* Address */}
-            <div className="space-y-2">
-              <Label htmlFor="street-address">Street address</Label>
-              <Input
-                id="street-address"
-                value={streetAddress}
-                onChange={(e) => setStreetAddress(e.target.value)}
-                placeholder="Street address"
-              />
-            </div>
-
-            {/* DOB & Gender */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="date-of-birth">Date of birth</Label>
-                <Input
-                  id="date-of-birth"
-                  type="date"
-                  value={dateOfBirth}
-                  onChange={(e) => setDateOfBirth(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="gender">Gender</Label>
-                <Select value={gender || "__none__"} onValueChange={(val) => setGender(val === "__none__" ? "" : val)}>
-                  <SelectTrigger id="gender">
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Select gender</SelectItem>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Emergency Contact */}
-            <div className="space-y-4 border-t pt-4">
-              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Emergency Contact</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <TabsContent value="details" className="mt-4 space-y-6">
+                {/* Email Field */}
                 <div className="space-y-2">
-                  <Label htmlFor="emergency-contact-name">Emergency contact name</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
-                    id="emergency-contact-name"
-                    value={emergencyContactName}
-                    onChange={(e) => setEmergencyContactName(e.target.value)}
-                    placeholder="Contact name"
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="email@example.com"
                   />
                 </div>
+
+                {/* Names */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="first-name">First name</Label>
+                    <Input
+                      id="first-name"
+                      required
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="First name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="last-name">Last name</Label>
+                    <Input
+                      id="last-name"
+                      required
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Last name"
+                    />
+                  </div>
+                </div>
+
+                {/* Contact details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Phone number"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="suburb">Suburb</Label>
+                    <Input
+                      id="suburb"
+                      value={suburb}
+                      onChange={(e) => setSuburb(e.target.value)}
+                      placeholder="Suburb"
+                    />
+                  </div>
+                </div>
+
+                {/* Address */}
                 <div className="space-y-2">
-                  <Label htmlFor="emergency-contact-phone">Emergency contact phone</Label>
+                  <Label htmlFor="street-address">Street address</Label>
                   <Input
-                    id="emergency-contact-phone"
-                    value={emergencyContactPhone}
-                    onChange={(e) => setEmergencyContactPhone(e.target.value)}
-                    placeholder="Contact phone number"
+                    id="street-address"
+                    value={streetAddress}
+                    onChange={(e) => setStreetAddress(e.target.value)}
+                    placeholder="Street address"
                   />
                 </div>
-              </div>
-            </div>
+
+                {/* DOB & Gender */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="date-of-birth">Date of birth</Label>
+                    <Input
+                      id="date-of-birth"
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gender">Gender</Label>
+                    <Select value={gender || "__none__"} onValueChange={(val) => setGender(val === "__none__" ? "" : val)}>
+                      <SelectTrigger id="gender">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Select gender</SelectItem>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Emergency Contact */}
+                <div className="space-y-4 border-t pt-4">
+                  <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Emergency Contact</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="emergency-contact-name">Emergency contact name</Label>
+                      <Input
+                        id="emergency-contact-name"
+                        value={emergencyContactName}
+                        onChange={(e) => setEmergencyContactName(e.target.value)}
+                        placeholder="Contact name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="emergency-contact-phone">Emergency contact phone</Label>
+                      <Input
+                        id="emergency-contact-phone"
+                        value={emergencyContactPhone}
+                        onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                        placeholder="Contact phone number"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="roles" className="mt-4">
+                {rolesContent || <p className="text-sm text-muted-foreground">No role controls available.</p>}
+              </TabsContent>
+
+              <TabsContent value="teams" className="mt-4">
+                {teamsContent || <p className="text-sm text-muted-foreground">No team controls available.</p>}
+              </TabsContent>
+            </Tabs>
 
             <DialogFooter className="border-t pt-4 gap-2">
-              {onManageRoles && (
-                <Button type="button" variant="outline" onClick={onManageRoles} disabled={saving || accessLinkSending}>
-                  Roles & Teams
-                </Button>
-              )}
-              {onSendAccessLink && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleAccessLinkReview}
-                  disabled={saving || accessLinkSending}
-                >
-                  {accessLinkSending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : user?.is_placeholder ? (
-                    <>
-                      <Mail className="mr-2 h-4 w-4" />
-                      Send Claim Link
-                    </>
-                  ) : (
-                    <>
-                      <KeyRound className="mr-2 h-4 w-4" />
-                      Send Password Reset
-                    </>
-                  )}
-                </Button>
-              )}
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                 Cancel
               </Button>
+              {activeTab !== "details" && onSaveRoles ? (
+                <Button type="button" onClick={onSaveRoles} disabled={rolesSaving}>
+                  {rolesSaving ? "Saving..." : "Save Roles & Teams"}
+                </Button>
+              ) : (
               <Button type="submit" disabled={saving}>
                 {saving ? (
                   <>
@@ -420,6 +452,7 @@ export const EditUserDetailsDialog = ({
                   "Save"
                 )}
               </Button>
+              )}
             </DialogFooter>
           </form>
         )}

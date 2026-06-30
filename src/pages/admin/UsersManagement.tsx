@@ -134,12 +134,13 @@ const UsersManagement = () => {
   const [accessReviewOpen, setAccessReviewOpen] = useState(false);
   const [accessReviewDetails, setAccessReviewDetails] = useState<AccessLinkReviewDetails | null>(null);
   const [confirmDetailsCurrent, setConfirmDetailsCurrent] = useState(false);
-  const [confirmRolesCurrent, setConfirmRolesCurrent] = useState(false);
-  const [confirmTeamsCurrent, setConfirmTeamsCurrent] = useState(false);
+  const [confirmedRoleKeys, setConfirmedRoleKeys] = useState<string[]>([]);
+  const [confirmedTeamKeys, setConfirmedTeamKeys] = useState<string[]>([]);
   
   const handleOpenEditDialog = (u: UserWithRoles) => {
     setSelectedUser(u);
     setEditDialogOpen(true);
+    void loadRoleState(u);
   };
 
   const handleToggleSelectUser = (userId: string) => {
@@ -538,7 +539,7 @@ const UsersManagement = () => {
     }
   };
 
-  const handleOpenRoleDialog = async (u: UserWithRoles) => {
+  const loadRoleState = async (u: UserWithRoles) => {
     setSelectedUser(u);
     setRevsportsPlayerIdDraft(u.revsports_player_id || "");
     const { data: rolesData } = await supabase
@@ -578,6 +579,10 @@ const UsersManagement = () => {
     setAssignDivision("");
     setAssignTeamId("");
     setAssignMembershipType("PRIMARY");
+  };
+
+  const handleOpenRoleDialog = async (u: UserWithRoles) => {
+    await loadRoleState(u);
     setRoleDialogOpen(true);
   };
 
@@ -856,8 +861,8 @@ const UsersManagement = () => {
     setSelectedUser(updatedUser);
     setAccessReviewDetails(details);
     setConfirmDetailsCurrent(false);
-    setConfirmRolesCurrent(false);
-    setConfirmTeamsCurrent(false);
+    setConfirmedRoleKeys([]);
+    setConfirmedTeamKeys([]);
     setEditDialogOpen(false);
     setAccessReviewOpen(true);
   };
@@ -1088,17 +1093,28 @@ const UsersManagement = () => {
   const activePrimaryTeam = accessReviewUser?.memberships.find(
     (membership) => membership.membership_type === "PRIMARY" && membership.status === "ACTIVE"
   );
+  const accessRoleKeys = accessReviewUser?.roleScopes.map((scope, index) =>
+    `${scope.role}-${scope.association_id || "all"}-${scope.club_id || "all"}-${scope.team_id || "all"}-${index}`
+  ) || [];
+  const accessTeamItems = accessReviewUser
+    ? [
+        ...accessReviewUser.memberships.map((membership) => ({ key: `membership-${membership.id}`, item: membership, pending: false })),
+        ...accessReviewUser.pendingInvites.map((invite) => ({ key: `invite-${invite.id}`, item: invite, pending: true })),
+      ]
+    : [];
   const accessMissingItems = [
     !accessReviewDetails?.email?.trim() ? "Email" : null,
     !accessReviewDetails?.firstName?.trim() ? "First name" : null,
     !accessReviewDetails?.lastName?.trim() ? "Last name" : null,
     !activePrimaryTeam ? "Active primary team" : null,
   ].filter(Boolean) as string[];
+  const allRolesConfirmed = accessRoleKeys.every((key) => confirmedRoleKeys.includes(key));
+  const allTeamsConfirmed = accessTeamItems.every((team) => confirmedTeamKeys.includes(team.key));
   const accessConfirmReady =
     accessMissingItems.length === 0 &&
     confirmDetailsCurrent &&
-    confirmRolesCurrent &&
-    confirmTeamsCurrent &&
+    allRolesConfirmed &&
+    allTeamsConfirmed &&
     !accessSending;
 
   const profileValue = (value?: string | null) => value?.trim() || "Not recorded";
@@ -1124,6 +1140,240 @@ const UsersManagement = () => {
     const scopeText = [association?.name, club?.name, division?.name, team?.name].filter(Boolean).join(" / ");
     return scopeText || "All allowed scope";
   };
+
+  const rolesTabContent = (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">RevSports Link</h4>
+        {isSuperAdmin ? (
+          <div className="space-y-1">
+            <Label htmlFor="revsports-player-id">External player ID</Label>
+            <Input
+              id="revsports-player-id"
+              value={revsportsPlayerIdDraft}
+              onChange={(event) => setRevsportsPlayerIdDraft(event.target.value)}
+              placeholder="RevSports player ID"
+            />
+          </div>
+        ) : (
+          <div className="rounded-md border bg-muted/40 px-3 py-2 font-mono text-sm">
+            {selectedUser?.revsports_player_id || "Not linked"}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Roles</h4>
+        <div className="flex flex-wrap gap-2">
+          {ALL_ROLES.map((role) => {
+            const disabled = !canAssignRole(role);
+            const isChecked = selectedRoles.includes(role);
+
+            return (
+              <button
+                key={role}
+                type="button"
+                disabled={disabled}
+                onClick={() => !disabled && handleToggleRole(role)}
+                className={`
+                  px-3 py-1.5 rounded-full text-xs font-semibold border transition-all
+                  ${isChecked ? "opacity-100 ring-2 ring-offset-2 ring-offset-background" : "opacity-40 hover:opacity-70"}
+                  ${disabled ? "cursor-not-allowed" : "cursor-pointer"}
+                `}
+              >
+                <Badge className={`${getRoleBadgeColor(role)} pointer-events-none`} variant="secondary">
+                  {getRoleDisplayName(role)}
+                </Badge>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {selectedRoles.includes("ASSOCIATION_ADMIN") && renderAssociationScopeList("Association Admin", assocAdminScopes, setAssocAdminScopes)}
+      {selectedRoles.includes("CLUB_ADMIN") && renderClubScopeList("Club Admin", clubAdminScopes, setClubAdminScopes)}
+      {selectedRoles.includes("COACH") && renderTeamScopeList("Coach", coachScopes, setCoachScopes)}
+      {selectedRoles.includes("TEAM_MANAGER") && renderTeamScopeList("Team Manager", managerScopes, setManagerScopes)}
+    </div>
+  );
+
+  const teamsTabContent = (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Team Memberships</h4>
+        <Button variant="outline" size="sm" onClick={() => setShowTeamAssign(!showTeamAssign)}>
+          <Plus className="h-3 w-3 mr-1" />
+          Assign Team
+        </Button>
+      </div>
+
+      {selectedUser && (selectedUser.memberships.length > 0 || selectedUser.pendingInvites.length > 0) ? (
+        <div className="space-y-1">
+          {selectedUser.memberships.map((m) => (
+            <div key={m.id} className="flex items-center justify-between gap-2 text-sm py-1 border-b border-border/40 last:border-0">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Badge variant="outline" className="text-xs shrink-0">
+                  {m.team_name || "Unknown"}
+                </Badge>
+                <Badge
+                  className={`text-xs shrink-0 ${
+                    m.membership_type === "PRIMARY"
+                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                  variant="secondary"
+                >
+                  {m.membership_type}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {m.membership_type !== "PRIMARY" && (
+                  <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => handleMakePrimary(m.id)}>
+                    Make Primary
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" className="h-6 text-xs px-2 text-destructive hover:text-destructive" onClick={() => handleRemoveMembership(m.id)}>
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+
+          {selectedUser.pendingInvites.map((invite) => (
+            <div key={invite.id} className="flex items-center justify-between gap-2 text-sm py-1 border-b border-border/40 last:border-0">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Badge variant="outline" className="text-xs shrink-0">
+                  {invite.team_name || "Unknown"}
+                </Badge>
+                <Badge className="text-xs shrink-0 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300" variant="secondary">
+                  {invite.membership_type}
+                </Badge>
+                <Badge className="text-xs shrink-0" variant="outline">
+                  Pending
+                </Badge>
+              </div>
+              <Button variant="ghost" size="sm" className="h-6 text-xs px-2 text-destructive hover:text-destructive" onClick={() => handleCancelInvite(invite.id)}>
+                Cancel
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">No team memberships</p>
+      )}
+
+      {showTeamAssign && (
+        <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Association</Label>
+              <Select
+                value={assignAssociationId}
+                onValueChange={(v) => {
+                  setAssignAssociationId(v);
+                  setAssignClubId("");
+                  setAssignDivision("");
+                  setAssignTeamId("");
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs overflow-hidden">
+                  <SelectValue placeholder="Select association" />
+                </SelectTrigger>
+                <SelectContent>
+                  {associations.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Club</Label>
+              <Select
+                value={assignClubId}
+                onValueChange={(v) => {
+                  setAssignClubId(v);
+                  setAssignDivision("");
+                  setAssignTeamId("");
+                  setAssignTeamOptions([]);
+                  setAssignDivisionOptions([]);
+                }}
+                disabled={!assignAssociationId}
+              >
+                <SelectTrigger className="h-8 text-xs overflow-hidden">
+                  <SelectValue placeholder="Select club" />
+                </SelectTrigger>
+                <SelectContent>
+                  {assignAvailableClubs.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Division</Label>
+              <Select
+                value={assignDivision}
+                onValueChange={(v) => {
+                  setAssignDivision(v);
+                  setAssignTeamId("");
+                }}
+                disabled={!assignClubId || assignDivisionOptions.length === 0}
+              >
+                <SelectTrigger className="h-8 text-xs overflow-hidden">
+                  <SelectValue placeholder="Select division" />
+                </SelectTrigger>
+                <SelectContent>
+                  {assignDivisionOptions.length === 0 ? (
+                    <SelectItem value="_none" disabled>No divisions available</SelectItem>
+                  ) : (
+                    assignDivisionOptions.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Team</Label>
+              <Select value={assignTeamId} onValueChange={setAssignTeamId} disabled={!assignDivision}>
+                <SelectTrigger className="h-8 text-xs overflow-hidden">
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {assignAvailableTeams.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Membership Type</Label>
+              <Select value={assignMembershipType} onValueChange={(v) => setAssignMembershipType(v as MembershipType)}>
+                <SelectTrigger className="h-8 text-xs overflow-hidden">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PRIMARY">Primary</SelectItem>
+                  <SelectItem value="SECONDARY">Secondary</SelectItem>
+                  <SelectItem value="FILL_IN">Fill-in</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowTeamAssign(false)}>Cancel</Button>
+            <Button size="sm" onClick={handleAssignTeam} disabled={!assignTeamId || assignSaving}>
+              {assignSaving ? "Adding..." : "Add Membership"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   if (scopeLoading) {
     return (
@@ -1530,11 +1780,10 @@ const UsersManagement = () => {
           user={selectedUser}
           onSendAccessLink={handleRequestAccessLinkReview}
           accessLinkSending={accessSending}
-          onManageRoles={() => {
-            if (!selectedUser) return;
-            setEditDialogOpen(false);
-            handleOpenRoleDialog(selectedUser);
-          }}
+          rolesContent={rolesTabContent}
+          teamsContent={teamsTabContent}
+          onSaveRoles={handleSaveRoles}
+          rolesSaving={saving}
           onSuccess={async () => {
             const freshUsers = await fetchUsers();
             setSelectedUser((prev) => {
@@ -1551,8 +1800,8 @@ const UsersManagement = () => {
             setAccessReviewOpen(open);
             if (!open) {
               setConfirmDetailsCurrent(false);
-              setConfirmRolesCurrent(false);
-              setConfirmTeamsCurrent(false);
+              setConfirmedRoleKeys([]);
+              setConfirmedTeamKeys([]);
               setAccessReviewDetails(null);
             }
           }}
@@ -1627,14 +1876,30 @@ const UsersManagement = () => {
                   </h3>
                   {accessReviewUser.roleScopes.length > 0 ? (
                     <div className="space-y-2">
-                      {accessReviewUser.roleScopes.map((scope, index) => (
-                        <div key={`${scope.role}-${scope.association_id || "all"}-${scope.club_id || "all"}-${scope.team_id || "all"}-${index}`} className="flex flex-wrap items-center gap-2 text-sm">
-                          <Badge className={getRoleBadgeColor(scope.role)} variant="secondary">
-                            {getRoleDisplayName(scope.role)}
-                          </Badge>
-                          <span className="text-muted-foreground">{getRoleScopeSummary(scope)}</span>
-                        </div>
-                      ))}
+                      {accessReviewUser.roleScopes.map((scope, index) => {
+                        const roleKey = accessRoleKeys[index];
+                        return (
+                          <label key={roleKey} htmlFor={`confirm-role-${roleKey}`} className="flex items-start gap-3 text-sm">
+                            <Checkbox
+                              id={`confirm-role-${roleKey}`}
+                              checked={confirmedRoleKeys.includes(roleKey)}
+                              onCheckedChange={(checked) => {
+                                setConfirmedRoleKeys((current) =>
+                                  checked === true
+                                    ? Array.from(new Set([...current, roleKey]))
+                                    : current.filter((key) => key !== roleKey)
+                                );
+                              }}
+                            />
+                            <span className="flex flex-wrap items-center gap-2">
+                              <Badge className={getRoleBadgeColor(scope.role)} variant="secondary">
+                                {getRoleDisplayName(scope.role)}
+                              </Badge>
+                              <span className="text-muted-foreground">{getRoleScopeSummary(scope)}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">No roles recorded.</p>
@@ -1645,21 +1910,27 @@ const UsersManagement = () => {
                   <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                     Teams
                   </h3>
-                  {accessReviewUser.memberships.length > 0 || accessReviewUser.pendingInvites.length > 0 ? (
+                  {accessTeamItems.length > 0 ? (
                     <div className="space-y-2">
-                      {accessReviewUser.memberships.map((membership) => (
-                        <div key={membership.id} className="flex flex-wrap items-center gap-2 text-sm">
-                          <Badge variant="outline">{membership.status}</Badge>
-                          <Badge variant="secondary">{membership.membership_type}</Badge>
-                          <span className="text-muted-foreground">{getTeamSummary(membership)}</span>
-                        </div>
-                      ))}
-                      {accessReviewUser.pendingInvites.map((invite) => (
-                        <div key={invite.id} className="flex flex-wrap items-center gap-2 text-sm">
-                          <Badge variant="outline">PENDING INVITE</Badge>
-                          <Badge variant="secondary">{invite.membership_type}</Badge>
-                          <span className="text-muted-foreground">{getTeamSummary(invite)}</span>
-                        </div>
+                      {accessTeamItems.map(({ key, item, pending }) => (
+                        <label key={key} htmlFor={`confirm-team-${key}`} className="flex items-start gap-3 text-sm">
+                          <Checkbox
+                            id={`confirm-team-${key}`}
+                            checked={confirmedTeamKeys.includes(key)}
+                            onCheckedChange={(checked) => {
+                              setConfirmedTeamKeys((current) =>
+                                checked === true
+                                  ? Array.from(new Set([...current, key]))
+                                  : current.filter((teamKey) => teamKey !== key)
+                              );
+                            }}
+                          />
+                          <span className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline">{pending ? "PENDING INVITE" : (item as Membership).status}</Badge>
+                            <Badge variant="secondary">{item.membership_type}</Badge>
+                            <span className="text-muted-foreground">{getTeamSummary(item)}</span>
+                          </span>
+                        </label>
                       ))}
                     </div>
                   ) : (
@@ -1675,22 +1946,6 @@ const UsersManagement = () => {
                       onCheckedChange={(checked) => setConfirmDetailsCurrent(checked === true)}
                     />
                     <span>I confirm the email, name, and profile details are true and correct.</span>
-                  </label>
-                  <label htmlFor="confirm-roles-current" className="flex items-start gap-3 text-sm">
-                    <Checkbox
-                      id="confirm-roles-current"
-                      checked={confirmRolesCurrent}
-                      onCheckedChange={(checked) => setConfirmRolesCurrent(checked === true)}
-                    />
-                    <span>I confirm the roles and permissions are up to date and correct.</span>
-                  </label>
-                  <label htmlFor="confirm-teams-current" className="flex items-start gap-3 text-sm">
-                    <Checkbox
-                      id="confirm-teams-current"
-                      checked={confirmTeamsCurrent}
-                      onCheckedChange={(checked) => setConfirmTeamsCurrent(checked === true)}
-                    />
-                    <span>I confirm the team associations are up to date and correct.</span>
                   </label>
                 </div>
               </div>

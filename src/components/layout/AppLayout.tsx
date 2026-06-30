@@ -239,13 +239,6 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/chat", label: "Chat", icon: MessageCircle },
       ],
     },
-    {
-      heading: "Coaching",
-      items: [
-        { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
-        { path: "/coaching/formations", label: "Formations", icon: LayoutGrid },
-      ],
-    },
   ],
 };
 
