@@ -30,7 +30,7 @@ type TeamMembership = {
 };
 
 type ClaimLinkPayload = {
-  placeholder_profile_id?: string;
+  profile_id?: string;
   email?: string;
 };
 
@@ -39,6 +39,9 @@ const ADMIN_ROLES = ["SUPER_ADMIN", "ASSOCIATION_ADMIN", "CLUB_ADMIN", "TEAM_MAN
 const normaliseEmail = (value: string) => value.trim().toLowerCase();
 
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+const formatMissingRequirements = (missing: string[]) =>
+  `Add ${missing.join(", ")} before sending this link.`;
 
 const hasAdminScopeForPlaceholder = (roles: AdminRole[], memberships: TeamMembership[]) => {
   if (roles.some((role) => role.role === "SUPER_ADMIN")) return true;
@@ -86,15 +89,11 @@ Deno.serve(async (req) => {
 
     const callerId = claimsData.claims.sub as string;
     const payload = (await req.json()) as ClaimLinkPayload;
-    const placeholderProfileId = payload.placeholder_profile_id;
+    const profileId = payload.profile_id;
     const email = payload.email ? normaliseEmail(payload.email) : "";
 
-    if (!placeholderProfileId || !email) {
-      return jsonResponse({ error: "Missing placeholder profile or email address." }, 400);
-    }
-
-    if (!isValidEmail(email)) {
-      return jsonResponse({ error: "Enter a valid email address." }, 400);
+    if (!profileId) {
+      return jsonResponse({ error: "Missing profile." }, 400);
     }
 
     const serviceClient = createClient(
@@ -108,7 +107,7 @@ Deno.serve(async (req) => {
       .eq("user_id", callerId);
 
     if (rolesError) {
-      console.error("send-placeholder-claim-link: caller role lookup failed", rolesError);
+      console.error("send-profile-access-link: caller role lookup failed", rolesError);
       return jsonResponse({ error: "Could not check your admin access." }, 500);
     }
 
@@ -116,44 +115,100 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "You do not have admin access." }, 403);
     }
 
-    const { data: placeholder, error: placeholderError } = await serviceClient
+    const { data: profile, error: profileError } = await serviceClient
       .from("profiles")
       .select("id, first_name, last_name, is_placeholder, revsports_player_id")
-      .eq("id", placeholderProfileId)
+      .eq("id", profileId)
       .maybeSingle();
 
-    if (placeholderError) {
-      console.error("send-placeholder-claim-link: placeholder lookup failed", placeholderError);
-      return jsonResponse({ error: "Could not check the placeholder profile." }, 500);
+    if (profileError) {
+      console.error("send-profile-access-link: profile lookup failed", profileError);
+      return jsonResponse({ error: "Could not check the profile." }, 500);
     }
 
-    if (!placeholder || placeholder.is_placeholder !== true) {
-      return jsonResponse({ error: "This profile is not a placeholder profile." }, 400);
+    if (!profile) {
+      return jsonResponse({ error: "Profile not found." }, 404);
     }
 
     const { data: memberships, error: membershipError } = await serviceClient
       .from("team_memberships")
       .select("team_id, teams(club_id, clubs(association_id))")
-      .eq("user_id", placeholderProfileId);
+      .eq("user_id", profileId);
 
     if (membershipError) {
-      console.error("send-placeholder-claim-link: membership lookup failed", membershipError);
-      return jsonResponse({ error: "Could not check the placeholder team access." }, 500);
+      console.error("send-profile-access-link: membership lookup failed", membershipError);
+      return jsonResponse({ error: "Could not check the profile team access." }, 500);
     }
 
     if (!hasAdminScopeForPlaceholder(callerRoles as AdminRole[], (memberships || []) as TeamMembership[])) {
-      return jsonResponse({ error: "You do not have permission to send a claim link for this profile." }, 403);
+      return jsonResponse({ error: "You do not have permission to send an access link for this profile." }, 403);
+    }
+
+    const missingRequirements: string[] = [];
+    if (!profile.first_name?.trim()) missingRequirements.push("first name");
+    if (!profile.last_name?.trim()) missingRequirements.push("last name");
+
+    const { data: activePrimaryMembership, error: primaryMembershipError } = await serviceClient
+      .from("team_memberships")
+      .select("id")
+      .eq("user_id", profileId)
+      .eq("membership_type", "PRIMARY")
+      .eq("status", "ACTIVE")
+      .limit(1)
+      .maybeSingle();
+
+    if (primaryMembershipError) {
+      console.error("send-profile-access-link: primary membership lookup failed", primaryMembershipError);
+      return jsonResponse({ error: "Could not check the primary team membership." }, 500);
+    }
+
+    if (!activePrimaryMembership) missingRequirements.push("active primary team");
+
+    if (missingRequirements.length > 0) {
+      return jsonResponse({ error: formatMissingRequirements(missingRequirements), missing_requirements: missingRequirements }, 400);
+    }
+
+    if (profile.is_placeholder !== true) {
+      const { data: authUser, error: authUserError } = await serviceClient.auth.admin.getUserById(profileId);
+      const accountEmail = authUser?.user?.email ? normaliseEmail(authUser.user.email) : "";
+
+      if (authUserError || !accountEmail) {
+        return jsonResponse({ error: "Add an account email before sending a password reset link." }, 400);
+      }
+
+      const { error: resetError } = await serviceClient.auth.resetPasswordForEmail(accountEmail, {
+        redirectTo: `${req.headers.get("origin") || "https://sportstackapp.com"}/reset-password`,
+      });
+
+      if (resetError) {
+        console.error("send-profile-access-link: password reset failed", resetError);
+        return jsonResponse({ error: resetError.message || "Could not send the password reset link." }, 400);
+      }
+
+      return jsonResponse({
+        success: true,
+        link_type: "password_reset",
+        profile_id: profileId,
+      });
+    }
+
+    if (!email) {
+      return jsonResponse({ error: "Enter the player's real email address." }, 400);
+    }
+
+    if (!isValidEmail(email)) {
+      return jsonResponse({ error: "Enter a valid email address." }, 400);
     }
 
     const { data: existingApprovedClaim, error: existingClaimError } = await serviceClient
       .from("profile_claim_reviews")
       .select("id")
-      .eq("placeholder_profile_id", placeholderProfileId)
+      .eq("placeholder_profile_id", profileId)
       .eq("status", "approved")
       .maybeSingle();
 
     if (existingClaimError) {
-      console.error("send-placeholder-claim-link: existing claim lookup failed", existingClaimError);
+      console.error("send-profile-access-link: existing claim lookup failed", existingClaimError);
       return jsonResponse({ error: "Could not check for an existing claim link." }, 500);
     }
 
@@ -165,30 +220,30 @@ Deno.serve(async (req) => {
 
     const { data: inviteData, error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email, {
       data: {
-        first_name: placeholder.first_name,
-        last_name: placeholder.last_name,
-        placeholder_profile_id: placeholderProfileId,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        placeholder_profile_id: profileId,
       },
       redirectTo,
     });
 
     if (inviteError || !inviteData?.user?.id) {
-      console.error("send-placeholder-claim-link: invite failed", inviteError);
+      console.error("send-profile-access-link: invite failed", inviteError);
       return jsonResponse({ error: inviteError?.message || "Could not send the claim link." }, 400);
     }
 
     const realProfileId = inviteData.user.id;
 
-    const { error: profileError } = await serviceClient.from("profiles").upsert({
+    const { error: realProfileError } = await serviceClient.from("profiles").upsert({
       id: realProfileId,
-      first_name: placeholder.first_name,
-      last_name: placeholder.last_name,
+      first_name: profile.first_name,
+      last_name: profile.last_name,
       is_placeholder: false,
-      revsports_player_id: placeholder.revsports_player_id,
+      revsports_player_id: profile.revsports_player_id,
     });
 
-    if (profileError) {
-      console.error("send-placeholder-claim-link: real profile upsert failed", profileError);
+    if (realProfileError) {
+      console.error("send-profile-access-link: real profile upsert failed", realProfileError);
       return jsonResponse({ error: "The invite was sent, but the real profile could not be prepared." }, 500);
     }
 
@@ -196,7 +251,7 @@ Deno.serve(async (req) => {
       .from("profile_claim_reviews")
       .insert({
         real_profile_id: realProfileId,
-        placeholder_profile_id: placeholderProfileId,
+        placeholder_profile_id: profileId,
         status: "approved",
         match_method: "admin_approved",
         match_value: email,
@@ -206,13 +261,13 @@ Deno.serve(async (req) => {
       });
 
     if (reviewError) {
-      console.error("send-placeholder-claim-link: review insert failed", reviewError);
+      console.error("send-profile-access-link: review insert failed", reviewError);
       return jsonResponse({ error: "The invite was sent, but the claim approval could not be recorded." }, 500);
     }
 
     await serviceClient.from("profile_claim_audit").insert({
       real_profile_id: realProfileId,
-      placeholder_profile_id: placeholderProfileId,
+      placeholder_profile_id: profileId,
       status: "claim_link_sent",
       match_method: "admin_approved",
       match_value: email,
@@ -221,11 +276,12 @@ Deno.serve(async (req) => {
 
     return jsonResponse({
       success: true,
+      link_type: "claim",
       real_profile_id: realProfileId,
-      placeholder_profile_id: placeholderProfileId,
+      placeholder_profile_id: profileId,
     });
   } catch (err) {
-    console.error("send-placeholder-claim-link: unexpected error", err);
+    console.error("send-profile-access-link: unexpected error", err);
     return jsonResponse({ error: "Internal server error" }, 500);
   }
 });

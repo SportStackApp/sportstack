@@ -24,7 +24,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
-import { Users, ArrowLeft, Shield, Search, Check, X, UserPlus, FileSpreadsheet, Download, RefreshCw, Plus, AlertTriangle, Pencil, GitMerge, Mail } from "lucide-react";
+import { Users, ArrowLeft, Shield, Search, Check, X, UserPlus, FileSpreadsheet, Download, RefreshCw, Plus, AlertTriangle, Pencil, GitMerge, Mail, Eye, EyeOff, KeyRound } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -128,21 +128,21 @@ const UsersManagement = () => {
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
-  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
+  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [selectedMergeIds, setSelectedMergeIds] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
-  const [claimEmail, setClaimEmail] = useState("");
-  const [claimSending, setClaimSending] = useState(false);
+  const [accessEmail, setAccessEmail] = useState("");
+  const [accessSending, setAccessSending] = useState(false);
   
   const handleOpenEditDialog = (u: UserWithRoles) => {
     setSelectedUser(u);
     setEditDialogOpen(true);
   };
 
-  const handleOpenClaimDialog = (u: UserWithRoles) => {
+  const handleOpenAccessDialog = (u: UserWithRoles) => {
     setSelectedUser(u);
-    setClaimEmail("");
-    setClaimDialogOpen(true);
+    setAccessEmail("");
+    setAccessDialogOpen(true);
   };
 
   const handleToggleSelectUser = (userId: string) => {
@@ -851,21 +851,22 @@ const UsersManagement = () => {
     });
   };
 
-  const handleSendClaimLink = async () => {
+  const handleSendAccessLink = async () => {
     if (!selectedUser) return;
 
-    const email = claimEmail.trim().toLowerCase();
-    if (!email) {
+    const isPlaceholder = selectedUser.is_placeholder === true;
+    const email = accessEmail.trim().toLowerCase();
+    if (isPlaceholder && !email) {
       toast({ title: "Email required", description: "Enter the player's real email address.", variant: "destructive" });
       return;
     }
 
-    setClaimSending(true);
+    setAccessSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-placeholder-claim-link", {
+      const { data, error } = await supabase.functions.invoke("send-profile-access-link", {
         body: {
-          placeholder_profile_id: selectedUser.id,
-          email,
+          profile_id: selectedUser.id,
+          email: isPlaceholder ? email : undefined,
         },
       });
 
@@ -873,27 +874,29 @@ const UsersManagement = () => {
         throw error;
       }
 
-      const result = data as { error?: string; success?: boolean } | null;
+      const result = data as { error?: string; success?: boolean; link_type?: "claim" | "password_reset" } | null;
       if (!result?.success) {
-        throw new Error(result?.error || "Could not send the claim link.");
+        throw new Error(result?.error || "Could not send the access link.");
       }
 
       toast({
-        title: "Claim link sent",
-        description: "The player can use the email link to create their real account.",
+        title: result.link_type === "password_reset" ? "Password reset sent" : "Claim link sent",
+        description: result.link_type === "password_reset"
+          ? "The user can use the email link to reset their password."
+          : "The player can use the email link to create their real account.",
       });
-      setClaimDialogOpen(false);
-      setClaimEmail("");
+      setAccessDialogOpen(false);
+      setAccessEmail("");
       await fetchUsers();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not send the claim link.";
+      const message = err instanceof Error ? err.message : "Could not send the access link.";
       toast({
-        title: "Claim link failed",
+        title: "Access link failed",
         description: message,
         variant: "destructive",
       });
     } finally {
-      setClaimSending(false);
+      setAccessSending(false);
     }
   };
 
@@ -1193,8 +1196,19 @@ const UsersManagement = () => {
           <Button
             variant={hidePlaceholders ? "secondary" : "outline"}
             onClick={() => setHidePlaceholders(prev => !prev)}
+            title={hidePlaceholders ? "Click to show placeholder profiles" : "Click to hide placeholder profiles"}
           >
-            Hide placeholders
+            {hidePlaceholders ? (
+              <>
+                <EyeOff className="h-4 w-4 mr-2" />
+                Placeholders hidden
+              </>
+            ) : (
+              <>
+                <Eye className="h-4 w-4 mr-2" />
+                Placeholders shown
+              </>
+            )}
           </Button>
         </div>
 
@@ -1423,10 +1437,15 @@ const UsersManagement = () => {
                             <Shield className="mr-2 h-4 w-4" />
                             Roles & Teams
                           </Button>
-                          {u.is_placeholder && (
-                            <Button variant="outline" size="sm" onClick={() => handleOpenClaimDialog(u)}>
+                          {u.is_placeholder ? (
+                            <Button variant="outline" size="sm" onClick={() => handleOpenAccessDialog(u)}>
                               <Mail className="mr-2 h-4 w-4" />
                               Claim Link
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="sm" onClick={() => handleOpenAccessDialog(u)}>
+                              <KeyRound className="mr-2 h-4 w-4" />
+                              Password Reset
                             </Button>
                           )}
                           {isSuperAdmin && (
@@ -1508,12 +1527,16 @@ const UsersManagement = () => {
           }}
         />
 
-        <Dialog open={claimDialogOpen} onOpenChange={setClaimDialogOpen}>
+        <Dialog open={accessDialogOpen} onOpenChange={setAccessDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Send Claim Link</DialogTitle>
+              <DialogTitle>
+                {selectedUser?.is_placeholder ? "Send Claim Link" : "Send Password Reset"}
+              </DialogTitle>
               <DialogDescription>
-                Send a private email link so this placeholder player can create a real account.
+                {selectedUser?.is_placeholder
+                  ? "Send a private email link so this placeholder player can create a real account."
+                  : "Send a password reset email to this user's account email."}
               </DialogDescription>
             </DialogHeader>
 
@@ -1529,24 +1552,34 @@ const UsersManagement = () => {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="claim-email">Player email</Label>
-                <Input
-                  id="claim-email"
-                  type="email"
-                  value={claimEmail}
-                  onChange={(event) => setClaimEmail(event.target.value)}
-                  placeholder="player@example.com"
-                />
-              </div>
+              {selectedUser?.is_placeholder ? (
+                <div className="space-y-1">
+                  <Label htmlFor="access-email">Player email</Label>
+                  <Input
+                    id="access-email"
+                    type="email"
+                    value={accessEmail}
+                    onChange={(event) => setAccessEmail(event.target.value)}
+                    placeholder="player@example.com"
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  This will use the email address already attached to the user's SportStack account.
+                </p>
+              )}
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setClaimDialogOpen(false)} disabled={claimSending}>
+              <Button variant="outline" onClick={() => setAccessDialogOpen(false)} disabled={accessSending}>
                 Cancel
               </Button>
-              <Button onClick={handleSendClaimLink} disabled={claimSending}>
-                {claimSending ? "Sending..." : "Send Link"}
+              <Button onClick={handleSendAccessLink} disabled={accessSending}>
+                {accessSending
+                  ? "Sending..."
+                  : selectedUser?.is_placeholder
+                    ? "Send Claim Link"
+                    : "Send Password Reset"}
               </Button>
             </DialogFooter>
           </DialogContent>
