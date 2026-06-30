@@ -31,6 +31,8 @@ interface RevsportsPlayer {
   id: string;
   player_name: string;
   team: string;
+  team_side: string | null;
+  team_label: string | null;
   jersey: string | null;
   profile_id: string | null;
 }
@@ -75,9 +77,9 @@ export default function MvpVoteCast() {
         const typedSession = sessionData as MvpSession;
         setSession(typedSession);
 
-        // Check if session is closed
-        const closesAt = new Date(typedSession.closes_at);
-        const closed = typedSession.status !== "OPEN" || closesAt <= new Date();
+        // Admin controls whether a voting session is open. Some reopened
+        // sessions can have an old closes_at value, so status is the source of truth.
+        const closed = typedSession.status !== "OPEN";
         setIsClosed(closed);
 
         if (closed) {
@@ -103,7 +105,7 @@ export default function MvpVoteCast() {
         // 3. Find current user's player row in revsports_players
         const { data: voterRow, error: voterErr } = await supabase
           .from("revsports_players")
-          .select("id, team")
+          .select("id, team, team_side, team_label")
           .eq("fixture_id", typedSession.fixture_id)
           .eq("profile_id", user.id)
           .maybeSingle();
@@ -124,7 +126,7 @@ export default function MvpVoteCast() {
         // of the game (teammates + fill-ins) and excludes the opposition.
         const { data: allRows, error: teammateErr } = await supabase
           .from("revsports_players")
-          .select("id, player_name, team, jersey, profile_id")
+          .select("id, player_name, team, team_side, team_label, jersey, profile_id")
           .eq("fixture_id", typedSession.fixture_id)
           .eq("attended", true);
 
@@ -133,12 +135,19 @@ export default function MvpVoteCast() {
         const typedRows = (allRows as RevsportsPlayer[]) || [];
 
         // voterRow.team may be null; (a == null && b == null) || a === b handles both cases
-        const sameSide = (rowTeam: string | null) =>
-          (rowTeam == null && voterRow.team == null) || rowTeam === voterRow.team;
+        const sameSide = (player: RevsportsPlayer) => {
+          if (voterRow.team_side && player.team_side) {
+            return player.team_side === voterRow.team_side;
+          }
+          if (voterRow.team_label && player.team_label) {
+            return player.team_label === voterRow.team_label;
+          }
+          return (player.team == null && voterRow.team == null) || player.team === voterRow.team;
+        };
 
         // Eligible = same side as voter, excluding the voter themselves
         const eligible = typedRows.filter(
-          (p) => sameSide(p.team) && p.id !== voterRow.id && p.profile_id !== user.id
+          (p) => sameSide(p) && p.id !== voterRow.id && p.profile_id !== user.id
         );
 
         // Sort alphabetically
@@ -395,7 +404,7 @@ export default function MvpVoteCast() {
         <CardContent className="pt-6 space-y-6">
           {eligiblePlayers.length === 0 ? (
             <div className="py-6 text-center text-muted-foreground">
-              No other teammates found in the lineup for this game.
+              No other teammates are available to vote for in this game. This usually means the player list has not linked correctly yet.
             </div>
           ) : (
             <>

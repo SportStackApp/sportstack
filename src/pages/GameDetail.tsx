@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getLineupAccess, type LineupAccess } from "@/lib/lineupAccess";
 
 type AvailabilityStatus = "AVAILABLE" | "UNAVAILABLE" | "UNSURE" | "PENDING";
 
@@ -57,6 +58,7 @@ const GameDetail = () => {
   const [loading, setLoading] = useState(true);
   const [availability, setAvailability] = useState<AvailabilityStatus>("PENDING");
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [lineupAccess, setLineupAccess] = useState<LineupAccess | null>(null);
 
   useEffect(() => {
     const fetchGame = async () => {
@@ -72,6 +74,8 @@ const GameDetail = () => {
       if (gameData) {
         const fixture = gameData as GameRow;
         setGame(fixture);
+        const access = await getLineupAccess(user?.id, fixture);
+        setLineupAccess(access);
 
         // Fetch current user's availability
         if (user) {
@@ -283,14 +287,16 @@ const GameDetail = () => {
       )}
 
       {/* Actions */}
-      <div className="flex gap-3">
-        <Link to={`/games/${id}/lineup`} className="flex-1">
-          <Button variant="default" className="w-full">
-            <Users className="h-4 w-4 mr-2" />
-            View Lineup
-          </Button>
-        </Link>
-      </div>
+      {lineupAccess?.canView && (
+        <div className="flex gap-3">
+          <Link to={`/games/${id}/lineup`} className="flex-1">
+            <Button variant="default" className="w-full">
+              <Users className="h-4 w-4 mr-2" />
+              View Lineup
+            </Button>
+          </Link>
+        </div>
+      )}
     </div>
   );
 };

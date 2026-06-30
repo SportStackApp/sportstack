@@ -23,6 +23,7 @@ import {
   Menu,
   X,
   Bell,
+  AlertTriangle,
   ClipboardList,
   ClipboardCheck,
   Users,
@@ -38,7 +39,16 @@ import {
   Vote,
   Layers,
   MessageSquare,
+  ImagePlus,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -66,6 +76,47 @@ interface NavSection {
   heading: string;
   items: NavItem[];
 }
+
+const ADMIN_DROPDOWN_SECTIONS: NavSection[] = [
+  {
+    heading: "Core Admin",
+    items: [
+      { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
+      { path: "/admin/associations", label: "Associations", icon: Globe },
+      { path: "/admin/clubs", label: "Clubs", icon: Building2 },
+      { path: "/admin/divisions", label: "Divisions", icon: Layers },
+      { path: "/admin/users", label: "Users", icon: UserCog },
+      { path: "/admin/teams", label: "Teams", icon: Shield },
+      { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+      { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
+      { path: "/admin/venues", label: "Venues", icon: MapPin },
+      { path: "/admin/roles-permissions", label: "Roles & permissions", icon: Shield },
+    ],
+  },
+  {
+    heading: "Data Quality",
+    items: [
+      { path: "/admin/revsports-mappings", label: "RevSports Mappings", icon: GitMerge },
+      { path: "/admin/revsports-entities", label: "RevSports Review", icon: GitMerge },
+      { path: "/admin/revsports-unmatched", label: "Unmatched RevSports", icon: AlertTriangle },
+    ],
+  },
+  {
+    heading: "Support",
+    items: [
+      { path: "/admin/feedback", label: "Feedback", icon: MessageSquare },
+      { path: "/admin/error-logs", label: "Error Logs", icon: AlertTriangle },
+    ],
+  },
+  {
+    heading: "Voting",
+    items: [
+      { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
+      { path: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+    ],
+  },
+];
+
 const NAV_SETS: Record<AppMode, NavSection[]> = {
   super_admin: [
     {
@@ -108,8 +159,6 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/admin/venues", label: "Venues", icon: MapPin },
         { path: "/admin/users", label: "Users", icon: UserCog },
         { path: "/admin/requests", label: "Requests", icon: ClipboardList },
-        { path: "/admin/revsports-mappings", label: "RevSports Mappings", icon: GitMerge },
-        { path: "/admin/revsports-entities", label: "RevSports Review", icon: GitMerge },
       ],
     },
   ],
@@ -259,6 +308,7 @@ interface FeedbackInsert {
   message: string;
   page_path: string;
   user_agent: string;
+  screenshot_path?: string | null;
 }
 
 interface FeedbackClient {
@@ -283,10 +333,15 @@ const AppLayout = () => {
     setSelectedClubId,
     setSelectedTeamId,
     setSelectedDivision,
+    clubs,
+    teams,
+    teamDivisions,
     filteredClubs,
     filteredTeams,
     filteredDivisions,
     selectedAssociation,
+    selectedClub,
+    selectedTeam,
   } = useTeamContext();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -305,9 +360,11 @@ const AppLayout = () => {
   const [isVoter, setIsVoter] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackScreenshot, setFeedbackScreenshot] = useState<File | null>(null);
   const [isFeedbackSubmitting, setIsFeedbackSubmitting] = useState(false);
 
   const isVoterOnly = roles.length === 1 && roles[0] === "VOTER";
+  const isBrandNewUser = roles.length === 0;
 
 
   // Fetch notifications from DB
@@ -331,11 +388,17 @@ const AppLayout = () => {
     const isAdmin = mode === "super_admin" || mode === "association" || mode === "club";
     if (!isAdmin) { setPendingRequestCount(0); return; }
     const fetchCount = async () => {
-      const { count } = await supabase
-        .from("primary_change_requests")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "PENDING");
-      setPendingRequestCount(count || 0);
+      const [membershipRequests, primaryRequests] = await Promise.all([
+        (supabase as any)
+          .from("requests")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "PENDING"),
+        supabase
+          .from("primary_change_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "PENDING"),
+      ]);
+      setPendingRequestCount((membershipRequests.count || 0) + (primaryRequests.count || 0));
     };
     fetchCount();
   }, [user, mode]);
@@ -423,7 +486,7 @@ const AppLayout = () => {
       setPlayerAssociationName(currentMembership.associationName);
       setPlayerAssociationAbbr(currentMembership.associationAbbr || "");
       setPlayerClubName(currentMembership.clubName);
-      setPlayerTeamName(currentMembership.teamName);
+      setPlayerTeamName(selectedTeamId === currentMembership.teamId ? currentMembership.teamName : "");
       setPlayerLogoUrl(currentMembership.associationLogoUrl || currentMembership.clubLogoUrl);
 
       if (isVoterOnly && selectedTeamId !== currentMembership.teamId) {
@@ -487,23 +550,116 @@ const AppLayout = () => {
   };
 
   const baseSections = NAV_SETS[mode === "super_admin" ? viewingAs : mode];
+  // Show selectors based on mode
+  const showAssociationSelector = mode === "super_admin";
+  const showClubSelector = mode === "super_admin" || mode === "association" || mode === "club";
+  const showAdminDropdown = mode === "super_admin" || mode === "association" || mode === "club";
+
   const visibleSections = baseSections.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
       if (isVoterOnly && !["/dashboard", "/mvp-votes"].includes(item.path)) return false;
+      if (isBrandNewUser && item.path !== "/dashboard") return false;
       if (selectedAssociationId && item.path === "/admin/associations") return false;
       if (selectedClubId && item.path === "/admin/clubs") return false;
       if (selectedTeamId && item.path === "/admin/teams") return false;
       if (item.path === "/mvp-votes" && !isVoter) return false;
+      if (showAdminDropdown && section.heading === "Admin") return false;
       return true;
     }),
   })).filter((section) => section.items.length > 0);
-  const mobileNavItems = MOBILE_NAV[mode];
+  const mobileNavItems = isBrandNewUser ? MOBILE_NAV.player.filter((item) => item.path === "/dashboard") : MOBILE_NAV[mode];
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // Show selectors based on mode
-  const showAssociationSelector = mode === "super_admin";
-  const showClubSelector = mode === "super_admin" || mode === "association";
+  const visibleAdminDropdownSections = ADMIN_DROPDOWN_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      if (!showAdminDropdown) return false;
+      if (item.path === "/admin/error-logs" && mode !== "super_admin") return false;
+      if (item.path === "/admin/roles-permissions" && mode !== "super_admin") return false;
+      if (item.path === "/admin/feedback" && mode === "club") return false;
+      if (section.heading === "Data Quality" && mode !== "super_admin") return false;
+      if (section.heading === "Voting" && mode === "club") return false;
+      return true;
+    }),
+  })).filter((section) => section.items.length > 0);
+
+  const selectedDivisionObj = filteredDivisions.find((division) => division.id === selectedDivision);
+  const cascadeDivisionId =
+    selectedDivision || (filteredDivisions.length === 1 ? filteredDivisions[0].id : "");
+  const cascadeTeams = selectedClubId && cascadeDivisionId
+    ? teams.filter((team) => {
+        if (team.club_id !== selectedClubId) return false;
+        const teamDivisionId = (team as { division_id?: string | null }).division_id;
+        return teamDivisionId === cascadeDivisionId || teamDivisions.some((item) => item.team_id === team.id && item.division_id === cascadeDivisionId);
+      })
+    : filteredTeams;
+  const selectedTeamDivisionId =
+    (selectedTeam as { division_id?: string | null } | undefined)?.division_id ||
+    teamDivisions.find((teamDivision) => teamDivision.team_id === selectedTeamId)?.division_id ||
+    "";
+  const staticCascadeClass =
+    "flex h-10 min-w-0 max-w-[190px] items-center rounded-md bg-primary-foreground/10 px-3 text-sm font-medium text-primary-foreground truncate lg:max-w-[260px]";
+  const cascadeSelectTriggerClass =
+    "h-10 min-w-0 max-w-[190px] bg-primary-foreground/10 text-primary-foreground border-primary-foreground/15 font-medium data-[placeholder]:text-primary-foreground/70 lg:max-w-[260px]";
+  const cascadeClearClass =
+    "h-7 w-7 shrink-0 rounded-full text-primary-foreground/60 hover:text-primary-foreground hover:bg-primary-foreground/10";
+
+  useEffect(() => {
+    const associationMatch = location.pathname.match(/^\/associations\/([^/]+)/);
+    const clubMatch = location.pathname.match(/^\/clubs\/([^/]+)/);
+    const teamMatch = location.pathname.match(/^\/teams\/([^/]+)/);
+
+    if (teamMatch) {
+      const teamId = teamMatch[1];
+      const team = teams.find((item) => item.id === teamId) as { id: string; club_id: string; division_id?: string | null } | undefined;
+      const club = team ? clubs.find((item) => item.id === team.club_id) : undefined;
+      const divisionId = team?.division_id || teamDivisions.find((item) => item.team_id === teamId)?.division_id || "";
+
+      if (club && selectedAssociationId !== club.association_id) setSelectedAssociationId(club.association_id);
+      if (team && selectedClubId !== team.club_id) setSelectedClubId(team.club_id);
+      if (divisionId && selectedDivision !== divisionId) setSelectedDivision(divisionId);
+      if (team && selectedTeamId !== team.id) setSelectedTeamId(team.id);
+      return;
+    }
+
+    if (clubMatch) {
+      const clubId = clubMatch[1];
+      const club = clubs.find((item) => item.id === clubId);
+      if (club && selectedAssociationId !== club.association_id) setSelectedAssociationId(club.association_id);
+      if (club && selectedClubId !== club.id) setSelectedClubId(club.id);
+      if (selectedDivision) setSelectedDivision("");
+      if (selectedTeamId) setSelectedTeamId("");
+      return;
+    }
+
+    if (associationMatch) {
+      const associationId = associationMatch[1];
+      if (selectedAssociationId !== associationId) setSelectedAssociationId(associationId);
+      if (selectedClubId) setSelectedClubId("");
+      if (selectedDivision) setSelectedDivision("");
+      if (selectedTeamId) setSelectedTeamId("");
+    }
+  }, [
+    location.pathname,
+    clubs,
+    teams,
+    teamDivisions,
+    selectedAssociationId,
+    selectedClubId,
+    selectedDivision,
+    selectedTeamId,
+    setSelectedAssociationId,
+    setSelectedClubId,
+    setSelectedDivision,
+    setSelectedTeamId,
+  ]);
+
+  useEffect(() => {
+    if (selectedTeamId && selectedTeamDivisionId && selectedDivision !== selectedTeamDivisionId) {
+      setSelectedDivision(selectedTeamDivisionId);
+    }
+  }, [selectedDivision, selectedTeamDivisionId, selectedTeamId, setSelectedDivision]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -532,12 +688,57 @@ const AppLayout = () => {
     if (!user || !feedbackMessage.trim() || isFeedbackSubmitting) return;
 
     setIsFeedbackSubmitting(true);
+    let screenshotPath: string | null = null;
+
+    if (feedbackScreenshot) {
+      const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+      if (!allowedTypes.includes(feedbackScreenshot.type)) {
+        toast({
+          title: "Screenshot not attached",
+          description: "Please use a PNG, JPG, or WebP screenshot.",
+          variant: "destructive",
+        });
+        setIsFeedbackSubmitting(false);
+        return;
+      }
+
+      if (feedbackScreenshot.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Screenshot too large",
+          description: "Screenshots must be under 5MB.",
+          variant: "destructive",
+        });
+        setIsFeedbackSubmitting(false);
+        return;
+      }
+
+      const extension = feedbackScreenshot.name.split(".").pop() || "png";
+      screenshotPath = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("feedback-screenshots")
+        .upload(screenshotPath, feedbackScreenshot, {
+          contentType: feedbackScreenshot.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        toast({
+          title: "Screenshot not uploaded",
+          description: uploadError.message || "Please try again.",
+          variant: "destructive",
+        });
+        setIsFeedbackSubmitting(false);
+        return;
+      }
+    }
+
     const feedbackClient = supabase as unknown as FeedbackClient;
     const { error } = await feedbackClient.from("app_feedback").insert({
       user_id: user.id,
       message: feedbackMessage.trim(),
       page_path: location.pathname,
       user_agent: navigator.userAgent,
+      screenshot_path: screenshotPath,
     });
 
     setIsFeedbackSubmitting(false);
@@ -552,6 +753,7 @@ const AppLayout = () => {
     }
 
     setFeedbackMessage("");
+    setFeedbackScreenshot(null);
     setIsFeedbackOpen(false);
     toast({
       title: "Feedback sent",
@@ -688,7 +890,7 @@ const AppLayout = () => {
       <header className="sticky top-0 z-50 bg-primary border-b border-primary/20">
         <div className="flex h-14 items-center justify-between px-4">
           {/* Left: Hamburger → Association Logo → Club → Division → Team */}
-          <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Button
               variant="ghost"
               size="icon"
@@ -703,15 +905,18 @@ const AppLayout = () => {
               <div className="flex items-center gap-1">
                 <Popover open={isAssociationPopoverOpen} onOpenChange={setIsAssociationPopoverOpen}>
                   <PopoverTrigger asChild>
-                    <button className="w-10 h-10 rounded-lg overflow-hidden border-2 border-primary-foreground/20 hover:border-primary-foreground/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground/50">
+                    <button
+                      className="w-10 h-10 shrink-0 rounded-lg overflow-hidden border-2 border-primary-foreground/20 hover:border-primary-foreground/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground/50"
+                      title={selectedAssociation?.name || "Select association"}
+                    >
                       <Avatar className="w-full h-full rounded-none">
                         <AvatarImage
-                          src={selectedAssociation?.logo_url || undefined}
-                          alt={selectedAssociation?.name}
+                          src={selectedAssociation?.logo_url || "/favicon.ico"}
+                          alt={selectedAssociation?.name || "SportStack"}
                           className="object-cover"
                         />
                         <AvatarFallback className="rounded-none bg-accent text-accent-foreground text-xs font-semibold">
-                          {selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "Admin"}
+                          {selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "SS"}
                         </AvatarFallback>
                       </Avatar>
                     </button>
@@ -760,11 +965,12 @@ const AppLayout = () => {
                   </PopoverContent>
                 </Popover>
                 {selectedAssociationId && (
-                  <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full text-primary-foreground/50 hover:text-primary-foreground hover:bg-primary-foreground/10" onClick={() => {
+                  <Button variant="ghost" size="icon" className={cascadeClearClass} title="Clear association" onClick={() => {
                     setSelectedAssociationId("");
                     setSelectedClubId("");
                     setSelectedDivision("");
                     setSelectedTeamId("");
+                    navigate(mode === "super_admin" || mode === "association" || mode === "club" ? "/admin" : "/dashboard");
                   }}>
                     <X className="h-3 w-3" />
                   </Button>
@@ -773,23 +979,23 @@ const AppLayout = () => {
             ) : (
               // Static association logo for non-super_admin modes
               <>
-                <div className="w-10 h-10 shrink-0 rounded-lg overflow-hidden border-2 border-primary-foreground/20">
+                <div className="w-10 h-10 shrink-0 rounded-lg overflow-hidden border-2 border-primary-foreground/20" title={(mode === "player" ? playerAssociationName || playerClubName : selectedAssociation?.name) || "SportStack"}>
                   <Avatar className="w-full h-full rounded-none">
                     <AvatarImage
-                      src={(mode === "player" ? playerLogoUrl : selectedAssociation?.logo_url) || undefined}
-                      alt={mode === "player" ? playerAssociationName || playerClubName : selectedAssociation?.name}
+                      src={(mode === "player" ? playerLogoUrl : selectedAssociation?.logo_url) || "/favicon.ico"}
+                      alt={(mode === "player" ? playerAssociationName || playerClubName : selectedAssociation?.name) || "SportStack"}
                       className="object-cover"
                     />
                     <AvatarFallback className="rounded-none bg-accent text-accent-foreground text-xs font-semibold">
                       {mode === "player"
-                        ? playerAssociationAbbr || playerAssociationName.substring(0, 2).toUpperCase() || "Admin"
-                        : selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "Admin"}
+                        ? playerAssociationAbbr || playerAssociationName.substring(0, 2).toUpperCase() || "SS"
+                        : selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "SS"}
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 {mode === "player" && isVoterOnly && voterTeamMemberships.length > 1 ? (
                   <Select value={selectedTeamId || voterTeamMemberships[0]?.teamId} onValueChange={handleVoterTeamChange}>
-                    <SelectTrigger className="h-10 w-[190px] max-w-[42vw] min-w-0 bg-accent text-accent-foreground border-0 font-medium">
+                    <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[190px]")}>
                       <SelectValue placeholder="Select team" />
                     </SelectTrigger>
                     <SelectContent className="bg-background border-border">
@@ -802,14 +1008,19 @@ const AppLayout = () => {
                   </Select>
                 ) : (
                   <>
-                    {mode === "player" && playerClubName && (
-                      <div className="h-10 max-w-[140px] lg:max-w-[180px] min-w-0 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground truncate">
-                        {playerClubName}
+                    {mode === "player" && (selectedClub || playerClubName) && (
+                      <div className={staticCascadeClass} title={selectedClub?.name || playerClubName}>
+                        {selectedClub?.name || playerClubName}
                       </div>
                     )}
-                    {mode === "player" && playerTeamName && (
-                      <div className="h-10 max-w-[120px] lg:max-w-[160px] min-w-0 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground truncate">
-                        {playerTeamName}
+                    {mode === "player" && selectedDivisionObj && (
+                      <div className={staticCascadeClass} title={selectedDivisionObj.name}>
+                        {selectedDivisionObj.name}
+                      </div>
+                    )}
+                    {mode === "player" && (selectedTeam || (!selectedClubId && playerTeamName)) && (
+                      <div className={staticCascadeClass} title={selectedTeam ? getTeamDisplayName(selectedTeam) : playerTeamName}>
+                        {selectedTeam ? getTeamDisplayName(selectedTeam) : playerTeamName}
                       </div>
                     )}
                   </>
@@ -820,26 +1031,33 @@ const AppLayout = () => {
             {/* Club Selector */}
             {showClubSelector && selectedAssociationId && filteredClubs.length > 0 && (
               <div className="flex items-center gap-1">
-                <Select key={selectedAssociationId} value={selectedClubId || undefined} onValueChange={(v) => {
-                  setSelectedClubId(v); 
-                  navigate(`/clubs/${v}`);
-                }}>
-                  <SelectTrigger className="w-[140px] lg:w-[180px] bg-accent text-accent-foreground border-0 font-medium">
-                    <SelectValue placeholder="Select Club" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border-border">
-                    {filteredClubs.map((club) => (
-                      <SelectItem key={club.id} value={club.id}>
-                        {club.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedClubId && (
-                  <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full text-primary-foreground/50 hover:text-primary-foreground hover:bg-primary-foreground/10" onClick={() => {
+                {filteredClubs.length === 1 ? (
+                  <div className={staticCascadeClass} title={selectedClub?.name || filteredClubs[0].name}>
+                    {selectedClub?.name || filteredClubs[0].name}
+                  </div>
+                ) : (
+                  <Select key={selectedAssociationId} value={selectedClubId || undefined} onValueChange={(v) => {
+                    setSelectedClubId(v);
+                    navigate(`/clubs/${v}`);
+                  }}>
+                    <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[170px] lg:w-[230px]")}>
+                      <SelectValue placeholder="Select Club" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border-border">
+                      {filteredClubs.map((club) => (
+                        <SelectItem key={club.id} value={club.id}>
+                          {club.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {selectedClubId && filteredClubs.length > 1 && (
+                  <Button variant="ghost" size="icon" className={cascadeClearClass} title="Clear club" onClick={() => {
                     setSelectedClubId("");
                     setSelectedDivision("");
                     setSelectedTeamId("");
+                    navigate(selectedAssociationId ? `/associations/${selectedAssociationId}` : "/admin");
                   }}>
                     <X className="h-3 w-3" />
                   </Button>
@@ -848,27 +1066,34 @@ const AppLayout = () => {
             )}
 
             {/* Division Selector */}
-            {selectedClubId && filteredDivisions.length > 0 && (
+            {showClubSelector && selectedClubId && filteredDivisions.length > 0 && (
               <div className="flex items-center gap-1">
-                <Select key={selectedClubId} value={selectedDivision || undefined} onValueChange={(v) => {
-                  setSelectedDivision(v); 
-                  navigate("/admin/division");
-                }}>
-                  <SelectTrigger className="w-[120px] lg:w-[160px] bg-accent text-accent-foreground border-0 font-medium">
-                    <SelectValue placeholder="Division" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border-border">
-                    {filteredDivisions.map((div) => (
-                      <SelectItem key={div.id} value={div.id}>
-                        {div.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedDivision && (
-                  <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full text-primary-foreground/50 hover:text-primary-foreground hover:bg-primary-foreground/10" onClick={() => {
+                {filteredDivisions.length === 1 ? (
+                  <div className={staticCascadeClass} title={selectedDivisionObj?.name || filteredDivisions[0].name}>
+                    {selectedDivisionObj?.name || filteredDivisions[0].name}
+                  </div>
+                ) : (
+                  <Select key={selectedClubId} value={selectedDivision || undefined} onValueChange={(v) => {
+                    setSelectedDivision(v);
+                    navigate("/admin/division");
+                  }}>
+                    <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[150px] lg:w-[210px]")}>
+                      <SelectValue placeholder="Division" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border-border">
+                      {filteredDivisions.map((div) => (
+                        <SelectItem key={div.id} value={div.id}>
+                          {div.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {selectedDivision && filteredDivisions.length > 1 && (
+                  <Button variant="ghost" size="icon" className={cascadeClearClass} title="Clear division" onClick={() => {
                     setSelectedDivision("");
                     setSelectedTeamId("");
+                    navigate(selectedClubId ? `/clubs/${selectedClubId}` : "/admin");
                   }}>
                     <X className="h-3 w-3" />
                   </Button>
@@ -877,26 +1102,34 @@ const AppLayout = () => {
             )}
 
             {/* Team Selector */}
-            {selectedClubId && selectedDivision && filteredTeams.length > 0 && (
+            {showClubSelector && selectedClubId && cascadeDivisionId && cascadeTeams.length > 0 && (
               <div className="flex items-center gap-1">
-                <Select key={selectedClubId + selectedDivision} value={selectedTeamId || undefined} onValueChange={(v) => {
-                  setSelectedTeamId(v);
-                  navigate(`/teams/${v}`);
-                }}>
-                  <SelectTrigger className="w-[120px] lg:w-[160px] bg-accent text-accent-foreground border-0 font-medium">
-                    <SelectValue placeholder="Select Team" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border-border">
-                    {filteredTeams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {getTeamDisplayName(team)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedTeamId && (
-                  <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full text-primary-foreground/50 hover:text-primary-foreground hover:bg-primary-foreground/10" onClick={() => {
+                {cascadeTeams.length === 1 ? (
+                  <div className={staticCascadeClass} title={getTeamDisplayName(selectedTeam || cascadeTeams[0])}>
+                    {getTeamDisplayName(selectedTeam || cascadeTeams[0])}
+                  </div>
+                ) : (
+                  <Select key={selectedClubId + cascadeDivisionId} value={selectedTeamId || undefined} onValueChange={(v) => {
+                    if (!selectedDivision && cascadeDivisionId) setSelectedDivision(cascadeDivisionId);
+                    setSelectedTeamId(v);
+                    navigate(`/teams/${v}`);
+                  }}>
+                    <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[150px] lg:w-[210px]")}>
+                      <SelectValue placeholder="Select Team" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border-border">
+                      {cascadeTeams.map((team) => (
+                        <SelectItem key={team.id} value={team.id}>
+                          {getTeamDisplayName(team)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {selectedTeamId && cascadeTeams.length > 1 && (
+                  <Button variant="ghost" size="icon" className={cascadeClearClass} title="Clear team" onClick={() => {
                     setSelectedTeamId("");
+                    navigate(selectedDivision ? "/admin/division" : selectedClubId ? `/clubs/${selectedClubId}` : "/dashboard");
                   }}>
                     <X className="h-3 w-3" />
                   </Button>
@@ -907,6 +1140,39 @@ const AppLayout = () => {
 
           {/* Right: Notifications & User Avatar */}
           <div className="flex items-center gap-1">
+            {showAdminDropdown && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="text-primary-foreground hover:bg-primary-foreground/10"
+                  >
+                    Admin
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  {visibleAdminDropdownSections.map((section, sectionIndex) => (
+                    <div key={section.heading}>
+                      {sectionIndex > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuLabel>{section.heading}</DropdownMenuLabel>
+                      {section.items.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <DropdownMenuItem key={item.path} asChild>
+                            <Link to={item.path} className="flex items-center gap-2">
+                              <Icon className="h-4 w-4" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -1018,11 +1284,43 @@ const AppLayout = () => {
             />
             <p className="text-xs text-muted-foreground">{feedbackMessage.length}/1000</p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsFeedbackOpen(false)} disabled={isFeedbackSubmitting}>
+          <div className="space-y-2">
+            <Label htmlFor="feedback-screenshot" className="flex items-center gap-2">
+              <ImagePlus className="h-4 w-4" />
+              Screenshot optional
+            </Label>
+            <input
+              id="feedback-screenshot"
+              type="file"
+              accept=".png,.jpg,.jpeg,.webp"
+              className="block w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground file:border-0 file:bg-transparent file:text-primary"
+              onChange={(event) => setFeedbackScreenshot(event.target.files?.[0] || null)}
+              disabled={isFeedbackSubmitting}
+            />
+            {feedbackScreenshot && (
+              <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                <span className="min-w-0 truncate">{feedbackScreenshot.name}</span>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setFeedbackScreenshot(null)}>
+                  Remove
+                </Button>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">PNG, JPG, or WebP. Maximum 5MB.</p>
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setIsFeedbackOpen(false)}
+              disabled={isFeedbackSubmitting}
+            >
               Cancel
             </Button>
-            <Button onClick={handleFeedbackSubmit} disabled={!feedbackMessage.trim() || isFeedbackSubmitting}>
+            <Button
+              className="w-full sm:w-auto"
+              onClick={handleFeedbackSubmit}
+              disabled={!feedbackMessage.trim() || isFeedbackSubmitting}
+            >
               {isFeedbackSubmitting ? "Sending..." : "Send feedback"}
             </Button>
           </DialogFooter>
