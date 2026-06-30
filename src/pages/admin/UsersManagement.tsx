@@ -6,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -23,8 +22,9 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
-import { Users, ArrowLeft, Shield, Search, Check, X, UserPlus, FileSpreadsheet, Download, RefreshCw, Plus, AlertTriangle, Pencil, GitMerge, Mail, Eye, EyeOff, KeyRound } from "lucide-react";
+import { Users, ArrowLeft, Search, Check, X, UserPlus, FileSpreadsheet, Download, RefreshCw, Plus, AlertTriangle, Pencil, GitMerge, Eye, EyeOff } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -128,21 +128,13 @@ const UsersManagement = () => {
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
-  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [selectedMergeIds, setSelectedMergeIds] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
-  const [accessEmail, setAccessEmail] = useState("");
   const [accessSending, setAccessSending] = useState(false);
   
   const handleOpenEditDialog = (u: UserWithRoles) => {
     setSelectedUser(u);
     setEditDialogOpen(true);
-  };
-
-  const handleOpenAccessDialog = (u: UserWithRoles) => {
-    setSelectedUser(u);
-    setAccessEmail("");
-    setAccessDialogOpen(true);
   };
 
   const handleToggleSelectUser = (userId: string) => {
@@ -851,11 +843,11 @@ const UsersManagement = () => {
     });
   };
 
-  const handleSendAccessLink = async () => {
+  const handleSendAccessLink = async (emailValue: string) => {
     if (!selectedUser) return;
 
     const isPlaceholder = selectedUser.is_placeholder === true;
-    const email = accessEmail.trim().toLowerCase();
+    const email = emailValue.trim().toLowerCase();
     if (isPlaceholder && !email) {
       toast({ title: "Email required", description: "Enter the player's real email address.", variant: "destructive" });
       return;
@@ -885,8 +877,6 @@ const UsersManagement = () => {
           ? "The user can use the email link to reset their password."
           : "The player can use the email link to create their real account.",
       });
-      setAccessDialogOpen(false);
-      setAccessEmail("");
       await fetchUsers();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not send the access link.";
@@ -1433,32 +1423,6 @@ const UsersManagement = () => {
                             <Pencil className="mr-2 h-4 w-4" />
                             Edit Details
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleOpenRoleDialog(u)}>
-                            <Shield className="mr-2 h-4 w-4" />
-                            Roles & Teams
-                          </Button>
-                          {u.is_placeholder ? (
-                            <Button variant="outline" size="sm" onClick={() => handleOpenAccessDialog(u)}>
-                              <Mail className="mr-2 h-4 w-4" />
-                              Claim Link
-                            </Button>
-                          ) : (
-                            <Button variant="outline" size="sm" onClick={() => handleOpenAccessDialog(u)}>
-                              <KeyRound className="mr-2 h-4 w-4" />
-                              Password Reset
-                            </Button>
-                          )}
-                          {isSuperAdmin && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleToggleSelectUser(u.id)}
-                              className={selectedMergeIds.includes(u.id) ? "bg-muted" : ""}
-                            >
-                              <GitMerge className="mr-2 h-4 w-4" />
-                              Merge
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1501,6 +1465,13 @@ const UsersManagement = () => {
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           user={selectedUser}
+          onSendAccessLink={handleSendAccessLink}
+          accessLinkSending={accessSending}
+          onManageRoles={() => {
+            if (!selectedUser) return;
+            setEditDialogOpen(false);
+            handleOpenRoleDialog(selectedUser);
+          }}
           onSuccess={async () => {
             const freshUsers = await fetchUsers();
             setSelectedUser((prev) => {
@@ -1527,64 +1498,6 @@ const UsersManagement = () => {
           }}
         />
 
-        <Dialog open={accessDialogOpen} onOpenChange={setAccessDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedUser?.is_placeholder ? "Send Claim Link" : "Send Password Reset"}
-              </DialogTitle>
-              <DialogDescription>
-                {selectedUser?.is_placeholder
-                  ? "Send a private email link so this placeholder player can create a real account."
-                  : "Send a password reset email to this user's account email."}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-3 py-2">
-              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
-                <div className="font-medium">
-                  {selectedUser?.first_name || selectedUser?.last_name
-                    ? `${selectedUser?.first_name || ""} ${selectedUser?.last_name || ""}`.trim()
-                    : "Placeholder player"}
-                </div>
-                <div className="text-muted-foreground">
-                  RevSports ID: {selectedUser?.revsports_player_id || "Not linked"}
-                </div>
-              </div>
-
-              {selectedUser?.is_placeholder ? (
-                <div className="space-y-1">
-                  <Label htmlFor="access-email">Player email</Label>
-                  <Input
-                    id="access-email"
-                    type="email"
-                    value={accessEmail}
-                    onChange={(event) => setAccessEmail(event.target.value)}
-                    placeholder="player@example.com"
-                  />
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  This will use the email address already attached to the user's SportStack account.
-                </p>
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setAccessDialogOpen(false)} disabled={accessSending}>
-                Cancel
-              </Button>
-              <Button onClick={handleSendAccessLink} disabled={accessSending}>
-                {accessSending
-                  ? "Sending..."
-                  : selectedUser?.is_placeholder
-                    ? "Send Claim Link"
-                    : "Send Password Reset"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
         {/* Role Management Dialog */}
         <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -1595,7 +1508,13 @@ const UsersManagement = () => {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-2">
+            <Tabs defaultValue="roles" className="py-2">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="roles">Roles</TabsTrigger>
+                <TabsTrigger value="teams">Teams</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="roles" className="space-y-4 mt-4">
               <div className="space-y-2">
                 <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">RevSports Link</h4>
                 {isSuperAdmin ? (
@@ -1653,11 +1572,10 @@ const UsersManagement = () => {
               {selectedRoles.includes("CLUB_ADMIN") && renderClubScopeList("Club Admin", clubAdminScopes, setClubAdminScopes)}
               {selectedRoles.includes("COACH") && renderTeamScopeList("Coach", coachScopes, setCoachScopes)}
               {selectedRoles.includes("TEAM_MANAGER") && renderTeamScopeList("Team Manager", managerScopes, setManagerScopes)}
-            </div>
+              </TabsContent>
 
-            <Separator />
-
-            <div className="space-y-3 py-2">
+              <TabsContent value="teams" className="mt-4">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Team Memberships</h4>
                 <Button
@@ -1867,6 +1785,8 @@ const UsersManagement = () => {
                 </div>
               )}
             </div>
+              </TabsContent>
+            </Tabs>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>Cancel</Button>

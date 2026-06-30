@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, KeyRound, Loader2, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,6 +43,9 @@ interface EditUserDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   user: ProfileWithExtensions | null;
   onSuccess: () => void;
+  onSendAccessLink?: (email: string) => Promise<void>;
+  accessLinkSending?: boolean;
+  onManageRoles?: () => void;
 }
 
 export const EditUserDetailsDialog = ({
@@ -50,6 +53,9 @@ export const EditUserDetailsDialog = ({
   onOpenChange,
   user,
   onSuccess,
+  onSendAccessLink,
+  accessLinkSending = false,
+  onManageRoles,
 }: EditUserDetailsDialogProps) => {
   const { toast } = useToast();
   
@@ -343,6 +349,36 @@ export const EditUserDetailsDialog = ({
             </div>
 
             <DialogFooter className="border-t pt-4 gap-2">
+              {onManageRoles && (
+                <Button type="button" variant="outline" onClick={onManageRoles} disabled={saving || accessLinkSending}>
+                  Roles & Teams
+                </Button>
+              )}
+              {onSendAccessLink && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onSendAccessLink(email.trim())}
+                  disabled={saving || accessLinkSending}
+                >
+                  {accessLinkSending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : user?.is_placeholder ? (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Send Claim Link
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound className="mr-2 h-4 w-4" />
+                      Send Password Reset
+                    </>
+                  )}
+                </Button>
+              )}
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                 Cancel
               </Button>
