@@ -24,7 +24,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
-import { Users, ArrowLeft, Shield, Search, Check, X, UserPlus, FileSpreadsheet, Download, RefreshCw, Plus, AlertTriangle, Pencil, GitMerge } from "lucide-react";
+import { Users, ArrowLeft, Shield, Search, Check, X, UserPlus, FileSpreadsheet, Download, RefreshCw, Plus, AlertTriangle, Pencil, GitMerge, Mail } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -128,12 +128,21 @@ const UsersManagement = () => {
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
   const [selectedMergeIds, setSelectedMergeIds] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
+  const [claimEmail, setClaimEmail] = useState("");
+  const [claimSending, setClaimSending] = useState(false);
   
   const handleOpenEditDialog = (u: UserWithRoles) => {
     setSelectedUser(u);
     setEditDialogOpen(true);
+  };
+
+  const handleOpenClaimDialog = (u: UserWithRoles) => {
+    setSelectedUser(u);
+    setClaimEmail("");
+    setClaimDialogOpen(true);
   };
 
   const handleToggleSelectUser = (userId: string) => {
@@ -842,6 +851,52 @@ const UsersManagement = () => {
     });
   };
 
+  const handleSendClaimLink = async () => {
+    if (!selectedUser) return;
+
+    const email = claimEmail.trim().toLowerCase();
+    if (!email) {
+      toast({ title: "Email required", description: "Enter the player's real email address.", variant: "destructive" });
+      return;
+    }
+
+    setClaimSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-placeholder-claim-link", {
+        body: {
+          placeholder_profile_id: selectedUser.id,
+          email,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const result = data as { error?: string; success?: boolean } | null;
+      if (!result?.success) {
+        throw new Error(result?.error || "Could not send the claim link.");
+      }
+
+      toast({
+        title: "Claim link sent",
+        description: "The player can use the email link to create their real account.",
+      });
+      setClaimDialogOpen(false);
+      setClaimEmail("");
+      await fetchUsers();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not send the claim link.";
+      toast({
+        title: "Claim link failed",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setClaimSending(false);
+    }
+  };
+
   const getClubsForAssociation = (assocId: string | null) => {
     if (!assocId) return clubs;
     return clubs.filter((c) => c.association_id === assocId);
@@ -1368,6 +1423,12 @@ const UsersManagement = () => {
                             <Shield className="mr-2 h-4 w-4" />
                             Roles & Teams
                           </Button>
+                          {u.is_placeholder && (
+                            <Button variant="outline" size="sm" onClick={() => handleOpenClaimDialog(u)}>
+                              <Mail className="mr-2 h-4 w-4" />
+                              Claim Link
+                            </Button>
+                          )}
                           {isSuperAdmin && (
                             <Button
                               variant="outline"
@@ -1446,6 +1507,50 @@ const UsersManagement = () => {
             setSelectedMergeIds([]);
           }}
         />
+
+        <Dialog open={claimDialogOpen} onOpenChange={setClaimDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Send Claim Link</DialogTitle>
+              <DialogDescription>
+                Send a private email link so this placeholder player can create a real account.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-2">
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                <div className="font-medium">
+                  {selectedUser?.first_name || selectedUser?.last_name
+                    ? `${selectedUser?.first_name || ""} ${selectedUser?.last_name || ""}`.trim()
+                    : "Placeholder player"}
+                </div>
+                <div className="text-muted-foreground">
+                  RevSports ID: {selectedUser?.revsports_player_id || "Not linked"}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="claim-email">Player email</Label>
+                <Input
+                  id="claim-email"
+                  type="email"
+                  value={claimEmail}
+                  onChange={(event) => setClaimEmail(event.target.value)}
+                  placeholder="player@example.com"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setClaimDialogOpen(false)} disabled={claimSending}>
+                Cancel
+              </Button>
+              <Button onClick={handleSendClaimLink} disabled={claimSending}>
+                {claimSending ? "Sending..." : "Send Link"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Role Management Dialog */}
         <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
