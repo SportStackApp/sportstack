@@ -38,12 +38,25 @@ interface ProfileWithExtensions {
   revsports_player_id?: string | null;
 }
 
+export interface AccessLinkReviewDetails {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  streetAddress: string;
+  suburb: string;
+  dateOfBirth: string;
+  gender: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+}
+
 interface EditUserDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: ProfileWithExtensions | null;
   onSuccess: () => void;
-  onSendAccessLink?: (email: string) => Promise<void>;
+  onSendAccessLink?: (details: AccessLinkReviewDetails) => Promise<void> | void;
   accessLinkSending?: boolean;
   onManageRoles?: () => void;
 }
@@ -202,6 +215,21 @@ export const EditUserDetailsDialog = ({
     }
   };
 
+  const handleAccessLinkReview = () => {
+    onSendAccessLink?.({
+      email: email.trim(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      phone: phone.trim(),
+      streetAddress: streetAddress.trim(),
+      suburb: suburb.trim(),
+      dateOfBirth,
+      gender,
+      emergencyContactName: emergencyContactName.trim(),
+      emergencyContactPhone: emergencyContactPhone.trim(),
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -358,7 +386,7 @@ export const EditUserDetailsDialog = ({
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => onSendAccessLink(email.trim())}
+                  onClick={handleAccessLinkReview}
                   disabled={saving || accessLinkSending}
                 >
                   {accessLinkSending ? (

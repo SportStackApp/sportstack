@@ -32,7 +32,7 @@ import { useAdminScope } from "@/hooks/useAdminScope";
 import { useAuth } from "@/contexts/AuthContext";
 import { getRoleDisplayName, getRoleBadgeColor } from "@/hooks/useUserRole";
 import type { Database } from "@/integrations/supabase/types";
-import { EditUserDetailsDialog } from "@/components/admin/EditUserDetailsDialog";
+import { EditUserDetailsDialog, type AccessLinkReviewDetails } from "@/components/admin/EditUserDetailsDialog";
 import { ensurePlayerRoleForTeam } from "@/lib/playerRoles";
 import { MergeProfilesDialog } from "@/components/admin/MergeProfilesDialog";
 
@@ -131,6 +131,11 @@ const UsersManagement = () => {
   const [selectedMergeIds, setSelectedMergeIds] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [accessSending, setAccessSending] = useState(false);
+  const [accessReviewOpen, setAccessReviewOpen] = useState(false);
+  const [accessReviewDetails, setAccessReviewDetails] = useState<AccessLinkReviewDetails | null>(null);
+  const [confirmDetailsCurrent, setConfirmDetailsCurrent] = useState(false);
+  const [confirmRolesCurrent, setConfirmRolesCurrent] = useState(false);
+  const [confirmTeamsCurrent, setConfirmTeamsCurrent] = useState(false);
   
   const handleOpenEditDialog = (u: UserWithRoles) => {
     setSelectedUser(u);
@@ -843,13 +848,27 @@ const UsersManagement = () => {
     });
   };
 
-  const handleSendAccessLink = async (emailValue: string) => {
+  const handleRequestAccessLinkReview = async (details: AccessLinkReviewDetails) => {
     if (!selectedUser) return;
 
+    const freshUsers = await fetchUsers();
+    const updatedUser = freshUsers.find((item) => item.id === selectedUser.id) || selectedUser;
+    setSelectedUser(updatedUser);
+    setAccessReviewDetails(details);
+    setConfirmDetailsCurrent(false);
+    setConfirmRolesCurrent(false);
+    setConfirmTeamsCurrent(false);
+    setEditDialogOpen(false);
+    setAccessReviewOpen(true);
+  };
+
+  const handleConfirmSendAccessLink = async () => {
+    if (!selectedUser || !accessReviewDetails) return;
+
     const isPlaceholder = selectedUser.is_placeholder === true;
-    const email = emailValue.trim().toLowerCase();
-    if (isPlaceholder && !email) {
-      toast({ title: "Email required", description: "Enter the player's real email address.", variant: "destructive" });
+    const email = accessReviewDetails.email.trim().toLowerCase();
+    if (!email) {
+      toast({ title: "Email required", description: "Enter the user's email address.", variant: "destructive" });
       return;
     }
 
@@ -877,6 +896,7 @@ const UsersManagement = () => {
           ? "The user can use the email link to reset their password."
           : "The player can use the email link to create their real account.",
       });
+      setAccessReviewOpen(false);
       await fetchUsers();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not send the access link.";
@@ -1061,6 +1081,49 @@ const UsersManagement = () => {
   const assignAvailableTeams = assignDivision
     ? assignTeamOptions.filter((t: any) => t.division_id === assignDivision)
     : assignTeamOptions;
+
+  const accessReviewUser = selectedUser;
+  const accessReviewIsPlaceholder = accessReviewUser?.is_placeholder === true;
+  const accessReviewAction = accessReviewIsPlaceholder ? "claim link" : "password reset";
+  const activePrimaryTeam = accessReviewUser?.memberships.find(
+    (membership) => membership.membership_type === "PRIMARY" && membership.status === "ACTIVE"
+  );
+  const accessMissingItems = [
+    !accessReviewDetails?.email?.trim() ? "Email" : null,
+    !accessReviewDetails?.firstName?.trim() ? "First name" : null,
+    !accessReviewDetails?.lastName?.trim() ? "Last name" : null,
+    !activePrimaryTeam ? "Active primary team" : null,
+  ].filter(Boolean) as string[];
+  const accessConfirmReady =
+    accessMissingItems.length === 0 &&
+    confirmDetailsCurrent &&
+    confirmRolesCurrent &&
+    confirmTeamsCurrent &&
+    !accessSending;
+
+  const profileValue = (value?: string | null) => value?.trim() || "Not recorded";
+
+  const getTeamSummary = (membership: Membership | PendingInvite) => {
+    const team = teams.find((item) => item.id === membership.team_id);
+    const club = team ? clubs.find((item) => item.id === team.club_id) : undefined;
+    const association = club ? associations.find((item) => item.id === club.association_id) : undefined;
+    const division = team?.division_id ? divisions.find((item) => item.id === team.division_id) : undefined;
+    return [
+      association?.name,
+      club?.name,
+      division?.name,
+      membership.team_name || team?.name || "Unknown team",
+    ].filter(Boolean).join(" / ");
+  };
+
+  const getRoleScopeSummary = (scope: RoleWithScope) => {
+    const association = scope.association_id ? associations.find((item) => item.id === scope.association_id) : undefined;
+    const club = scope.club_id ? clubs.find((item) => item.id === scope.club_id) : undefined;
+    const team = scope.team_id ? teams.find((item) => item.id === scope.team_id) : undefined;
+    const division = team?.division_id ? divisions.find((item) => item.id === team.division_id) : undefined;
+    const scopeText = [association?.name, club?.name, division?.name, team?.name].filter(Boolean).join(" / ");
+    return scopeText || "All allowed scope";
+  };
 
   if (scopeLoading) {
     return (
@@ -1465,7 +1528,7 @@ const UsersManagement = () => {
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           user={selectedUser}
-          onSendAccessLink={handleSendAccessLink}
+          onSendAccessLink={handleRequestAccessLinkReview}
           accessLinkSending={accessSending}
           onManageRoles={() => {
             if (!selectedUser) return;
@@ -1481,6 +1544,168 @@ const UsersManagement = () => {
             });
           }}
         />
+
+        <Dialog
+          open={accessReviewOpen}
+          onOpenChange={(open) => {
+            setAccessReviewOpen(open);
+            if (!open) {
+              setConfirmDetailsCurrent(false);
+              setConfirmRolesCurrent(false);
+              setConfirmTeamsCurrent(false);
+              setAccessReviewDetails(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Confirm {accessReviewIsPlaceholder ? "Claim Link" : "Password Reset"}
+              </DialogTitle>
+              <DialogDescription>
+                Review the profile, roles, and teams before sending the {accessReviewAction} email.
+              </DialogDescription>
+            </DialogHeader>
+
+            {accessReviewUser && accessReviewDetails && (
+              <div className="space-y-5 py-2">
+                {accessMissingItems.length > 0 && (
+                  <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                    Missing required information: {accessMissingItems.join(", ")}.
+                  </div>
+                )}
+
+                <div className="rounded-md border p-3">
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Details to Confirm
+                  </h3>
+                  <div className="grid gap-2 text-sm sm:grid-cols-2">
+                    <div>
+                      <span className="text-muted-foreground">Email:</span>{" "}
+                      <span className="font-medium">{profileValue(accessReviewDetails.email)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Name:</span>{" "}
+                      <span className="font-medium">
+                        {profileValue(`${accessReviewDetails.firstName} ${accessReviewDetails.lastName}`)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Phone:</span>{" "}
+                      <span className="font-medium">{profileValue(accessReviewDetails.phone)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Date of birth:</span>{" "}
+                      <span className="font-medium">{profileValue(accessReviewDetails.dateOfBirth)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Gender:</span>{" "}
+                      <span className="font-medium">{profileValue(accessReviewDetails.gender)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Suburb:</span>{" "}
+                      <span className="font-medium">{profileValue(accessReviewDetails.suburb)}</span>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <span className="text-muted-foreground">Address:</span>{" "}
+                      <span className="font-medium">{profileValue(accessReviewDetails.streetAddress)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Emergency contact:</span>{" "}
+                      <span className="font-medium">{profileValue(accessReviewDetails.emergencyContactName)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Emergency phone:</span>{" "}
+                      <span className="font-medium">{profileValue(accessReviewDetails.emergencyContactPhone)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-md border p-3">
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Roles and Permissions
+                  </h3>
+                  {accessReviewUser.roleScopes.length > 0 ? (
+                    <div className="space-y-2">
+                      {accessReviewUser.roleScopes.map((scope, index) => (
+                        <div key={`${scope.role}-${scope.association_id || "all"}-${scope.club_id || "all"}-${scope.team_id || "all"}-${index}`} className="flex flex-wrap items-center gap-2 text-sm">
+                          <Badge className={getRoleBadgeColor(scope.role)} variant="secondary">
+                            {getRoleDisplayName(scope.role)}
+                          </Badge>
+                          <span className="text-muted-foreground">{getRoleScopeSummary(scope)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No roles recorded.</p>
+                  )}
+                </div>
+
+                <div className="rounded-md border p-3">
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Teams
+                  </h3>
+                  {accessReviewUser.memberships.length > 0 || accessReviewUser.pendingInvites.length > 0 ? (
+                    <div className="space-y-2">
+                      {accessReviewUser.memberships.map((membership) => (
+                        <div key={membership.id} className="flex flex-wrap items-center gap-2 text-sm">
+                          <Badge variant="outline">{membership.status}</Badge>
+                          <Badge variant="secondary">{membership.membership_type}</Badge>
+                          <span className="text-muted-foreground">{getTeamSummary(membership)}</span>
+                        </div>
+                      ))}
+                      {accessReviewUser.pendingInvites.map((invite) => (
+                        <div key={invite.id} className="flex flex-wrap items-center gap-2 text-sm">
+                          <Badge variant="outline">PENDING INVITE</Badge>
+                          <Badge variant="secondary">{invite.membership_type}</Badge>
+                          <span className="text-muted-foreground">{getTeamSummary(invite)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No teams recorded.</p>
+                  )}
+                </div>
+
+                <div className="space-y-3 rounded-md border bg-muted/30 p-3">
+                  <label htmlFor="confirm-details-current" className="flex items-start gap-3 text-sm">
+                    <Checkbox
+                      id="confirm-details-current"
+                      checked={confirmDetailsCurrent}
+                      onCheckedChange={(checked) => setConfirmDetailsCurrent(checked === true)}
+                    />
+                    <span>I confirm the email, name, and profile details are true and correct.</span>
+                  </label>
+                  <label htmlFor="confirm-roles-current" className="flex items-start gap-3 text-sm">
+                    <Checkbox
+                      id="confirm-roles-current"
+                      checked={confirmRolesCurrent}
+                      onCheckedChange={(checked) => setConfirmRolesCurrent(checked === true)}
+                    />
+                    <span>I confirm the roles and permissions are up to date and correct.</span>
+                  </label>
+                  <label htmlFor="confirm-teams-current" className="flex items-start gap-3 text-sm">
+                    <Checkbox
+                      id="confirm-teams-current"
+                      checked={confirmTeamsCurrent}
+                      onCheckedChange={(checked) => setConfirmTeamsCurrent(checked === true)}
+                    />
+                    <span>I confirm the team associations are up to date and correct.</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAccessReviewOpen(false)} disabled={accessSending}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmSendAccessLink} disabled={!accessConfirmReady}>
+                {accessSending ? "Sending..." : `Send ${accessReviewIsPlaceholder ? "Claim Link" : "Password Reset"}`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <MergeProfilesDialog
           open={mergeDialogOpen}
