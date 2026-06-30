@@ -133,9 +133,12 @@ const UsersManagement = () => {
   const [accessSending, setAccessSending] = useState(false);
   const [accessReviewOpen, setAccessReviewOpen] = useState(false);
   const [accessReviewDetails, setAccessReviewDetails] = useState<AccessLinkReviewDetails | null>(null);
-  const [confirmDetailsCurrent, setConfirmDetailsCurrent] = useState(false);
+  const [confirmEmailCurrent, setConfirmEmailCurrent] = useState(false);
+  const [confirmFirstNameCurrent, setConfirmFirstNameCurrent] = useState(false);
+  const [confirmLastNameCurrent, setConfirmLastNameCurrent] = useState(false);
   const [confirmedRoleKeys, setConfirmedRoleKeys] = useState<string[]>([]);
   const [confirmedTeamKeys, setConfirmedTeamKeys] = useState<string[]>([]);
+  const [accessReviewRevSportsId, setAccessReviewRevSportsId] = useState("");
   
   const handleOpenEditDialog = (u: UserWithRoles) => {
     setSelectedUser(u);
@@ -860,9 +863,12 @@ const UsersManagement = () => {
     const updatedUser = freshUsers.find((item) => item.id === selectedUser.id) || selectedUser;
     setSelectedUser(updatedUser);
     setAccessReviewDetails(details);
-    setConfirmDetailsCurrent(false);
+    setConfirmEmailCurrent(false);
+    setConfirmFirstNameCurrent(false);
+    setConfirmLastNameCurrent(false);
     setConfirmedRoleKeys([]);
     setConfirmedTeamKeys([]);
+    setAccessReviewRevSportsId(updatedUser.revsports_player_id || "");
     setEditDialogOpen(false);
     setAccessReviewOpen(true);
   };
@@ -879,6 +885,18 @@ const UsersManagement = () => {
 
     setAccessSending(true);
     try {
+      const cleanRevSportsId = accessReviewRevSportsId.trim();
+      if (cleanRevSportsId !== (selectedUser.revsports_player_id || "")) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ revsports_player_id: cleanRevSportsId || null } as Partial<Profile>)
+          .eq("id", selectedUser.id);
+
+        if (profileError) {
+          throw profileError;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("send-profile-access-link", {
         body: {
           profile_id: selectedUser.id,
@@ -1112,7 +1130,9 @@ const UsersManagement = () => {
   const allTeamsConfirmed = accessTeamItems.every((team) => confirmedTeamKeys.includes(team.key));
   const accessConfirmReady =
     accessMissingItems.length === 0 &&
-    confirmDetailsCurrent &&
+    confirmEmailCurrent &&
+    confirmFirstNameCurrent &&
+    confirmLastNameCurrent &&
     allRolesConfirmed &&
     allTeamsConfirmed &&
     !accessSending;
@@ -1799,9 +1819,12 @@ const UsersManagement = () => {
           onOpenChange={(open) => {
             setAccessReviewOpen(open);
             if (!open) {
-              setConfirmDetailsCurrent(false);
+              setConfirmEmailCurrent(false);
+              setConfirmFirstNameCurrent(false);
+              setConfirmLastNameCurrent(false);
               setConfirmedRoleKeys([]);
               setConfirmedTeamKeys([]);
+              setAccessReviewRevSportsId("");
               setAccessReviewDetails(null);
             }
           }}
@@ -1828,16 +1851,49 @@ const UsersManagement = () => {
                   <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                     Details to Confirm
                   </h3>
-                  <div className="grid gap-2 text-sm sm:grid-cols-2">
-                    <div>
-                      <span className="text-muted-foreground">Email:</span>{" "}
-                      <span className="font-medium">{profileValue(accessReviewDetails.email)}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Name:</span>{" "}
-                      <span className="font-medium">
-                        {profileValue(`${accessReviewDetails.firstName} ${accessReviewDetails.lastName}`)}
+                  <div className="grid gap-3 text-sm sm:grid-cols-2">
+                    <label htmlFor="confirm-email-current" className="flex items-start gap-3 rounded-md border bg-muted/30 p-2">
+                      <Checkbox
+                        id="confirm-email-current"
+                        checked={confirmEmailCurrent}
+                        onCheckedChange={(checked) => setConfirmEmailCurrent(checked === true)}
+                      />
+                      <span>
+                        <span className="block text-muted-foreground">Email</span>
+                        <span className="font-medium">{profileValue(accessReviewDetails.email)}</span>
                       </span>
+                    </label>
+                    <label htmlFor="confirm-first-name-current" className="flex items-start gap-3 rounded-md border bg-muted/30 p-2">
+                      <Checkbox
+                        id="confirm-first-name-current"
+                        checked={confirmFirstNameCurrent}
+                        onCheckedChange={(checked) => setConfirmFirstNameCurrent(checked === true)}
+                      />
+                      <span>
+                        <span className="block text-muted-foreground">First name</span>
+                        <span className="font-medium">{profileValue(accessReviewDetails.firstName)}</span>
+                      </span>
+                    </label>
+                    <label htmlFor="confirm-last-name-current" className="flex items-start gap-3 rounded-md border bg-muted/30 p-2">
+                      <Checkbox
+                        id="confirm-last-name-current"
+                        checked={confirmLastNameCurrent}
+                        onCheckedChange={(checked) => setConfirmLastNameCurrent(checked === true)}
+                      />
+                      <span>
+                        <span className="block text-muted-foreground">Last name</span>
+                        <span className="font-medium">{profileValue(accessReviewDetails.lastName)}</span>
+                      </span>
+                    </label>
+                    <div className="space-y-1">
+                      <Label htmlFor="access-revsports-player-id">RevSports ID</Label>
+                      <Input
+                        id="access-revsports-player-id"
+                        value={accessReviewRevSportsId}
+                        onChange={(event) => setAccessReviewRevSportsId(event.target.value)}
+                        placeholder="RevSports player ID"
+                        disabled={!isSuperAdmin || accessSending}
+                      />
                     </div>
                     <div>
                       <span className="text-muted-foreground">Phone:</span>{" "}
@@ -1938,16 +1994,6 @@ const UsersManagement = () => {
                   )}
                 </div>
 
-                <div className="space-y-3 rounded-md border bg-muted/30 p-3">
-                  <label htmlFor="confirm-details-current" className="flex items-start gap-3 text-sm">
-                    <Checkbox
-                      id="confirm-details-current"
-                      checked={confirmDetailsCurrent}
-                      onCheckedChange={(checked) => setConfirmDetailsCurrent(checked === true)}
-                    />
-                    <span>I confirm the email, name, and profile details are true and correct.</span>
-                  </label>
-                </div>
               </div>
             )}
 
