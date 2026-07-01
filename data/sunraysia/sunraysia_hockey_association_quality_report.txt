@@ -1,9 +1,9 @@
 DATA QUALITY REPORT - Sunraysia Hockey Association
-Generated: 2026-06-30T18:08:39.632926
+Generated: 2026-07-01T18:09:46.876955
 ------------------------------------------------------------
-Rows checked: 3,594
+Rows checked: 3,597
 Issues found: 0
-Warnings found: 63
+Warnings found: 68
 
 No issues found by the basic checker.
 
@@ -11,6 +11,11 @@ WARNINGS
 ------------------------------------------------------------
 Merged duplicate player appearance: Matisse Daniel - Waratahs - Waratahs Blue Indoor - https://www.sunraysiahockey.com.au/game/2519719; 2 source rows became 1 row.
 Merged duplicate player appearance: Regan Taylor - Rivaside - Rivaside Red Indoor - https://www.sunraysiahockey.com.au/game/2519719; 2 source rows became 1 row.
+Merged duplicate player appearance: Georgia Kent - Rivaside - Rivaside Red Indoor - https://www.sunraysiahockey.com.au/game/2519729; 2 source rows became 1 row.
+Merged duplicate player appearance: Georgia Kent - Rivaside - Rivaside Red Indoor - https://www.sunraysiahockey.com.au/game/2519737; 2 source rows became 1 row.
+Merged duplicate player appearance: Georgia Kent - Rivaside - Rivaside Red Indoor - https://www.sunraysiahockey.com.au/game/2519742; 2 source rows became 1 row.
+Merged duplicate player appearance: Georgia Kent - Rivaside - Rivaside Red Indoor - https://www.sunraysiahockey.com.au/game/2519747; 2 source rows became 1 row.
+Merged duplicate player appearance: Georgia Kent - Rivaside - Rivaside Red Indoor - https://www.sunraysiahockey.com.au/game/2519751; 2 source rows became 1 row.
 Merged duplicate player appearance: Patrick Mannes - Rivaside - Rivaside Under 16 Mixed - https://www.sunraysiahockey.com.au/game/2519757; 2 source rows became 1 row.
 Merged duplicate player appearance: Malachy Pyke - Rivaside - Rivaside Under 16 Mixed - https://www.sunraysiahockey.com.au/game/2519757; 2 source rows became 1 row.
 Merged duplicate player appearance: Hamish Regan - Waratahs - Waratahs White Under 16 - https://www.sunraysiahockey.com.au/game/2519757; 2 source rows became 1 row.
