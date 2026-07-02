@@ -263,6 +263,7 @@ interface VoterTeamMembership {
   teamId: string;
   teamName: string;
   membershipType: "PRIMARY" | "SECONDARY";
+  divisionId: string | null;
   clubId: string;
   clubName: string;
   clubLogoUrl: string | null;
@@ -289,6 +290,7 @@ interface VoterClubRow {
 interface VoterTeamRow {
   id: string;
   name: string | null;
+  division_id: string | null;
   clubs: VoterClubRow | VoterClubRow[] | null;
 }
 
@@ -437,7 +439,7 @@ const AppLayout = () => {
     const fetchPlayerHeaderContext = async () => {
       const { data } = await supabase
         .from("team_memberships")
-        .select("team_id, membership_type, teams(id, name, clubs(id, name, logo_url, associations(id, name, abbreviation, logo_url)))")
+        .select("team_id, membership_type, teams(id, name, division_id, clubs(id, name, logo_url, associations(id, name, abbreviation, logo_url)))")
         .eq("user_id", user.id)
         .eq("status", "ACTIVE")
         .in("membership_type", ["PRIMARY", "SECONDARY"]);
@@ -454,6 +456,7 @@ const AppLayout = () => {
             teamId: team.id,
             teamName: team.name || "Team",
             membershipType: row.membership_type,
+            divisionId: team.division_id || null,
             clubId: club.id,
             clubName: club.name || "Club",
             clubLogoUrl: club.logo_url || null,
@@ -486,7 +489,7 @@ const AppLayout = () => {
       if (isVoterOnly && selectedTeamId !== currentMembership.teamId) {
         setSelectedAssociationId(currentMembership.associationId);
         setSelectedClubId(currentMembership.clubId);
-        setSelectedDivision("");
+        setSelectedDivision(currentMembership.divisionId || "");
         setSelectedTeamId(currentMembership.teamId);
       }
     };
@@ -588,10 +591,6 @@ const AppLayout = () => {
         return teamDivisionId === cascadeDivisionId || teamDivisions.some((item) => item.team_id === team.id && item.division_id === cascadeDivisionId);
       })
     : filteredTeams;
-  const selectedTeamDivisionId =
-    (selectedTeam as { division_id?: string | null } | undefined)?.division_id ||
-    teamDivisions.find((teamDivision) => teamDivision.team_id === selectedTeamId)?.division_id ||
-    "";
   const staticCascadeClass =
     "flex h-10 min-w-0 max-w-[190px] items-center rounded-md bg-primary-foreground/10 px-3 text-sm font-medium text-primary-foreground truncate lg:max-w-[260px]";
   const cascadeSelectTriggerClass =
@@ -649,12 +648,6 @@ const AppLayout = () => {
     setSelectedTeamId,
   ]);
 
-  useEffect(() => {
-    if (selectedTeamId && selectedTeamDivisionId && selectedDivision !== selectedTeamDivisionId) {
-      setSelectedDivision(selectedTeamDivisionId);
-    }
-  }, [selectedDivision, selectedTeamDivisionId, selectedTeamId, setSelectedDivision]);
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
@@ -673,7 +666,7 @@ const AppLayout = () => {
 
     setSelectedAssociationId(membership.associationId);
     setSelectedClubId(membership.clubId);
-    setSelectedDivision("");
+    setSelectedDivision(membership.divisionId || "");
     setSelectedTeamId(membership.teamId);
     navigate("/dashboard");
   };
@@ -727,13 +720,21 @@ const AppLayout = () => {
     }
 
     const feedbackClient = supabase as unknown as FeedbackClient;
-    const { error } = await feedbackClient.from("app_feedback").insert({
+    const feedbackPayload: FeedbackInsert = {
       user_id: user.id,
       message: feedbackMessage.trim(),
       page_path: location.pathname,
       user_agent: navigator.userAgent,
       screenshot_path: screenshotPath,
-    });
+    };
+
+    let { error } = await feedbackClient.from("app_feedback").insert(feedbackPayload);
+
+    if (error?.message?.includes("screenshot_path")) {
+      const payloadWithoutScreenshot = { ...feedbackPayload };
+      delete payloadWithoutScreenshot.screenshot_path;
+      ({ error } = await feedbackClient.from("app_feedback").insert(payloadWithoutScreenshot));
+    }
 
     setIsFeedbackSubmitting(false);
 

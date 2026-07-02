@@ -70,12 +70,15 @@ const Dashboard = () => {
     selectedAssociationId,
     selectedClubId,
     selectedTeamId,
+    selectedDivision,
     selectedTeam,
     selectedClub,
     setSelectedAssociationId,
     setSelectedClubId,
+    setSelectedDivision,
     setSelectedTeamId,
     filteredClubs,
+    filteredDivisions,
     filteredTeams,
   } = useTeamContext();
   const { user } = useAuth();
@@ -482,14 +485,34 @@ const Dashboard = () => {
             </div>
 
             <div className="space-y-2">
+              <Label>Division</Label>
+              <Select
+                value={selectedDivision || undefined}
+                onValueChange={(value) => setSelectedDivision(value)}
+                disabled={!selectedClubId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select division" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredDivisions.map((division) => (
+                    <SelectItem key={division.id} value={division.id}>
+                      {division.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Team</Label>
               <Select
                 value={selectedTeamId || undefined}
                 onValueChange={(value) => setSelectedTeamId(value)}
-                disabled={!selectedClubId}
+                disabled={!selectedDivision}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select team" />
+                  <SelectValue placeholder={!selectedDivision ? "Select division first" : "Select team"} />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredTeams.map((team) => (

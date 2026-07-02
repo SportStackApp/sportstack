@@ -83,9 +83,9 @@ export const ScopedTeamSelector = ({
       if (scopedTeamIds.length === 1) {
         const team = teams.find((t) => t.id === scopedTeamIds[0]);
         if (team) {
-          onTeamChange(team.id);
           setSelectedClubId(team.club_id);
           if (team.division) setSelectedDivision(team.division);
+          onTeamChange(team.id);
           const club = clubs.find((c) => c.id === team.club_id);
           if (club) setSelectedAssociationId(club.association_id);
         }
@@ -136,7 +136,7 @@ export const ScopedTeamSelector = ({
   // Final team list filtered by division
   const availableTeams = selectedDivision
     ? clubFilteredTeams.filter((t) => t.division === selectedDivision)
-    : clubFilteredTeams;
+    : [];
 
   const isAssociationLocked =
     !isSuperAdmin && scopedAssociationIds.length === 0 && scopedClubIds.length > 0;
@@ -232,10 +232,10 @@ export const ScopedTeamSelector = ({
         <Select
           value={selectedTeamId}
           onValueChange={onTeamChange}
-          disabled={isTeamLocked || !selectedClubId}
+          disabled={isTeamLocked || !selectedClubId || !selectedDivision}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Select team" />
+            <SelectValue placeholder={!selectedDivision ? "Select division first" : "Select team"} />
           </SelectTrigger>
           <SelectContent>
             {availableTeams.map((t) => (

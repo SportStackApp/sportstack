@@ -951,7 +951,7 @@ const UsersManagement = () => {
     <div className="space-y-2 mt-4">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">{title} Scope</Label>
-        <Button variant="ghost" size="sm" onClick={() => setScopes(prev => [...prev, { id: crypto.randomUUID(), association_id: "", club_id: "", division_id: "", team_id: "" }])}>
+        <Button type="button" variant="ghost" size="sm" onClick={() => setScopes(prev => [...prev, { id: crypto.randomUUID(), association_id: "", club_id: "", division_id: "", team_id: "" }])}>
           <Plus className="h-3 w-3 mr-1" /> Add Team
         </Button>
       </div>
@@ -1021,7 +1021,7 @@ const UsersManagement = () => {
     <div className="space-y-2 mt-4">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">{title} Scope</Label>
-        <Button variant="ghost" size="sm" onClick={() => setScopes(prev => [...prev, { id: crypto.randomUUID(), association_id: "", club_id: "" }])}>
+        <Button type="button" variant="ghost" size="sm" onClick={() => setScopes(prev => [...prev, { id: crypto.randomUUID(), association_id: "", club_id: "" }])}>
           <Plus className="h-3 w-3 mr-1" /> Add Club
         </Button>
       </div>
@@ -1068,7 +1068,7 @@ const UsersManagement = () => {
     <div className="space-y-2 mt-4">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">{title} Scope</Label>
-        <Button variant="ghost" size="sm" onClick={() => setScopes(prev => [...prev, { id: crypto.randomUUID(), association_id: "" }])}>
+        <Button type="button" variant="ghost" size="sm" onClick={() => setScopes(prev => [...prev, { id: crypto.randomUUID(), association_id: "" }])}>
           <Plus className="h-3 w-3 mr-1" /> Add Association
         </Button>
       </div>
@@ -1221,7 +1221,7 @@ const UsersManagement = () => {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Team Memberships</h4>
-        <Button variant="outline" size="sm" onClick={() => setShowTeamAssign(!showTeamAssign)}>
+        <Button type="button" variant="outline" size="sm" onClick={() => setShowTeamAssign(!showTeamAssign)}>
           <Plus className="h-3 w-3 mr-1" />
           Assign Team
         </Button>
@@ -1248,11 +1248,11 @@ const UsersManagement = () => {
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {m.membership_type !== "PRIMARY" && (
-                  <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => handleMakePrimary(m.id)}>
+                  <Button type="button" variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => handleMakePrimary(m.id)}>
                     Make Primary
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" className="h-6 text-xs px-2 text-destructive hover:text-destructive" onClick={() => handleRemoveMembership(m.id)}>
+                <Button type="button" variant="ghost" size="sm" className="h-6 text-xs px-2 text-destructive hover:text-destructive" onClick={() => handleRemoveMembership(m.id)}>
                   Remove
                 </Button>
               </div>
@@ -1272,7 +1272,7 @@ const UsersManagement = () => {
                   Pending
                 </Badge>
               </div>
-              <Button variant="ghost" size="sm" className="h-6 text-xs px-2 text-destructive hover:text-destructive" onClick={() => handleCancelInvite(invite.id)}>
+              <Button type="button" variant="ghost" size="sm" className="h-6 text-xs px-2 text-destructive hover:text-destructive" onClick={() => handleCancelInvite(invite.id)}>
                 Cancel
               </Button>
             </div>
@@ -1385,8 +1385,8 @@ const UsersManagement = () => {
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowTeamAssign(false)}>Cancel</Button>
-            <Button size="sm" onClick={handleAssignTeam} disabled={!assignTeamId || assignSaving}>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowTeamAssign(false)}>Cancel</Button>
+            <Button type="button" size="sm" onClick={handleAssignTeam} disabled={!assignTeamId || assignSaving}>
               {assignSaving ? "Adding..." : "Add Membership"}
             </Button>
           </div>

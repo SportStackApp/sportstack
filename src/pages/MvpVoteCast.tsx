@@ -178,40 +178,31 @@ export default function MvpVoteCast() {
     if (!user || !sessionId || !allSelected || hasDuplicates || submitting) return;
     setSubmitting(true);
     try {
-      // 1. Insert into mvp_vote_submissions
-      const { error: subErr } = await supabase
-        .from("mvp_vote_submissions")
-        .insert({
-          session_id: sessionId,
-          voter_profile_id: user.id,
-          shoutout: shoutout.trim() || null,
-          submitted_at: new Date().toISOString()
-        });
+      const submittedAt = new Date().toISOString();
 
-      if (subErr) throw subErr;
-
-      // 2. Insert three rows into mvp_votes
+      // Save vote rows first. If RLS blocks this step, do not create the
+      // submission marker, otherwise the round disappears without a full vote.
       const votesToInsert = [
         {
           session_id: sessionId,
           voter_profile_id: user.id,
           player_id: votes.vote3,
           points: 3,
-          created_at: new Date().toISOString()
+          created_at: submittedAt
         },
         {
           session_id: sessionId,
           voter_profile_id: user.id,
           player_id: votes.vote2,
           points: 2,
-          created_at: new Date().toISOString()
+          created_at: submittedAt
         },
         {
           session_id: sessionId,
           voter_profile_id: user.id,
           player_id: votes.vote1,
           points: 1,
-          created_at: new Date().toISOString()
+          created_at: submittedAt
         }
       ];
 
@@ -220,6 +211,18 @@ export default function MvpVoteCast() {
         .insert(votesToInsert);
 
       if (votesErr) throw votesErr;
+
+      // Record the submission after the vote rows are safely saved.
+      const { error: subErr } = await supabase
+        .from("mvp_vote_submissions")
+        .insert({
+          session_id: sessionId,
+          voter_profile_id: user.id,
+          shoutout: shoutout.trim() || null,
+          submitted_at: submittedAt
+        });
+
+      if (subErr) throw subErr;
 
       setSuccess(true);
       toast({

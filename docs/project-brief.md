@@ -63,6 +63,7 @@ Current voting-related database tables:
 - If a database field has moved to a join table, use the join table as the source of truth.
 - For team divisions, prefer `team_divisions` joined to `divisions` when the plain text `teams.division` field is missing or unreliable.
 - For team membership status, use the real enum values in the database.
+- Any team picker must use the full cascade: association, then club, then division, then team. Do not allow team selection before division because many teams share names such as Gold, Blue, Blaze, or Pumas across divisions.
 
 ## Current Data Notes
 

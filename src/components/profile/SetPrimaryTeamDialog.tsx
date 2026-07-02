@@ -45,9 +45,11 @@ export const SetPrimaryTeamDialog = ({
 
   const [selectedAssociation, setSelectedAssociation] = useState("");
   const [selectedClub, setSelectedClub] = useState("");
-  const [selectedDivision, setSelectedDivision] = useState("__all__");
+  const [selectedDivision, setSelectedDivision] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  type TeamOption = { id: string; name: string; division: string | null; division_id: string | null };
 
   // Fetch associations when dialog opens
   useEffect(() => {
@@ -69,29 +71,29 @@ export const SetPrimaryTeamDialog = ({
 
   // Fetch teams when club changes
   useEffect(() => {
-    if (!selectedClub) { setTeams([]); setSelectedTeam(""); setDivisions([]); setSelectedDivision("__all__"); return; }
+    if (!selectedClub) { setTeams([]); setSelectedTeam(""); setDivisions([]); setSelectedDivision(""); return; }
     supabase.from("teams").select("id, name, division, division_id").eq("club_id", selectedClub).order("name").then(async ({ data }) => {
       // Exclude current primary team
-      const filtered = (data || []).filter((t: any) => t.id !== currentPrimaryTeamId);
+      const filtered = ((data || []) as TeamOption[]).filter((t) => t.id !== currentPrimaryTeamId);
       setTeams(filtered);
       setSelectedTeam("");
 
       // Extract unique division_ids to populate division dropdown
-      const divisionIds = Array.from(new Set(filtered.map((t: any) => t.division_id).filter(Boolean))) as string[];
+      const divisionIds = Array.from(new Set(filtered.map((t) => t.division_id).filter(Boolean))) as string[];
       if (divisionIds.length > 0) {
-        const { data: divData } = (await supabase.from("divisions" as any).select("id, name").in("id", divisionIds).order("name")) as any;
-        setDivisions(divData || []);
+        const { data: divData } = await supabase.from("divisions" as never).select("id, name").in("id", divisionIds).order("name");
+        setDivisions((divData || []) as { id: string; name: string }[]);
       } else {
         setDivisions([]);
       }
-      setSelectedDivision("__all__");
+      setSelectedDivision("");
     });
   }, [selectedClub, currentPrimaryTeamId]);
 
   const handleClose = () => {
     setSelectedAssociation("");
     setSelectedClub("");
-    setSelectedDivision("__all__");
+    setSelectedDivision("");
     setSelectedTeam("");
     onOpenChange(false);
   };
@@ -177,7 +179,6 @@ export const SetPrimaryTeamDialog = ({
                   <SelectValue placeholder="Select division" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">All Divisions</SelectItem>
                   {divisions.map((d) => (
                     <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                   ))}
@@ -191,18 +192,18 @@ export const SetPrimaryTeamDialog = ({
             <div className="space-y-2">
               <Label>Team</Label>
               {(() => {
-                const filteredTeams = selectedDivision === "__all__" || selectedDivision === ""
-                  ? teams
-                  : teams.filter((t) => t.division_id === selectedDivision);
-                return filteredTeams.length === 0 ? (
+                const filteredTeams = selectedDivision
+                  ? teams.filter((t) => t.division_id === selectedDivision)
+                  : [];
+                return selectedDivision && filteredTeams.length === 0 ? (
                   <div className="py-4 text-center">
                     <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">No available teams in this club</p>
                   </div>
                 ) : (
-                  <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                  <Select value={selectedTeam} onValueChange={setSelectedTeam} disabled={!selectedDivision}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select team" />
+                      <SelectValue placeholder={!selectedDivision ? "Select division first" : "Select team"} />
                     </SelectTrigger>
                     <SelectContent>
                       {filteredTeams.map((t) => (
