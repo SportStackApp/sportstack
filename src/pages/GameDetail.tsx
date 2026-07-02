@@ -59,6 +59,7 @@ const GameDetail = () => {
   const [availability, setAvailability] = useState<AvailabilityStatus>("PENDING");
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [lineupAccess, setLineupAccess] = useState<LineupAccess | null>(null);
+  const [hasVisibleLineup, setHasVisibleLineup] = useState(false);
 
   useEffect(() => {
     const fetchGame = async () => {
@@ -76,6 +77,17 @@ const GameDetail = () => {
         setGame(fixture);
         const access = await getLineupAccess(user?.id, fixture);
         setLineupAccess(access);
+        setHasVisibleLineup(false);
+
+        if (access.visibleTeamIds.length > 0) {
+          const { data: lineupRows } = await supabase
+            .from("fixture_lineups")
+            .select("id")
+            .eq("fixture_id", id)
+            .in("team_id", access.visibleTeamIds)
+            .limit(1);
+          setHasVisibleLineup((lineupRows || []).length > 0);
+        }
 
         // Fetch current user's availability
         if (user) {
@@ -103,7 +115,7 @@ const GameDetail = () => {
           const userIds = members.map((m) => m.user_id);
 
           const [profilesRes, availRes] = await Promise.all([
-            supabase.from("teammate_profiles").select("id, first_name, last_name").in("id", userIds),
+            supabase.from("profiles").select("id, first_name, last_name").in("id", userIds),
             supabase.from("fixture_availability").select("user_id, status").eq("fixture_id", id).in("user_id", userIds),
           ]);
 
@@ -287,7 +299,7 @@ const GameDetail = () => {
       )}
 
       {/* Actions */}
-      {lineupAccess?.canView && (
+      {lineupAccess?.canView && (lineupAccess.canEdit || hasVisibleLineup) && (
         <div className="flex gap-3">
           <Link to={`/games/${id}/lineup`} className="flex-1">
             <Button variant="default" className="w-full">

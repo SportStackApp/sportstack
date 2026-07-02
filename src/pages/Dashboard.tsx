@@ -83,7 +83,7 @@ const Dashboard = () => {
   } = useTeamContext();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { canManageClub } = useAdminScope();
+  const { canManageClub, canManageTeam } = useAdminScope();
   const [games, setGames] = useState<GameRow[]>([]);
   const [availability, setAvailability] = useState<Record<string, AvailabilityStatus>>({});
   const [loading, setLoading] = useState(true);
@@ -430,6 +430,7 @@ const Dashboard = () => {
     ? { backgroundColor: clubPrimary, color: clubSecondary || "#fff" }
     : undefined;
   const canEditCurrentClub = selectedClubId ? canManageClub(selectedClubId) : false;
+  const canOpenFixtureDetail = selectedTeamId ? canManageTeam(selectedTeamId) : false;
 
   if (isBrandNewUser) {
     return (
@@ -596,9 +597,16 @@ const Dashboard = () => {
           {/* Upcoming Fixtures */}
           <Card style={brandStyle} className={!brandStyle ? "bg-primary text-primary-foreground" : ""}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold text-primary-foreground">
-                Upcoming fixtures
-              </CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-base font-semibold text-primary-foreground">
+                  Upcoming fixtures
+                </CardTitle>
+                <Link to="/games">
+                  <Button size="sm" variant="secondary">
+                    View all
+                  </Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent className="space-y-2">
               {loading ? (
@@ -618,17 +626,13 @@ const Dashboard = () => {
                   const divisionName = game.divisions?.name;
                   const avail = availability[game.id];
 
-                  return (
-                    <Link
-                      key={game.id}
-                      to={`/games/${game.id}`}
-                      className="block p-3 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
-                    >
+                  const fixtureCard = (
+                    <>
                       <div className="flex items-center justify-between mb-1.5">
                         <p className="text-sm">
                           {homeTeam} vs {awayTeam}
                         </p>
-                        <ChevronRight className="h-4 w-4 text-primary-foreground/50 flex-shrink-0" />
+                        {canOpenFixtureDetail && <ChevronRight className="h-4 w-4 text-primary-foreground/50 flex-shrink-0" />}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-primary-foreground/70 mb-2">
                         {divisionName && <span>{divisionName}</span>}
@@ -670,7 +674,24 @@ const Dashboard = () => {
                           );
                         })}
                       </div>
+                    </>
+                  );
+
+                  return canOpenFixtureDetail ? (
+                    <Link
+                      key={game.id}
+                      to={`/games/${game.id}`}
+                      className="block p-3 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
+                    >
+                      {fixtureCard}
                     </Link>
+                  ) : (
+                    <div
+                      key={game.id}
+                      className="block p-3 rounded-lg bg-primary-foreground/10"
+                    >
+                      {fixtureCard}
+                    </div>
                   );
                 })
               )}

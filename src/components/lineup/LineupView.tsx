@@ -154,7 +154,7 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
     const profileMap = new Map((profilesRes.data || []).map((profile: any) => [profile.id, profile]));
     const availabilityMap = new Map((availabilityRes.data || []).map((row: any) => [row.user_id, row.status]));
 
-    const builtRoster = memberships
+    const sortedRoster = memberships
       .map((member: any) => {
         const profile = profileMap.get(member.user_id);
         const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() || "Unknown player";
@@ -174,6 +174,9 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
         if (a.availability !== "UNAVAILABLE" && b.availability === "UNAVAILABLE") return -1;
         return a.name.localeCompare(b.name);
       });
+    const builtRoster = sortedRoster.filter(
+      (player, index, allPlayers) => allPlayers.findIndex((item) => item.id === player.id) === index
+    );
 
     const prefMap: Record<string, Record<string, number>> = {};
     (prefsRes.data || []).forEach((row: any) => {
@@ -406,9 +409,11 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
           {player.membershipType} - {AVAILABILITY_LABELS[player.availability]}
         </p>
       </div>
-      <Button size="sm" variant={action === "assign" ? "default" : "outline"} onClick={() => (action === "assign" ? assignPlayer(player.id) : removePlayer(player.id))}>
-        {action === "assign" ? "Add" : <UserMinus className="h-4 w-4" />}
-      </Button>
+      {isCoach && (
+        <Button size="sm" variant={action === "assign" ? "default" : "outline"} onClick={() => (action === "assign" ? assignPlayer(player.id) : removePlayer(player.id))}>
+          {action === "assign" ? "Add" : <UserMinus className="h-4 w-4" />}
+        </Button>
+      )}
     </div>
   );
 
@@ -436,7 +441,7 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
-            <Select value={selectedFormationId} onValueChange={(value) => setSelectedFormationId(value)}>
+            <Select value={selectedFormationId} onValueChange={(value) => isCoach && setSelectedFormationId(value)} disabled={!isCoach}>
               <SelectTrigger>
                 <SelectValue placeholder="Choose formation" />
               </SelectTrigger>
@@ -533,29 +538,31 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{selectedPositionId ? "Select player" : "Roster"}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search players..." className="pl-9" />
-          </div>
-          {selectedPositionId && (
-            <Button variant="outline" className="w-full" onClick={() => setSelectedPositionId(null)}>
-              Add selected player to bench instead
-            </Button>
-          )}
-          <div className="max-h-[640px] space-y-2 overflow-auto pr-1">
-            {availablePlayers.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">No available roster players.</p>
-            ) : (
-              availablePlayers.map((player) => playerCard(player, "assign"))
+      {isCoach && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{selectedPositionId ? "Select player" : "Roster"}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search players..." className="pl-9" />
+            </div>
+            {selectedPositionId && (
+              <Button variant="outline" className="w-full" onClick={() => setSelectedPositionId(null)}>
+                Add selected player to bench instead
+              </Button>
             )}
-          </div>
-        </CardContent>
-      </Card>
+            <div className="max-h-[640px] space-y-2 overflow-auto pr-1">
+              {availablePlayers.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">No available roster players.</p>
+              ) : (
+                availablePlayers.map((player) => playerCard(player, "assign"))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
