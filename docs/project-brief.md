@@ -179,3 +179,7 @@ npm run lint
 - Custom formation builder is parked until core features are stable.
 - Multi-sport support is a future goal, not current scope.
 - Root `test_*.js` files may be old investigation scripts and should be reviewed before cleanup.
+- Permission re-scope: add explicit concepts for vote-submission visibility, committee access, committee president access, and module enable/disable by association, club, division, and team.
+- Permission re-scope: parent permissions should flow down, but child scopes need clear exclude/override rules with warning prompts.
+- User profile address structure is parked for a later structured-address pass; keep current address changes small.
+- Formation/pitch rotation for mobile is parked for a later lineup/formation builder pass.

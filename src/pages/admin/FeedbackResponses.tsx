@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ExternalLink, MessageSquare, RefreshCw, Save } from "lucide-react";
+import { ArrowLeft, Download, ExternalLink, MessageSquare, RefreshCw, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +29,23 @@ interface FeedbackRow {
   updated_at: string;
 }
 
+interface FeedbackAttachmentRow {
+  id: string;
+  feedback_id: string;
+  storage_path: string;
+  file_name: string | null;
+  content_type: string | null;
+  file_size: number | null;
+  created_at: string;
+  signedUrl?: string;
+}
+
+interface FeedbackProfileRow {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+}
+
 interface FeedbackClient {
   from: (table: "app_feedback") => {
     select: (columns: string) => {
@@ -42,10 +59,18 @@ interface FeedbackClient {
   };
 }
 
+interface FeedbackAttachmentClient {
+  from: (table: "app_feedback_attachments") => {
+    select: (columns: string) => {
+      in: (column: "feedback_id", values: string[]) => Promise<{ data: FeedbackAttachmentRow[] | null; error: { message?: string } | null }>;
+    };
+  };
+}
+
 const STATUS_LABELS: Record<FeedbackStatus, string> = {
   OPEN: "Open",
   REVIEWED: "Reviewed",
-  CLOSED: "Completed",
+  CLOSED: "Archived",
 };
 
 const STATUS_STYLES: Record<FeedbackStatus, string> = {
@@ -62,11 +87,12 @@ const FeedbackResponses = () => {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, { status: FeedbackStatus; admin_notes: string }>>({});
-  const [screenshotUrls, setScreenshotUrls] = useState<Record<string, string>>({});
+  const [feedbackAttachments, setFeedbackAttachments] = useState<Record<string, FeedbackAttachmentRow[]>>({});
 
   const canViewFeedback = isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN";
 
   const feedbackClient = useMemo(() => supabase as unknown as FeedbackClient, []);
+  const attachmentClient = useMemo(() => supabase as unknown as FeedbackAttachmentClient, []);
 
   const fetchFeedback = async () => {
     setLoading(true);
@@ -97,7 +123,7 @@ const FeedbackResponses = () => {
         .in("id", userIds);
 
       profileMap = new Map(
-        (profiles || []).map((profile: any) => [
+        ((profiles || []) as FeedbackProfileRow[]).map((profile) => [
           profile.id,
           `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Unknown user",
         ])
@@ -109,24 +135,49 @@ const FeedbackResponses = () => {
       submitter_name: profileMap.get(row.user_id) || "Unknown user",
     }));
 
-    const screenshotEntries = await Promise.all(
-      rowsWithNames
+    const attachmentMap: Record<string, FeedbackAttachmentRow[]> = {};
+    const feedbackIds = rowsWithNames.map((row) => row.id);
+
+    if (feedbackIds.length > 0) {
+      const { data: attachments } = await attachmentClient
+        .from("app_feedback_attachments")
+        .select("*")
+        .in("feedback_id", feedbackIds);
+
+      const attachmentRows = attachments || [];
+      const legacyAttachments = rowsWithNames
         .filter((row) => row.screenshot_path)
-        .map(async (row) => {
+        .map<FeedbackAttachmentRow>((row) => ({
+          id: `${row.id}-legacy-screenshot`,
+          feedback_id: row.id,
+          storage_path: row.screenshot_path as string,
+          file_name: "Legacy screenshot",
+          content_type: null,
+          file_size: null,
+          created_at: row.created_at,
+        }));
+
+      const signedAttachments = await Promise.all(
+        [...attachmentRows, ...legacyAttachments].map(async (attachment) => {
           const { data: signed } = await supabase.storage
             .from("feedback-screenshots")
-            .createSignedUrl(row.screenshot_path as string, 60 * 10);
-          return [row.id, signed?.signedUrl || ""] as const;
+            .createSignedUrl(attachment.storage_path, 60 * 60);
+
+          return {
+            ...attachment,
+            signedUrl: signed?.signedUrl || "",
+          };
         })
-    );
+      );
+
+      signedAttachments.forEach((attachment) => {
+        if (!attachment.signedUrl) return;
+        attachmentMap[attachment.feedback_id] = [...(attachmentMap[attachment.feedback_id] || []), attachment];
+      });
+    }
 
     setFeedbackRows(rowsWithNames);
-    setScreenshotUrls(
-      screenshotEntries.reduce<Record<string, string>>((acc, [id, url]) => {
-        if (url) acc[id] = url;
-        return acc;
-      }, {})
-    );
+    setFeedbackAttachments(attachmentMap);
     setDrafts(
       rowsWithNames.reduce<Record<string, { status: FeedbackStatus; admin_notes: string }>>((acc, row) => {
         acc[row.id] = {
@@ -208,6 +259,55 @@ const FeedbackResponses = () => {
     });
   };
 
+  const escapeCsvValue = (value: string | number | null | undefined) => {
+    const text = String(value ?? "");
+    return `"${text.replace(/"/g, '""')}"`;
+  };
+
+  const handleDownloadCsv = () => {
+    const headers = [
+      "Submitted",
+      "Submitted by",
+      "User ID",
+      "Page",
+      "Feedback",
+      "Status",
+      "Dealt with",
+      "Archived",
+      "Admin notes/actions",
+      "Photo files",
+      "Photo links",
+    ];
+
+    const rows = feedbackRows.map((row) => {
+      const attachments = feedbackAttachments[row.id] || [];
+      return [
+        formatDate(row.created_at),
+        row.submitter_name || "Unknown user",
+        row.user_id,
+        row.page_path || "",
+        row.message,
+        STATUS_LABELS[row.status],
+        row.status === "CLOSED" ? "Yes" : row.status === "REVIEWED" ? "In progress" : "No",
+        row.status === "CLOSED" ? "Yes" : "No",
+        row.admin_notes || "",
+        attachments.map((attachment) => attachment.file_name || attachment.storage_path).join("\n"),
+        attachments.map((attachment) => attachment.signedUrl || "").filter(Boolean).join("\n"),
+      ];
+    });
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map((value) => escapeCsvValue(value)).join(","))
+      .join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `sportstack-feedback-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (scopeLoading || loading) {
     return (
       <div className="space-y-6">
@@ -235,10 +335,16 @@ const FeedbackResponses = () => {
             <p className="text-muted-foreground">Review feedback, add admin notes, and track completion.</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchFeedback}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={handleDownloadCsv} disabled={feedbackRows.length === 0}>
+            <Download className="mr-2 h-4 w-4" />
+            Download CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={fetchFeedback}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {feedbackRows.length === 0 ? (
@@ -283,16 +389,21 @@ const FeedbackResponses = () => {
                             <p>Submitted by: {row.submitter_name}</p>
                             <p className="break-all">User ID: {row.user_id}</p>
                           </div>
-                          {screenshotUrls[row.id] && (
-                            <a
-                              href={screenshotUrls[row.id]}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              View screenshot
-                            </a>
+                          {(feedbackAttachments[row.id] || []).length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {(feedbackAttachments[row.id] || []).map((attachment, index) => (
+                                <a
+                                  key={attachment.id}
+                                  href={attachment.signedUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  Photo {index + 1}
+                                </a>
+                              ))}
+                            </div>
                           )}
                           <Badge variant="outline" className={STATUS_STYLES[row.status]}>
                             {STATUS_LABELS[row.status]}

@@ -374,6 +374,7 @@ export default function Requests() {
 
   const visibleRequests = requests.filter((r) => {
     if (statusFilter === "ALL") return true;
+    if (statusFilter === "PENDING") return ["PENDING", "ADMIN_APPROVED"].includes(r.status);
     return r.status === statusFilter;
   });
 
@@ -397,6 +398,13 @@ export default function Requests() {
       return (
         <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 pointer-events-none">
           <CheckCircle2 className="w-3 h-3 mr-1" /> Approved
+        </Badge>
+      );
+    }
+    if (status === "ADMIN_APPROVED") {
+      return (
+        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 pointer-events-none">
+          <Clock className="w-3 h-3 mr-1" /> Awaiting player
         </Badge>
       );
     }
@@ -438,7 +446,7 @@ export default function Requests() {
               setCurrentPage(1);
             }}
           >
-            {status.charAt(0) + status.slice(1).toLowerCase()}
+            {status === "PENDING" ? "Action required" : status.charAt(0) + status.slice(1).toLowerCase()}
           </Button>
         ))}
       </div>
@@ -568,6 +576,11 @@ export default function Requests() {
                                   </Button>
                                 )}
                               </>
+                            )}
+                            {request.status === "ADMIN_APPROVED" && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">
+                                Waiting for player
+                              </Badge>
                             )}
                             {request.status === "CANCELLED" && (
                               <Badge variant="outline" className="bg-gray-50 text-xs">Cancelled</Badge>

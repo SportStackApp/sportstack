@@ -218,7 +218,7 @@ export const ProfilePhotoCropper = ({
           )}
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:items-center">
           {currentImage && onDelete && (
             <Button
               variant="destructive"
@@ -236,7 +236,7 @@ export const ProfilePhotoCropper = ({
               )}
             </Button>
           )}
-          <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
+          <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row">
             <Button
               variant="outline"
               onClick={handleClose}

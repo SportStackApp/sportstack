@@ -60,6 +60,7 @@ import TeamDashboard from "./pages/TeamDashboard";
 
 // Layout
 import AppLayout from "./components/layout/AppLayout";
+import { GlobalLoadingBar } from "./components/GlobalLoadingBar";
 
 // Auth
 import { AuthProvider } from "./contexts/AuthContext";
@@ -82,6 +83,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
+                <GlobalLoadingBar />
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<Landing />} />

@@ -92,6 +92,23 @@ const ROLES_NEEDING_SCOPE: Record<string, string> = {
   COACH: "team",
 };
 
+const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
+  if (error && typeof error === "object" && "context" in error) {
+    const context = (error as { context?: unknown }).context;
+    if (context instanceof Response) {
+      try {
+        const body = await context.clone().json();
+        if (body?.error) return String(body.error);
+      } catch {
+        // Use the normal Supabase error message if the response body is not JSON.
+      }
+    }
+  }
+
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+};
+
 const UsersManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -115,16 +132,32 @@ const UsersManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
-  const availableTeamsForFilter = useMemo(() => {
-    if (divisionFilter === "all") return teams;
-    return teams.filter((t) => t.division_id === divisionFilter);
-  }, [teams, divisionFilter]);
-
   const [hidePlaceholders, setHidePlaceholders] = useState(true);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter, associationFilter, clubFilter, divisionFilter, teamFilter, hidePlaceholders]);
+
+  useEffect(() => {
+    if (associationFilter === "all") {
+      setClubFilter("all");
+      setDivisionFilter("all");
+      setTeamFilter("all");
+    }
+  }, [associationFilter]);
+
+  useEffect(() => {
+    if (clubFilter === "all") {
+      setDivisionFilter("all");
+      setTeamFilter("all");
+    }
+  }, [clubFilter]);
+
+  useEffect(() => {
+    if (divisionFilter === "all") {
+      setTeamFilter("all");
+    }
+  }, [divisionFilter]);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
@@ -336,6 +369,19 @@ const UsersManagement = () => {
       };
     });
 
+    if (isSuperAdmin && usersWithRoles.length > 0) {
+      const { data: emailData, error: emailError } = await supabase.functions.invoke("get-user-emails", {
+        body: { profileIds: usersWithRoles.map((item) => item.id) },
+      });
+
+      if (!emailError && emailData?.emails) {
+        const emailMap = emailData.emails as Record<string, string | null>;
+        usersWithRoles.forEach((item) => {
+          item.email = emailMap[item.id] || null;
+        });
+      }
+    }
+
     setUsers(usersWithRoles);
     setLoading(false);
     return usersWithRoles;
@@ -395,9 +441,69 @@ const UsersManagement = () => {
     return dupes;
   }, [users]);
 
+  const scopedAvailableTeams = useMemo(() => {
+    if (isSuperAdmin) return teams;
+
+    return teams.filter((team) => {
+      const club = clubs.find((item) => item.id === team.club_id);
+      return (
+        scopedTeamIds.includes(team.id) ||
+        scopedClubIds.includes(team.club_id) ||
+        Boolean(club?.association_id && scopedAssociationIds.includes(club.association_id))
+      );
+    });
+  }, [clubs, isSuperAdmin, scopedAssociationIds, scopedClubIds, scopedTeamIds, teams]);
+
+  const availableAssociations = useMemo(() => {
+    if (isSuperAdmin) return associations;
+
+    const associationIds = new Set(
+      scopedAvailableTeams
+        .map((team) => clubs.find((club) => club.id === team.club_id)?.association_id)
+        .filter(Boolean)
+    );
+
+    return associations.filter((association) => associationIds.has(association.id));
+  }, [associations, clubs, isSuperAdmin, scopedAvailableTeams]);
+
+  const availableClubs = useMemo(() => {
+    if (associationFilter === "all") return [];
+
+    const availableClubIds = new Set(scopedAvailableTeams.map((team) => team.club_id));
+    return clubs.filter((club) => club.association_id === associationFilter && availableClubIds.has(club.id));
+  }, [associationFilter, clubs, scopedAvailableTeams]);
+
+  const availableDivisions = useMemo(() => {
+    if (clubFilter === "all") return [];
+
+    const divisionIds = new Set(
+      scopedAvailableTeams
+        .filter((team) => team.club_id === clubFilter)
+        .map((team) => team.division_id)
+        .filter(Boolean)
+    );
+
+    return divisions.filter((division) => divisionIds.has(division.id));
+  }, [clubFilter, divisions, scopedAvailableTeams]);
+
+  const availableTeamsForFilter = useMemo(() => {
+    if (divisionFilter === "all") return [];
+
+    return scopedAvailableTeams.filter(
+      (team) => team.club_id === clubFilter && team.division_id === divisionFilter
+    );
+  }, [clubFilter, divisionFilter, scopedAvailableTeams]);
+
+  const getUserTeamIds = (item: UserWithRoles) => [
+    ...item.memberships.map((membership) => membership.team_id),
+    ...item.pendingInvites.map((invite) => invite.team_id),
+  ];
+
   const filteredUsers = users.filter((user) => {
     const fullName = `${user.first_name || ""} ${user.last_name || ""}`.toLowerCase();
-    if (!fullName.includes(searchQuery.toLowerCase())) return false;
+    const email = user.email?.toLowerCase() || "";
+    const query = searchQuery.trim().toLowerCase();
+    if (query && !fullName.includes(query) && !email.includes(query)) return false;
     if (statusFilter === "duplicates") {
       return duplicateUserIds.has(user.id);
     }
@@ -415,18 +521,18 @@ const UsersManagement = () => {
           return club?.association_id === associationFilter;
         })
         .map((t) => t.id);
-      if (!user.memberships.some((m) => assocTeamIds.includes(m.team_id))) return false;
+      if (!getUserTeamIds(user).some((teamId) => assocTeamIds.includes(teamId))) return false;
     }
     if (clubFilter !== "all") {
       const clubTeamIds = teams.filter((t) => t.club_id === clubFilter).map((t) => t.id);
-      if (!user.memberships.some((m) => clubTeamIds.includes(m.team_id))) return false;
+      if (!getUserTeamIds(user).some((teamId) => clubTeamIds.includes(teamId))) return false;
     }
     if (divisionFilter !== "all") {
       const divisionTeamIds = teams.filter((t) => t.division_id === divisionFilter).map((t) => t.id);
-      if (!user.memberships.some((m) => divisionTeamIds.includes(m.team_id))) return false;
+      if (!getUserTeamIds(user).some((teamId) => divisionTeamIds.includes(teamId))) return false;
     }
     if (teamFilter !== "all") {
-      if (!user.memberships.some((m) => m.team_id === teamFilter)) return false;
+      if (!getUserTeamIds(user).includes(teamFilter)) return false;
     }
     if (hidePlaceholders && (user as any).is_placeholder === true) return false;
     return true;
@@ -436,18 +542,6 @@ const UsersManagement = () => {
     const startIdx = (currentPage - 1) * rowsPerPage;
     return filteredUsers.slice(startIdx, startIdx + rowsPerPage);
   }, [filteredUsers, currentPage, rowsPerPage]);
-
-  const availableAssociations = isSuperAdmin
-    ? associations
-    : associations.filter((a) => scopedAssociationIds.includes(a.id));
-
-  const availableClubs = clubs.filter((c) => {
-    if (associationFilter !== "all") return c.association_id === associationFilter;
-    if (!isSuperAdmin) {
-      return scopedClubIds.includes(c.id) || scopedAssociationIds.includes(c.association_id);
-    }
-    return true;
-  });
 
   const handleExport = () => {
     if (filteredUsers.length === 0) return;
@@ -462,7 +556,7 @@ const UsersManagement = () => {
         "Registration #": index + 1,
         "First Name": user.first_name || "",
         "Last Name": user.last_name || "",
-        "Email": "",
+        "Email": user.email || "",
         "Gender": user.gender || "",
         "Date of Birth": user.date_of_birth || "",
         "Hockey Vic Number": user.hockey_vic_number || "",
@@ -905,19 +999,36 @@ const UsersManagement = () => {
       });
 
       if (error) {
-        throw error;
+        throw new Error(await getFunctionErrorMessage(error, "Could not send the access link."));
       }
 
-      const result = data as { error?: string; success?: boolean; link_type?: "claim" | "password_reset" } | null;
+      const result = data as {
+        error?: string;
+        success?: boolean;
+        link_type?: "claim" | "existing_account_claim" | "password_reset";
+      } | null;
       if (!result?.success) {
         throw new Error(result?.error || "Could not send the access link.");
       }
 
+      const toastCopy = result.link_type === "password_reset"
+        ? {
+            title: "Password reset sent",
+            description: "The user can use the email link to reset their password.",
+          }
+        : result.link_type === "existing_account_claim"
+          ? {
+              title: "Existing account linked",
+              description: "The user can use the email link to sign in and claim the placeholder profile.",
+            }
+          : {
+              title: "Claim link sent",
+              description: "The player can use the email link to create their real account.",
+            };
+
       toast({
-        title: result.link_type === "password_reset" ? "Password reset sent" : "Claim link sent",
-        description: result.link_type === "password_reset"
-          ? "The user can use the email link to reset their password."
-          : "The player can use the email link to create their real account.",
+        title: toastCopy.title,
+        description: toastCopy.description,
       });
       setAccessReviewOpen(false);
       await fetchUsers();
@@ -1447,7 +1558,7 @@ const UsersManagement = () => {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name..."
+              placeholder="Search by name or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -1466,7 +1577,15 @@ const UsersManagement = () => {
               <SelectItem value="duplicates">Duplicates</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={associationFilter} onValueChange={(v) => { setAssociationFilter(v); setClubFilter("all"); }}>
+          <Select
+            value={associationFilter}
+            onValueChange={(v) => {
+              setAssociationFilter(v);
+              setClubFilter("all");
+              setDivisionFilter("all");
+              setTeamFilter("all");
+            }}
+          >
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Association" />
             </SelectTrigger>
@@ -1477,7 +1596,15 @@ const UsersManagement = () => {
               ))}
             </SelectContent>
           </Select>
-          <Select value={clubFilter} onValueChange={setClubFilter}>
+          <Select
+            value={clubFilter}
+            onValueChange={(v) => {
+              setClubFilter(v);
+              setDivisionFilter("all");
+              setTeamFilter("all");
+            }}
+            disabled={associationFilter === "all"}
+          >
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Club" />
             </SelectTrigger>
@@ -1494,18 +1621,19 @@ const UsersManagement = () => {
               setDivisionFilter(v);
               setTeamFilter("all");
             }}
+            disabled={clubFilter === "all"}
           >
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Division" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Divisions</SelectItem>
-              {divisions.map((d) => (
+              {availableDivisions.map((d) => (
                 <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={teamFilter} onValueChange={setTeamFilter}>
+          <Select value={teamFilter} onValueChange={setTeamFilter} disabled={divisionFilter === "all"}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Team" />
             </SelectTrigger>
@@ -1536,13 +1664,16 @@ const UsersManagement = () => {
         </div>
 
         {/* Pending Primary Team Change Requests */}
-        {primaryRequests.length > 0 && selectedMergeIds.length < 0 && (
+        {primaryRequests.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <RefreshCw className="h-5 w-5" />
-                Pending Primary Team Changes ({primaryRequests.length})
+                Primary Team Changes ({primaryRequests.length})
               </CardTitle>
+              <CardDescription>
+                These are handled from Requests so the badge count and action list stay matched.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -1557,11 +1688,8 @@ const UsersManagement = () => {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => handleApprovePrimaryRequest(req.id)}>
-                        <Check className="h-3 w-3 mr-1" /> Approve
-                      </Button>
-                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDeclinePrimaryRequest(req.id)}>
-                        <X className="h-3 w-3 mr-1" /> Decline
+                      <Button size="sm" variant="outline" onClick={() => navigate("/admin/requests")}>
+                        Open Requests
                       </Button>
                     </div>
                   </div>
@@ -1633,17 +1761,24 @@ const UsersManagement = () => {
                         </TableCell>
                       )}
                       <TableCell className="font-medium">
-                        <div className="flex items-center gap-1.5">
-                          {u.first_name || u.last_name
-                            ? `${u.first_name || ""} ${u.last_name || ""}`.trim()
-                            : "(No name)"}
-                          {duplicateUserIds.has(u.id) && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                              </TooltipTrigger>
-                              <TooltipContent>Possible duplicate account</TooltipContent>
-                            </Tooltip>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            {u.first_name || u.last_name
+                              ? `${u.first_name || ""} ${u.last_name || ""}`.trim()
+                              : "(No name)"}
+                            {duplicateUserIds.has(u.id) && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                                </TooltipTrigger>
+                                <TooltipContent>Possible duplicate account</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                          {u.email && (
+                            <div className="text-xs font-normal text-muted-foreground">
+                              {u.email}
+                            </div>
                           )}
                         </div>
                       </TableCell>

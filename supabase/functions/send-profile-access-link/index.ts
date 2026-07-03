@@ -34,6 +34,11 @@ type ClaimLinkPayload = {
   email?: string;
 };
 
+type AuthUserSummary = {
+  id: string;
+  email?: string | null;
+};
+
 const ADMIN_ROLES = ["SUPER_ADMIN", "ASSOCIATION_ADMIN", "CLUB_ADMIN", "TEAM_MANAGER", "COACH"];
 
 const normaliseEmail = (value: string) => value.trim().toLowerCase();
@@ -42,6 +47,32 @@ const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 
 const formatMissingRequirements = (missing: string[]) =>
   `Add ${missing.join(", ")} before sending this link.`;
+
+const findAuthUserByEmail = async (serviceClient: ReturnType<typeof createClient>, email: string) => {
+  const perPage = 1000;
+  let page = 1;
+
+  while (true) {
+    const { data, error } = await serviceClient.auth.admin.listUsers({ page, perPage });
+
+    if (error) {
+      throw error;
+    }
+
+    const users = (data?.users || []) as AuthUserSummary[];
+    const matchingUser = users.find((user) => user.email && normaliseEmail(user.email) === email);
+
+    if (matchingUser) {
+      return matchingUser;
+    }
+
+    if (users.length < perPage) {
+      return null;
+    }
+
+    page += 1;
+  }
+};
 
 const hasAdminScopeForPlaceholder = (roles: AdminRole[], memberships: TeamMembership[]) => {
   if (roles.some((role) => role.role === "SUPER_ADMIN")) return true;
@@ -217,6 +248,130 @@ Deno.serve(async (req) => {
     }
 
     const redirectTo = `${req.headers.get("origin") || "https://sportstackapp.com"}/`;
+    const passwordResetRedirectTo = `${req.headers.get("origin") || "https://sportstackapp.com"}/reset-password`;
+
+    let existingAuthUser: AuthUserSummary | null = null;
+    try {
+      existingAuthUser = await findAuthUserByEmail(serviceClient, email);
+    } catch (lookupError) {
+      console.error("send-profile-access-link: auth email lookup failed", lookupError);
+      return jsonResponse({ error: "Could not check whether that email already has an account." }, 500);
+    }
+
+    if (existingAuthUser) {
+      const realProfileId = existingAuthUser.id;
+
+      if (realProfileId === profileId) {
+        const { error: profileActivationError } = await serviceClient.from("profiles").upsert({
+          id: profileId,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          is_placeholder: false,
+          revsports_player_id: profile.revsports_player_id,
+        });
+
+        if (profileActivationError) {
+          console.error("send-profile-access-link: placeholder account activation failed", profileActivationError);
+          return jsonResponse({ error: "Could not activate this account." }, 500);
+        }
+
+        await serviceClient.from("profile_claim_audit").insert({
+          real_profile_id: profileId,
+          placeholder_profile_id: profileId,
+          status: "placeholder_account_activated",
+          match_method: "admin_approved",
+          match_value: email,
+          reason: "admin activated placeholder profile that already had the real account email",
+        });
+
+        const { error: resetError } = await serviceClient.auth.resetPasswordForEmail(email, {
+          redirectTo: passwordResetRedirectTo,
+        });
+
+        if (resetError) {
+          console.error("send-profile-access-link: placeholder account password reset failed", resetError);
+          return jsonResponse({ error: resetError.message || "The account was activated, but the email could not be sent." }, 400);
+        }
+
+        return jsonResponse({
+          success: true,
+          link_type: "existing_account_claim",
+          real_profile_id: profileId,
+          placeholder_profile_id: profileId,
+        });
+      }
+
+      const { data: realProfile, error: realProfileLookupError } = await serviceClient
+        .from("profiles")
+        .select("id, first_name, last_name, is_placeholder, revsports_player_id")
+        .eq("id", realProfileId)
+        .maybeSingle();
+
+      if (realProfileLookupError) {
+        console.error("send-profile-access-link: existing real profile lookup failed", realProfileLookupError);
+        return jsonResponse({ error: "Could not prepare the existing account for this claim." }, 500);
+      }
+
+      if (realProfile?.is_placeholder === true) {
+        return jsonResponse({ error: "That email belongs to another placeholder profile. Merge the profiles manually first." }, 409);
+      }
+
+      const { error: realProfileError } = await serviceClient.from("profiles").upsert({
+        id: realProfileId,
+        first_name: realProfile?.first_name?.trim() || profile.first_name,
+        last_name: realProfile?.last_name?.trim() || profile.last_name,
+        is_placeholder: false,
+        revsports_player_id: realProfile?.revsports_player_id?.trim() || profile.revsports_player_id,
+      });
+
+      if (realProfileError) {
+        console.error("send-profile-access-link: existing profile upsert failed", realProfileError);
+        return jsonResponse({ error: "Could not prepare the existing account for this claim." }, 500);
+      }
+
+      const { error: reviewError } = await serviceClient
+        .from("profile_claim_reviews")
+        .insert({
+          real_profile_id: realProfileId,
+          placeholder_profile_id: profileId,
+          status: "approved",
+          match_method: "admin_approved",
+          match_value: email,
+          reason: "existing account linked by admin",
+          reviewed_by: callerId,
+          reviewed_at: new Date().toISOString(),
+        });
+
+      if (reviewError) {
+        console.error("send-profile-access-link: existing account review insert failed", reviewError);
+        return jsonResponse({ error: "The existing account was found, but the claim approval could not be recorded." }, 500);
+      }
+
+      await serviceClient.from("profile_claim_audit").insert({
+        real_profile_id: realProfileId,
+        placeholder_profile_id: profileId,
+        status: "existing_account_linked",
+        match_method: "admin_approved",
+        match_value: email,
+        reason: "admin linked placeholder to existing account email",
+      });
+
+      const { error: resetError } = await serviceClient.auth.resetPasswordForEmail(email, {
+        redirectTo: passwordResetRedirectTo,
+      });
+
+      if (resetError) {
+        console.error("send-profile-access-link: existing account password reset failed", resetError);
+        return jsonResponse({ error: resetError.message || "The account was linked, but the email could not be sent." }, 400);
+      }
+
+      return jsonResponse({
+        success: true,
+        link_type: "existing_account_claim",
+        real_profile_id: realProfileId,
+        placeholder_profile_id: profileId,
+      });
+    }
 
     const { data: inviteData, error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email, {
       data: {

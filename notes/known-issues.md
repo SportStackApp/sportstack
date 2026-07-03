@@ -27,3 +27,18 @@ The Supabase emails for password resets, placeholder claim links, and welcome me
 - Improve the welcome/invite email template.
 - Keep the wording clear about what action the user needs to take.
 - Make the templates visually consistent with SportStack branding.
+
+## Permission, Modules, and Parked Feedback Items
+**Logged:** 3 July 2026  
+**Status:** Parked - include in the permission/module re-scope
+
+**Do:**
+- Add explicit permission concepts for vote-submission visibility, committee access, and committee president access.
+- Allow module enable/disable rules at association, club, division, and team level.
+- Keep inheritance clear: parent permissions flow down, but child scopes can be excluded or overridden with warning prompts.
+- Consider Club Admin visibility for vote submissions; do not hard-code this to Super Admin and Association Admin only.
+
+**Do not:**
+- Add one-off hard-coded permission checks that will need to be unwound during the re-scope.
+- Treat module inheritance as only a Super Admin setting.
+- Rebuild address structure or pitch rotation as part of small feedback fixes.

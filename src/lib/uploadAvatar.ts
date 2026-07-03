@@ -20,7 +20,7 @@ export async function uploadAvatar(
     .from("avatars")
     .upload(fileName, imageBlob, {
       contentType: "image/jpeg",
-      upsert: true,
+      upsert: false,
     });
 
   if (error) throw error;

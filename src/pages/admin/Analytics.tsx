@@ -7,7 +7,7 @@ import { useAdminScope } from "@/hooks/useAdminScope";
 import { useToast } from "@/hooks/use-toast";
 // Import icons from Lucide library to make the interface visually appealing
 import { 
-  Trophy, RefreshCw, XCircle, Clock, Users, BarChart3, ChevronDown, X, ShieldAlert, Search
+  Trophy, RefreshCw, XCircle, Clock, Users, BarChart3, ChevronDown, X, ShieldAlert, Search, ClipboardList
 } from "lucide-react";
 // Import standard UI structural components
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -48,8 +48,10 @@ export default function Analytics() {
   // Main data lists fetched from Supabase
   const [sessions, setSessions] = useState<any[]>([]);
   const [votes, setVotes] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [revsportsPlayers, setRevsportsPlayers] = useState<any[]>([]);
+  const [eligibleVoters, setEligibleVoters] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   // Filter States: Grade, Rounds (multi-select), Date Range, Voter, and Voted For
@@ -80,7 +82,7 @@ export default function Analytics() {
       // Step A: Load MVP Voting Sessions
       const { data: sessionsData, error: sessionsErr } = await supabase
         .from("mvp_voting_sessions")
-        .select("id, grade, round, game_date, home_team, away_team, status, opened_at, closes_at")
+        .select("id, fixture_id, grade, round, game_date, home_team, away_team, status, opened_at, closes_at")
         .order("game_date", { ascending: false });
 
       if (sessionsErr) throw sessionsErr;
@@ -96,7 +98,33 @@ export default function Analytics() {
       const loadedVotes = votesData || [];
       setVotes(loadedVotes);
 
-      // Step C: Load Player Names from revsports_players
+      // Step C: Load vote submission markers and eligible voters.
+      const { data: submissionsData, error: submissionsErr } = await supabase
+        .from("mvp_vote_submissions")
+        .select("id, session_id, voter_profile_id, submitted_at");
+
+      if (submissionsErr) throw submissionsErr;
+      const loadedSubmissions = submissionsData || [];
+      setSubmissions(loadedSubmissions);
+
+      const fixtureIds = Array.from(new Set(loadedSessions.map((session: any) => session.fixture_id).filter(Boolean)));
+      let loadedEligibleVoters: any[] = [];
+      if (fixtureIds.length > 0) {
+        const { data: eligibleData, error: eligibleErr } = await supabase
+          .from("revsports_players")
+          .select("id, fixture_id, player_name, team, team_side, team_label, profile_id")
+          .in("fixture_id", fixtureIds)
+          .eq("attended", true)
+          .not("profile_id", "is", null);
+
+        if (eligibleErr) throw eligibleErr;
+        loadedEligibleVoters = eligibleData || [];
+        setEligibleVoters(loadedEligibleVoters);
+      } else {
+        setEligibleVoters([]);
+      }
+
+      // Step D: Load Player Names from revsports_players
       // We extract all unique player_ids that received votes to lookup their names and profiles
       const uniquePlayerIds = Array.from(new Set(loadedVotes.map((v: any) => v.player_id))).filter(Boolean);
       
@@ -113,13 +141,19 @@ export default function Analytics() {
         setRevsportsPlayers([]);
       }
 
-      // Step D: Load Registered Profiles
+      // Step E: Load Registered Profiles
       // We query profile information for all voters and players who have a linked profile
       const profileIds = new Set<string>();
       loadedVotes.forEach((v: any) => {
         if (v.voter_profile_id) profileIds.add(v.voter_profile_id);
       });
+      loadedSubmissions.forEach((submission: any) => {
+        if (submission.voter_profile_id) profileIds.add(submission.voter_profile_id);
+      });
       loadedPlayers.forEach((p: any) => {
+        if (p.profile_id) profileIds.add(p.profile_id);
+      });
+      loadedEligibleVoters.forEach((p: any) => {
         if (p.profile_id) profileIds.add(p.profile_id);
       });
 
@@ -395,6 +429,34 @@ export default function Analytics() {
     const voters = filteredVotes.map((v) => v.voter_profile_id).filter(Boolean);
     return new Set(voters).size;
   }, [filteredVotes]);
+
+  const voteCompletionRows = useMemo(() => {
+    const submissionMap = new Map<string, any>();
+    submissions.forEach((submission) => {
+      submissionMap.set(`${submission.session_id}:${submission.voter_profile_id}`, submission);
+    });
+
+    return filteredSessions
+      .flatMap((session) => {
+        const sessionVoters = eligibleVoters.filter((player) => player.fixture_id === session.fixture_id);
+        return sessionVoters.map((player) => {
+          const submission = submissionMap.get(`${session.id}:${player.profile_id}`);
+          return {
+            id: `${session.id}-${player.profile_id}`,
+            round: session.round || "Unknown",
+            game: [session.home_team, session.away_team].filter(Boolean).join(" v ") || "Unknown game",
+            voterName: profileNameMap.get(player.profile_id) || player.player_name || "Unknown voter",
+            team: player.team_label || player.team || "Unknown team",
+            submitted: Boolean(submission),
+            submittedAt: submission?.submitted_at || null,
+          };
+        });
+      })
+      .sort((a, b) => {
+        if (a.submitted !== b.submitted) return a.submitted ? 1 : -1;
+        return a.round.localeCompare(b.round, undefined, { numeric: true }) || a.voterName.localeCompare(b.voterName);
+      });
+  }, [filteredSessions, eligibleVoters, submissions, profileNameMap]);
 
   // 8. COMPILING STANDINGS (Leaderboard Table - Deduplicated)
   // Group votes by profile_id (fallback to lowercased player name if no profile linked)
@@ -842,6 +904,66 @@ export default function Analytics() {
                   </CardContent>
                 </Card>
               </div>
+
+              <Card className="shadow-sm border-border">
+                <CardHeader className="bg-muted/20 border-b py-4">
+                  <CardTitle className="text-lg font-bold flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5 text-primary" /> Vote Completion
+                  </CardTitle>
+                  <CardDescription>Shows eligible voters and whether their submission has been received</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {voteCompletionRows.length === 0 ? (
+                    <div className="p-12 text-center text-muted-foreground text-sm">
+                      No eligible voters found for these filters.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader className="bg-muted/40">
+                          <TableRow>
+                            <TableHead className="font-semibold">Round</TableHead>
+                            <TableHead className="font-semibold">Game</TableHead>
+                            <TableHead className="font-semibold">Voter</TableHead>
+                            <TableHead className="font-semibold">Team</TableHead>
+                            <TableHead className="font-semibold">Status</TableHead>
+                            <TableHead className="text-right font-semibold">Submitted</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {voteCompletionRows.map((row) => (
+                            <TableRow key={row.id} className="hover:bg-muted/30 transition-colors">
+                              <TableCell className="font-medium">{row.round}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{row.game}</TableCell>
+                              <TableCell className="font-medium">{row.voterName}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{row.team}</TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={row.submitted ? "bg-green-100 text-green-800 border-green-200" : "bg-amber-100 text-amber-800 border-amber-200"}
+                                >
+                                  {row.submitted ? "Submitted" : "Missing"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right text-sm text-muted-foreground">
+                                {row.submittedAt
+                                  ? new Date(row.submittedAt).toLocaleString("en-AU", {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
+                                  : "Not yet"}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* SECTION 4: RESTRICTED INDIVIDUAL VOTES PANEL */}
               {isPrivilegedAdmin && (

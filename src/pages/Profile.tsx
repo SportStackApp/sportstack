@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Lock, Camera, Wrench, Settings } from "lucide-react";
+import { AlertCircle, Save, Lock, Camera, Wrench, Settings } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationPreferencesSection } from "@/components/profile/NotificationPreferencesSection";
 import { PersonalDetailsSection } from "@/components/profile/PersonalDetailsSection";
@@ -26,6 +27,7 @@ import { uploadAvatar, deleteAvatar } from "@/lib/uploadAvatar";
 import { useTestRole } from "@/contexts/TestRoleContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { isProfileReviewRequired } from "@/lib/profileCompletion";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -120,6 +122,7 @@ const Profile = () => {
   const [pendingRequestTeams, setPendingRequestTeams] = useState<Array<{id: string; teamId: string; teamName: string; clubName: string; type: string;}>>([]);
   const [pendingPrimaryRequest, setPendingPrimaryRequest] = useState<Array<{id: string; teamId: string; teamName: string; clubName: string; type: string;}>>([]);
   const [loading, setLoading] = useState(true);
+  const [needsProfileReview, setNeedsProfileReview] = useState(false);
   
   const [isEditing, setIsEditing] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
@@ -181,6 +184,12 @@ const Profile = () => {
       };
       setFormData(newFormData);
       setSavedFormData(newFormData);
+
+      const reviewRequired = isProfileReviewRequired(profileData);
+      setNeedsProfileReview(reviewRequired);
+      if (reviewRequired) {
+        setIsEditing(true);
+      }
     }
 
     // Fetch team memberships with team, club, association details
@@ -375,19 +384,30 @@ const Profile = () => {
   const handleSave = async () => {
     if (!user) return;
 
+    const profileUpdate = {
+      first_name: formData.firstName.trim() || null,
+      last_name: formData.lastName.trim() || null,
+      phone: formData.phone.trim() || null,
+      suburb: formData.suburb.trim() || null,
+      date_of_birth: formData.dateOfBirth || null,
+      gender: formData.gender || null,
+      emergency_contact_name: formData.emergencyContact.name.trim() || null,
+      emergency_contact_phone: formData.emergencyContact.phone.trim() || null,
+      emergency_contact_relationship: formData.emergencyContact.relationship.trim() || null,
+    };
+
+    if (isProfileReviewRequired(profileUpdate)) {
+      toast({
+        title: "Details required",
+        description: "Please complete first name, last name, phone, date of birth, and gender before continuing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { error } = await supabase
       .from("profiles")
-      .update({
-        first_name: formData.firstName || null,
-        last_name: formData.lastName || null,
-        phone: formData.phone || null,
-        suburb: formData.suburb || null,
-        date_of_birth: formData.dateOfBirth || null,
-        gender: formData.gender || null,
-        emergency_contact_name: formData.emergencyContact.name || null,
-        emergency_contact_phone: formData.emergencyContact.phone || null,
-        emergency_contact_relationship: formData.emergencyContact.relationship || null,
-      })
+      .update(profileUpdate)
       .eq("id", user.id);
 
     if (error) {
@@ -397,8 +417,26 @@ const Profile = () => {
         variant: "destructive",
       });
     } else {
-      setSavedFormData(formData);
+      const savedData = {
+        ...formData,
+        firstName: profileUpdate.first_name || "",
+        lastName: profileUpdate.last_name || "",
+        phone: profileUpdate.phone || "",
+        suburb: profileUpdate.suburb || "",
+        dateOfBirth: profileUpdate.date_of_birth || "",
+        gender: profileUpdate.gender || "",
+        emergencyContact: {
+          name: profileUpdate.emergency_contact_name || "",
+          phone: profileUpdate.emergency_contact_phone || "",
+          relationship: profileUpdate.emergency_contact_relationship || "",
+        },
+      };
+      setFormData(savedData);
+      setSavedFormData(savedData);
+      setProfile((current) => current ? { ...current, ...profileUpdate } : current);
+      setNeedsProfileReview(false);
       setIsEditing(false);
+      window.dispatchEvent(new Event("sportstack:profile-review-completed"));
       toast({
         title: "Profile Updated",
         description: "Your profile has been saved successfully.",
@@ -511,12 +549,17 @@ const Profile = () => {
 
     // Downgrade old PRIMARY to SECONDARY
     if (pendingChangeRequest.from_team_id) {
-      await supabase
+      const { error: downgradeError } = await supabase
         .from("team_memberships")
         .update({ membership_type: "SECONDARY" })
         .eq("user_id", user.id)
         .eq("team_id", pendingChangeRequest.from_team_id)
         .eq("membership_type", "PRIMARY");
+
+      if (downgradeError) {
+        toast({ title: "Error", description: "Failed to update your old primary team.", variant: "destructive" });
+        return;
+      }
     }
 
     const { data: existingTargetMembership } = await supabase
@@ -539,18 +582,23 @@ const Profile = () => {
           status: "ACTIVE",
         });
 
-    // Mark request as completed
-    await supabase
+    if (upgradeError) {
+      toast({ title: "Error", description: "Failed to confirm change.", variant: "destructive" });
+      return;
+    }
+
+    const { error: completionError } = await supabase
       .from("primary_change_requests")
       .update({ status: "COMPLETED", resolved_at: new Date().toISOString() })
       .eq("id", pendingChangeRequest.id);
 
-    if (upgradeError) {
-      toast({ title: "Error", description: "Failed to confirm change.", variant: "destructive" });
-    } else {
-      toast({ title: "Primary Team Changed", description: "Your primary team has been updated." });
-      fetchData();
+    if (completionError) {
+      toast({ title: "Error", description: "Your team changed, but the request could not be closed.", variant: "destructive" });
+      return;
     }
+
+    toast({ title: "Primary Team Changed", description: "Your primary team has been updated." });
+    fetchData();
   };
 
   const handleAcceptInvite = async (membershipId: string) => {
@@ -759,6 +807,16 @@ const Profile = () => {
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto animate-fade-in pb-8">
+      {needsProfileReview && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Confirm your profile details</AlertTitle>
+          <AlertDescription>
+            Please check your email and save your first name, last name, phone number, date of birth, and gender before continuing.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header */}
       <div className="text-center">
         <div
@@ -868,6 +926,7 @@ const Profile = () => {
         email={user?.email || ""}
         isEditing={isEditing}
         formData={formData}
+        requiresReview={needsProfileReview}
         onFormChange={handleFormChange}
         onSave={handleSave}
         onCancel={handleCancel}

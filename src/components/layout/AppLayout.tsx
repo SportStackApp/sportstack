@@ -307,9 +307,39 @@ interface FeedbackInsert {
   screenshot_path?: string | null;
 }
 
+interface FeedbackAttachmentInsert {
+  feedback_id: string;
+  user_id: string;
+  storage_path: string;
+  file_name: string;
+  content_type: string;
+  file_size: number;
+}
+
 interface FeedbackClient {
   from: (table: "app_feedback") => {
-    insert: (payload: FeedbackInsert) => Promise<{ error: { message?: string } | null }>;
+    insert: (payload: FeedbackInsert) => {
+      select: (columns: string) => {
+        single: () => Promise<{ data: { id: string } | null; error: { message?: string } | null }>;
+      };
+    };
+  };
+}
+
+interface FeedbackAttachmentClient {
+  from: (table: "app_feedback_attachments") => {
+    insert: (payload: FeedbackAttachmentInsert[]) => Promise<{ error: { message?: string } | null }>;
+  };
+}
+
+interface RequestCountClient {
+  from: (table: "requests") => {
+    select: (
+      columns: string,
+      options: { count: "exact"; head: true }
+    ) => {
+      eq: (column: "status", value: "PENDING") => Promise<{ count: number | null; error: { message?: string } | null }>;
+    };
   };
 }
 
@@ -342,6 +372,7 @@ const AppLayout = () => {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAssociationPopoverOpen, setIsAssociationPopoverOpen] = useState(false);
+  const [isCascadePopoverOpen, setIsCascadePopoverOpen] = useState(false);
   const [isModeSwitcherOpen, setIsModeSwitcherOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
@@ -356,7 +387,7 @@ const AppLayout = () => {
   const [isVoter, setIsVoter] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
-  const [feedbackScreenshot, setFeedbackScreenshot] = useState<File | null>(null);
+  const [feedbackScreenshots, setFeedbackScreenshots] = useState<File[]>([]);
   const [isFeedbackSubmitting, setIsFeedbackSubmitting] = useState(false);
 
   const isVoterOnly = roles.length === 1 && roles[0] === "VOTER";
@@ -384,15 +415,16 @@ const AppLayout = () => {
     const isAdmin = mode === "super_admin" || mode === "association" || mode === "club";
     if (!isAdmin) { setPendingRequestCount(0); return; }
     const fetchCount = async () => {
+      const requestCountClient = supabase as unknown as RequestCountClient;
       const [membershipRequests, primaryRequests] = await Promise.all([
-        (supabase as any)
+        requestCountClient
           .from("requests")
           .select("id", { count: "exact", head: true })
           .eq("status", "PENDING"),
         supabase
           .from("primary_change_requests")
           .select("id", { count: "exact", head: true })
-          .eq("status", "PENDING"),
+          .in("status", ["PENDING", "ADMIN_APPROVED"]),
       ]);
       setPendingRequestCount((membershipRequests.count || 0) + (primaryRequests.count || 0));
     };
@@ -595,8 +627,17 @@ const AppLayout = () => {
     "flex h-10 min-w-0 max-w-[190px] items-center rounded-md bg-primary-foreground/10 px-3 text-sm font-medium text-primary-foreground truncate lg:max-w-[260px]";
   const cascadeSelectTriggerClass =
     "h-10 min-w-0 max-w-[190px] bg-primary-foreground/10 text-primary-foreground border-primary-foreground/15 font-medium data-[placeholder]:text-primary-foreground/70 lg:max-w-[260px]";
+  const cascadePanelSelectTriggerClass =
+    "h-10 w-full min-w-0 bg-background text-foreground border-border font-medium";
   const cascadeClearClass =
     "h-7 w-7 shrink-0 rounded-full text-primary-foreground/60 hover:text-primary-foreground hover:bg-primary-foreground/10";
+  const cascadeSummaryParts = [
+    selectedAssociation?.abbreviation || selectedAssociation?.name || (mode === "player" ? playerAssociationAbbr || playerAssociationName : ""),
+    selectedClub?.name || (mode === "player" ? playerClubName : ""),
+    selectedDivisionObj?.name,
+    selectedTeam ? getTeamDisplayName(selectedTeam) : mode === "player" ? playerTeamName : "",
+  ].filter(Boolean);
+  const cascadeSummary = cascadeSummaryParts.length > 0 ? cascadeSummaryParts.join(" > ") : "Select scope";
 
   useEffect(() => {
     const associationMatch = location.pathname.match(/^\/associations\/([^/]+)/);
@@ -675,43 +716,23 @@ const AppLayout = () => {
     if (!user || !feedbackMessage.trim() || isFeedbackSubmitting) return;
 
     setIsFeedbackSubmitting(true);
-    let screenshotPath: string | null = null;
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
 
-    if (feedbackScreenshot) {
-      const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
-      if (!allowedTypes.includes(feedbackScreenshot.type)) {
+    for (const screenshot of feedbackScreenshots) {
+      if (!allowedTypes.includes(screenshot.type)) {
         toast({
-          title: "Screenshot not attached",
-          description: "Please use a PNG, JPG, or WebP screenshot.",
+          title: "Photos not attached",
+          description: "Please use PNG, JPG, or WebP photos only.",
           variant: "destructive",
         });
         setIsFeedbackSubmitting(false);
         return;
       }
 
-      if (feedbackScreenshot.size > 5 * 1024 * 1024) {
+      if (screenshot.size > 5 * 1024 * 1024) {
         toast({
-          title: "Screenshot too large",
-          description: "Screenshots must be under 5MB.",
-          variant: "destructive",
-        });
-        setIsFeedbackSubmitting(false);
-        return;
-      }
-
-      const extension = feedbackScreenshot.name.split(".").pop() || "png";
-      screenshotPath = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
-      const { error: uploadError } = await supabase.storage
-        .from("feedback-screenshots")
-        .upload(screenshotPath, feedbackScreenshot, {
-          contentType: feedbackScreenshot.type,
-          upsert: false,
-        });
-
-      if (uploadError) {
-        toast({
-          title: "Screenshot not uploaded",
-          description: uploadError.message || "Please try again.",
+          title: "Photo too large",
+          description: "Each photo must be under 5MB.",
           variant: "destructive",
         });
         setIsFeedbackSubmitting(false);
@@ -725,30 +746,77 @@ const AppLayout = () => {
       message: feedbackMessage.trim(),
       page_path: location.pathname,
       user_agent: navigator.userAgent,
-      screenshot_path: screenshotPath,
+      screenshot_path: null,
     };
 
-    let { error } = await feedbackClient.from("app_feedback").insert(feedbackPayload);
+    const { data: insertedFeedback, error } = await feedbackClient
+      .from("app_feedback")
+      .insert(feedbackPayload)
+      .select("id")
+      .single();
 
-    if (error?.message?.includes("screenshot_path")) {
-      const payloadWithoutScreenshot = { ...feedbackPayload };
-      delete payloadWithoutScreenshot.screenshot_path;
-      ({ error } = await feedbackClient.from("app_feedback").insert(payloadWithoutScreenshot));
-    }
-
-    setIsFeedbackSubmitting(false);
-
-    if (error) {
+    if (error || !insertedFeedback) {
+      setIsFeedbackSubmitting(false);
       toast({
         title: "Feedback not sent",
-        description: error.message || "Please try again.",
+        description: error?.message || "Please try again.",
         variant: "destructive",
       });
       return;
     }
 
+    const uploadedAttachments: FeedbackAttachmentInsert[] = [];
+
+    for (const screenshot of feedbackScreenshots) {
+      const extension = screenshot.name.split(".").pop() || "png";
+      const storagePath = `${user.id}/${insertedFeedback.id}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("feedback-screenshots")
+        .upload(storagePath, screenshot, {
+          contentType: screenshot.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        setIsFeedbackSubmitting(false);
+        toast({
+          title: "Photo not uploaded",
+          description: uploadError.message || "Your feedback was saved, but one photo was not attached.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      uploadedAttachments.push({
+        feedback_id: insertedFeedback.id,
+        user_id: user.id,
+        storage_path: storagePath,
+        file_name: screenshot.name,
+        content_type: screenshot.type,
+        file_size: screenshot.size,
+      });
+    }
+
+    if (uploadedAttachments.length > 0) {
+      const attachmentClient = supabase as unknown as FeedbackAttachmentClient;
+      const { error: attachmentError } = await attachmentClient
+        .from("app_feedback_attachments")
+        .insert(uploadedAttachments);
+
+      if (attachmentError) {
+        setIsFeedbackSubmitting(false);
+        toast({
+          title: "Photos not linked",
+          description: attachmentError.message || "Your feedback was saved, but the photo links were not saved.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    setIsFeedbackSubmitting(false);
     setFeedbackMessage("");
-    setFeedbackScreenshot(null);
+    setFeedbackScreenshots([]);
     setIsFeedbackOpen(false);
     toast({
       title: "Feedback sent",
@@ -899,6 +967,119 @@ const AppLayout = () => {
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
 
+            <Popover open={isCascadePopoverOpen} onOpenChange={setIsCascadePopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="min-w-0 flex-1 justify-start gap-2 px-2 text-primary-foreground hover:bg-primary-foreground/10 xl:hidden"
+                >
+                  <MapPin className="h-4 w-4 shrink-0" />
+                  <span className="truncate text-left text-sm font-medium">{cascadeSummary}</span>
+                  <ChevronDown className="ml-auto h-4 w-4 shrink-0" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[min(92vw,360px)] space-y-3 bg-background p-3" align="start">
+                {showAssociationSelector && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Association</Label>
+                    <Select
+                      value={selectedAssociationId || undefined}
+                      onValueChange={(v) => {
+                        handleAssociationChange(v);
+                        setIsCascadePopoverOpen(false);
+                      }}
+                    >
+                      <SelectTrigger className={cascadePanelSelectTriggerClass}>
+                        <SelectValue placeholder="Select association" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border-border">
+                        {associations.map((assoc) => (
+                          <SelectItem key={assoc.id} value={assoc.id}>
+                            {assoc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {showClubSelector && selectedAssociationId && filteredClubs.length > 0 && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Club</Label>
+                    <Select
+                      value={selectedClubId || undefined}
+                      onValueChange={(v) => {
+                        setSelectedClubId(v);
+                        navigate(`/clubs/${v}`);
+                      }}
+                    >
+                      <SelectTrigger className={cascadePanelSelectTriggerClass}>
+                        <SelectValue placeholder="Select club" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border-border">
+                        {filteredClubs.map((club) => (
+                          <SelectItem key={club.id} value={club.id}>
+                            {club.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {showClubSelector && selectedClubId && filteredDivisions.length > 0 && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Division</Label>
+                    <Select
+                      value={selectedDivision || undefined}
+                      onValueChange={(v) => {
+                        setSelectedDivision(v);
+                        navigate("/admin/division");
+                      }}
+                    >
+                      <SelectTrigger className={cascadePanelSelectTriggerClass}>
+                        <SelectValue placeholder="Select division" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border-border">
+                        {filteredDivisions.map((div) => (
+                          <SelectItem key={div.id} value={div.id}>
+                            {div.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {showClubSelector && selectedClubId && cascadeDivisionId && cascadeTeams.length > 0 && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Team</Label>
+                    <Select
+                      value={selectedTeamId || undefined}
+                      onValueChange={(v) => {
+                        if (!selectedDivision && cascadeDivisionId) setSelectedDivision(cascadeDivisionId);
+                        setSelectedTeamId(v);
+                        setIsCascadePopoverOpen(false);
+                        navigate(`/teams/${v}`);
+                      }}
+                    >
+                      <SelectTrigger className={cascadePanelSelectTriggerClass}>
+                        <SelectValue placeholder="Select team" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border-border">
+                        {cascadeTeams.map((team) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {getTeamDisplayName(team)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+
+            <div className="hidden min-w-0 items-center gap-2 xl:flex">
             {/* Association Logo with Popover - only interactive for super_admin */}
             {showAssociationSelector ? (
               <div className="flex items-center gap-1">
@@ -1135,6 +1316,7 @@ const AppLayout = () => {
                 )}
               </div>
             )}
+            </div>
           </div>
 
           {/* Right: Notifications & User Avatar */}
@@ -1290,25 +1472,39 @@ const AppLayout = () => {
           <div className="space-y-2">
             <Label htmlFor="feedback-screenshot" className="flex items-center gap-2">
               <ImagePlus className="h-4 w-4" />
-              Screenshot optional
+              Photos optional
             </Label>
             <input
               id="feedback-screenshot"
               type="file"
               accept=".png,.jpg,.jpeg,.webp"
+              multiple
               className="block w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground file:border-0 file:bg-transparent file:text-primary"
-              onChange={(event) => setFeedbackScreenshot(event.target.files?.[0] || null)}
+              onChange={(event) => setFeedbackScreenshots(Array.from(event.target.files || []))}
               disabled={isFeedbackSubmitting}
             />
-            {feedbackScreenshot && (
-              <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-                <span className="min-w-0 truncate">{feedbackScreenshot.name}</span>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setFeedbackScreenshot(null)}>
-                  Remove
-                </Button>
+            {feedbackScreenshots.length > 0 && (
+              <div className="space-y-2">
+                {feedbackScreenshots.map((screenshot) => (
+                  <div key={`${screenshot.name}-${screenshot.lastModified}`} className="flex items-center justify-between gap-3 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                    <span className="min-w-0 truncate">{screenshot.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setFeedbackScreenshots((current) =>
+                          current.filter((item) => item.name !== screenshot.name || item.lastModified !== screenshot.lastModified)
+                        )
+                      }
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
-            <p className="text-xs text-muted-foreground">PNG, JPG, or WebP. Maximum 5MB.</p>
+            <p className="text-xs text-muted-foreground">PNG, JPG, or WebP. Maximum 5MB each.</p>
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button
