@@ -1,0 +1,31 @@
+{
+  "brand": "SportStack",
+  "colours": {
+    "navy": "#0F172A",
+    "green": "#16A34A",
+    "green_dark_mode": "#22C55E",
+    "yellow": "#FACC15",
+    "red": "#EF4444",
+    "blue": "#38BDF8",
+    "soft_white": "#F8FAFC",
+    "grey": "#E5E7EB",
+    "ink": "#334155",
+    "slate": "#94A3B8"
+  },
+  "card_meaning": {
+    "green": "warning",
+    "yellow": "suspension",
+    "red": "send-off"
+  },
+  "typography": {
+    "family": "Poppins",
+    "wordmark_weight": 800,
+    "heading_weight": 700,
+    "body_weight": 500
+  },
+  "wordmark": {
+    "sport": "#0F172A",
+    "stack": "#16A34A",
+    "note": "text exported as outlines in all image assets"
+  }
+}

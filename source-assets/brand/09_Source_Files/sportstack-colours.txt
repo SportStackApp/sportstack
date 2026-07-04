@@ -1,0 +1,11 @@
+SportStack colours
+------------------
+Navy      #0F172A
+Green     #16A34A (dark-mode #22C55E)
+Yellow    #FACC15
+Red       #EF4444
+Blue      #38BDF8
+Soft white#F8FAFC
+Grey      #E5E7EB
+Ink       #334155
+Slate     #94A3B8

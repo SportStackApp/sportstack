@@ -49,3 +49,6 @@ modules/
 # Supabase local CLI cache
 /supabase/.temp/
 /supabase/.temp_old/
+
+# Local font files - do not commit
+*.ttf

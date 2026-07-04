@@ -1,0 +1,7 @@
+Export settings
+---------------
+SVG: primary format, text converted to outlines.
+PNG: @1x/@2x, transparent where possible.
+App icons: full-bleed square PNG (OS applies corner mask).
+Favicon: 16/32/48 + .ico.
+Colour profile: sRGB.
