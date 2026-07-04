@@ -1,8 +1,9 @@
 # AGENTS.md
 
 Guidance for AI coding agents (OpenAI Codex, etc.) working in the **SportStack** repository.
-Read this file **and** `docs/project-brief.md` before doing anything. Fuller context lives in
-`TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` and `PROJECT_SCOPE_UI_UX_AND_IMPLEMENTATION_PLAN.md`.
+Read this file first, then `docs/current-state.md`, then `docs/project-brief.md` before doing anything.
+Fuller context lives in `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` and
+`PROJECT_SCOPE_UI_UX_AND_IMPLEMENTATION_PLAN.md`.
 
 ## Project overview
 SportStack is a private React + TypeScript + Vite SPA (Tailwind + shadcn/ui) with a Supabase
@@ -12,6 +13,18 @@ stages it in `revsports_*` tables, maps it via `revsports_*_mappings`, and impor
 tables (`fixtures`, `teams`, `profiles`, ...). Supabase project: `svierarfcolhcfjpmwck`
 (**one project for dev AND prod — treat all data as real**). The **live DB schema is the source
 of truth**; migration files may have drifted.
+
+## Source of truth order
+1. `AGENTS.md`
+2. `docs/current-state.md`
+3. `CODEX_HANDOFF.md`
+4. `docs/project-brief.md`
+5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md`
+6. `PROJECT_SCOPE_UI_UX_AND_IMPLEMENTATION_PLAN.md`
+7. Latest pull requests and commits
+8. Live Supabase check
+
+If this order conflicts with older documentation, use the newer/current source and mark anything uncertain as `UNKNOWN — needs confirmation`.
 
 ## Setup commands
 ```bash
@@ -42,7 +55,7 @@ There is no automated test suite yet. Do the relevant manual smoke test and say 
   anything that auto-deploys to `main`.
 - Never read, print, or expose `.env` / `.env.local` or the Supabase **service** key.
 - The frontend may only use the **anon/publishable** key. The service key is server/CI-only.
-- If a fact isn't in the handoff docs or the live DB, mark it `UNKNOWN — needs confirmation` and ask.
+- If a fact isn't in the handoff docs, latest repo history, or the live DB, mark it `UNKNOWN — needs confirmation` and ask.
 
 ## Files to avoid editing (unless explicitly asked)
 - `src/components/ui/*` (generated shadcn)
@@ -77,3 +90,4 @@ There is no automated test suite yet. Do the relevant manual smoke test and say 
 2. List of files changed.
 3. Exactly what the owner should test next.
 4. Risk level and whether a DB migration is included.
+5. Whether `docs/current-state.md` needs updating after the task.
