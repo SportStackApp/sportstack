@@ -1,4 +1,4 @@
-project_id = "hrfpejoyrtxrfemgchrx"
+project_id = "svierarfcolhcfjpmwck"
 
 [functions.create-player]
 verify_jwt = false
