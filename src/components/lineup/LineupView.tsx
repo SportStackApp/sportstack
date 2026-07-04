@@ -13,6 +13,7 @@ import {
   type FormationPositionRow,
   type FormationRow,
   formatOwnerScope,
+  getFormationFieldSource,
   preferenceScore,
 } from "@/lib/formationPlanner";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,20 @@ const MEMBERSHIP_ORDER: Record<string, number> = {
   PERMANENT: 1,
   FILL_IN: 2,
   SECONDARY: 3,
+};
+
+const EXPECTED_SCHEMA_ERROR_PATTERNS = [
+  "field_templates",
+  "field_template_id",
+  "could not find",
+  "does not exist",
+  "schema cache",
+  "relationship",
+];
+
+const isExpectedMissingSchemaError = (error?: { message?: string } | null) => {
+  const message = String(error?.message || "").toLowerCase();
+  return EXPECTED_SCHEMA_ERROR_PATTERNS.some((pattern) => message.includes(pattern));
 };
 
 export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = false }: LineupViewProps) => {
@@ -115,11 +130,41 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
     .filter(Boolean) as RosterPlayer[];
 
   const startersCount = Object.values(assignments).filter(Boolean).length;
+  const selectedFieldSource = getFormationFieldSource(selectedFormation);
+
+  const loadFormationRows = async () => {
+    const [fieldTemplateIdRes, fieldTemplatesRes] = await Promise.all([
+      supabase.from("formations").select("id, field_template_id").limit(1),
+      supabase.from("field_templates").select("id").limit(1),
+    ]);
+
+    const canUseLinkedFieldTemplates = !fieldTemplateIdRes.error && !fieldTemplatesRes.error;
+
+    if (canUseLinkedFieldTemplates) {
+      const linkedRes = await supabase
+        .from("formations")
+        .select("*, field_templates(*)")
+        .order("is_default", { ascending: false })
+        .order("name");
+
+      if (!linkedRes.error) return linkedRes;
+      if (!isExpectedMissingSchemaError(linkedRes.error)) {
+        toast.warning(`Field template data is unavailable: ${linkedRes.error.message}`);
+      }
+    } else {
+      if (fieldTemplateIdRes.error && !isExpectedMissingSchemaError(fieldTemplateIdRes.error)) {
+        toast.warning(`Field template links are unavailable: ${fieldTemplateIdRes.error.message}`);
+      }
+    }
+
+    return supabase.from("formations").select("*").order("is_default", { ascending: false }).order("name");
+  };
 
   const loadLineupData = async () => {
     setLoading(true);
+    const formationsPromise = loadFormationRows();
     const [formationsRes, iconsRes, rosterRes, availabilityRes, prefsRes, lineupRes] = await Promise.all([
-      supabase.from("formations").select("*").order("is_default", { ascending: false }).order("name"),
+      formationsPromise,
       supabase.from("formation_icons").select("*").order("name"),
       supabase
         .from("team_memberships")
@@ -474,7 +519,7 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
             </div>
           )}
 
-          <HockeyPitch backgroundUrl={selectedFormation?.background_image_url}>
+          <HockeyPitch backgroundUrl={selectedFieldSource.background_image_url}>
             {positions.map((position) => {
               const player = roster.find((item) => item.id === assignments[position.id]);
               const icon = icons.find((item) => item.id === position.icon_id);

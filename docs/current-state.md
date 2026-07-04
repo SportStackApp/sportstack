@@ -79,26 +79,35 @@ Date: 2026-07-04
 
 What changed:
 
-- Added this current-state handoff file.
-- Updated agent/human start instructions to read this file before older handoff documents.
+- Formation Builder Phase 1 field-template compatibility support was added without applying migrations or changing live Supabase data.
+- Existing formations still fall back to legacy pitch/grid/boundary fields when `field_templates` is unavailable.
+- Formation Builder reliability was improved: safer position saves, stable position edit keys, hidden formation recovery, whole-tile library clicks, save validation, and stable default seeding.
+- Formation Builder library safety was improved: real delete button, delete confirmation, fixture-line-up usage block before delete, clearer hide/unhide controls, and unsaved-change protection before switching formations or starting a new draft.
+- App version bumped to `v2026.07.04.2123`.
 
 Files changed:
 
+- `src/lib/formationPlanner.ts`
+- `src/pages/coaching/FormationBuilder.tsx`
+- `src/components/lineup/LineupView.tsx`
+- `src/lib/appVersion.ts`
 - `docs/current-state.md`
-- `AGENTS.md`
-- `README.md`
 
 Checks run:
 
-- Documentation-only change. No build, lint, or type check required.
+- `npx tsc --noEmit` passed.
+- Focused ESLint passed with existing React hook dependency warnings only.
+- `npm run build` passed.
+- Browser smoke check confirmed `/coaching/formations` loads and the Delete confirmation dialog renders.
 
 What Aaron should test next:
 
-- Ask Codex to read `AGENTS.md` and `docs/current-state.md` first, then confirm it understands the current source-of-truth order before doing code work.
+- Aaron confirmed the Formation Builder reliability and library-safety block passed manual testing.
+- Next test block should focus on the remaining pitch/position controls: position movement/editing, icon sizing, pitch zoom, and orientation controls.
 
 Risk level:
 
-- Low. Documentation-only. No app code, database, secrets, migrations, workflows, or deployment config changed.
+- Medium. App-code only. No database migration, no live Supabase data changes, no generated Supabase type edits, no feedback items closed.
 
 ## How to update this file
 

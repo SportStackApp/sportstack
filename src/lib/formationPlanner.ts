@@ -1,5 +1,27 @@
 export type FormationOwnerScope = "SUPER_ADMIN" | "ASSOCIATION" | "CLUB" | "TEAM";
 
+export type FieldTemplateRow = {
+  id: string;
+  name: string;
+  code: string | null;
+  sport: string;
+  owner_scope: FormationOwnerScope;
+  association_id: string | null;
+  club_id: string | null;
+  team_id: string | null;
+  background_image_url: string | null;
+  grid_rows: number;
+  grid_columns: number;
+  pitch_boundary_x?: number;
+  pitch_boundary_y?: number;
+  pitch_boundary_width?: number;
+  pitch_boundary_height?: number;
+  default_icon_id: string | null;
+  position_icon_size: number;
+  is_active: boolean;
+  created_by: string | null;
+};
+
 export type FormationRow = {
   id: string;
   name: string;
@@ -17,6 +39,9 @@ export type FormationRow = {
   pitch_boundary_y?: number;
   pitch_boundary_width?: number;
   pitch_boundary_height?: number;
+  field_template_id?: string | null;
+  position_icon_size?: number | null;
+  field_templates?: FieldTemplateRow | FieldTemplateRow[] | null;
   created_by: string | null;
 };
 
@@ -57,6 +82,8 @@ export const DEFAULT_BOUNDARY: BoundaryBox = {
   height: 84,
 };
 
+export const DEFAULT_POSITION_ICON_SIZE = 40;
+
 export const DEFAULT_FORMATION_POSITIONS = [
   { code: "GK", name: "Goalkeeper", grid_x: 1, grid_y: 5, zone: "goalkeeper" },
   { code: "LB", name: "Left Back", grid_x: 4, grid_y: 2, zone: "defence" },
@@ -86,7 +113,51 @@ export function gridToPercent(
   };
 }
 
-export function normaliseBoundary(row?: Partial<FormationRow> | null): BoundaryBox {
+type FieldSourceLike = Partial<Pick<
+  FormationRow | FieldTemplateRow,
+  "pitch_boundary_x" | "pitch_boundary_y" | "pitch_boundary_width" | "pitch_boundary_height"
+>>;
+
+export type FormationFieldSource = FieldSourceLike & {
+  id?: string | null;
+  name?: string | null;
+  code?: string | null;
+  background_image_url?: string | null;
+  grid_rows?: number | null;
+  grid_columns?: number | null;
+  default_icon_id?: string | null;
+  position_icon_size?: number | null;
+};
+
+function getLinkedFieldTemplate(formation?: Partial<FormationRow> | null) {
+  const fieldTemplate = formation?.field_templates;
+  if (Array.isArray(fieldTemplate)) return fieldTemplate[0] || null;
+  return fieldTemplate || null;
+}
+
+export function getFieldTemplateFallbackFromFormation(formation: Partial<FormationRow>): FormationFieldSource {
+  return {
+    id: formation.field_template_id || formation.id || null,
+    name: formation.name || null,
+    code: formation.code || null,
+    background_image_url: formation.background_image_url || null,
+    grid_rows: formation.grid_rows ?? 10,
+    grid_columns: formation.grid_columns ?? 14,
+    pitch_boundary_x: formation.pitch_boundary_x ?? DEFAULT_BOUNDARY.x,
+    pitch_boundary_y: formation.pitch_boundary_y ?? DEFAULT_BOUNDARY.y,
+    pitch_boundary_width: formation.pitch_boundary_width ?? DEFAULT_BOUNDARY.width,
+    pitch_boundary_height: formation.pitch_boundary_height ?? DEFAULT_BOUNDARY.height,
+    default_icon_id: null,
+    position_icon_size: formation.position_icon_size ?? DEFAULT_POSITION_ICON_SIZE,
+  };
+}
+
+export function getFormationFieldSource(formation?: Partial<FormationRow> | null): FormationFieldSource {
+  if (!formation) return getFieldTemplateFallbackFromFormation({});
+  return getLinkedFieldTemplate(formation) || getFieldTemplateFallbackFromFormation(formation);
+}
+
+export function normaliseBoundary(row?: FieldSourceLike | null): BoundaryBox {
   return {
     x: Number(row?.pitch_boundary_x ?? DEFAULT_BOUNDARY.x),
     y: Number(row?.pitch_boundary_y ?? DEFAULT_BOUNDARY.y),
