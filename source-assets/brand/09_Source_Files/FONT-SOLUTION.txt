@@ -1,0 +1,5 @@
+Font solution
+-------------
+Wordmark font: Poppins ExtraBold (open-source, OFL).
+1) WEBSITE/APP: self-host the included Poppins .ttf files with @font-face so the site never depends on Google.
+2) IMAGE ASSETS: all text is exported as OUTLINES (vector shapes) so no font install is needed to view them.
