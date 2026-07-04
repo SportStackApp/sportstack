@@ -7,10 +7,14 @@ SportStack is a private React + TypeScript + Vite sports management app for club
 Read these documents before making changes:
 
 - [Agent instructions](AGENTS.md)
+- [Current state](docs/current-state.md)
+- [Codex handoff](CODEX_HANDOFF.md)
 - [Project brief](docs/project-brief.md)
 - [Technical specification and system handoff](TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md)
 - [Project scope, UI/UX, and implementation plan](PROJECT_SCOPE_UI_UX_AND_IMPLEMENTATION_PLAN.md)
 - [Codex handoff extras](CODEX_HANDOFF_EXTRAS.md)
+
+`docs/current-state.md` is the short, living status file. Update it after meaningful Codex tasks, pull requests, schema changes, deployments, or confirmed live-data checks.
 
 ## Local setup
 
@@ -58,7 +62,7 @@ There is no automated test suite yet. Perform the relevant manual smoke test for
 
 ## Future documentation
 
-Add these docs when they are created:
+Add or expand these docs as the project matures:
 
 - [Contributing guide](CONTRIBUTING.md)
 - [Testing guide](TESTING.md)
