@@ -1,5 +1,5 @@
 DATA QUALITY REPORT - Wimmera Hockey Association
-Generated: 2026-07-04T23:56:16.479402
+Generated: 2026-07-05T04:05:10.602116
 ------------------------------------------------------------
 Rows checked: 177
 Issues found: 0
