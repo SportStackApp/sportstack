@@ -24,7 +24,7 @@ import { getTeamDisplayName } from "@/lib/utils";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import type { Database } from "@/integrations/supabase/types";
 
-type Team = Database["public"]["Tables"]["teams"]["Row"] & { division_id?: string | null };
+type Team = Database["public"]["Tables"]["teams"]["Row"] & { division_id?: string | null; logo_url?: string | null };
 type Club = Database["public"]["Tables"]["clubs"]["Row"];
 type Association = Database["public"]["Tables"]["associations"]["Row"];
 type Venue = Database["public"]["Tables"]["venues"]["Row"];
@@ -35,6 +35,17 @@ interface Division {
   association_id: string;
   season_id: string | null;
 }
+
+type SupabaseQueryResult<T> = Promise<{ data: T[] | null; error: { message: string } | null }>;
+type UntypedSupabaseClient = {
+  from: (table: string) => {
+    select: (columns: string) => {
+      order: (column: string) => SupabaseQueryResult<Division>;
+    };
+  };
+};
+
+const untypedSupabase = supabase as unknown as UntypedSupabaseClient;
 
 const TeamsManagement = () => {
   const navigate = useNavigate();
@@ -71,7 +82,8 @@ const TeamsManagement = () => {
     division: "",
     division_id: "__none__",
     gender: "",
-    home_venue_id: "__none__"
+    home_venue_id: "__none__",
+    logo_url: ""
   });
   const [saving, setSaving] = useState(false);
 
@@ -87,7 +99,7 @@ const TeamsManagement = () => {
       supabase.from("clubs").select("*").order("name"),
       supabase.from("associations").select("*").order("name"),
       supabase.from("venues").select("*").order("name"),
-      supabase.from("divisions" as any).select("id, name, association_id, season_id").order("name"),
+      untypedSupabase.from("divisions").select("id, name, association_id, season_id").order("name"),
     ]);
 
     if (clubsRes.error) toast({ title: "Error", description: "Failed to load clubs", variant: "destructive" });
@@ -98,7 +110,7 @@ const TeamsManagement = () => {
     const allClubs = clubsRes.data || [];
     const allAssociations = associationsRes.data || [];
     const allVenues = venuesRes.data || [];
-    const allDivisions = (divisionsRes.data as any) || [];
+    const allDivisions = divisionsRes.data || [];
 
     setClubs(allClubs);
     setAssociations(allAssociations);
@@ -204,7 +216,8 @@ const TeamsManagement = () => {
         division: team.division || "",
         division_id: team.division_id || "__none__",
         gender: team.gender || "",
-        home_venue_id: team.home_venue_id || "__none__"
+        home_venue_id: team.home_venue_id || "__none__",
+        logo_url: team.logo_url || ""
       });
     } else {
       setEditingTeam(null);
@@ -217,7 +230,8 @@ const TeamsManagement = () => {
         division: "",
         division_id: "__none__",
         gender: "",
-        home_venue_id: "__none__"
+        home_venue_id: "__none__",
+        logo_url: ""
       });
     }
     setDialogOpen(true);
@@ -248,7 +262,8 @@ const TeamsManagement = () => {
       division: formData.division.trim() || null,
       division_id: formData.division_id,
       gender: formData.gender || null,
-      home_venue_id: formData.home_venue_id === "__none__" ? null : formData.home_venue_id
+      home_venue_id: formData.home_venue_id === "__none__" ? null : formData.home_venue_id,
+      logo_url: formData.logo_url.trim() || null
     };
 
     if (editingTeam) {
@@ -322,6 +337,22 @@ const TeamsManagement = () => {
                 <div className="space-y-2">
                   <Label>Name *</Label>
                   <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Team name" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Team logo URL</Label>
+                  <Input
+                    value={formData.logo_url}
+                    onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                    placeholder="https://..."
+                  />
+                  {formData.logo_url.trim() && (
+                    <div className="flex items-center gap-3 rounded-md border bg-muted/30 p-3">
+                      <img src={formData.logo_url.trim()} alt="" className="h-12 w-12 rounded-full object-cover" />
+                      <p className="text-xs text-muted-foreground">
+                        This logo is used on team scoreboards when available.
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Age Group</Label>
@@ -484,6 +515,7 @@ const TeamsManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Logo</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Club</TableHead>
                   <TableHead>Division</TableHead>
@@ -498,6 +530,15 @@ const TeamsManagement = () => {
                   const divName = divisions.find((d) => d.id === team.division_id)?.name || team.division || "-";
                   return (
                     <TableRow key={team.id}>
+                      <TableCell>
+                        {team.logo_url ? (
+                          <img src={team.logo_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                            {team.name.slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">
                         <Link to={`/teams/${team.id}`} className="hover:underline text-primary">
                           {getTeamDisplayName(team)}

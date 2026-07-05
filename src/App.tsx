@@ -20,6 +20,8 @@ import Chat from "./pages/Chat";
 import CoachingSquad from "./pages/coaching/CoachingSquad";
 import CoachingPlayerProfile from "./pages/coaching/CoachingPlayerProfile";
 import FormationBuilder from "./pages/coaching/FormationBuilder";
+import FormationLibrary from "./pages/coaching/FormationLibrary";
+import TemplateBuilder from "./pages/coaching/TemplateBuilder";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import VotingPortal from "./pages/VotingPortal";
@@ -103,7 +105,9 @@ const App = () => (
                       <Route path="/games/:id/lineup" element={<Lineup />} />
                       <Route path="/roster" element={<Roster />} />
                       <Route path="/coaching" element={<CoachingSquad />} />
-                      <Route path="/coaching/formations" element={<FormationBuilder />} />
+                      <Route path="/coaching/formations" element={<FormationLibrary />} />
+                      <Route path="/coaching/formations/builder" element={<FormationBuilder />} />
+                      <Route path="/coaching/formations/templates/builder" element={<TemplateBuilder />} />
                       <Route path="/coaching/:playerId" element={<CoachingPlayerProfile />} />
                       <Route path="/chat" element={<Chat />} />
                       <Route path="/umpire/vote" element={<UmpireVoteSubmit />} />

@@ -5,6 +5,7 @@ interface HockeyPitchProps {
   children: React.ReactNode;
   className?: string;
   backgroundUrl?: string | null;
+  orientation?: "landscape" | "portrait";
 }
 
 // Field dimensions within the SVG viewBox (0 0 1000 620)
@@ -29,7 +30,7 @@ const DOT_ARC_RADIUS = 130;
 const GOAL_W = 20;
 const GOAL_H = 40;
 
-export const HockeyPitch = ({ children, className, backgroundUrl }: HockeyPitchProps) => {
+export const HockeyPitch = ({ children, className, backgroundUrl, orientation = "landscape" }: HockeyPitchProps) => {
   // Build tick marks along all four sides
   const ticks: React.ReactNode[] = [];
   const TICK_LEN = 6;
@@ -69,12 +70,12 @@ export const HockeyPitch = ({ children, className, backgroundUrl }: HockeyPitchP
         "relative w-full mx-auto rounded-xl overflow-hidden",
         className
       )}
-      style={{ aspectRatio: "1000 / 620" }}
+      style={{ aspectRatio: orientation === "portrait" ? "620 / 1000" : "1000 / 620" }}
     >
       {/* Field background image */}
       <img
         src={backgroundUrl || fieldBg}
-        alt="Hockey pitch"
+        alt="Playing surface"
         className="absolute inset-0 w-full h-full object-cover"
       />
 
