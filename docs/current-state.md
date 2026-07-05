@@ -79,6 +79,59 @@ Date: 2026-07-05
 
 What changed:
 
+- Local branch `feat/mvp-voting-email-reminders` adds the MVP voting email reminder backend pieces.
+- Added a new Supabase Edge Function `mvp-voting-email-reminders`.
+- The function can send:
+  - an opening email when a voting session is open,
+  - a 3-day reminder at 6:00pm Australia/Melbourne time based on `closes_at`,
+  - a 24-hour reminder based on `closes_at`,
+  - a manual resend to non-voters from the admin detail screen.
+- Reminder recipients are the current login-based eligible voter set: attended `revsports_players` rows with linked `profile_id`, excluding submitted voters in `mvp_vote_submissions`.
+- Added a local migration for `mvp_voting_email_events` tracking plus a Supabase Cron job that calls the Edge Function every 15 minutes.
+- The admin MVP Voting "Resend to Non-Voters" button now calls the Edge Function instead of showing the old mock message.
+- Review follow-up: scheduled emails now claim a `sending` row before calling Resend, so repeated or overlapping cron runs cannot send the same opening/3-day/24-hour email twice.
+- Review follow-up: the 3-day reminder no longer skips itself when it is close to the opening email; it remains 3 calendar days before `closes_at` at 6:00pm Australia/Melbourne time.
+- Review follow-up: the RLS policy avoids enum-name drift by checking `ur.role::text = 'ASSOCIATION_ADMIN'`.
+
+Files changed:
+
+- `src/pages/admin/MvpVotingAdmin.tsx`
+- `supabase/config.toml`
+- `supabase/functions/mvp-voting-email-reminders/index.ts`
+- `supabase/migrations/20260705174040_mvp_voting_email_reminders.sql`
+- `docs/current-state.md`
+
+Checks run:
+
+- `npx tsc --noEmit` passed.
+- `npm run build` passed.
+- Review follow-up checks: `npx tsc --noEmit` passed again and `npm run build` passed again.
+- `npx eslint src/pages/admin/MvpVotingAdmin.tsx` still fails on existing `no-explicit-any` errors and one existing hook-dependency warning in that file.
+- `deno check supabase/functions/mvp-voting-email-reminders/index.ts` could not run because Deno is not installed locally.
+
+What Aaron should test next:
+
+- Do not test live email sending until the Edge Function is deployed, the migration is applied, and the required secrets are set.
+- After live setup, open `/admin/mvp-voting`, open an `OPEN` session, and use "Resend to Non-Voters" on a small known session first.
+- Confirm the toast says how many emails were sent, skipped, and failed.
+
+Risk level:
+
+- High until live setup is reviewed. This includes a database migration, Supabase Cron, an Edge Function, and outbound email through Resend.
+- No live Supabase migration, Edge Function deploy, Cron activation, or secret changes have been applied by this local coding pass.
+
+Required live setup before release:
+
+- Set Edge Function secrets: `RESEND_API_KEY`, `MVP_REMINDER_FROM_EMAIL`, `SPORTSTACK_APP_URL`, and `SPORTSTACK_CRON_SECRET`.
+- Add the matching Supabase Vault secret named `mvp_reminder_cron_secret`.
+- Apply the migration and deploy the Edge Function only after a final review.
+
+### Previous handoff entry
+
+Date: 2026-07-05
+
+What changed:
+
 - Formation Library remains the front door for saved formations, templates, and assets.
 - `/coaching/formations` now opens the Formation Library; `/coaching/formations/builder` keeps the existing Formation Builder workbench.
 - `/coaching/formations/templates/builder` opens the new Template Builder for reusable surface/template setup.

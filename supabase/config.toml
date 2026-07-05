@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.save-pending-signup]
 verify_jwt = false
+
+[functions.mvp-voting-email-reminders]
+verify_jwt = false

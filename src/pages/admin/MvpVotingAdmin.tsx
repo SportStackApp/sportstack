@@ -543,12 +543,33 @@ export default function MvpVotingAdmin() {
     }
   };
 
-  // Action: Resend notification to non-voters (mock)
-  const handleResendToNonVoters = () => {
-    toast({
-      title: "Resend to Non-Voters",
-      description: "Email resend will be available once the email trigger is built",
-    });
+  // Action: Resend voting reminder to players who have not voted.
+  const handleResendToNonVoters = async () => {
+    if (!sessionDetails) return;
+    setActionLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("mvp-voting-email-reminders", {
+        body: {
+          action: "manual_resend",
+          session_id: sessionDetails.id,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Reminder sent",
+        description: `Sent ${data?.sent || 0} email(s). Skipped ${data?.skipped || 0}. Failed ${data?.failed || 0}.`,
+      });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Reminder failed",
+        description: err instanceof Error ? err.message : "The reminder email could not be sent.",
+      });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // Action: Cancel vote confirmation flow
