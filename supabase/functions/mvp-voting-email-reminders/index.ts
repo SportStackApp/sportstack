@@ -38,6 +38,18 @@ type Profile = {
 const MELBOURNE_TZ = "Australia/Melbourne";
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const ADMIN_ROLES = ["SUPER_ADMIN", "ASSOCIATION_ADMIN"];
+const EMAIL_SEND_DELAY_MS = 750;
+const RATE_LIMIT_RETRY_DELAYS_MS = [1500, 3000];
+
+class EmailSendError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "EmailSendError";
+    this.status = status;
+  }
+}
 
 const jsonResponse = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -48,6 +60,8 @@ const jsonResponse = (body: Record<string, unknown>, status = 200) =>
 const getEnv = (name: string) => Deno.env.get(name)?.trim() || "";
 
 const normaliseSiteUrl = () => (getEnv("SPORTSTACK_APP_URL") || "https://sportstackapp.com").replace(/\/$/, "");
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function getZonedParts(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-AU", {
@@ -209,7 +223,11 @@ async function loadSessions(serviceClient: ReturnType<typeof createClient>, acti
   return (data || []) as MvpSession[];
 }
 
-async function loadNonVoters(serviceClient: ReturnType<typeof createClient>, session: MvpSession) {
+async function loadNonVoters(
+  serviceClient: ReturnType<typeof createClient>,
+  session: MvpSession,
+  targetProfileId?: string,
+) {
   if (!session.fixture_id) return [];
 
   const [playersRes, submissionsRes] = await Promise.all([
@@ -228,11 +246,14 @@ async function loadNonVoters(serviceClient: ReturnType<typeof createClient>, ses
   if (playersRes.error) throw playersRes.error;
   if (submissionsRes.error) throw submissionsRes.error;
 
-  const submittedProfileIds = new Set((submissionsRes.data || []).map((row: any) => row.voter_profile_id));
+  const submittedProfileIds = new Set(
+    ((submissionsRes.data || []) as { voter_profile_id: string | null }[]).map((row) => row.voter_profile_id),
+  );
   const seen = new Set<string>();
 
   return ((playersRes.data || []) as EligiblePlayer[])
     .filter((player) => player.profile_id && (player.team === null || player.team === "Grampians Hockey Club"))
+    .filter((player) => !targetProfileId || player.profile_id === targetProfileId)
     .filter((player) => {
       if (!player.profile_id || submittedProfileIds.has(player.profile_id) || seen.has(player.profile_id)) return false;
       seen.add(player.profile_id);
@@ -355,7 +376,21 @@ async function sendEmail(email: string, subject: string, html: string) {
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `Resend returned ${response.status}`);
+    throw new EmailSendError(text || `Resend returned ${response.status}`, response.status);
+  }
+}
+
+async function sendEmailWithRetry(email: string, subject: string, html: string) {
+  for (let attempt = 0; attempt <= RATE_LIMIT_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      await sendEmail(email, subject, html);
+      return;
+    } catch (error) {
+      const isRateLimit = error instanceof EmailSendError && error.status === 429;
+      const canRetry = attempt < RATE_LIMIT_RETRY_DELAYS_MS.length;
+      if (!isRateLimit || !canRetry) throw error;
+      await sleep(RATE_LIMIT_RETRY_DELAYS_MS[attempt]);
+    }
   }
 }
 
@@ -381,12 +416,18 @@ function buildEmailHtml(session: MvpSession, eventType: ReminderEvent, recipient
   `;
 }
 
-async function sendForEvent(serviceClient: ReturnType<typeof createClient>, session: MvpSession, eventType: ReminderEvent) {
-  const nonVoters = await loadNonVoters(serviceClient, session);
+async function sendForEvent(
+  serviceClient: ReturnType<typeof createClient>,
+  session: MvpSession,
+  eventType: ReminderEvent,
+  targetProfileId?: string,
+) {
+  const nonVoters = await loadNonVoters(serviceClient, session, targetProfileId);
   const profiles = await loadProfiles(serviceClient, nonVoters.map((player) => player.profile_id!).filter(Boolean));
   let sent = 0;
   let skipped = 0;
   let failed = 0;
+  let sendAttempts = 0;
 
   for (const player of nonVoters) {
     const profileId = player.profile_id!;
@@ -410,8 +451,12 @@ async function sendForEvent(serviceClient: ReturnType<typeof createClient>, sess
     }
 
     try {
+      if (sendAttempts > 0) {
+        await sleep(EMAIL_SEND_DELAY_MS);
+      }
+      sendAttempts += 1;
       const name = profileName(profiles.get(profileId), player.player_name);
-      await sendEmail(email, `${eventTitle(eventType)} - ${sessionTitle(session)}`, buildEmailHtml(session, eventType, name));
+      await sendEmailWithRetry(email, `${eventTitle(eventType)} - ${sessionTitle(session)}`, buildEmailHtml(session, eventType, name));
       if (eventType === "manual_resend") {
         await recordEvent(serviceClient, session.id, profileId, eventType, email, "sent");
       } else {
@@ -448,7 +493,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: auth.error }, auth.status);
     }
 
-    const payload = (await req.json().catch(() => ({}))) as { action?: ReminderAction; session_id?: string };
+    const payload = (await req.json().catch(() => ({}))) as { action?: ReminderAction; session_id?: string; profile_id?: string };
     const action = payload.action || "scheduled";
     const eventFilter = action === "scheduled" ? null : action;
     const sessions = await loadSessions(serviceClient, action, payload.session_id);
@@ -462,7 +507,7 @@ Deno.serve(async (req) => {
 
       for (const eventType of eventTypes) {
         if (!shouldSendEvent(session, eventType, now)) continue;
-        const result = await sendForEvent(serviceClient, session, eventType);
+        const result = await sendForEvent(serviceClient, session, eventType, payload.profile_id);
         totals.sessions += 1;
         totals.sent += result.sent;
         totals.skipped += result.skipped;

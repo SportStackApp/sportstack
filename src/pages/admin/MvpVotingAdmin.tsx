@@ -97,6 +97,7 @@ export default function MvpVotingAdmin() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCancelToken, setSelectedCancelToken] = useState<VoterStatus | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [rowActionLoading, setRowActionLoading] = useState<string | null>(null);
 
   const hasAccess = isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN";
 
@@ -572,7 +573,39 @@ export default function MvpVotingAdmin() {
     }
   };
 
-  // Action: Cancel vote confirmation flow
+  // Action: Resend voting reminder to one eligible player who has not voted.
+  const handleResendToVoter = async (voter: VoterStatus) => {
+    if (!sessionDetails) return;
+    setRowActionLoading(`resend-${voter.id}`);
+    try {
+      const { data, error } = await supabase.functions.invoke("mvp-voting-email-reminders", {
+        body: {
+          action: "manual_resend",
+          session_id: sessionDetails.id,
+          profile_id: voter.id,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Reminder sent",
+        description: `Sent ${data?.sent || 0} email(s). Skipped ${data?.skipped || 0}. Failed ${data?.failed || 0}.`,
+      });
+
+      await loadSessionDetails(sessionDetails.id);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Reminder failed",
+        description: err instanceof Error ? err.message : "The reminder email could not be sent.",
+      });
+    } finally {
+      setRowActionLoading(null);
+    }
+  };
+
+  // Action: Withdraw a submitted vote so the player can vote again.
   const handleCancelVoteConfirm = async () => {
     if (!selectedCancelToken || !sessionDetails) return;
     setActionLoading(true);
@@ -601,17 +634,17 @@ export default function MvpVotingAdmin() {
       const { error: auditErr } = await supabase
         .from("mvp_vote_audit")
         .insert({
-          action: "CANCEL_VOTE",
+          action: "WITHDRAW_VOTE",
           session_id: sessionDetails.id,
           changed_by: user?.id,
-          reason: "Admin cancelled vote for resubmission",
+          reason: "Admin withdrew vote for resubmission",
         });
 
       if (auditErr) throw auditErr;
 
       toast({
-        title: "Vote Cancelled",
-        description: `Successfully cancelled vote for ${selectedCancelToken.player_name}.`,
+        title: "Vote Withdrawn",
+        description: `${selectedCancelToken.player_name} can now submit their vote again.`,
       });
 
       setDialogOpen(false);
@@ -1107,7 +1140,7 @@ export default function MvpVotingAdmin() {
                     <CardTitle className="text-base font-bold flex items-center gap-2">
                       <Users className="h-4 w-4 text-primary" /> Voter Status
                     </CardTitle>
-                    <CardDescription>Check status of individual player links</CardDescription>
+                    <CardDescription>Check who has voted and resend one reminder at a time</CardDescription>
                   </CardHeader>
                   <CardContent className="p-0">
                     {voters.length === 0 ? (
@@ -1139,21 +1172,40 @@ export default function MvpVotingAdmin() {
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
-                                {voter.voted_at && (
+                                <div className="flex justify-end gap-2">
+                                {voter.voted_at ? (
                                   <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="sm"
                                     onClick={() => {
                                       setSelectedCancelToken(voter);
                                       setDialogOpen(true);
                                     }}
-                                    disabled={actionLoading}
-                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    title="Cancel Vote"
+                                    disabled={actionLoading || rowActionLoading !== null}
+                                    className="h-8 gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    title="Withdraw vote"
                                   >
-                                    <XCircle className="h-4.5 w-4.5" />
+                                    <XCircle className="h-4 w-4" />
+                                    Withdraw
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleResendToVoter(voter)}
+                                    disabled={actionLoading || rowActionLoading !== null || sessionDetails.status !== "OPEN"}
+                                    className="h-8 gap-2"
+                                    title="Resend reminder to this player"
+                                  >
+                                    {rowActionLoading === `resend-${voter.id}` ? (
+                                      <RefreshCw className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Mail className="h-4 w-4" />
+                                    )}
+                                    Resend
                                   </Button>
                                 )}
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -1194,15 +1246,15 @@ export default function MvpVotingAdmin() {
         </div>
       )}
 
-      {/* CONFIRMATION DIALOG FOR CANCELLING VOTE */}
+      {/* CONFIRMATION DIALOG FOR WITHDRAWING VOTE */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
-              <XCircle className="h-5 w-5" /> Cancel Player Vote
+              <XCircle className="h-5 w-5" /> Withdraw Player Vote
             </DialogTitle>
             <DialogDescription className="pt-2 text-foreground font-medium">
-              Are you sure you want to cancel {selectedCancelToken?.player_name}'s vote? They will be able to resubmit.
+              Are you sure you want to withdraw {selectedCancelToken?.player_name}'s vote? They will be able to submit it again.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0 mt-4">
@@ -1223,7 +1275,7 @@ export default function MvpVotingAdmin() {
               className="gap-2"
             >
               {actionLoading && <RefreshCw className="h-4 w-4 animate-spin" />}
-              Confirm
+              Withdraw Vote
             </Button>
           </DialogFooter>
         </DialogContent>

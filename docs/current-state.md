@@ -79,6 +79,80 @@ Date: 2026-07-05
 
 What changed:
 
+- Local MVP voting admin follow-up fixes were added but not deployed live yet.
+- Pending voters now have a per-person "Resend" button in the Voter Status table.
+- The per-person resend calls `mvp-voting-email-reminders` with `session_id` and `profile_id`; the Edge Function still checks server-side that the profile is eligible and has not voted.
+- Submitted voters now show a clearer "Withdraw" action. It uses the existing vote-withdraw flow: delete that voter's vote rows, delete their submission row, and write an `mvp_vote_audit` entry.
+- The Edge Function now throttles email sends and retries Resend `429` rate-limit responses before recording a failure.
+- No database migration was added for these fixes.
+- No live Edge Function redeploy or Vercel deploy has been done for these local fixes yet.
+
+Files changed:
+
+- `src/pages/admin/MvpVotingAdmin.tsx`
+- `supabase/functions/mvp-voting-email-reminders/index.ts`
+- `docs/current-state.md`
+
+Checks run:
+
+- `npx tsc --noEmit` passed.
+- `npm run build` passed.
+- `npx eslint supabase/functions/mvp-voting-email-reminders/index.ts` passed.
+- `npx eslint src/pages/admin/MvpVotingAdmin.tsx` still fails on pre-existing `no-explicit-any` issues and one pre-existing hook dependency warning in that file.
+
+What Aaron should test next:
+
+- After deploy, open `/admin/mvp-voting`, open one session, and confirm pending voters show a per-person "Resend" button.
+- Click one pending voter's "Resend" button and confirm only one email event is created for that profile.
+- Confirm submitted voters show "Withdraw", then withdraw one known test vote and confirm that voter moves back to pending.
+
+Risk level:
+
+- Medium. This changes live email send behaviour once the Edge Function is redeployed and changes the admin UI once the app is deployed.
+- No schema migration is included.
+
+### Previous handoff entry
+
+Date: 2026-07-05
+
+What changed:
+
+- Live Supabase Step 1 for MVP voting email reminders was completed.
+- Deployed the `mvp-voting-email-reminders` Edge Function to project `svierarfcolhcfjpmwck`; it is active with `verify_jwt = false` because the function performs its own admin/cron authentication.
+- Applied the live migration recorded by Supabase as `20260705091329_mvp_voting_email_reminders`.
+- Live now has `public.mvp_voting_email_events`, RLS enabled, the scheduled-event duplicate-protection index, `pg_cron`, `pg_net`, `supabase_vault`, and an active cron job named `mvp-voting-email-reminders` running every 15 minutes.
+- Verification after deployment showed `mvp_voting_email_events` had 0 rows, so no reminder email events had been recorded by the setup step.
+- The Vault secret `mvp_reminder_cron_secret` was not present after Step 1.
+- The local Supabase CLI account returned 403 for listing Functions and Secrets, so Edge Function secrets still need to be set or verified from a Supabase account with enough project privileges.
+
+Files changed:
+
+- `docs/current-state.md`
+
+Checks run:
+
+- Live Supabase migration list confirmed the migration is recorded.
+- Live Supabase Edge Function list confirmed `mvp-voting-email-reminders` is active.
+- Live SQL confirmed the email events table, cron/net/vault extensions, and active cron job exist.
+- Live SQL confirmed the email events table had 0 rows immediately after setup.
+
+What Aaron should test next:
+
+- Do not click "Resend to Non-Voters" yet.
+- Set or verify the remaining live secrets first: `RESEND_API_KEY`, `MVP_REMINDER_FROM_EMAIL`, `SPORTSTACK_APP_URL`, `SPORTSTACK_CRON_SECRET`, and matching Vault secret `mvp_reminder_cron_secret`.
+- After secrets are confirmed, test on one small known MVP voting session before relying on scheduled reminders.
+
+Risk level:
+
+- Medium-high until secrets are configured and a small live send is tested.
+- Cron is active, but it should fail closed until the cron secret matches and Resend secrets are present.
+
+### Previous handoff entry
+
+Date: 2026-07-05
+
+What changed:
+
 - Local branch `feat/mvp-voting-email-reminders` adds the MVP voting email reminder backend pieces.
 - Added a new Supabase Edge Function `mvp-voting-email-reminders`.
 - The function can send:
