@@ -4,7 +4,7 @@
 # Scrapes the season-wide Team Statistics page for every configured
 # association/competition and writes results to revsports_player_registry.
 #
-# Also saves a CSV backup to data/player-registry/ in the repo.
+# Also uploads CSV backups from data/player-registry/ to Supabase Storage.
 #
 # Uses Playwright (headless Chromium) because the stats page loads
 # player data via JavaScript — plain requests can't see it.
@@ -27,7 +27,7 @@ jobs:
   scrape-registry:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     # Force GitHub Actions to use Node.js 24 (required after June 2026 deprecation)
     env:
@@ -55,11 +55,11 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python scraper/player_registry_scraper.py
 
-      - name: Commit results
+      - name: Upload backup to Supabase Storage
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/
-          git diff --cached --quiet || git commit -m "scrape(registry): $(date '+%Y-%m-%d %H:%M') AEST"
-          git pull --rebase -X theirs
-          git push
+          python scripts/upload_scrape_backups_to_storage.py \
+            --source-dir data/player-registry \
+            --source-name player-registry

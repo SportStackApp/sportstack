@@ -75,6 +75,46 @@ After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
 
+Date: 2026-07-06
+
+What changed:
+
+- Scrape backup workflow output was moved away from Git commits and into Supabase Storage.
+- Added a helper script that uploads `.csv`, `.json`, and `.txt` scraper backup files to a private Supabase Storage bucket named `scrape-backups`.
+- The helper creates the bucket if it does not already exist.
+- The five scrape workflows now use read-only repository permissions and upload backup files after each scrape instead of running `git add`, `git commit`, and `git push`.
+- This should stop scheduled scrape output from repeatedly moving `main` ahead of `dev`.
+- No app UI code was changed.
+- No database migration was added.
+
+Files changed:
+
+- `.github/workflows/player-history.yml`
+- `.github/workflows/player-registry.yml`
+- `.github/workflows/scrape-hb.yml`
+- `.github/workflows/scrape-sunraysia.yml`
+- `.github/workflows/scrape-wha.yml`
+- `scripts/upload_scrape_backups_to_storage.py`
+- `docs/current-state.md`
+
+Checks run:
+
+- `python -m py_compile scripts/upload_scrape_backups_to_storage.py` passed.
+- Searched workflows and confirmed the scrape workflows no longer contain `git add`, `git commit`, `git push`, or `contents: write`.
+
+What Aaron should test next:
+
+- After this is pushed, manually run one small scraper workflow from GitHub Actions.
+- Confirm the workflow uploads files into Supabase Storage bucket `scrape-backups`.
+- Confirm the workflow does not create a new `scrape(...)` commit on `main`.
+
+Risk level:
+
+- Medium. This changes GitHub Actions behaviour and will create/use a private Supabase Storage bucket during the next scraper run.
+- No schema migration is included.
+
+### Previous handoff entry
+
 Date: 2026-07-05
 
 What changed:

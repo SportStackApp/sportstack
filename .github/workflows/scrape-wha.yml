@@ -4,7 +4,7 @@
 # Scrapes fixture and result data from RevSports.
 # Player data is login-protected on WHA — fixture/result data only.
 # Can write directly to Supabase (revsports_players table) when enabled.
-# Also saves a CSV backup to the /data folder in the repo.
+# Also uploads CSV backups from the /data folder to Supabase Storage.
 #
 # Schedule (AEST = UTC+10):
 #   Daily       — 2am AEST every day
@@ -76,7 +76,7 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     # Force GitHub Actions to use Node.js 24 (required after June 2026 deprecation)
     env:
@@ -110,20 +110,14 @@ jobs:
           ONLY_TEAM:            ${{ github.event.inputs.only_team   || '' }}
         run: python scraper/scraper.py
 
-      - name: Commit results
+      - name: Upload backup to Supabase Storage
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add -A data/wimmera
-
-          if git diff --cached --quiet; then
-            echo "No data/wimmera changes to commit."
-          else
-            git commit -m "scrape(wha): latest output"
-            git pull --rebase -X theirs
-            git push
-          fi
+          python scripts/upload_scrape_backups_to_storage.py \
+            --source-dir data/wimmera \
+            --source-name wimmera
 
       - name: Run fixture import
         if: env.UPLOAD_TO_SUPABASE == 'true'

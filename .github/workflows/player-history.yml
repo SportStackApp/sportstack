@@ -4,7 +4,7 @@
 # Reads all players from revsports_player_registry in Supabase,
 # then visits each player's career history page on RevSports.
 #
-# Also saves a CSV backup to data/player-history/ in the repo.
+# Also uploads CSV backups from data/player-history/ to Supabase Storage.
 #
 # Uses Playwright (headless Chromium) because history pages are
 # JavaScript-rendered.
@@ -34,7 +34,7 @@ jobs:
   scrape-history:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     # Force GitHub Actions to use Node.js 24 (required after June 2026 deprecation)
     env:
@@ -62,11 +62,11 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python scraper/history_scraper.py
 
-      - name: Commit results
+      - name: Upload backup to Supabase Storage
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/
-          git diff --cached --quiet || git commit -m "scrape(history): $(date '+%Y-%m-%d %H:%M') AEST"
-          git pull --rebase -X theirs
-          git push
+          python scripts/upload_scrape_backups_to_storage.py \
+            --source-dir data/player-history \
+            --source-name player-history
