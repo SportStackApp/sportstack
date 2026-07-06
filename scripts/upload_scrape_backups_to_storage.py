@@ -37,7 +37,7 @@ def ensure_bucket(client, bucket_name: str) -> None:
         if "not found" not in message and "does not exist" not in message:
             raise
 
-    client.storage.create_bucket(bucket_name, {"public": False})
+    client.storage.create_bucket(bucket_name, bucket_name, {"public": False})
 
 
 def collect_files(source_dir: Path) -> list[Path]:
