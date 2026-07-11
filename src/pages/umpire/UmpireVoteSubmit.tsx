@@ -28,10 +28,16 @@ import {
   CheckCircle2,
   Trophy,
 } from "lucide-react";
+import {
+  getDefaultUmpireVoteScheme,
+  UMPIRE_VOTE_SCHEMES,
+  UmpireVoteSchemeKey,
+} from "@/lib/umpireVoteSchemes";
 
 type AppMode = "super_admin" | "association" | "club" | "team" | "player";
 
 interface VoteCard {
+  schemeLineKey: string;
   label: string;
   points: number;
   playerName: string;
@@ -95,6 +101,7 @@ export default function UmpireVoteSubmit() {
 
   // Step 2 - Vote cards state
   const [voteCards, setVoteCards] = useState<VoteCard[]>([]);
+  const [selectedSchemeKey, setSelectedSchemeKey] = useState<UmpireVoteSchemeKey>("classic_3_2_1");
 
   // Step 2 - Autocomplete player suggestions
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -406,30 +413,27 @@ export default function UmpireVoteSubmit() {
     }
   };
 
-  // Determine vote structure from division name
-  const initializeVoteCards = (divName: string) => {
-    const isJunior =
-      divName.includes("Under") ||
-      divName.includes("U11") ||
-      divName.includes("U14") ||
-      divName.includes("U16");
+  const buildVoteCards = (schemeKey: UmpireVoteSchemeKey): VoteCard[] => {
+    return UMPIRE_VOTE_SCHEMES[schemeKey].lines.map((line) => ({
+      schemeLineKey: line.key,
+      label: line.label,
+      points: line.points,
+      playerName: "",
+      playerNumber: "",
+      teamId: "",
+      badgeType: line.badgeType,
+    }));
+  };
 
-    if (isJunior) {
-      // 4 cards
-      setVoteCards([
-        { label: "Best Male", points: 2, playerName: "", playerNumber: "", teamId: "" },
-        { label: "Second Male", points: 1, playerName: "", playerNumber: "", teamId: "" },
-        { label: "Best Female", points: 2, playerName: "", playerNumber: "", teamId: "" },
-        { label: "Second Female", points: 1, playerName: "", playerNumber: "", teamId: "" },
-      ]);
-    } else {
-      // Senior (3 cards)
-      setVoteCards([
-        { label: "Best on Ground", points: 3, playerName: "", playerNumber: "", teamId: "", badgeType: "gold" },
-        { label: "Second Best", points: 2, playerName: "", playerNumber: "", teamId: "", badgeType: "silver" },
-        { label: "Third Best", points: 1, playerName: "", playerNumber: "", teamId: "", badgeType: "bronze" },
-      ]);
-    }
+  const initialiseVoteCards = (divName: string) => {
+    const scheme = getDefaultUmpireVoteScheme(divName);
+    setSelectedSchemeKey(scheme.key);
+    setVoteCards(buildVoteCards(scheme.key));
+  };
+
+  const handleSchemeChange = (schemeKey: UmpireVoteSchemeKey) => {
+    setSelectedSchemeKey(schemeKey);
+    setVoteCards(buildVoteCards(schemeKey));
   };
 
   // Navigation handlers
@@ -455,8 +459,7 @@ export default function UmpireVoteSubmit() {
       return;
     }
 
-    // Initialize Step 2 Cards based on selected division name
-    initializeVoteCards(selectedFixture.divisionName);
+    initialiseVoteCards(selectedFixture.divisionName);
     setStep(2);
   };
 
@@ -498,6 +501,7 @@ export default function UmpireVoteSubmit() {
     setSelectedDivisionId("");
     setSelectedFixtureId("");
     setSelectedFixture(null);
+    setSelectedSchemeKey("classic_3_2_1");
     setVoteCards([]);
     setSubmitSuccess(false);
     setSubmitError(null);
@@ -752,6 +756,10 @@ export default function UmpireVoteSubmit() {
 
                 {/* Match Selection Cascade */}
                 <div className="space-y-4 pt-2">
+                  <div className="rounded-lg border border-border/70 bg-muted/25 p-3 text-xs text-muted-foreground">
+                    Select in order. Each choice narrows the next list so umpires only see fixtures that match the selected round and division.
+                  </div>
+
                   {/* Association Select (only show if 2 or more available) */}
                   {userAssociations.length > 1 && (
                     <div className="space-y-2 animate-fade-in">
@@ -802,11 +810,15 @@ export default function UmpireVoteSubmit() {
                           <SelectValue placeholder={roundsLoading ? "Loading rounds..." : "Select Round"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {rounds.map((round) => (
-                            <SelectItem key={round} value={String(round)}>
-                              Round {round}
-                            </SelectItem>
-                          ))}
+                          {rounds.length === 0 ? (
+                            <SelectItem value="__none__" disabled>No rounds found</SelectItem>
+                          ) : (
+                            rounds.map((round) => (
+                              <SelectItem key={round} value={String(round)}>
+                                Round {round}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -830,11 +842,15 @@ export default function UmpireVoteSubmit() {
                           <SelectValue placeholder={divisionsLoading ? "Loading divisions..." : "Select Division"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {divisions.map((div) => (
-                            <SelectItem key={div.id} value={div.id}>
-                              {div.name}
-                            </SelectItem>
-                          ))}
+                          {divisions.length === 0 ? (
+                            <SelectItem value="__none__" disabled>No divisions found</SelectItem>
+                          ) : (
+                            divisions.map((div) => (
+                              <SelectItem key={div.id} value={div.id}>
+                                {div.name}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -855,13 +871,29 @@ export default function UmpireVoteSubmit() {
                           <SelectValue placeholder={fixturesLoading ? "Loading fixtures..." : "Select Fixture"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {fixtures.map((fix) => (
-                            <SelectItem key={fix.id} value={fix.id}>
-                              {fix.homeTeamName} vs {fix.awayTeamName}
-                            </SelectItem>
-                          ))}
+                          {fixtures.length === 0 ? (
+                            <SelectItem value="__none__" disabled>No fixtures found</SelectItem>
+                          ) : (
+                            fixtures.map((fix) => (
+                              <SelectItem key={fix.id} value={fix.id}>
+                                {fix.homeTeamName} vs {fix.awayTeamName}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+
+                  {selectedFixture && (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground">Selected fixture</p>
+                      <p className="mt-1 text-base font-semibold text-foreground">
+                        {selectedFixture.homeTeamName} vs {selectedFixture.awayTeamName}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Round {selectedFixture.round_number} - {selectedFixture.divisionName}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -906,6 +938,35 @@ export default function UmpireVoteSubmit() {
                   <span>
                     <strong>Round: </strong> {selectedFixture.round_number}
                   </span>
+                </div>
+
+                <div className="rounded-lg border border-border/70 p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Voting scheme</p>
+                      <p className="text-xs text-muted-foreground">
+                        Frontend-only for now. It controls the vote cards shown below and still saves to the existing vote line table.
+                      </p>
+                    </div>
+                    <Select
+                      value={selectedSchemeKey}
+                      onValueChange={(value) => handleSchemeChange(value as UmpireVoteSchemeKey)}
+                    >
+                      <SelectTrigger className="w-full md:w-64">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.values(UMPIRE_VOTE_SCHEMES).map((scheme) => (
+                          <SelectItem key={scheme.key} value={scheme.key}>
+                            {scheme.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {UMPIRE_VOTE_SCHEMES[selectedSchemeKey].description}
+                  </p>
                 </div>
 
                 {/* Cards rendering */}

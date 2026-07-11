@@ -7,7 +7,8 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8081,
-    allowedHosts: ["stout-hence-good.ngrok-free.dev"],
+    // allowedHosts = the web addresses Vite is willing to answer to
+    allowedHosts: ["stout-hence-good.ngrok-free.dev", ".barbi.beer"], // added ".barbi.beer" so ssdev.barbi.beer works
     hmr: {
       overlay: false,
     },
@@ -22,4 +23,3 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }));
-
