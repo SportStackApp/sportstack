@@ -22,6 +22,7 @@ import CoachingPlayerProfile from "./pages/coaching/CoachingPlayerProfile";
 import FormationBuilder from "./pages/coaching/FormationBuilder";
 import FormationLibrary from "./pages/coaching/FormationLibrary";
 import TemplateBuilder from "./pages/coaching/TemplateBuilder";
+import HockeyTraceLab from "./pages/coaching/HockeyTraceLab";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import VotingPortal from "./pages/VotingPortal";
@@ -53,6 +54,9 @@ import MvpVotingAdmin from "./pages/admin/MvpVotingAdmin";
 import Analytics from "./pages/admin/Analytics";
 import FeedbackResponses from "./pages/admin/FeedbackResponses";
 import RolesPermissions from "./pages/admin/RolesPermissions";
+import ModuleLayoutPreview from "./pages/admin/ModuleLayoutPreview";
+import SafetyRiskModule from "./pages/admin/SafetyRiskModule";
+import UmpireVotingModule from "./pages/admin/UmpireVotingModule";
 
 // Entity Dashboards
 import AssociationDashboard from "./pages/AssociationDashboard";
@@ -108,6 +112,7 @@ const App = () => (
                       <Route path="/coaching/formations" element={<FormationLibrary />} />
                       <Route path="/coaching/formations/builder" element={<FormationBuilder />} />
                       <Route path="/coaching/formations/templates/builder" element={<TemplateBuilder />} />
+                      <Route path="/coaching/trace" element={<HockeyTraceLab />} />
                       <Route path="/coaching/:playerId" element={<CoachingPlayerProfile />} />
                       <Route path="/chat" element={<Chat />} />
                       <Route path="/umpire/vote" element={<UmpireVoteSubmit />} />
@@ -136,8 +141,11 @@ const App = () => (
                       <Route path="/admin/venues" element={<VenuesManagement />} />
                       <Route path="/admin/requests" element={<Requests />} />
                       <Route path="/admin/mvp-voting" element={<MvpVotingAdmin />} />
+                      <Route path="/admin/umpire-voting" element={<UmpireVotingModule />} />
+                      <Route path="/admin/safety-risk" element={<SafetyRiskModule />} />
                       <Route path="/admin/analytics" element={<Analytics />} />
                       <Route path="/admin/roles-permissions" element={<RolesPermissions />} />
+                      <Route path="/admin/module-preview" element={<ModuleLayoutPreview />} />
 
                       {/* Entity Dashboards */}
                       <Route path="/associations/:id" element={<AssociationDashboard />} />

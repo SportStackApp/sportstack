@@ -75,6 +75,266 @@ After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
 
+Date: 2026-07-11
+
+What changed:
+
+- Added the next mock-only Safety Hub form prototype round.
+- The `/admin/safety-risk` Add record button now opens a prototype form menu for:
+  - Add Risk
+  - Add Action
+  - Add QI Item
+  - Submit Bright Idea
+  - Committee Bright Idea Review
+  - Record Risk Review
+- Added a five-step Add/Edit Risk wizard:
+  - Basics
+  - Risk Event
+  - Inherent Risk
+  - Controls & Residual Risk
+  - Treatment & Review
+- Added calculated inherent and residual ratings using the same 5 x 5 mock matrix shown on Matrix & Guidance.
+- Added Action, QI, Bright Idea, committee review, and risk review prototype forms.
+- Added linked-record form entry points from record drawers:
+  - Risk drawer can open Edit Risk, Add linked Action, Add linked QI, and Record Review.
+  - Action drawer can open Edit Action and Add linked QI.
+  - QI drawer can open Edit QI and Add linked Action.
+  - Bright Idea drawer can open Committee Review, linked QI, and linked Action flows.
+- Linked forms prefill visible record IDs, for example Add linked Action from `R-001` shows `R-001` as the risk link.
+- Added clear validation messages for required fields.
+- Added an unsaved-draft warning before closing a changed form.
+- Prototype saves validate locally and show a confirmation toast/banner only. They do not create, update, or delete live data.
+- No live Supabase data is read or written by these forms.
+- No migration was added or applied.
+
+Files changed:
+
+- `src/pages/admin/SafetyRiskModule.tsx`
+- `docs/current-state.md`
+
+Checks run:
+
+- `npx tsc --noEmit` passed.
+- `npx eslint src/pages/admin/SafetyRiskModule.tsx` passed.
+- `npm run build` passed.
+- Browser smoke check passed for `/admin/safety-risk`:
+  - Add record menu opened.
+  - Blank Action save showed validation messages.
+  - `R-001` drawer opened Add linked Action with `R-001` prefilled.
+  - Closing a changed form showed the unsaved-draft warning.
+- Browser console still showed the existing app-startup `claimPlaceholderProfile` Edge Function non-2xx error; this was not introduced by the Safety Hub page.
+- `npm run lint` still fails on existing unrelated lint issues across older `modules/*`, older admin/coaching files, Supabase function code, and `tailwind.config.ts`.
+
+What Aaron should test next:
+
+- Open `/admin/safety-risk`.
+- Click Add record and open each prototype form.
+- In Add Risk, step through all five wizard steps and check field names/order.
+- From `R-001`, open Add linked Action and confirm the risk link is obvious before saving.
+- From a QI row, open Add linked Action and confirm the QI link is obvious before saving.
+- From a Bright Idea row, open Committee Review and check the decision/conversion wording.
+- Type into any form, press Close, and confirm the unsaved-draft warning is clear.
+
+Risk level:
+
+- Low. UI prototype only.
+- No database migration, no RLS/auth change, no Edge Function change, no live data write, and no deployment action.
+
+### Previous handoff entry
+
+Date: 2026-07-11
+
+What changed:
+
+- Adjusted `/admin/safety-risk` back to the approved first-round Safety Hub approach: local mock UI only.
+- Removed direct Supabase reads and writes from the Safety Hub page for this prototype round.
+- Added the planned seven Safety Hub areas:
+  - Dashboard
+  - Risk Register
+  - Actions
+  - QI Register
+  - Bright Ideas
+  - Matrix & Guidance
+  - Audit History
+- Added representative mock records for risks, actions, QI items, Bright Ideas, audit events, and the 5 x 5 matrix.
+- Added dashboard KPI cards, alert chips, charts, compact register tables, filters, loading state, empty state, linked-record badges, and a right-side detail drawer.
+- Updated the admin navigation label to `Safety Hub` while keeping the existing `/admin/safety-risk` route.
+- The Add record button is visible but disabled until the next form-prototype package.
+- No live Supabase data is read or written by this page.
+- No migration was added or applied.
+
+Files changed:
+
+- `src/pages/admin/SafetyRiskModule.tsx`
+- `src/components/layout/AppLayout.tsx`
+- `docs/current-state.md`
+
+Checks run:
+
+- `npx tsc --noEmit` passed.
+- `npx eslint src/pages/admin/SafetyRiskModule.tsx` passed.
+- `npm run build` passed.
+- Browser smoke check passed for `/admin/safety-risk`: the page rendered, all seven tabs appeared, the Bright Ideas tab showed mock rows, and the `R-001` detail drawer opened.
+- Browser console showed an existing app-startup `claimPlaceholderProfile` Edge Function non-2xx error on reload; this was not introduced by the Safety Hub page.
+- `npm run lint` still fails on existing unrelated lint issues across older `modules/*`, older admin/coaching files, Supabase function code, and `tailwind.config.ts`.
+
+What Aaron should test next:
+
+- Open `/admin/safety-risk`.
+- Check each tab: Dashboard, Risk Register, Actions, QI Register, Bright Ideas, Matrix & Guidance, and Audit History.
+- Open a few rows and confirm the right-side detail drawer feels easier than a wide spreadsheet.
+- Check the risk table filters and search.
+- Confirm the sidebar/admin menu label now says `Safety Hub`.
+
+Risk level:
+
+- Low. UI prototype only.
+- No database migration, no RLS/auth change, no Edge Function change, no live data write, and no deployment action.
+
+### Previous handoff entry
+
+Date: 2026-07-07
+
+What changed:
+
+- Added first real SportStack integration surfaces for the Lovable-origin modules:
+  - `/admin/safety-risk`
+  - `/admin/umpire-voting`
+  - `/coaching/trace`
+- Safety/Risk merges Hockey Risk Guard and Hockey Safety Hub into one admin module.
+- Safety/Risk uses the existing live `rg_*` table shape rather than importing duplicate Lovable auth/layout/schema.
+- Umpire Voting removes Ballarat branding and uses the current SportStack umpire vote path: `player_vote_submissions` and `player_vote_lines`.
+- Umpire Voting adds admin review, approval/reopen actions, scoped filters, and a leaderboard.
+- Hockey Trace Lab is explicitly experimental and in-memory only. It supports CSV upload, demo replay, pitch path display, basic event detection, confidence filtering, and session stats.
+- Added a local draft migration for module feature flags and future Hockey Trace persistence.
+- The draft migration is additive only and does not create duplicate fixture, team, round, division, club, association, venue, or pitch tables.
+- No live migration was applied.
+- No Edge Function was deployed.
+- No destructive database action was taken.
+
+Files changed:
+
+- `src/App.tsx`
+- `src/components/layout/AppLayout.tsx`
+- `src/lib/tracePlayback.ts`
+- `src/pages/admin/SafetyRiskModule.tsx`
+- `src/pages/admin/UmpireVotingModule.tsx`
+- `src/pages/coaching/HockeyTraceLab.tsx`
+- `supabase/migrations/20260707120000_sportstack_modules_integration.sql`
+- `docs/current-state.md`
+
+Checks run:
+
+- Read-only live Supabase schema check confirmed existing SportStack `fixtures`, `teams`, `divisions`, `clubs`, `associations`, `venues`, `pitches`, `rg_*`, and umpire/player-vote tables.
+- `npx tsc --noEmit` passed.
+- Focused ESLint passed for the touched files.
+- `npm run build` passed.
+- Local HTTP route checks returned `200` for `/admin/safety-risk`, `/admin/umpire-voting`, and `/coaching/trace`.
+- Browser visual verification through the in-app browser timed out before returning page state.
+- `npm run lint` still fails on existing unrelated lint issues across old `modules/*`, older admin/coaching files, `src/pages/umpire/UmpireVoteSubmit.tsx`, Supabase function code, and `tailwind.config.ts`.
+
+What Aaron should test next:
+
+- Open `/admin/safety-risk` and check the Register, Actions, QI, Matrix, and Audit tabs.
+- Add one low-risk test risk only if you are happy to write to live `rg_risk_register`.
+- Open `/admin/umpire-voting`, filter by association/division, and check the review queue and leaderboard.
+- Do not approve or reopen real umpire submissions until you choose a safe test record.
+- Open `/coaching/trace`, upload a small CSV or use the demo replay, and check whether the pitch replay concept feels right.
+
+Risk level:
+
+- Medium. App-code changes plus one local draft migration.
+- The migration has not been applied and needs a Supabase RLS/security review before live use.
+
+### Previous handoff entry
+
+Date: 2026-07-07
+
+What changed:
+
+- Refined the protected module preview route at `/admin/module-preview`.
+- Removed Field Hockey Ace from the preview because the current SportStack formation/line-up work is already further along.
+- Added/expanded SportStack-style mock previews for the four current local modules:
+  - Hockey Risk Guard
+  - Hockey Safety Hub
+  - Ballarat Umpire Hub
+  - Hockey Trace Playback
+- Hockey Risk Guard now shows a denser risk register, action/QI board, and admin metrics.
+- Hockey Safety Hub now shows a simpler safety snapshot and fast-edit register.
+- Ballarat Umpire Hub now shows an umpire vote flow plus admin leaderboard/review surface.
+- Hockey Trace Playback now shows session upload, GPS/motion/heart-rate intake, pitch replay, sensor event detection, and confidence indicators.
+- All preview data is mock data only.
+- No database migration was added.
+- No live Supabase or deployment action was taken.
+
+Files changed:
+
+- `src/pages/admin/ModuleLayoutPreview.tsx`
+- `docs/current-state.md`
+
+Checks run:
+
+- `npx tsc --noEmit` passed.
+- `npm run build` passed.
+- Browser check passed at `/admin/module-preview`; all four tabs loaded and no horizontal page overflow was detected.
+- `npx eslint src/App.tsx src/pages/admin/ModuleLayoutPreview.tsx` passed.
+- `npm run lint` still fails on existing unrelated lint issues across older app files and local module folders, including the newly added `modules/Ballarat Umpire Hub` source.
+
+What Aaron should test next:
+
+- Open `/admin/module-preview`.
+- Click Risk Guard, Safety Hub, Umpire Hub, and Trace Playback.
+- Check which module feels closest to the eventual real SportStack workflow.
+- For Hockey Trace Playback, focus on whether the replay map, event list, and upload cards feel like the right early direction.
+
+Risk level:
+
+- Low. Local UI preview only.
+- No schema migration is included.
+
+### Previous handoff entry
+
+Date: 2026-07-06
+
+What changed:
+
+- Added a protected admin preview route for the Lovable-origin modules in `modules/`.
+- The preview is available at `/admin/module-preview`.
+- It uses mock data only and does not import the modules' separate Supabase clients, auth flows, or migrations.
+- The page shows preliminary SportStack-style layout previews for:
+  - Field Hockey Ace
+  - Hockey Risk Guard
+  - Hockey Safety Hub
+- No database migration was added.
+- No live Supabase or deployment action was taken.
+
+Files changed:
+
+- `src/App.tsx`
+- `src/pages/admin/ModuleLayoutPreview.tsx`
+- `docs/current-state.md`
+
+Checks run:
+
+- `npx tsc --noEmit` passed.
+- `npm run build` passed.
+- Browser check passed at `/admin/module-preview`; tabs loaded and the preview no longer had horizontal page overflow.
+- `npx eslint src/App.tsx src/pages/admin/ModuleLayoutPreview.tsx` passed.
+- `npm run lint` still fails on existing unrelated lint issues across older `modules/*`, older admin/coaching files, Supabase function code, and `tailwind.config.ts`.
+
+What Aaron should test next:
+
+- Open `/admin/module-preview`.
+- Click the Risk Guard, Safety Hub, and Field Ace tabs.
+- Check whether the Risk Guard dashboard/table layout or Field Ace pitch/preference idea is closest to what you want brought into the real SportStack app.
+
+Risk level:
+
+- Low. Local UI preview only.
+- No schema migration is included.
+
+### Previous handoff entry
+
 Date: 2026-07-06
 
 What changed:

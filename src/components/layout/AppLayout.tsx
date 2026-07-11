@@ -40,6 +40,8 @@ import {
   Layers,
   MessageSquare,
   ImagePlus,
+  ShieldCheck,
+  Radar,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -113,7 +115,15 @@ const ADMIN_DROPDOWN_SECTIONS: NavSection[] = [
     heading: "Voting",
     items: [
       { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
+      { path: "/admin/umpire-voting", label: "Umpire Voting", icon: Vote },
       { path: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    heading: "Modules",
+    items: [
+      { path: "/admin/safety-risk", label: "Safety Hub", icon: ShieldCheck },
+      { path: "/admin/module-preview", label: "Module Preview", icon: ImagePlus },
     ],
   },
 ];
@@ -132,7 +142,14 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "MVP Voting",
       items: [
         { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
+        { path: "/admin/umpire-voting", label: "Umpire Voting", icon: Vote },
         { path: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+      ],
+    },
+    {
+      heading: "Safety",
+      items: [
+        { path: "/admin/safety-risk", label: "Safety Hub", icon: ShieldCheck },
       ],
     },
     {
@@ -140,6 +157,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       items: [
         { path: "/coaching", label: "Squad", icon: ClipboardCheck },
         { path: "/coaching/formations", label: "Formations", icon: LayoutGrid },
+        { path: "/coaching/trace", label: "Trace Lab", icon: Radar },
         { path: "/roster", label: "Roster", icon: Users },
       ],
     },
@@ -175,7 +193,14 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "MVP Voting",
       items: [
         { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
+        { path: "/admin/umpire-voting", label: "Umpire Voting", icon: Vote },
         { path: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+      ],
+    },
+    {
+      heading: "Safety",
+      items: [
+        { path: "/admin/safety-risk", label: "Safety Hub", icon: ShieldCheck },
       ],
     },
     {
@@ -225,6 +250,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/roster", label: "Roster", icon: Users },
         { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
         { path: "/coaching/formations", label: "Formations", icon: LayoutGrid },
+        { path: "/coaching/trace", label: "Trace Lab", icon: Radar },
       ],
     },
   ],
