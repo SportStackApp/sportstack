@@ -29,6 +29,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AdminCascadeFilters } from "@/components/admin/AdminCascadeFilters";
+import {
+  ALL_CASCADE_VALUE,
+  emptyCascadeValue,
+  type CascadeValue,
+} from "@/lib/adminCascade";
 
 // Cast the Supabase client to `any` type to widen API support for these tables
 const supabase = originalSupabase as any;
@@ -39,7 +45,7 @@ export default function Analytics() {
   // 1. ACCESS CONTROL AND PERMISSIONS
   // Any user with administrative access (isAnyAdmin) is allowed on this page.
   // But individual votes are restricted to Super Admins and Association Admins.
-  const { loading: scopeLoading, isAnyAdmin, isSuperAdmin, highestScopedRole } = useAdminScope();
+  const { loading: scopeLoading, isAnyAdmin, isSuperAdmin, highestScopedRole, scopedAssociationIds } = useAdminScope();
 
   // Determine whether the current user has access to view the individual votes section
   const isPrivilegedAdmin = isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN";
@@ -52,7 +58,12 @@ export default function Analytics() {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [revsportsPlayers, setRevsportsPlayers] = useState<any[]>([]);
   const [eligibleVoters, setEligibleVoters] = useState<any[]>([]);
+  const [allAssociations, setAllAssociations] = useState<any[]>([]);
+  const [allClubs, setAllClubs] = useState<any[]>([]);
+  const [allDivisions, setAllDivisions] = useState<any[]>([]);
+  const [allTeams, setAllTeams] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [analyticsCascade, setAnalyticsCascade] = useState<CascadeValue>(emptyCascadeValue);
 
   // Filter States: Grade, Rounds (multi-select), Date Range, Voter, and Voted For
   const [selectedGrade, setSelectedGrade] = useState<string>("all");
@@ -79,10 +90,26 @@ export default function Analytics() {
   const loadData = async () => {
     setDataLoading(true);
     try {
+      const [assocRes, clubRes, divRes, teamRes] = await Promise.all([
+        supabase.from("associations").select("id, name").order("name"),
+        supabase.from("clubs").select("id, name, association_id").order("name"),
+        supabase.from("divisions").select("id, name, association_id").order("name"),
+        supabase.from("teams").select("id, name, club_id, division_id").order("name"),
+      ]);
+
+      if (assocRes.error) throw assocRes.error;
+      if (clubRes.error) throw clubRes.error;
+      if (divRes.error) throw divRes.error;
+      if (teamRes.error) throw teamRes.error;
+      setAllAssociations(assocRes.data || []);
+      setAllClubs(clubRes.data || []);
+      setAllDivisions(divRes.data || []);
+      setAllTeams(teamRes.data || []);
+
       // Step A: Load MVP Voting Sessions
       const { data: sessionsData, error: sessionsErr } = await supabase
         .from("mvp_voting_sessions")
-        .select("id, fixture_id, grade, round, game_date, home_team, away_team, status, opened_at, closes_at")
+        .select("id, fixture_id, grade, round, game_date, home_team, away_team, status, opened_at, closes_at, fixtures(id, division_id, home_team_id, away_team_id)")
         .order("game_date", { ascending: false });
 
       if (sessionsErr) throw sessionsErr;
@@ -187,6 +214,17 @@ export default function Analytics() {
     }
   }, [isAnyAdmin]);
 
+  useEffect(() => {
+    if (!isSuperAdmin && scopedAssociationIds.length === 1) {
+      setAnalyticsCascade({
+        associationId: scopedAssociationIds[0],
+        clubId: ALL_CASCADE_VALUE,
+        divisionId: ALL_CASCADE_VALUE,
+        teamId: ALL_CASCADE_VALUE,
+      });
+    }
+  }, [isSuperAdmin, scopedAssociationIds]);
+
   // 4. MAPS FOR SPEEDY CLIENT-SIDE LOOKUPS
   // We use ES6 Maps to quickly cross-reference related IDs without looping arrays repeatedly.
 
@@ -229,6 +267,53 @@ export default function Analytics() {
   // Helper function to resolve a voter's display name.
   const getVoterName = (voterProfileId: string) => {
     return profileNameMap.get(voterProfileId) || "Unknown Voter";
+  };
+
+  const teamById = useMemo(() => new Map(allTeams.map((team) => [team.id, team])), [allTeams]);
+  const clubById = useMemo(() => new Map(allClubs.map((club) => [club.id, club])), [allClubs]);
+
+  const getSessionFixture = (session: any) => {
+    const fixture = session.fixtures;
+    return Array.isArray(fixture) ? fixture[0] : fixture;
+  };
+
+  const sessionMatchesCascade = (session: any, cascade: CascadeValue) => {
+    if (
+      cascade.associationId === ALL_CASCADE_VALUE &&
+      cascade.clubId === ALL_CASCADE_VALUE &&
+      cascade.divisionId === ALL_CASCADE_VALUE &&
+      cascade.teamId === ALL_CASCADE_VALUE
+    ) {
+      return true;
+    }
+
+    const fixture = getSessionFixture(session);
+    if (!fixture) return false;
+
+    const fixtureTeamIds = [fixture.home_team_id, fixture.away_team_id].filter(Boolean);
+    const fixtureTeams = fixtureTeamIds.map((teamId) => teamById.get(teamId)).filter(Boolean);
+
+    if (cascade.associationId !== ALL_CASCADE_VALUE) {
+      const hasAssociation = fixtureTeams.some((team) => {
+        const club = clubById.get(team.club_id);
+        return club?.association_id === cascade.associationId;
+      });
+      if (!hasAssociation) return false;
+    }
+
+    if (cascade.clubId !== ALL_CASCADE_VALUE && !fixtureTeams.some((team) => team.club_id === cascade.clubId)) {
+      return false;
+    }
+
+    if (cascade.divisionId !== ALL_CASCADE_VALUE && fixture.division_id !== cascade.divisionId) {
+      return false;
+    }
+
+    if (cascade.teamId !== ALL_CASCADE_VALUE && !fixtureTeamIds.includes(cascade.teamId)) {
+      return false;
+    }
+
+    return true;
   };
 
   // 5. EXTRACTING UNIQUE SLICER VALUE ARRAYS
@@ -295,6 +380,9 @@ export default function Analytics() {
   // Combine all slicers to filter sessions first based on grade, round, date range.
   const filteredSessions = useMemo(() => {
     return sessions.filter((session) => {
+      if (!sessionMatchesCascade(session, analyticsCascade)) {
+        return false;
+      }
       // Filter by Grade
       if (selectedGrade !== "all" && session.grade !== selectedGrade) {
         return false;
@@ -313,7 +401,7 @@ export default function Analytics() {
       }
       return true;
     });
-  }, [sessions, selectedGrade, selectedRounds, startDate, endDate]);
+  }, [sessions, analyticsCascade, selectedGrade, selectedRounds, startDate, endDate, teamById, clubById]);
 
   // Optimize lookup of filtered session IDs using a Set
   const filteredSessionIds = useMemo(() => {
@@ -362,6 +450,9 @@ export default function Analytics() {
   // Separate filter logic for Individual Votes Log
   const logFilteredSessions = useMemo(() => {
     return sessions.filter((session) => {
+      if (!sessionMatchesCascade(session, analyticsCascade)) {
+        return false;
+      }
       if (logSelectedGrade !== "all" && session.grade !== logSelectedGrade) {
         return false;
       }
@@ -376,7 +467,7 @@ export default function Analytics() {
       }
       return true;
     });
-  }, [sessions, logSelectedGrade, logSelectedRounds, logStartDate, logEndDate]);
+  }, [sessions, analyticsCascade, logSelectedGrade, logSelectedRounds, logStartDate, logEndDate, teamById, clubById]);
 
   const logFilteredSessionIds = useMemo(() => {
     return new Set(logFilteredSessions.map((s) => s.id));
@@ -553,6 +644,12 @@ export default function Analytics() {
   };
 
   const handleResetFilters = () => {
+    setAnalyticsCascade(!isSuperAdmin && scopedAssociationIds.length === 1 ? {
+      associationId: scopedAssociationIds[0],
+      clubId: ALL_CASCADE_VALUE,
+      divisionId: ALL_CASCADE_VALUE,
+      teamId: ALL_CASCADE_VALUE,
+    } : emptyCascadeValue);
     setSelectedGrade("all");
     setSelectedRounds(["all"]);
     setStartDate("");
@@ -561,7 +658,12 @@ export default function Analytics() {
     setSelectedVotedFor("all");
   };
 
-  const hasActiveFilters = selectedGrade !== "all" || !selectedRounds.includes("all") || startDate || endDate || selectedVoter !== "all" || selectedVotedFor !== "all";
+  const cascadeHasActiveFilters =
+    (isSuperAdmin && analyticsCascade.associationId !== ALL_CASCADE_VALUE) ||
+    analyticsCascade.clubId !== ALL_CASCADE_VALUE ||
+    analyticsCascade.divisionId !== ALL_CASCADE_VALUE ||
+    analyticsCascade.teamId !== ALL_CASCADE_VALUE;
+  const hasActiveFilters = cascadeHasActiveFilters || selectedGrade !== "all" || !selectedRounds.includes("all") || startDate || endDate || selectedVoter !== "all" || selectedVotedFor !== "all";
 
   const handleLogRoundToggle = (round: string) => {
     if (round === "all") {
@@ -660,7 +762,19 @@ export default function Analytics() {
             <>
               {/* SECTION 1: SLICERS (FILTERS) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end bg-muted/30 p-4 rounded-xl border border-border shadow-sm">
-                
+                <AdminCascadeFilters
+                  associations={allAssociations}
+                  clubs={allClubs}
+                  divisions={allDivisions}
+                  teams={allTeams}
+                  value={analyticsCascade}
+                  onChange={setAnalyticsCascade}
+                  disabledAssociation={!isSuperAdmin}
+                  className="grid gap-4 sm:col-span-2 md:col-span-3 lg:col-span-6 lg:grid-cols-4"
+                  triggerClassName="bg-background"
+                  labelClassName="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                />
+
                 {/* Grade Filter Dropdown */}
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Grade</Label>

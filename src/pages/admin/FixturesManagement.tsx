@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useAdminScope } from "@/hooks/useAdminScope";
+import { AdminCascadeFilters } from "@/components/admin/AdminCascadeFilters";
+import {
+  ALL_CASCADE_VALUE,
+  emptyCascadeValue,
+  getCascadeOptions,
+  type CascadeValue,
+} from "@/lib/adminCascade";
 import * as XLSX from "xlsx";
 
 interface FixtureRow {
@@ -71,6 +78,20 @@ interface FixtureForm {
   notes: string;
 }
 
+interface FixtureTeam {
+  id: string;
+  name: string;
+  club_id: string;
+  division_id: string | null;
+  divisionName: string | null;
+  associationName: string | null;
+}
+
+interface FixtureTeamScope {
+  associationId: string;
+  divisionId: string;
+}
+
 const emptyForm: FixtureForm = {
   home_team_id: "",
   away_team_id: "",
@@ -83,6 +104,11 @@ const emptyForm: FixtureForm = {
   home_score: null,
   away_score: null,
   notes: "",
+};
+
+const emptyFixtureTeamScope: FixtureTeamScope = {
+  associationId: ALL_CASCADE_VALUE,
+  divisionId: ALL_CASCADE_VALUE,
 };
 
 const FIXTURE_SELECT =
@@ -119,8 +145,6 @@ const FixturesManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedFixture, setSelectedFixture] = useState<FixtureRow | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editAssociationId, setEditAssociationId] = useState<string>("");
-  const [editDivisionId, setEditDivisionId] = useState<string>("");
   const [editForm, setEditForm] = useState({
     date: "",
     time: "",
@@ -128,6 +152,7 @@ const FixturesManagement = () => {
     awayTeamId: "",
     round: "",
     venueId: "",
+    pitchId: "",
     status: "",
     homeScore: "",
     awayScore: "",
@@ -140,16 +165,17 @@ const FixturesManagement = () => {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState<FixtureForm>(emptyForm);
-  const [allAssocTeams, setAllAssocTeams] = useState<{ id: string; name: string; club_id: string; division_id: string | null; divisionName: string | null; associationName: string | null }[]>([]);
+  const [addTeamScope, setAddTeamScope] = useState<FixtureTeamScope>(emptyFixtureTeamScope);
+  const [editTeamScope, setEditTeamScope] = useState<FixtureTeamScope>(emptyFixtureTeamScope);
+  const [allAssocTeams, setAllAssocTeams] = useState<FixtureTeam[]>([]);
   const [allAssociations, setAllAssociations] = useState<{ id: string; name: string }[]>([]);
+  const [allClubs, setAllClubs] = useState<{ id: string; name: string; association_id: string }[]>([]);
   const [allDivisions, setAllDivisions] = useState<{ id: string; name: string; association_id: string }[]>([]);
   const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
   const [pitches, setPitches] = useState<{ id: string; name: string; venue_id: string }[]>([]);
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [filterRound, setFilterRound] = useState("");
-  const [filterAssociation, setFilterAssociation] = useState("ALL");
-  const [filterDivision, setFilterDivision] = useState("ALL");
-  const [filterTeam, setFilterTeam] = useState("ALL");
+  const [fixtureCascade, setFixtureCascade] = useState<CascadeValue>(emptyCascadeValue);
   const [assocTeamIds, setAssocTeamIds] = useState<string[]>([]);
 
   const teamIds = selectedTeamId
@@ -161,12 +187,13 @@ const FixturesManagement = () => {
   useEffect(() => {
     const loadRefData = async () => {
       if (!selectedAssociationId) {
-        const [venueRes, teamRes, pitchRes, divisionRes, associationRes] = await Promise.all([
+        const [venueRes, teamRes, pitchRes, divisionRes, associationRes, clubRes] = await Promise.all([
           supabase.from("venues").select("id, name").order("name"),
           (supabase.from("teams" as any).select("id, name, club_id, division_id, divisions(name, association_id, associations(name))") as any).order("name"),
           supabase.from("pitches").select("id, name, venue_id").order("name"),
           supabase.from("divisions" as any).select("id, name, association_id").order("name"),
           supabase.from("associations").select("id, name").order("name"),
+          supabase.from("clubs").select("id, name, association_id").order("name"),
         ]);
         setVenues(venueRes.data || []);
         setAllAssocTeams((teamRes.data || []).map((team: any) => ({
@@ -180,10 +207,11 @@ const FixturesManagement = () => {
         setPitches(pitchRes.data || []);
         setAllDivisions((divisionRes.data || []) as any);
         setAllAssociations(associationRes.data || []);
+        setAllClubs(clubRes.data || []);
         return;
       }
       const [clubRes, venueRes, divisionRes, associationRes] = await Promise.all([
-        supabase.from("clubs").select("id").eq("association_id", selectedAssociationId),
+        supabase.from("clubs").select("id, name, association_id").eq("association_id", selectedAssociationId).order("name"),
         supabase.from("venues").select("id, name").eq("association_id", selectedAssociationId).order("name"),
         supabase.from("divisions" as any).select("id, name, association_id").order("name"),
         supabase.from("associations").select("id, name").order("name"),
@@ -194,6 +222,7 @@ const FixturesManagement = () => {
       setVenues(loadedVenues);
       setAllDivisions((divisionRes.data || []) as any);
       setAllAssociations(associationRes.data || []);
+      setAllClubs((clubRes.data || []) as any);
 
       if (clubIds.length > 0) {
         const { data: teamData } = await (supabase.from("teams" as any).select("id, name, club_id, division_id, divisions(name, association_id, associations(name))").in("club_id", clubIds) as any).order("name");
@@ -271,16 +300,79 @@ const FixturesManagement = () => {
     fetchFixtures();
   }, [selectedAssociationId, selectedTeamId, scopedTeamIds.join(","), assocTeamIds.join(",")]);
 
+  const teamById = useMemo(
+    () => new Map(allAssocTeams.map((team) => [team.id, team])),
+    [allAssocTeams],
+  );
+
+  const clubById = useMemo(
+    () => new Map(allClubs.map((club) => [club.id, club])),
+    [allClubs],
+  );
+
+  const fixtureCascadeOptions = useMemo(
+    () =>
+      getCascadeOptions({
+        associations: allAssociations,
+        clubs: allClubs,
+        divisions: allDivisions,
+        teams: allAssocTeams,
+        value: fixtureCascade,
+      }),
+    [allAssociations, allClubs, allDivisions, allAssocTeams, fixtureCascade],
+  );
+
+  const getFixtureTeamScopeOptions = (scope: FixtureTeamScope) => {
+    const divisions =
+      scope.associationId === ALL_CASCADE_VALUE
+        ? []
+        : allDivisions.filter((division) => division.association_id === scope.associationId);
+
+    const teams =
+      scope.divisionId === ALL_CASCADE_VALUE
+        ? []
+        : allAssocTeams.filter((team) => {
+            if (team.division_id !== scope.divisionId) return false;
+            const club = clubById.get(team.club_id);
+            return scope.associationId === ALL_CASCADE_VALUE || club?.association_id === scope.associationId;
+          });
+
+    return { divisions, teams };
+  };
+
+  const addTeamScopeOptions = getFixtureTeamScopeOptions(addTeamScope);
+  const editTeamScopeOptions = getFixtureTeamScopeOptions(editTeamScope);
+
+  const getFixtureTeamLabel = (team: FixtureTeam | undefined, fallback = "Unknown") => {
+    if (!team) return fallback;
+    const club = clubById.get(team.club_id);
+    return [club?.name, team.name].filter(Boolean).join(" - ");
+  };
+
+  const getTeamLabel = (teamId: string | null | undefined, fallback = "BYE") => {
+    if (!teamId) return fallback;
+    return getFixtureTeamLabel(teamById.get(teamId), fallback);
+  };
+
+  const isTeamInFixtureScope = (teamId: string | null | undefined, scope: FixtureTeamScope) => {
+    if (!teamId) return true;
+    if (scope.associationId === ALL_CASCADE_VALUE || scope.divisionId === ALL_CASCADE_VALUE) return false;
+    const team = teamById.get(teamId);
+    if (!team || team.division_id !== scope.divisionId) return false;
+    const club = clubById.get(team.club_id);
+    return club?.association_id === scope.associationId;
+  };
+
   const handleExport = () => {
-    if (fixtures.length === 0) return;
-    const rows = fixtures.map((fixture) => {
+    if (displayFixtures.length === 0) return;
+    const rows = displayFixtures.map((fixture) => {
       const date = fixture.fixture_date ? new Date(fixture.fixture_date) : null;
       return {
         Date: date ? date.toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" }) : "",
         Day: date ? date.toLocaleDateString("en-AU", { weekday: "short" }) : "",
         Time: date ? date.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }) : "",
-        "Home Team": fixture.home_team?.name ?? "Unknown",
-        "Away Team": fixture.away_team?.name ?? "BYE",
+        "Home Team": getTeamLabel(fixture.home_team_id, fixture.home_team?.name ?? "Unknown"),
+        "Away Team": getTeamLabel(fixture.away_team_id, fixture.away_team?.name ?? "BYE"),
         Venue: fixture.venue?.name ?? "TBD",
         Round: fixture.round_number ?? "",
         Status: fixture.status,
@@ -293,14 +385,18 @@ const FixturesManagement = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Fixtures");
     XLSX.writeFile(wb, `fixtures-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
-    toast({ title: "Exported", description: `${fixtures.length} fixtures exported.` });
+    toast({ title: "Exported", description: `${displayFixtures.length} fixtures exported.` });
   };
 
   const openEdit = (fixture: FixtureRow) => {
     const homeTeam = allAssocTeams.find(t => t.id === fixture.home_team_id);
-    const division = allDivisions.find(d => d.id === homeTeam?.division_id);
-    setEditAssociationId(division?.association_id ?? "");
-    setEditDivisionId(homeTeam?.division_id ?? "");
+    const awayTeam = fixture.away_team_id ? allAssocTeams.find(t => t.id === fixture.away_team_id) : undefined;
+    const scopeTeam = homeTeam ?? awayTeam;
+    const club = scopeTeam ? clubById.get(scopeTeam.club_id) : undefined;
+    setEditTeamScope({
+      associationId: club?.association_id ?? ALL_CASCADE_VALUE,
+      divisionId: scopeTeam?.division_id ?? ALL_CASCADE_VALUE,
+    });
     
     const dateParts = splitDateTime(fixture.fixture_date);
     
@@ -311,6 +407,7 @@ const FixturesManagement = () => {
       awayTeamId: fixture.away_team_id ?? "",
       round: String(fixture.round_number ?? ""),
       venueId: fixture.venue_id ?? "",
+      pitchId: fixture.pitch_id ?? "",
       status: fixture.status ?? "SCHEDULED",
       homeScore: fixture.home_score !== null ? String(fixture.home_score) : "",
       awayScore: fixture.away_score !== null ? String(fixture.away_score) : "",
@@ -351,6 +448,17 @@ const FixturesManagement = () => {
       toast({ title: "Error", description: "Home team and date are required.", variant: "destructive" });
       return;
     }
+    if (
+      !isTeamInFixtureScope(editForm.homeTeamId, editTeamScope) ||
+      !isTeamInFixtureScope(editForm.awayTeamId, editTeamScope)
+    ) {
+      toast({
+        title: "Team mapping needs checking",
+        description: "Home and away teams must match the selected association and division.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const { error } = await supabase.from("fixtures").update({
       home_team_id: editForm.homeTeamId,
@@ -358,6 +466,7 @@ const FixturesManagement = () => {
       round_number: editForm.round ? parseInt(editForm.round, 10) : null,
       fixture_date: combineDateTime(editForm.date, editForm.time),
       venue_id: editForm.venueId || null,
+      pitch_id: editForm.pitchId || null,
       status: toDbStatus(editForm.status),
       home_score: editForm.homeScore ? parseInt(editForm.homeScore, 10) : null,
       away_score: editForm.awayScore ? parseInt(editForm.awayScore, 10) : null,
@@ -417,33 +526,85 @@ const FixturesManagement = () => {
     fetchFixtures();
   };
 
-  const divisionsForModal = editAssociationId
-    ? allDivisions.filter((d) => d.association_id === editAssociationId)
-    : allDivisions;
-
-  const teamsForModal = editDivisionId
-    ? allAssocTeams.filter((t) => t.division_id === editDivisionId)
-    : editAssociationId
-    ? allAssocTeams.filter((t) => {
-        const div = allDivisions.find((d) => d.id === t.division_id);
-        return div?.association_id === editAssociationId;
-      })
-    : allAssocTeams;
-
-  const renderTeamSelect = (value: string, onChange: (value: string) => void, placeholder: string, teamsList: typeof allAssocTeams, allowBye = false) => {
+  const renderTeamSelect = (
+    value: string,
+    onChange: (value: string) => void,
+    placeholder: string,
+    teamsList: FixtureTeam[],
+    allowBye = false,
+    disabled = false,
+  ) => {
     const selectValue = value === "" ? "__none__" : value || "__none__";
     return (
-      <Select value={selectValue} onValueChange={(value) => onChange(value === "__none__" ? "" : value)}>
-        <SelectTrigger className="h-9 text-sm w-full px-3"><SelectValue placeholder={placeholder} /></SelectTrigger>
+      <Select value={selectValue} onValueChange={(value) => onChange(value === "__none__" ? "" : value)} disabled={disabled}>
+        <SelectTrigger className="h-10 text-sm w-full min-w-0 overflow-hidden px-3"><SelectValue placeholder={placeholder} /></SelectTrigger>
         <SelectContent>
           <SelectItem value="__none__">{allowBye ? "BYE" : "None"}</SelectItem>
           {teamsList.map((team) => (
             <SelectItem key={team.id} value={team.id}>
-              {team.name}
+              {getFixtureTeamLabel(team)}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
+    );
+  };
+
+  const includeSelectedTeams = (teamsList: FixtureTeam[], selectedIds: string[]) => {
+    const optionIds = new Set(teamsList.map((team) => team.id));
+    const selectedTeams = selectedIds
+      .map((id) => teamById.get(id))
+      .filter((team): team is FixtureTeam => Boolean(team) && !optionIds.has(team.id));
+    return [...teamsList, ...selectedTeams];
+  };
+
+  const renderFixtureTeamScopeControls = (
+    scope: FixtureTeamScope,
+    onChange: (nextScope: FixtureTeamScope) => void,
+  ) => {
+    const options = getFixtureTeamScopeOptions(scope);
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Association</Label>
+          <Select
+            value={scope.associationId}
+            onValueChange={(associationId) => onChange({ associationId, divisionId: ALL_CASCADE_VALUE })}
+          >
+            <SelectTrigger className="h-10 w-full min-w-0 overflow-hidden px-3">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_CASCADE_VALUE}>All associations</SelectItem>
+              {allAssociations.map((association) => (
+                <SelectItem key={association.id} value={association.id}>
+                  {association.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Division</Label>
+          <Select
+            value={scope.divisionId}
+            onValueChange={(divisionId) => onChange({ ...scope, divisionId })}
+            disabled={scope.associationId === ALL_CASCADE_VALUE}
+          >
+            <SelectTrigger className="h-10 w-full min-w-0 overflow-hidden px-3">
+              <SelectValue placeholder={scope.associationId === ALL_CASCADE_VALUE ? "Select association first" : undefined} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_CASCADE_VALUE}>All divisions</SelectItem>
+              {options.divisions.map((division) => (
+                <SelectItem key={division.id} value={division.id}>
+                  {division.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
     );
   };
 
@@ -479,11 +640,23 @@ const FixturesManagement = () => {
   const displayFixtures = fixtures.filter((fixture) => {
     const matchesStatus = filterStatus === "ALL" || fixture.status === filterStatus;
     const matchesRound = !filterRound || fixture.round_number?.toString() === filterRound;
-    const homeTeamInfo = allAssocTeams.find((t) => t.id === fixture.home_team_id);
-    const matchesAssociation = filterAssociation === "ALL" || homeTeamInfo?.associationName === filterAssociation;
-    const matchesDivision = filterDivision === "ALL" || homeTeamInfo?.divisionName === filterDivision;
-    const matchesTeam = filterTeam === "ALL" || fixture.home_team_id === filterTeam || fixture.away_team_id === filterTeam;
-    return matchesStatus && matchesRound && matchesAssociation && matchesDivision && matchesTeam;
+    const homeTeamInfo = teamById.get(fixture.home_team_id);
+    const awayTeamInfo = fixture.away_team_id ? teamById.get(fixture.away_team_id) : null;
+    const fixtureTeams = [homeTeamInfo, awayTeamInfo].filter(Boolean) as FixtureTeam[];
+    const matchesAssociation =
+      fixtureCascade.associationId === ALL_CASCADE_VALUE ||
+      fixtureTeams.some((team) => clubById.get(team.club_id)?.association_id === fixtureCascade.associationId);
+    const matchesClub =
+      fixtureCascade.clubId === ALL_CASCADE_VALUE ||
+      fixtureTeams.some((team) => team.club_id === fixtureCascade.clubId);
+    const matchesDivision =
+      fixtureCascade.divisionId === ALL_CASCADE_VALUE ||
+      fixtureTeams.some((team) => team.division_id === fixtureCascade.divisionId);
+    const matchesTeam =
+      fixtureCascade.teamId === ALL_CASCADE_VALUE ||
+      fixture.home_team_id === fixtureCascade.teamId ||
+      fixture.away_team_id === fixtureCascade.teamId;
+    return matchesStatus && matchesRound && matchesAssociation && matchesClub && matchesDivision && matchesTeam;
   });
 
   return (
@@ -502,61 +675,35 @@ const FixturesManagement = () => {
             <Upload className="h-4 w-4" />
             Import
           </Button>
-          <Button variant="outline" onClick={handleExport} disabled={fixtures.length === 0} className="gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={displayFixtures.length === 0} className="gap-2">
             <Download className="h-4 w-4" />
-            Export ({fixtures.length})
+            Export ({displayFixtures.length})
           </Button>
-          <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
+          <Button
+            onClick={() => {
+              setAddTeamScope(emptyFixtureTeamScope);
+              setAddForm(emptyForm);
+              setAddDialogOpen(true);
+            }}
+            className="gap-2"
+          >
             <Plus className="h-4 w-4" />
             Add
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Label>Association:</Label>
-          <Select value={filterAssociation} onValueChange={(v) => { setFilterAssociation(v); setFilterDivision("ALL"); setFilterTeam("ALL"); }}>
-            <SelectTrigger className="w-48 min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All</SelectItem>
-              {allAssociations.map((a) => (
-                <SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label>Division:</Label>
-          <Select value={filterDivision} onValueChange={(v) => { setFilterDivision(v); setFilterTeam("ALL"); }}>
-            <SelectTrigger className="w-44 min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All</SelectItem>
-              {allDivisions
-                .filter((d) => filterAssociation === "ALL" || allAssociations.find((a) => a.name === filterAssociation)?.id === d.association_id)
-                .map((d) => (
-                  <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label>Team:</Label>
-          <Select value={filterTeam} onValueChange={setFilterTeam}>
-            <SelectTrigger className="w-40 min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All</SelectItem>
-              {allAssocTeams
-                .filter((t) =>
-                  (filterAssociation === "ALL" || t.associationName === filterAssociation) &&
-                  (filterDivision === "ALL" || t.divisionName === filterDivision)
-                )
-                .map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex flex-wrap items-end gap-4">
+        <AdminCascadeFilters
+          associations={fixtureCascadeOptions.associations}
+          clubs={allClubs}
+          divisions={allDivisions}
+          teams={allAssocTeams}
+          value={fixtureCascade}
+          onChange={setFixtureCascade}
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+          triggerClassName="w-48 min-w-0 overflow-hidden"
+        />
         <div className="flex items-center gap-2">
           <Label>Status:</Label>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -645,10 +792,10 @@ const FixturesManagement = () => {
                           {allAssocTeams.find((t) => t.id === fixture.home_team_id)?.divisionName ?? "-"}
                         </TableCell>
                         <TableCell>
-                          {fixture.home_team?.name ?? "Unknown"}
+                          {getTeamLabel(fixture.home_team_id, fixture.home_team?.name ?? "Unknown")}
                         </TableCell>
                         <TableCell>
-                          {fixture.away_team?.name ?? "BYE"}
+                          {getTeamLabel(fixture.away_team_id, fixture.away_team?.name ?? "BYE")}
                         </TableCell>
                         <TableCell>
                           {fixture.round_number ?? "-"}
@@ -701,14 +848,32 @@ const FixturesManagement = () => {
             <DialogDescription>Manually create a single fixture.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {renderFixtureTeamScopeControls(addTeamScope, (nextScope) => {
+              setAddTeamScope(nextScope);
+              setAddForm((form) => ({ ...form, home_team_id: "", away_team_id: "" }));
+            })}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Home Team *</Label>
-                {renderTeamSelect(addForm.home_team_id, (value) => setAddForm((form) => ({ ...form, home_team_id: value })), "Select home team", allAssocTeams)}
+                {renderTeamSelect(
+                  addForm.home_team_id,
+                  (value) => setAddForm((form) => ({ ...form, home_team_id: value })),
+                  addTeamScope.divisionId === ALL_CASCADE_VALUE ? "Select division first" : "Select home team",
+                  addTeamScopeOptions.teams,
+                  false,
+                  addTeamScope.divisionId === ALL_CASCADE_VALUE,
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Away Team</Label>
-                {renderTeamSelect(addForm.away_team_id, (value) => setAddForm((form) => ({ ...form, away_team_id: value })), "Select away team or BYE", allAssocTeams, true)}
+                {renderTeamSelect(
+                  addForm.away_team_id,
+                  (value) => setAddForm((form) => ({ ...form, away_team_id: value })),
+                  addTeamScope.divisionId === ALL_CASCADE_VALUE ? "Select division first" : "Select away team or BYE",
+                  addTeamScopeOptions.teams,
+                  true,
+                  addTeamScope.divisionId === ALL_CASCADE_VALUE,
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -758,20 +923,20 @@ const FixturesManagement = () => {
       </Dialog>
 
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Fixture</DialogTitle>
             <DialogDescription>Update fixture details.</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-3 gap-x-[10px] gap-y-3 py-2">
-            {/* Row 1 — Status and Association */}
-            <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-muted-foreground block mb-1">Status</Label>
+          <div className="grid grid-cols-1 gap-4 py-2 md:grid-cols-6">
+            {/* Row 5: status, score and source link */}
+            <div className="order-8 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-3">
+              <Label className="text-sm font-medium">Status</Label>
               <Select
                 value={editForm.status}
                 onValueChange={(value) => setEditForm((form) => ({ ...form, status: value }))}
               >
-                <SelectTrigger className="h-9 w-full px-3"><SelectValue placeholder="Select status" /></SelectTrigger>
+                <SelectTrigger className="h-10 w-full min-w-0 px-3"><SelectValue placeholder="Select status" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="SCHEDULED">Scheduled</SelectItem>
                   <SelectItem value="COMPLETED">Completed</SelectItem>
@@ -782,44 +947,30 @@ const FixturesManagement = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-2 space-y-1">
-              <Label className="text-[11px] font-medium text-muted-foreground block mb-1">Association</Label>
-              <Select
-                value={editAssociationId || "__none__"}
-                onValueChange={(value) => {
-                  const nextVal = value === "__none__" ? "" : value;
-                  setEditAssociationId(nextVal);
-                  setEditDivisionId("");
-                  setEditForm((form) => ({ ...form, homeTeamId: "", awayTeamId: "" }));
-                }}
-              >
-                <SelectTrigger className="h-9 w-full px-3"><SelectValue placeholder="All Associations" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">All Associations</SelectItem>
-                  {allAssociations.map((assoc) => (
-                    <SelectItem key={assoc.id} value={assoc.id}>{assoc.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="order-4 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-6">
+              {renderFixtureTeamScopeControls(editTeamScope, (nextScope) => {
+                setEditTeamScope(nextScope);
+                setEditForm((form) => ({ ...form, homeTeamId: "", awayTeamId: "" }));
+              })}
             </div>
 
-            {/* Row 2 — Round and Venue */}
-            <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-muted-foreground block mb-1">Round</Label>
+            {/* Row 1: round, date and time */}
+            <div className="order-1 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-2">
+              <Label className="text-sm font-medium">Round</Label>
               <Input
                 type="number"
                 value={editForm.round}
                 onChange={(e) => setEditForm((form) => ({ ...form, round: e.target.value }))}
-                className="h-9 w-full"
+                className="h-10 w-full"
               />
             </div>
-            <div className="col-span-2 space-y-1">
-              <Label className="text-[11px] font-medium text-muted-foreground block mb-1">Venue</Label>
+            <div className="order-5 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-3">
+              <Label className="text-sm font-medium">Venue</Label>
               <Select
                 value={editForm.venueId || "__none__"}
-                onValueChange={(value) => setEditForm((form) => ({ ...form, venueId: value === "__none__" ? "" : value }))}
+                onValueChange={(value) => setEditForm((form) => ({ ...form, venueId: value === "__none__" ? "" : value, pitchId: "" }))}
               >
-                <SelectTrigger className="h-9 w-full px-3"><SelectValue placeholder="Select venue" /></SelectTrigger>
+                <SelectTrigger className="h-10 w-full min-w-0 px-3"><SelectValue placeholder="Select venue" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">None</SelectItem>
                   {venues.map((venue) => (
@@ -828,103 +979,103 @@ const FixturesManagement = () => {
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Row 3 — Division, Home Team, Away Team */}
-            <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-muted-foreground block mb-1">Division</Label>
+            <div className="order-6 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-3">
+              <Label className="text-sm font-medium">Pitch</Label>
               <Select
-                value={editDivisionId || "__none__"}
-                onValueChange={(value) => {
-                  const nextVal = value === "__none__" ? "" : value;
-                  setEditDivisionId(nextVal);
-                  setEditForm((form) => ({ ...form, homeTeamId: "", awayTeamId: "" }));
-                }}
+                disabled={!editForm.venueId}
+                value={editForm.pitchId || "__none__"}
+                onValueChange={(value) => setEditForm((form) => ({ ...form, pitchId: value === "__none__" ? "" : value }))}
               >
-                <SelectTrigger className="h-9 w-full px-3"><SelectValue placeholder="All Divisions" /></SelectTrigger>
+                <SelectTrigger className="h-10 w-full min-w-0 px-3">
+                  <SelectValue placeholder="Select pitch" />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">All Divisions</SelectItem>
-                  {divisionsForModal.map((div) => (
-                    <SelectItem key={div.id} value={div.id}>{div.name}</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {pitches.filter((pitch) => pitch.venue_id === editForm.venueId).map((pitch) => (
+                    <SelectItem key={pitch.id} value={pitch.id}>{pitch.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-muted-foreground block mb-1">Home Team *</Label>
-              {renderTeamSelect(
-                editForm.homeTeamId,
-                (value) => setEditForm((form) => ({ ...form, homeTeamId: value })),
-                "Select home team",
-                teamsForModal
-              )}
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-muted-foreground block mb-1">Away Team</Label>
-              {renderTeamSelect(
-                editForm.awayTeamId,
-                (value) => setEditForm((form) => ({ ...form, awayTeamId: value })),
-                "Select away team or BYE",
-                teamsForModal,
-                true
-              )}
+
+            {/* Row 4: home and away teams */}
+            <div className="order-7 grid grid-cols-1 gap-3 rounded-lg border border-border bg-muted/10 p-4 sm:grid-cols-2 md:col-span-6">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Home Team *</Label>
+                {renderTeamSelect(
+                  editForm.homeTeamId,
+                  (value) => setEditForm((form) => ({ ...form, homeTeamId: value })),
+                  editTeamScope.divisionId === ALL_CASCADE_VALUE ? "Select division first" : "Select home team",
+                  includeSelectedTeams(editTeamScopeOptions.teams, [editForm.homeTeamId, editForm.awayTeamId]),
+                  false,
+                  editTeamScope.divisionId === ALL_CASCADE_VALUE,
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Away Team</Label>
+                {renderTeamSelect(
+                  editForm.awayTeamId,
+                  (value) => setEditForm((form) => ({ ...form, awayTeamId: value })),
+                  editTeamScope.divisionId === ALL_CASCADE_VALUE ? "Select division first" : "Select away team or BYE",
+                  includeSelectedTeams(editTeamScopeOptions.teams, [editForm.homeTeamId, editForm.awayTeamId]),
+                  true,
+                  editTeamScope.divisionId === ALL_CASCADE_VALUE,
+                )}
+              </div>
             </div>
 
-            {/* Row 4 — Date, Start Time, Score */}
-            <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-muted-foreground block mb-1">Date *</Label>
+            {/* Date and time stay ordered beside round on desktop. */}
+            <div className="order-2 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-2">
+              <Label className="text-sm font-medium">Date *</Label>
               <Input
                 type="date"
                 value={editForm.date}
                 onChange={(e) => setEditForm((form) => ({ ...form, date: e.target.value }))}
-                className="h-9 w-full"
+                className="h-10 w-full"
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-muted-foreground block mb-1">Start Time</Label>
+            <div className="order-3 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-2">
+              <Label className="text-sm font-medium">Start Time</Label>
               <Input
                 type="time"
                 value={editForm.time}
                 onChange={(e) => setEditForm((form) => ({ ...form, time: e.target.value }))}
-                className="h-9 w-full"
+                className="h-10 w-full"
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-muted-foreground block mb-1">Score</Label>
-              <div className="flex items-center gap-2 h-9">
+            <div className="order-9 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-3">
+              <Label className="text-sm font-medium">Score</Label>
+              <div className="flex h-10 items-center gap-2">
                 <Input
                   type="number"
                   value={editForm.homeScore}
                   onChange={(e) => setEditForm((form) => ({ ...form, homeScore: e.target.value }))}
-                  className="w-14 text-center h-9"
+                  className="h-10 w-20 text-center"
                 />
-                <span className="text-muted-foreground">—</span>
+                <span className="text-muted-foreground">-</span>
                 <Input
                   type="number"
                   value={editForm.awayScore}
                   onChange={(e) => setEditForm((form) => ({ ...form, awayScore: e.target.value }))}
-                  className="w-14 text-center h-9"
+                  className="h-10 w-20 text-center"
                 />
               </div>
-            </div>
-          </div>
-          <DialogFooter className="flex flex-row justify-between items-center w-full">
-            <div>
               {selectedFixture?.revsports_match_url && (
                 <a
                   href={selectedFixture.revsports_match_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:underline"
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline"
                 >
                   View on RevSports
                   <ExternalLink className="h-3 w-3" />
                 </a>
               )}
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleUpdateFixture}>Update</Button>
-            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateFixture}>Update</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

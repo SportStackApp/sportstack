@@ -20,6 +20,8 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle 
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AdminCascadeFilters } from "@/components/admin/AdminCascadeFilters";
+import { type CascadeValue } from "@/lib/adminCascade";
 
 // Widened Supabase client type for these custom MVP queries
 const supabase = originalSupabase as any;
@@ -131,54 +133,20 @@ export default function MvpVotingAdmin() {
     }
   }, [isSuperAdmin, scopedAssociationIds]);
 
-  // Cascading filter handlers
-  const handleAssociationChange = (val: string) => {
-    setFilterAssociation(val);
-    setFilterClub("ALL");
-    setFilterDivision("ALL");
-    setFilterTeam("ALL");
-    setCurrentPage(1);
+  const filterCascade: CascadeValue = {
+    associationId: filterAssociation,
+    clubId: filterClub,
+    divisionId: filterDivision,
+    teamId: filterTeam,
   };
 
-  const handleClubChange = (val: string) => {
-    setFilterClub(val);
-    setFilterDivision("ALL");
-    setFilterTeam("ALL");
+  const handleCascadeChange = (nextValue: CascadeValue) => {
+    setFilterAssociation(nextValue.associationId);
+    setFilterClub(nextValue.clubId);
+    setFilterDivision(nextValue.divisionId);
+    setFilterTeam(nextValue.teamId);
     setCurrentPage(1);
   };
-
-  const handleDivisionChange = (val: string) => {
-    setFilterDivision(val);
-    setFilterTeam("ALL");
-    setCurrentPage(1);
-  };
-
-  // Filter derivations
-  const filteredDivisions = allDivisions.filter((div) => {
-    if (filterAssociation !== "ALL" && div.association_id !== filterAssociation) {
-      return false;
-    }
-    if (filterClub !== "ALL") {
-      return allTeams.some((t) => t.club_id === filterClub && t.division_id === div.id);
-    }
-    return true;
-  });
-
-  const filteredTeams = allTeams.filter((team) => {
-    if (filterClub !== "ALL" && team.club_id !== filterClub) {
-      return false;
-    }
-    if (filterDivision !== "ALL" && team.division_id !== filterDivision) {
-      return false;
-    }
-    if (filterAssociation !== "ALL") {
-      const club = allClubs.find((c) => c.id === team.club_id);
-      if (!club || club.association_id !== filterAssociation) {
-        return false;
-      }
-    }
-    return true;
-  });
 
   // Load session list
   const loadSessions = async () => {
@@ -746,83 +714,18 @@ export default function MvpVotingAdmin() {
 
           {/* Filters UI */}
           <div className="flex flex-wrap items-center gap-4 bg-muted/20 p-4 rounded-lg border border-border">
-            {/* Association filter */}
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-semibold">Association:</Label>
-              <Select
-                disabled={!isSuperAdmin}
-                value={filterAssociation}
-                onValueChange={handleAssociationChange}
-              >
-                <SelectTrigger className="w-48 min-w-0 overflow-hidden h-9">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
-                  {allAssociations.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Club filter */}
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-semibold">Club:</Label>
-              <Select value={filterClub} onValueChange={handleClubChange}>
-                <SelectTrigger className="w-48 min-w-0 overflow-hidden h-9">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
-                  {allClubs
-                    .filter((c) => filterAssociation === "ALL" || c.association_id === filterAssociation)
-                    .map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Division filter */}
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-semibold">Division:</Label>
-              <Select value={filterDivision} onValueChange={handleDivisionChange}>
-                <SelectTrigger className="w-48 min-w-0 overflow-hidden h-9">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
-                  {filteredDivisions.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Team filter */}
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-semibold">Team:</Label>
-              <Select value={filterTeam} onValueChange={(v) => { setFilterTeam(v); setCurrentPage(1); }}>
-                <SelectTrigger className="w-48 min-w-0 overflow-hidden h-9">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
-                  {filteredTeams.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <AdminCascadeFilters
+              associations={allAssociations}
+              clubs={allClubs}
+              divisions={allDivisions}
+              teams={allTeams}
+              value={filterCascade}
+              onChange={handleCascadeChange}
+              disabledAssociation={!isSuperAdmin}
+              className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+              triggerClassName="w-48 min-w-0 overflow-hidden h-9"
+              labelClassName="text-sm font-semibold"
+            />
 
             {/* Status filter */}
             <div className="flex items-center gap-2">

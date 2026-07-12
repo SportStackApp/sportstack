@@ -38,6 +38,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase as originalSupabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useToast } from "@/hooks/use-toast";
+import { AdminCascadeFilters } from "@/components/admin/AdminCascadeFilters";
+import { getTeamCascadeLabel, type CascadeValue } from "@/lib/adminCascade";
 
 interface LooseQuery extends PromiseLike<{ data: unknown[] | null; error: { message: string } | null }> {
   select: (columns?: string, options?: unknown) => LooseQuery;
@@ -87,7 +89,25 @@ interface VoteLineRow {
 interface NamedRow {
   id: string;
   name: string;
-  association_id?: string | null;
+}
+
+interface ClubRow {
+  id: string;
+  name: string;
+  association_id: string;
+}
+
+interface DivisionRow {
+  id: string;
+  name: string;
+  association_id: string;
+}
+
+interface TeamRow {
+  id: string;
+  name: string;
+  club_id: string;
+  division_id: string | null;
 }
 
 interface LeaderboardRow {
@@ -120,11 +140,14 @@ export default function UmpireVotingModule() {
   const [voteLines, setVoteLines] = useState<VoteLineRow[]>([]);
   const [editHistory, setEditHistory] = useState<EditHistoryRow[]>([]);
   const [associations, setAssociations] = useState<NamedRow[]>([]);
-  const [divisions, setDivisions] = useState<NamedRow[]>([]);
-  const [teams, setTeams] = useState<NamedRow[]>([]);
+  const [clubs, setClubs] = useState<ClubRow[]>([]);
+  const [divisions, setDivisions] = useState<DivisionRow[]>([]);
+  const [teams, setTeams] = useState<TeamRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [associationFilter, setAssociationFilter] = useState("ALL");
+  const [clubFilter, setClubFilter] = useState("ALL");
   const [divisionFilter, setDivisionFilter] = useState("ALL");
+  const [teamFilter, setTeamFilter] = useState("ALL");
   const [roundFilter, setRoundFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState<"PENDING" | "APPROVED" | "DELETED" | "ALL">("PENDING");
   const [showDeleted, setShowDeleted] = useState(false);
@@ -135,7 +158,7 @@ export default function UmpireVotingModule() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [submissionRes, linesRes, assocRes, divRes, teamRes] = await Promise.all([
+      const [submissionRes, linesRes, assocRes, clubRes, divRes, teamRes] = await Promise.all([
         moduleSupabase
           .from("player_vote_submissions")
           .select("id, fixture_id, association_id, division_id, round_number, home_team_id, away_team_id, is_approved, is_locked, is_deleted, proxy_umpire_name, proxy_reason, submitted_by_admin_id, proxy_submitter_id, umpire_user_id, submitted_at")
@@ -143,21 +166,24 @@ export default function UmpireVotingModule() {
           .limit(250),
         moduleSupabase.from("player_vote_lines").select("id, submission_id, votes, player_name, player_number, team_id").limit(1000),
         moduleSupabase.from("associations").select("id, name").order("name"),
+        moduleSupabase.from("clubs").select("id, name, association_id").order("name"),
         moduleSupabase.from("divisions").select("id, name, association_id").order("name"),
-        moduleSupabase.from("teams").select("id, name").order("name"),
+        moduleSupabase.from("teams").select("id, name, club_id, division_id").order("name"),
       ]);
 
       if (submissionRes.error) throw submissionRes.error;
       if (linesRes.error) throw linesRes.error;
       if (assocRes.error) throw assocRes.error;
+      if (clubRes.error) throw clubRes.error;
       if (divRes.error) throw divRes.error;
       if (teamRes.error) throw teamRes.error;
 
       setSubmissions((submissionRes.data || []) as SubmissionRow[]);
       setVoteLines((linesRes.data || []) as VoteLineRow[]);
       setAssociations((assocRes.data || []) as NamedRow[]);
-      setDivisions((divRes.data || []) as NamedRow[]);
-      setTeams((teamRes.data || []) as NamedRow[]);
+      setClubs((clubRes.data || []) as ClubRow[]);
+      setDivisions((divRes.data || []) as DivisionRow[]);
+      setTeams((teamRes.data || []) as TeamRow[]);
 
       const editsRes = await moduleSupabase.from("player_vote_edits").select("*").limit(1000);
       setEditHistory(editsRes.error ? [] : ((editsRes.data || []) as EditHistoryRow[]));
@@ -182,7 +208,24 @@ export default function UmpireVotingModule() {
     }
   }, [isSuperAdmin, scopedAssociationIds]);
 
-  const teamNameMap = useMemo(() => new Map(teams.map((team) => [team.id, team.name])), [teams]);
+  const cascadeValue: CascadeValue = {
+    associationId: associationFilter,
+    clubId: clubFilter,
+    divisionId: divisionFilter,
+    teamId: teamFilter,
+  };
+
+  const handleCascadeChange = (nextValue: CascadeValue) => {
+    setAssociationFilter(nextValue.associationId);
+    setClubFilter(nextValue.clubId);
+    setDivisionFilter(nextValue.divisionId);
+    setTeamFilter(nextValue.teamId);
+  };
+
+  const teamNameMap = useMemo(
+    () => new Map(teams.map((team) => [team.id, getTeamCascadeLabel(team, clubs, divisions)])),
+    [teams, clubs, divisions],
+  );
   const divisionNameMap = useMemo(() => new Map(divisions.map((division) => [division.id, division.name])), [divisions]);
 
   const visibleSubmissions = useMemo(() => {
@@ -192,7 +235,13 @@ export default function UmpireVotingModule() {
         return false;
       }
       if (associationFilter !== "ALL" && submission.association_id !== associationFilter) return false;
+      if (clubFilter !== "ALL") {
+        const homeTeam = submission.home_team_id ? teams.find((team) => team.id === submission.home_team_id) : null;
+        const awayTeam = submission.away_team_id ? teams.find((team) => team.id === submission.away_team_id) : null;
+        if (homeTeam?.club_id !== clubFilter && awayTeam?.club_id !== clubFilter) return false;
+      }
       if (divisionFilter !== "ALL" && submission.division_id !== divisionFilter) return false;
+      if (teamFilter !== "ALL" && submission.home_team_id !== teamFilter && submission.away_team_id !== teamFilter) return false;
       if (roundFilter !== "ALL" && String(submission.round_number || "") !== roundFilter) return false;
       if (!showDeleted && submission.is_deleted) return false;
       if (statusFilter === "PENDING" && (submission.is_approved || submission.is_deleted)) return false;
@@ -223,7 +272,9 @@ export default function UmpireVotingModule() {
   }, [
     submissions,
     associationFilter,
+    clubFilter,
     divisionFilter,
+    teamFilter,
     roundFilter,
     statusFilter,
     showDeleted,
@@ -231,6 +282,7 @@ export default function UmpireVotingModule() {
     voteLines,
     divisionNameMap,
     teamNameMap,
+    teams,
     isSuperAdmin,
     scopedAssociationIds,
   ]);
@@ -393,18 +445,16 @@ export default function UmpireVotingModule() {
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Association</label>
-            <Select value={associationFilter} onValueChange={(value) => { setAssociationFilter(value); setDivisionFilter("ALL"); }}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All associations</SelectItem>
-                {associations.map((association) => (
-                  <SelectItem key={association.id} value={association.id}>{association.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <AdminCascadeFilters
+            associations={associations}
+            clubs={clubs}
+            divisions={divisions}
+            teams={teams}
+            value={cascadeValue}
+            onChange={handleCascadeChange}
+            disabledAssociation={!isSuperAdmin}
+            className="grid gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-4"
+          />
           <div className="space-y-2">
             <label className="text-sm font-medium">Round</label>
             <Select value={roundFilter} onValueChange={setRoundFilter}>
@@ -414,20 +464,6 @@ export default function UmpireVotingModule() {
                 {roundOptions.map((round) => (
                   <SelectItem key={round} value={String(round)}>Round {round}</SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Division</label>
-            <Select value={divisionFilter} onValueChange={setDivisionFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All divisions</SelectItem>
-                {divisions
-                  .filter((division) => associationFilter === "ALL" || division.association_id === associationFilter)
-                  .map((division) => (
-                    <SelectItem key={division.id} value={division.id}>{division.name}</SelectItem>
-                  ))}
               </SelectContent>
             </Select>
           </div>

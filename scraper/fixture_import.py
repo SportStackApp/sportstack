@@ -197,6 +197,47 @@ def load_team_division_lookup() -> dict:
     return compact
 
 
+def load_team_context_lookup(team_divisions: dict[str, set[str]]) -> dict:
+    """Return unique team lookups scoped by association, division, club and team text."""
+    log.info("Loading team context lookup...")
+    teams = supabase.table("teams").select("id, name, club_id, division_id").execute().data
+    clubs = supabase.table("clubs").select("id, name, association_id").execute().data
+    associations = supabase.table("associations").select("id, name").execute().data
+
+    club_by_id = {club["id"]: club for club in clubs}
+    association_by_id = {association["id"]: association for association in associations}
+    candidates: dict[tuple[str, ...], set[str]] = defaultdict(set)
+
+    def add_candidate(key_parts: tuple[Any, ...], team_id: str):
+        for key in mapping_keys(*key_parts):
+            candidates[key].add(team_id)
+
+    for team in teams:
+        team_id = team.get("id")
+        club = club_by_id.get(team.get("club_id"))
+        association = association_by_id.get(club.get("association_id")) if club else None
+        if not team_id or not club or not association:
+            continue
+
+        divisions = set(team_divisions.get(team_id, set()))
+        if team.get("division_id"):
+            divisions.add(team["division_id"])
+        if not divisions:
+            continue
+
+        association_name = association.get("name")
+        club_name = club.get("name")
+        team_name = team.get("name")
+        for division_id in divisions:
+            add_candidate((association_name, division_id, club_name, team_name), team_id)
+            add_candidate((association_name, division_id, "", team_name), team_id)
+
+    unique = {key: next(iter(team_ids)) for key, team_ids in candidates.items() if len(team_ids) == 1}
+    ambiguous = {key: len(team_ids) for key, team_ids in candidates.items() if len(team_ids) > 1}
+    log.info(f"  Loaded {len(unique)} unique team context keys and {len(ambiguous)} ambiguous keys")
+    return {"unique": unique, "ambiguous": ambiguous}
+
+
 def load_seasons() -> list[dict]:
     """Load seasons for date/year fallback reporting only."""
     log.info("Loading seasons for fallback checks...")
@@ -305,6 +346,66 @@ def resolve_team_id(team_map: dict, revsports_team_id: Any, team_name: Any, grad
     return None, "no_team_mapping"
 
 
+def team_matches_division(team_id: str | None, division_id: str | None, team_divisions: dict[str, set[str]]) -> bool:
+    if not team_id or not division_id:
+        return True
+    return division_id in team_divisions.get(team_id, set())
+
+
+def resolve_team_by_context(
+    team_context_lookup: dict,
+    association: str,
+    division_id: str | None,
+    club_name: Any,
+    team_name: Any,
+) -> tuple[str | None, str]:
+    if not division_id:
+        return None, "no_division_for_team_context"
+
+    unique = team_context_lookup["unique"]
+    ambiguous = team_context_lookup["ambiguous"]
+    lookup_keys = []
+    lookup_keys.extend(mapping_keys(association, division_id, club_name, team_name))
+    lookup_keys.extend(mapping_keys(association, division_id, "", team_name))
+    if normalise(team_name) != normalise(club_name):
+        lookup_keys.extend(mapping_keys(association, division_id, club_name, club_name))
+        lookup_keys.extend(mapping_keys(association, division_id, "", club_name))
+
+    for key in lookup_keys:
+        if key in unique:
+            return unique[key], "club_team_division"
+    for key in lookup_keys:
+        if key in ambiguous:
+            return None, "ambiguous_club_team_division"
+    return None, "no_club_team_division_mapping"
+
+
+def ensure_team_matches_division(
+    team_id: str | None,
+    team_source: str | None,
+    game: dict,
+    side: str,
+    association: str,
+    division_id: str | None,
+    team_divisions: dict[str, set[str]],
+    team_context_lookup: dict,
+) -> tuple[str | None, str | None, bool]:
+    if team_matches_division(team_id, division_id, team_divisions):
+        return team_id, team_source, False
+
+    fallback_id, fallback_source = resolve_team_by_context(
+        team_context_lookup,
+        association,
+        division_id,
+        game.get(f"{side}_club_name"),
+        game.get(f"{side}_team"),
+    )
+    if fallback_id and team_matches_division(fallback_id, division_id, team_divisions):
+        return fallback_id, fallback_source, True
+
+    return None, f"{team_source or 'team_mapping'}_outside_division", True
+
+
 def safe_sample(game: dict, association: str, reason: str) -> dict:
     """Return a safe unresolved sample without secrets or player details."""
     return {
@@ -313,8 +414,10 @@ def safe_sample(game: dict, association: str, reason: str) -> dict:
         "match_url": game.get("match_url"),
         "competition": first_present(game, ["revsports_competition_name", "competition", "competition_name", "season", "season_name"]),
         "grade": game.get("grade"),
+        "home_club": game.get("home_club_name"),
         "home_team": game.get("home_team"),
         "home_revsports_team_id": game.get("home_revsports_team_id"),
+        "away_club": game.get("away_club_name"),
         "away_team": game.get("away_team"),
         "away_revsports_team_id": game.get("away_revsports_team_id"),
         "venue": game.get("venue"),
@@ -324,7 +427,18 @@ def safe_sample(game: dict, association: str, reason: str) -> dict:
     }
 
 
-def build_fixture_rows(games: list, team_map: dict, venue_map: dict, pitch_map: dict, grade_map: dict, competition_map: dict, team_divisions: dict, seasons: list[dict], association: str) -> tuple[list, list, dict]:
+def build_fixture_rows(
+    games: list,
+    team_map: dict,
+    venue_map: dict,
+    pitch_map: dict,
+    grade_map: dict,
+    competition_map: dict,
+    team_divisions: dict,
+    team_context_lookup: dict,
+    seasons: list[dict],
+    association: str,
+) -> tuple[list, list, dict]:
     """
     For each game, resolve home_team, away_team, venue, pitch, division and season to SportStack UUIDs.
     Returns (resolved_rows, skipped_rows, dry_run_report).
@@ -350,6 +464,32 @@ def build_fixture_rows(games: list, team_map: dict, venue_map: dict, pitch_map: 
         division_id, division_source = resolve_division_id(game, association, home_id, away_id, grade_map, team_divisions)
         season_id, season_source = resolve_season_id(game, association, competition_map, seasons)
         pitch_id, pitch_source = resolve_pitch_id(game, pitch_map)
+
+        home_id, home_source, home_rechecked = ensure_team_matches_division(
+            home_id,
+            home_source,
+            game,
+            "home",
+            association,
+            division_id,
+            team_divisions,
+            team_context_lookup,
+        )
+        away_id, away_source, away_rechecked = ensure_team_matches_division(
+            away_id,
+            away_source,
+            game,
+            "away",
+            association,
+            division_id,
+            team_divisions,
+            team_context_lookup,
+        )
+        if home_rechecked:
+            stats["home_team_rechecked_against_division"] += 1
+        if away_rechecked:
+            stats["away_team_rechecked_against_division"] += 1
+
         if division_id:
             stats["division_resolved"] += 1
         else:
@@ -371,13 +511,19 @@ def build_fixture_rows(games: list, team_map: dict, venue_map: dict, pitch_map: 
 
         # Skip if any required mapping is missing
         if not home_id:
-            log.info(f"  No team mapping for home team '{home_name}' (grade: {grade}, source: {home_source})")
+            unresolved_reasons[f"home_team:{home_source}"] += 1
+            if len(samples) < SAMPLE_LIMIT:
+                samples.append(safe_sample(game, association, f"home_team:{home_source}"))
+            log.info(f"  No valid team mapping for home team '{home_name}' (grade: {grade}, source: {home_source})")
             log.info(f"    {url}")
             skipped.append({"reason": f"home team '{home_name}'", "url": url})
             continue
 
         if not away_id:
-            log.info(f"  No team mapping for away team '{away_name}' (grade: {grade}, source: {away_source})")
+            unresolved_reasons[f"away_team:{away_source}"] += 1
+            if len(samples) < SAMPLE_LIMIT:
+                samples.append(safe_sample(game, association, f"away_team:{away_source}"))
+            log.info(f"  No valid team mapping for away team '{away_name}' (grade: {grade}, source: {away_source})")
             log.info(f"    {url}")
             skipped.append({"reason": f"away team '{away_name}'", "url": url})
             continue
@@ -487,6 +633,8 @@ def log_report(label: str, report: dict):
     log.info(f"  can resolve division_id: {stats['division_resolved']}")
     log.info(f"  can resolve season_id: {stats['season_resolved']}")
     log.info(f"  can resolve pitch_id: {stats['pitch_resolved']}")
+    log.info(f"  home teams rechecked against division: {stats['home_team_rechecked_against_division']}")
+    log.info(f"  away teams rechecked against division: {stats['away_team_rechecked_against_division']}")
     if report["unresolved_reasons"]:
         log.info("  unresolved by reason:")
         for reason, count in sorted(report["unresolved_reasons"].items()):
@@ -497,7 +645,16 @@ def log_report(label: str, report: dict):
             log.info(f"    {sample}")
 
 
-def build_backfill_report(team_map: dict, venue_map: dict, pitch_map: dict, grade_map: dict, competition_map: dict, team_divisions: dict, seasons: list[dict]) -> dict:
+def build_backfill_report(
+    team_map: dict,
+    venue_map: dict,
+    pitch_map: dict,
+    grade_map: dict,
+    competition_map: dict,
+    team_divisions: dict,
+    team_context_lookup: dict,
+    seasons: list[dict],
+) -> dict:
     """Prepare a dry-run-only report for existing fixtures before any backfill update."""
     fixtures = supabase.table("fixtures").select("id, revsports_match_url, division_id, season_id, pitch_id").execute().data
     fixture_urls = {row.get("revsports_match_url") for row in fixtures if row.get("revsports_match_url")}
@@ -516,7 +673,18 @@ def build_backfill_report(team_map: dict, venue_map: dict, pitch_map: dict, grad
             aggregate["unresolved_reasons"]["fixture:no_matching_staging_row"] += 1
             continue
         association, game = staged
-        _, _, report = build_fixture_rows([game], team_map, venue_map, pitch_map, grade_map, competition_map, team_divisions, seasons, association)
+        _, _, report = build_fixture_rows(
+            [game],
+            team_map,
+            venue_map,
+            pitch_map,
+            grade_map,
+            competition_map,
+            team_divisions,
+            team_context_lookup,
+            seasons,
+            association,
+        )
         aggregate["stats"]["division_resolved"] += report["stats"]["division_resolved"]
         aggregate["stats"]["season_resolved"] += report["stats"]["season_resolved"]
         aggregate["stats"]["pitch_resolved"] += report["stats"]["pitch_resolved"]
@@ -553,6 +721,7 @@ def run():
     grade_map = load_grade_mappings()
     competition_map = load_competition_mappings()
     team_divisions = load_team_division_lookup()
+    team_context_lookup = load_team_context_lookup(team_divisions)
     seasons = load_seasons()
 
     grand_total_upserted = 0
@@ -563,7 +732,18 @@ def run():
         log.info(f"\n--- Processing: {association} ---")
 
         games = load_scraped_games(association)
-        resolved, skipped, report = build_fixture_rows(games, team_map, venue_map, pitch_map, grade_map, competition_map, team_divisions, seasons, association)
+        resolved, skipped, report = build_fixture_rows(
+            games,
+            team_map,
+            venue_map,
+            pitch_map,
+            grade_map,
+            competition_map,
+            team_divisions,
+            team_context_lookup,
+            seasons,
+            association,
+        )
 
         log.info(f"  Resolved import rows: {len(resolved)} | Skipped import rows: {len(skipped)}")
         log_report(association, report)
@@ -588,7 +768,16 @@ def run():
     log_report("TOTAL", grand_report)
 
     if args.backfill_dry_run:
-        backfill_report = build_backfill_report(team_map, venue_map, pitch_map, grade_map, competition_map, team_divisions, seasons)
+        backfill_report = build_backfill_report(
+            team_map,
+            venue_map,
+            pitch_map,
+            grade_map,
+            competition_map,
+            team_divisions,
+            team_context_lookup,
+            seasons,
+        )
         log.info("\n" + "=" * 60)
         log_report("Existing fixtures backfill", backfill_report)
         log.info("Backfill dry run only — no fixture rows updated")
