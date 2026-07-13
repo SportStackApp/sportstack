@@ -54,6 +54,17 @@ ASSOCIATIONS = [
 ]
 
 SAMPLE_LIMIT = 10
+READ_PAGE_SIZE = 500
+VERIFY_READ_BATCH_SIZE = 50
+VERIFY_FIXTURE_FIELDS = (
+    "home_team_id",
+    "away_team_id",
+    "division_id",
+    "season_id",
+    "home_score",
+    "away_score",
+    "status",
+)
 
 
 def normalise(value: Any) -> str:
@@ -253,13 +264,26 @@ def load_scraped_games(association: str) -> list:
 
     # Fetch all columns so dry-run reporting can identify optional RevSports source
     # fields such as competition/year without failing when staging schema differs.
-    rows = (
-        supabase.table("revsports_players")
-        .select("*")
-        .eq("association", association)
-        .execute()
-        .data
-    )
+    rows = []
+    start = 0
+    while True:
+        page = (
+            supabase.table("revsports_players")
+            .select("*")
+            .eq("association", association)
+            .order("id")
+            .range(start, start + READ_PAGE_SIZE - 1)
+            .execute()
+            .data
+            or []
+        )
+        rows.extend(page)
+        if len(page) < READ_PAGE_SIZE:
+            break
+        start += len(page)
+
+    page_count = max(1, (len(rows) + READ_PAGE_SIZE - 1) // READ_PAGE_SIZE)
+    log.info(f"  Loaded {len(rows)} staging rows across {page_count} pages")
 
     # Deduplicate: keep one row per match_url
     seen = {}
@@ -620,10 +644,51 @@ def upsert_fixtures(rows: list) -> int:
     for i in range(0, len(rows), BATCH_SIZE):
         batch = printable_rows(rows[i : i + BATCH_SIZE])
         supabase.table("fixtures").upsert(batch, on_conflict="revsports_match_url").execute()
+        verify_fixture_batch(batch)
         total_upserted += len(batch)
-        log.info(f"  Upserted batch {i // BATCH_SIZE + 1}: {len(batch)} rows")
+        log.info(f"  Upserted and verified batch {i // BATCH_SIZE + 1}: {len(batch)} rows")
 
     return total_upserted
+
+
+def verify_fixture_batch(batch: list[dict]) -> None:
+    """Confirm every attempted fixture upsert persisted its core mapped fields."""
+    expected_by_url = {row["revsports_match_url"]: row for row in batch}
+    columns = ",".join(("revsports_match_url", *VERIFY_FIXTURE_FIELDS))
+    urls = list(expected_by_url)
+    actual_rows = []
+    for start in range(0, len(urls), VERIFY_READ_BATCH_SIZE):
+        url_batch = urls[start : start + VERIFY_READ_BATCH_SIZE]
+        actual_rows.extend(
+            supabase.table("fixtures")
+            .select(columns)
+            .in_("revsports_match_url", url_batch)
+            .execute()
+            .data
+            or []
+        )
+    actual_by_url = {row["revsports_match_url"]: row for row in actual_rows}
+    failures = []
+
+    for url, expected in expected_by_url.items():
+        actual = actual_by_url.get(url)
+        if not actual:
+            failures.append(f"missing fixture: {url}")
+            continue
+
+        mismatched_fields = [
+            field
+            for field in VERIFY_FIXTURE_FIELDS
+            if actual.get(field) != expected.get(field)
+        ]
+        if mismatched_fields:
+            failures.append(f"field mismatch ({', '.join(mismatched_fields)}): {url}")
+
+    if failures:
+        sample = "; ".join(failures[:5])
+        raise RuntimeError(
+            f"Fixture upsert verification failed for {len(failures)} row(s): {sample}"
+        )
 
 
 def log_report(label: str, report: dict):
