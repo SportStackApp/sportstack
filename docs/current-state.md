@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-07-05
+Last updated: 2026-07-13
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -74,6 +74,40 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
+
+Date: 2026-07-13
+
+What changed:
+
+- Released the approved mock-only Safety Hub prototype baseline for `/admin/safety-risk`.
+- Added the demo-data warning, nine dashboard KPI cards, Bright Idea submission entry point, sectioned Action form, detailed Matrix & Guidance tabs, and expanded Audit History filters and drawer detail.
+- Improved the active tab contrast in light and dark mode and kept the tab bar visible as one horizontally scrollable row.
+- Added expandable association summaries to Risk, Action, QI and Bright Idea rows, grouped into associated risks, actions, QI items and Bright Ideas.
+- Improved desktop, tablet and mobile drawer/register behaviour, including tablet overflow and compact row controls.
+- Parked organisation-scoped settings for matrix wording, rating responses, review guidance and editable risk categories as a later package.
+- This approval covers the visual mock prototype only. It does not approve a database schema, permissions, RLS design, live data model or final matrix values.
+- No Safety Hub Supabase read/write, migration, RLS/Auth change or Edge Function change is included.
+
+Files changed:
+
+- `src/pages/admin/SafetyRiskModule.tsx`
+- `src/components/layout/AppLayout.tsx`
+- `docs/current-state.md`
+
+Checks run:
+
+- `npx eslint src/pages/admin/SafetyRiskModule.tsx src/components/layout/AppLayout.tsx` passed.
+- `npx tsc --noEmit` passed.
+- `npm run build` passed with the existing old Browserslist-data and large-chunk warnings.
+- Desktop, tablet and mobile browser checks passed in the final prototype review.
+- `npm run lint` still reports 611 existing unrelated repository problems; the focused Safety Hub lint has no issues.
+
+Risk level:
+
+- Low. Mock-only frontend and documentation changes.
+- No database migration is included.
+
+### Previous handoff entry
 
 Date: 2026-07-11
 

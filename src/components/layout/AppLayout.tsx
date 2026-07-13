@@ -855,7 +855,7 @@ const AppLayout = () => {
       {/* Viewing As dropdown — Super Admin only */}
       {mode === "super_admin" && (
         <div className="shrink-0 px-3 pt-3 pb-1">
-          <p className="text-xs font-medium text-muted-foreground mb-1 px-1">Viewing as</p>
+          <p className="text-xs font-medium text-primary-foreground/75 mb-1 px-1">Viewing as</p>
           <select
             value={viewingAs}
             onChange={(e) => {
@@ -880,7 +880,7 @@ const AppLayout = () => {
       <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2">
         {visibleSections.map((section) => (
           <div key={section.heading} className="mb-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-6 py-2">
+            <p className="text-xs font-semibold text-primary-foreground/75 uppercase tracking-wider px-6 py-2">
               {section.heading}
             </p>
             {section.items.map((item) => {
@@ -902,8 +902,8 @@ const AppLayout = () => {
                     className={cn(
                       "flex items-center gap-3 px-4 py-3 mx-2 my-1 rounded-lg text-sm font-medium transition-all border-l-4",
                       isActive
-                        ? "bg-secondary text-secondary-foreground border-secondary"
-                        : "text-accent-foreground hover:bg-accent-foreground/10 border-transparent"
+                        ? "bg-primary-foreground text-primary border-primary-foreground"
+                        : "text-primary-foreground/95 hover:bg-primary-foreground/10 border-transparent"
                     )}
                   >
                     <Icon className="h-5 w-5" />
@@ -927,7 +927,7 @@ const AppLayout = () => {
           <div className="relative">
             <button
               onClick={() => setIsModeSwitcherOpen(!isModeSwitcherOpen)}
-              className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-lg text-sm font-medium text-accent-foreground hover:bg-accent-foreground/10 transition-all border border-border"
+              className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-lg text-sm font-medium text-primary-foreground/95 hover:bg-primary-foreground/10 transition-all border border-primary-foreground/20"
             >
               <span className="truncate">{modeLabel}</span>
               <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", isModeSwitcherOpen && "rotate-180")} />
@@ -956,7 +956,7 @@ const AppLayout = () => {
 
         <button
           onClick={() => setIsFeedbackOpen(true)}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-accent-foreground hover:bg-accent-foreground/10 transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-primary-foreground/95 hover:bg-primary-foreground/10 transition-all"
         >
           <MessageSquare className="h-5 w-5" />
           Send feedback
@@ -964,13 +964,13 @@ const AppLayout = () => {
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-accent-foreground hover:bg-accent-foreground/10 transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-primary-foreground/95 hover:bg-primary-foreground/10 transition-all"
         >
           <LogOut className="h-5 w-5" />
           Logout
         </button>
 
-        <div className="px-4 pt-2 text-xs text-accent-foreground/60">
+        <div className="px-4 pt-2 text-xs text-primary-foreground/65">
           SportStack {APP_VERSION}
         </div>
       </div>
@@ -1470,7 +1470,7 @@ const AppLayout = () => {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 min-h-[calc(100vh-3.5rem)] p-4 lg:p-6 bg-muted/30">
+        <main className="min-w-0 flex-1 min-h-[calc(100vh-3.5rem)] p-4 lg:p-6 bg-muted/30">
           <Outlet />
         </main>
       </div>

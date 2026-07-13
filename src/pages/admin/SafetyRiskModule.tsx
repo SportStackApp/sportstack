@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
   CalendarClock,
+  ChevronDown,
   CheckCircle2,
   ClipboardCheck,
   ClipboardList,
@@ -57,7 +58,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -88,6 +88,10 @@ import { cn } from "@/lib/utils";
 type RiskRating = "Low" | "Medium" | "High" | "Very High";
 type ReviewState = "Current" | "Due soon" | "Overdue";
 type DueState = "Current" | "Due soon" | "Overdue" | "Complete";
+type RiskStatus = "Open" | "In progress" | "Controlled" | "Closed" | "Entered in error";
+type ActionStatus = "Not started" | "In progress" | "Blocked" | "Complete" | "Entered in error";
+type QiStatus = "New" | "Awaiting decision" | "Approved" | "In progress" | "Complete" | "Entered in error";
+type BrightIdeaStatus = "Submitted" | "Under review" | "Accepted" | "Deferred" | "Closed" | "Entered in error";
 
 interface RiskRecord {
   kind: "risk";
@@ -98,7 +102,7 @@ interface RiskRecord {
   type: string;
   owner: string;
   scope: string;
-  status: "Open" | "In progress" | "Controlled" | "Closed";
+  status: RiskStatus;
   inherentRating: RiskRating;
   residualRating: RiskRating;
   targetRating: RiskRating;
@@ -119,7 +123,7 @@ interface ActionRecord {
   id: string;
   title: string;
   owner: string;
-  status: "Not started" | "In progress" | "Blocked" | "Complete";
+  status: ActionStatus;
   dueDate: string;
   dueState: DueState;
   linkedRiskId?: string;
@@ -141,7 +145,7 @@ interface QiRecord {
   area: string;
   owner: string;
   priority: "Low" | "Medium" | "High";
-  status: "New" | "Awaiting decision" | "Approved" | "In progress" | "Complete";
+  status: QiStatus;
   dueDate: string;
   dueState: DueState;
   issue: string;
@@ -159,7 +163,7 @@ interface BrightIdeaRecord {
   submittedBy: string;
   submittedDate: string;
   scope: string;
-  status: "Submitted" | "Under review" | "Accepted" | "Deferred" | "Closed";
+  status: BrightIdeaStatus;
   decision: "Pending" | "Accept" | "Defer" | "Reject" | "Close";
   whyNeeded: string;
   suggestedImplementation: string;
@@ -176,6 +180,8 @@ interface AuditRecord {
   user: string;
   record: string;
   recordType: "Risk" | "Action" | "QI" | "Bright Idea";
+  scope: string;
+  relatedRecordId?: string;
   action: string;
   fieldChanged: string;
   previousValue: string;
@@ -184,7 +190,8 @@ interface AuditRecord {
 }
 
 type SafetyRecord = RiskRecord | ActionRecord | QiRecord | BrightIdeaRecord | AuditRecord;
-type SafetyFormMode = "risk" | "action" | "qi" | "idea" | "committee-review" | "risk-review";
+type CoreSafetyRecord = RiskRecord | ActionRecord | QiRecord | BrightIdeaRecord;
+type SafetyFormMode = "risk" | "action" | "qi" | "idea" | "committee-review" | "risk-review" | "link-records";
 
 interface SafetyFormContext {
   riskId?: string;
@@ -205,8 +212,9 @@ interface ChartDatum {
 }
 
 const ratingOrder: RiskRating[] = ["Very High", "High", "Medium", "Low"];
-const statusOptions = ["__all__", "Open", "In progress", "Controlled", "Closed"];
+const statusOptions = ["__all__", "Open", "In progress", "Controlled", "Closed", "Entered in error"];
 const ratingOptions = ["__all__", ...ratingOrder];
+const reviewStateOptions = ["__all__", "Current", "Due soon", "Overdue"];
 const dueSoonDays = 30;
 const formLikelihoodOptions = ["Rare", "Unlikely", "Possible", "Likely", "Almost Certain"];
 const formConsequenceOptions = ["Insignificant", "Minor", "Moderate", "Major", "Severe"];
@@ -215,11 +223,22 @@ const ideaDecisionOptions = ["Pending", "Accept", "Defer", "Reject", "Close"];
 const conversionOptions = ["Create risk", "Create action", "Create QI item", "Link to existing record", "Close without conversion"];
 
 const ratingStyles: Record<RiskRating, string> = {
-  Low: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Medium: "border-amber-200 bg-amber-50 text-amber-800",
-  High: "border-orange-200 bg-orange-50 text-orange-800",
-  "Very High": "border-rose-200 bg-rose-50 text-rose-800",
+  Low: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
+  Medium: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200",
+  High: "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-200",
+  "Very High": "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200",
 };
+
+const ratingCellStyles: Record<RiskRating, string> = {
+  Low: "border-emerald-100 bg-emerald-50/80 dark:border-emerald-900/80 dark:bg-emerald-950/35",
+  Medium: "border-amber-100 bg-amber-50/80 dark:border-amber-900/80 dark:bg-amber-950/35",
+  High: "border-orange-100 bg-orange-50/80 dark:border-orange-900/80 dark:bg-orange-950/35",
+  "Very High": "border-rose-100 bg-rose-50/80 dark:border-rose-900/80 dark:bg-rose-950/35",
+};
+
+const idCellClass = "w-20 min-w-20 whitespace-nowrap font-mono text-xs";
+const safetyTabTriggerClass =
+  "min-h-10 shrink-0 rounded-md border border-transparent px-4 text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm";
 
 const ratingColours: Record<RiskRating, string> = {
   Low: "#059669",
@@ -739,6 +758,8 @@ const auditEvents: AuditRecord[] = [
     user: "Safety Lead",
     record: "R-001",
     recordType: "Risk",
+    scope: "Association",
+    relatedRecordId: "A-001",
     action: "Updated",
     fieldChanged: "Residual rating",
     previousValue: "Very High",
@@ -752,6 +773,8 @@ const auditEvents: AuditRecord[] = [
     user: "Secretary",
     record: "QI-003",
     recordType: "QI",
+    scope: "Club",
+    relatedRecordId: "R-005",
     action: "Created",
     fieldChanged: "Status",
     previousValue: "-",
@@ -765,6 +788,8 @@ const auditEvents: AuditRecord[] = [
     user: "Venue Coordinator",
     record: "A-004",
     recordType: "Action",
+    scope: "Venue",
+    relatedRecordId: "R-001",
     action: "Status changed",
     fieldChanged: "Status",
     previousValue: "In progress",
@@ -778,6 +803,8 @@ const auditEvents: AuditRecord[] = [
     user: "Committee",
     record: "BI-001",
     recordType: "Bright Idea",
+    scope: "Club",
+    relatedRecordId: "QI-005",
     action: "Decision recorded",
     fieldChanged: "Decision",
     previousValue: "Pending",
@@ -791,6 +818,8 @@ const auditEvents: AuditRecord[] = [
     user: "Child Safety Officer",
     record: "A-003",
     recordType: "Action",
+    scope: "Association",
+    relatedRecordId: "R-003",
     action: "Completed",
     fieldChanged: "Status",
     previousValue: "In progress",
@@ -810,6 +839,61 @@ const riskMatrix: RiskRating[][] = [
 const likelihoodLabels = ["Rare", "Unlikely", "Possible", "Likely", "Almost Certain"];
 const consequenceLabels = ["Insignificant", "Minor", "Moderate", "Major", "Severe"];
 
+const likelihoodGuidance = [
+  "Rare: may occur only in exceptional circumstances, such as once every five or more seasons.",
+  "Unlikely: could occur at some time, but has not happened recently in this club or competition.",
+  "Possible: might occur during a normal season based on known incidents, near misses or local conditions.",
+  "Likely: expected to occur at least once in a season unless controls are improved.",
+  "Almost Certain: expected to occur many times, or is already happening repeatedly.",
+];
+
+const consequenceGuidance = [
+  "Insignificant: no injury or disruption; handled with normal supervision or a quick local fix.",
+  "Minor: first aid, short delay, small cost, or low-level complaint with no lasting impact.",
+  "Moderate: medical treatment, missed game, repeated complaint, equipment damage, or committee follow-up required.",
+  "Major: serious injury, child safety concern, formal investigation, major cost, or significant reputation impact.",
+  "Severe: life-threatening injury, major safeguarding breach, legal action, season disruption, or severe financial loss.",
+];
+
+const responseGuidance = [
+  "Low: manage through normal procedures, keep basic controls in place, and review annually.",
+  "Medium: assign an owner, record current controls, and review at least six-monthly or after an incident.",
+  "High: create a treatment action, report to committee, check controls are working, and review at least quarterly.",
+  "Very High: escalate immediately, consider pausing the activity until controls are clear, and review monthly until reduced.",
+];
+
+const categoryGuidance = [
+  "Safety: injury prevention, first aid, equipment, venue hazards and player welfare.",
+  "Child safety: supervision, behaviour, reporting, screening and safeguarding obligations.",
+  "Operational: rosters, fixtures, volunteers, data quality and day-to-day delivery risks.",
+  "Compliance: policies, legal duties, insurance, WWCC, privacy and record keeping.",
+  "Reputation: member trust, complaints, communication, social media and community confidence.",
+  "Financial: fees, grants, purchases, cash handling, loss, waste or unexpected costs.",
+];
+
+const reviewGuidance = [
+  "Very High: monthly until the rating is reduced and controls are proven.",
+  "High: quarterly, or sooner after an incident, near miss or major change.",
+  "Medium: six-monthly, or at season start and season end.",
+  "Low: annually, unless the activity or controls change.",
+  "Any overdue review should appear in the dashboard and remain visible until closed.",
+];
+
+const inherentResidualGuidance = [
+  "Inherent risk is the rating before considering current controls.",
+  "Residual risk is the rating after current controls are considered.",
+  "Example: an uninspected goal cage may be High inherent risk; after inspection, anchoring and pre-game checks, it may become Medium residual risk.",
+  "Target risk is the rating the club is aiming for after extra actions are completed.",
+];
+
+const matrixGuidanceTabs = [
+  { value: "likelihood", label: "Likelihood", title: "Likelihood definitions", items: likelihoodGuidance },
+  { value: "consequences", label: "Consequences", title: "Consequence examples", items: consequenceGuidance },
+  { value: "responses", label: "Ratings and responses", title: "Risk response guide", items: [...responseGuidance, ...inherentResidualGuidance] },
+  { value: "reviews", label: "Reviews", title: "Review frequency", items: reviewGuidance },
+  { value: "categories", label: "Categories", title: "Sporting risk categories", items: categoryGuidance },
+];
+
 export default function SafetyRiskModule() {
   const { toast } = useToast();
   const { loading: scopeLoading, isAnyAdmin } = useAdminScope();
@@ -819,10 +903,20 @@ export default function SafetyRiskModule() {
     selectedTeam,
   } = useTeamContext();
   const [activeRecord, setActiveRecord] = useState<SafetyRecord | null>(null);
+  const [expandedLinkedRowId, setExpandedLinkedRowId] = useState<string | null>(null);
   const [riskSearch, setRiskSearch] = useState("");
   const [riskRating, setRiskRating] = useState("__all__");
   const [riskStatus, setRiskStatus] = useState("__all__");
   const [riskCategory, setRiskCategory] = useState("__all__");
+  const [riskOwner, setRiskOwner] = useState("__all__");
+  const [riskReviewState, setRiskReviewState] = useState("__all__");
+  const [riskScope, setRiskScope] = useState("__all__");
+  const [auditDateFrom, setAuditDateFrom] = useState("");
+  const [auditDateTo, setAuditDateTo] = useState("");
+  const [auditUser, setAuditUser] = useState("__all__");
+  const [auditRecordType, setAuditRecordType] = useState("__all__");
+  const [auditRecordId, setAuditRecordId] = useState("");
+  const [auditAction, setAuditAction] = useState("__all__");
   const [formMode, setFormMode] = useState<SafetyFormMode | null>(null);
   const [formContext, setFormContext] = useState<SafetyFormContext>({});
   const [formValues, setFormValues] = useState<Record<string, string>>({});
@@ -843,6 +937,16 @@ export default function SafetyRiskModule() {
     setFormErrors([]);
     setFormDirty(false);
     setPrototypeSaveMessage(null);
+  };
+
+  const toggleLinkedRow = (recordId: string) => {
+    setExpandedLinkedRowId((current) => current === recordId ? null : recordId);
+  };
+
+  const handleLinkedRowKeyDown = (event: React.KeyboardEvent<HTMLTableRowElement>, recordId: string) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    toggleLinkedRow(recordId);
   };
 
   const updateFormValue = (field: string, value: string) => {
@@ -892,19 +996,63 @@ export default function SafetyRiskModule() {
     [],
   );
 
+  const riskOwners = useMemo(
+    () => Array.from(new Set(risks.map((risk) => risk.owner))).sort(),
+    [],
+  );
+
+  const riskScopes = useMemo(
+    () => Array.from(new Set(risks.map((risk) => risk.scope))).sort(),
+    [],
+  );
+
+  const auditUsers = useMemo(
+    () => Array.from(new Set(auditEvents.map((event) => event.user))).sort(),
+    [],
+  );
+
+  const auditActions = useMemo(
+    () => Array.from(new Set(auditEvents.map((event) => event.action))).sort(),
+    [],
+  );
+
+  const filteredAuditEvents = useMemo(() => {
+    const fromDate = parseDateFilter(auditDateFrom);
+    const toDate = parseDateFilter(auditDateTo);
+    const recordSearch = auditRecordId.trim().toLowerCase();
+
+    return auditEvents.filter((event) => {
+      const eventDate = parseAuditEventDate(event.date);
+      const matchesFrom = !fromDate || !eventDate || eventDate >= fromDate;
+      const matchesTo = !toDate || !eventDate || eventDate <= endOfDay(toDate);
+      const matchesUser = auditUser === "__all__" || event.user === auditUser;
+      const matchesRecordType = auditRecordType === "__all__" || event.recordType === auditRecordType;
+      const matchesRecordId =
+        !recordSearch ||
+        [event.record, event.relatedRecordId || ""]
+          .some((value) => value.toLowerCase().includes(recordSearch));
+      const matchesAction = auditAction === "__all__" || event.action === auditAction;
+
+      return matchesFrom && matchesTo && matchesUser && matchesRecordType && matchesRecordId && matchesAction;
+    });
+  }, [auditAction, auditDateFrom, auditDateTo, auditRecordId, auditRecordType, auditUser]);
+
   const filteredRisks = useMemo(() => {
     const search = riskSearch.trim().toLowerCase();
     return risks.filter((risk) => {
       const matchesSearch =
         !search ||
-        [risk.id, risk.title, risk.summary, risk.category, risk.owner]
+        [risk.id, risk.title, risk.summary, risk.category, risk.owner, risk.scope]
           .some((value) => value.toLowerCase().includes(search));
       const matchesRating = riskRating === "__all__" || risk.residualRating === riskRating;
       const matchesStatus = riskStatus === "__all__" || risk.status === riskStatus;
       const matchesCategory = riskCategory === "__all__" || risk.category === riskCategory;
-      return matchesSearch && matchesRating && matchesStatus && matchesCategory;
+      const matchesOwner = riskOwner === "__all__" || risk.owner === riskOwner;
+      const matchesReviewState = riskReviewState === "__all__" || risk.reviewState === riskReviewState;
+      const matchesScope = riskScope === "__all__" || risk.scope === riskScope;
+      return matchesSearch && matchesRating && matchesStatus && matchesCategory && matchesOwner && matchesReviewState && matchesScope;
     });
-  }, [riskCategory, riskRating, riskSearch, riskStatus]);
+  }, [riskCategory, riskOwner, riskRating, riskReviewState, riskScope, riskSearch, riskStatus]);
 
   const ratingData = useMemo(
     () => ratingOrder.map((rating) => ({
@@ -916,11 +1064,11 @@ export default function SafetyRiskModule() {
   );
 
   const actionStatusData = useMemo(() => {
-    const statuses = ["Not started", "In progress", "Blocked", "Complete"];
+    const statuses: ActionStatus[] = ["Not started", "In progress", "Blocked", "Complete", "Entered in error"];
     return statuses.map((status) => ({
       name: status,
       value: actions.filter((action) => action.status === status).length,
-      fill: status === "Complete" ? "#059669" : status === "Blocked" ? "#be123c" : "#2563eb",
+      fill: status === "Complete" ? "#059669" : status === "Blocked" || status === "Entered in error" ? "#be123c" : "#2563eb",
     }));
   }, []);
 
@@ -934,17 +1082,18 @@ export default function SafetyRiskModule() {
   );
 
   const qiStatusData = useMemo(() => {
-    const statuses = ["New", "Awaiting decision", "Approved", "In progress", "Complete"];
+    const statuses: QiStatus[] = ["New", "Awaiting decision", "Approved", "In progress", "Complete", "Entered in error"];
     return statuses.map((status) => ({
       name: status,
       value: qiItems.filter((item) => item.status === status).length,
-      fill: status === "Complete" ? "#059669" : status === "Awaiting decision" ? "#d97706" : "#2563eb",
+      fill: status === "Complete" ? "#059669" : status === "Entered in error" ? "#be123c" : status === "Awaiting decision" ? "#d97706" : "#2563eb",
     }));
   }, []);
 
   const highestRisks = [...risks]
     .sort((a, b) => ratingOrder.indexOf(a.residualRating) - ratingOrder.indexOf(b.residualRating))
     .slice(0, 5);
+  const highOrVeryHighRisks = risks.filter((risk) => risk.residualRating === "High" || risk.residualRating === "Very High").length;
   const overdueActions = actions.filter((action) => action.dueState === "Overdue").length;
   const dueSoonActions = actions.filter((action) => action.dueState === "Due soon").length;
   const awaitingQi = qiItems.filter((item) => item.status === "Awaiting decision").length;
@@ -1005,38 +1154,51 @@ export default function SafetyRiskModule() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-semibold tracking-tight">Safety Hub</h1>
-            <Badge variant="outline">Prototype</Badge>
+    <div className="min-w-0 space-y-6">
+      <div className="-mx-4 border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:-mx-6 lg:px-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <ShieldCheck className="h-6 w-6 text-primary" />
+              <h1 className="text-2xl font-semibold tracking-tight">Safety Hub</h1>
+              <Badge variant="outline">Prototype</Badge>
+            </div>
+            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+              Manage risks, actions, quality improvements and Bright Ideas across {scopeLabel}.
+            </p>
           </div>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Risk, actions, QI and Bright Ideas review surface for {scopeLabel}.
-          </p>
+          <AddRecordButton onOpenForm={(mode) => openForm({ mode })} />
         </div>
-        <AddRecordButton onOpenForm={(mode) => openForm({ mode })} />
       </div>
 
-      <Tabs defaultValue="dashboard" className="space-y-4">
-        <TabsList className="grid h-auto w-full grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="risks">Risk Register</TabsTrigger>
-          <TabsTrigger value="actions">Actions</TabsTrigger>
-          <TabsTrigger value="qi">QI Register</TabsTrigger>
-          <TabsTrigger value="ideas">Bright Ideas</TabsTrigger>
-          <TabsTrigger value="matrix">Matrix & Guidance</TabsTrigger>
-          <TabsTrigger value="audit">Audit History</TabsTrigger>
+      <Tabs defaultValue="dashboard" className="min-w-0 space-y-4">
+        <TabsList className="sticky top-14 z-20 flex h-auto w-full min-w-0 justify-start gap-1 overflow-x-auto border bg-muted/80 p-1.5 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-muted/70 dark:bg-muted/50">
+          <TabsTrigger value="dashboard" className={safetyTabTriggerClass}>Dashboard</TabsTrigger>
+          <TabsTrigger value="risks" className={safetyTabTriggerClass}>Risk Register</TabsTrigger>
+          <TabsTrigger value="actions" className={safetyTabTriggerClass}>Actions</TabsTrigger>
+          <TabsTrigger value="qi" className={safetyTabTriggerClass}>QI Register</TabsTrigger>
+          <TabsTrigger value="ideas" className={safetyTabTriggerClass}>Bright Ideas</TabsTrigger>
+          <TabsTrigger value="matrix" className={safetyTabTriggerClass}>Matrix & Guidance</TabsTrigger>
+          <TabsTrigger value="audit" className={safetyTabTriggerClass}>Audit History</TabsTrigger>
         </TabsList>
 
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
+          <div className="font-semibold">Demo data - not live committee records</div>
+          <p className="mt-1">
+            This Safety Hub is still a local mock prototype. It does not read or write live Supabase data.
+          </p>
+        </div>
+
         <TabsContent value="dashboard" className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
             <MetricCard icon={ShieldCheck} label="Total risks" value={risks.length} />
-            <MetricCard icon={AlertTriangle} label="Very high risks" value={risks.filter((risk) => risk.residualRating === "Very High").length} tone="critical" />
+            <MetricCard icon={AlertTriangle} label="High / Very High risks" value={highOrVeryHighRisks} tone="critical" />
+            <MetricCard icon={ListChecks} label="Total actions" value={actions.length} />
             <MetricCard icon={ClipboardList} label="Overdue actions" value={overdueActions} tone="warning" />
-            <MetricCard icon={Lightbulb} label="Ideas awaiting review" value={awaitingIdeas} tone="warning" />
+            <MetricCard icon={CalendarClock} label={`Due within ${dueSoonDays} days`} value={dueSoonActions} tone="warning" />
+            <MetricCard icon={ClipboardCheck} label="Total QI items" value={qiItems.length} />
+            <MetricCard icon={ClipboardList} label="QI awaiting decision" value={awaitingQi} tone="warning" />
+            <MetricCard icon={Lightbulb} label="Bright Ideas awaiting review" value={awaitingIdeas} tone="warning" />
             <MetricCard icon={FileClock} label="Reviews overdue" value={overdueReviews} tone="critical" />
           </div>
 
@@ -1072,8 +1234,8 @@ export default function SafetyRiskModule() {
               emptyLabel="No risks to show."
             >
               {highestRisks.map((risk) => (
-                <TableRow key={risk.id}>
-                  <TableCell className="font-mono text-xs">{risk.id}</TableCell>
+                <TableRow key={risk.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setActiveRecord(risk)}>
+                  <TableCell className={idCellClass}>{risk.id}</TableCell>
                   <TableCell className="min-w-52">
                     <div className="font-medium">{risk.title}</div>
                     <div className="line-clamp-1 text-xs text-muted-foreground">{risk.summary}</div>
@@ -1092,17 +1254,11 @@ export default function SafetyRiskModule() {
               emptyLabel="No due items to show."
             >
               {combinedDueItems.map((item) => (
-                <TableRow key={`${item.type}-${item.id}`}>
+                <TableRow key={`${item.type}-${item.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => setActiveRecord(item.record)}>
                   <TableCell><Badge variant="outline">{item.type}</Badge></TableCell>
-                  <TableCell className="font-mono text-xs">{item.id}</TableCell>
+                  <TableCell className={idCellClass}>{item.id}</TableCell>
                   <TableCell className="min-w-48">
-                    <button
-                      type="button"
-                      className="text-left font-medium hover:underline"
-                      onClick={() => setActiveRecord(item.record)}
-                    >
-                      {item.description}
-                    </button>
+                    <span className="font-medium">{item.description}</span>
                   </TableCell>
                   <TableCell>{item.owner}</TableCell>
                   <TableCell><DueBadge state={item.state} label={item.due} /></TableCell>
@@ -1123,6 +1279,14 @@ export default function SafetyRiskModule() {
             category={riskCategory}
             onCategoryChange={setRiskCategory}
             categories={riskCategories}
+            owner={riskOwner}
+            onOwnerChange={setRiskOwner}
+            owners={riskOwners}
+            reviewState={riskReviewState}
+            onReviewStateChange={setRiskReviewState}
+            scope={riskScope}
+            onScopeChange={setRiskScope}
+            scopes={riskScopes}
           />
           <RegisterTable
             title="Risk Register"
@@ -1130,30 +1294,65 @@ export default function SafetyRiskModule() {
             columns={["ID", "Risk / summary", "Rating", "Owner", "Review", "Status", ""]}
             emptyLabel="No risks match the selected filters."
           >
-            {filteredRisks.map((risk) => (
-              <TableRow key={risk.id}>
-                <TableCell className="font-mono text-xs">{risk.id}</TableCell>
-                <TableCell className="min-w-64">
-                  <div className="font-medium">{risk.title}</div>
-                  <div className="line-clamp-1 text-xs text-muted-foreground">{risk.summary}</div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    <RiskRatingBadge rating={risk.residualRating} />
-                    <div className="text-xs text-muted-foreground">Target {risk.targetRating}</div>
-                  </div>
-                </TableCell>
-                <TableCell>{risk.owner}</TableCell>
-                <TableCell><DueBadge state={risk.reviewState} label={risk.nextReview} /></TableCell>
-                <TableCell><Badge variant="secondary">{risk.status}</Badge></TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setActiveRecord(risk)}>
-                    <Eye className="mr-2 h-4 w-4" />
-                    Open
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {filteredRisks.map((risk) => {
+              const isExpanded = expandedLinkedRowId === risk.id;
+
+              return (
+                <Fragment key={risk.id}>
+                  <TableRow
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
+                    aria-controls={`${risk.id}-links`}
+                    className="cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                    onClick={() => toggleLinkedRow(risk.id)}
+                    onKeyDown={(event) => handleLinkedRowKeyDown(event, risk.id)}
+                  >
+                    <TableCell className={idCellClass}>{risk.id}</TableCell>
+                    <TableCell className="min-w-48">
+                      <div className="font-medium">{risk.title}</div>
+                      <div className="line-clamp-1 text-xs text-muted-foreground">{risk.summary}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <RiskRatingBadge rating={risk.residualRating} />
+                        <div className="text-xs text-muted-foreground">Target {risk.targetRating}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{risk.owner}</TableCell>
+                    <TableCell><DueBadge state={risk.reviewState} label={risk.nextReview} /></TableCell>
+                    <TableCell><StatusBadge status={risk.status} /></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`View ${risk.id} details`}
+                          onClick={(event) => { event.stopPropagation(); setActiveRecord(risk); }}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          <Eye className="h-4 w-4 xl:mr-2" />
+                          <span className="hidden xl:inline">View details</span>
+                        </Button>
+                        <ExpandAssociatedRecordsButton
+                          recordId={risk.id}
+                          isExpanded={isExpanded}
+                          onToggle={toggleLinkedRow}
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {isExpanded && (
+                    <ExpandedLinkedRecordsRow
+                      id={`${risk.id}-links`}
+                      colSpan={7}
+                      sourceRecord={risk}
+                      onOpenRecord={setActiveRecord}
+                    />
+                  )}
+                </Fragment>
+              );
+            })}
           </RegisterTable>
         </TabsContent>
 
@@ -1161,28 +1360,62 @@ export default function SafetyRiskModule() {
           <RegisterTable
             title="Actions"
             icon={ListChecks}
-            columns={["ID", "Action", "Links", "Owner", "Due", "Status", ""]}
+            columns={["ID", "Action", "Owner", "Due", "Status", ""]}
             emptyLabel="No actions to show."
           >
-            {actions.map((action) => (
-              <TableRow key={action.id}>
-                <TableCell className="font-mono text-xs">{action.id}</TableCell>
-                <TableCell className="min-w-64">
-                  <div className="font-medium">{action.title}</div>
-                  <div className="line-clamp-1 text-xs text-muted-foreground">{action.specific}</div>
-                </TableCell>
-                <TableCell><LinkedIds ids={[action.linkedRiskId, action.linkedQiId]} /></TableCell>
-                <TableCell>{action.owner}</TableCell>
-                <TableCell><DueBadge state={action.dueState} label={action.dueDate} /></TableCell>
-                <TableCell><Badge variant="secondary">{action.status}</Badge></TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setActiveRecord(action)}>
-                    <Eye className="mr-2 h-4 w-4" />
-                    Open
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {actions.map((action) => {
+              const isExpanded = expandedLinkedRowId === action.id;
+
+              return (
+                <Fragment key={action.id}>
+                  <TableRow
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
+                    aria-controls={`${action.id}-links`}
+                    className="cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                    onClick={() => toggleLinkedRow(action.id)}
+                    onKeyDown={(event) => handleLinkedRowKeyDown(event, action.id)}
+                  >
+                    <TableCell className={idCellClass}>{action.id}</TableCell>
+                    <TableCell className="min-w-48">
+                      <div className="font-medium">{action.title}</div>
+                      <div className="line-clamp-1 text-xs text-muted-foreground">{action.specific}</div>
+                    </TableCell>
+                    <TableCell>{action.owner}</TableCell>
+                    <TableCell><DueBadge state={action.dueState} label={action.dueDate} /></TableCell>
+                    <TableCell><StatusBadge status={action.status} /></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`View ${action.id} details`}
+                          onClick={(event) => { event.stopPropagation(); setActiveRecord(action); }}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          <Eye className="h-4 w-4 xl:mr-2" />
+                          <span className="hidden xl:inline">View details</span>
+                        </Button>
+                        <ExpandAssociatedRecordsButton
+                          recordId={action.id}
+                          isExpanded={isExpanded}
+                          onToggle={toggleLinkedRow}
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {isExpanded && (
+                    <ExpandedLinkedRecordsRow
+                      id={`${action.id}-links`}
+                      colSpan={6}
+                      sourceRecord={action}
+                      onOpenRecord={setActiveRecord}
+                    />
+                  )}
+                </Fragment>
+              );
+            })}
           </RegisterTable>
         </TabsContent>
 
@@ -1190,61 +1423,141 @@ export default function SafetyRiskModule() {
           <RegisterTable
             title="QI Register"
             icon={ClipboardCheck}
-            columns={["ID", "Improvement", "Priority", "Links", "Owner", "Due", "Status", ""]}
+            columns={["ID", "Improvement", "Priority", "Owner", "Due", "Status", ""]}
             emptyLabel="No QI items to show."
           >
-            {qiItems.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-mono text-xs">{item.id}</TableCell>
-                <TableCell className="min-w-64">
-                  <div className="font-medium">{item.title}</div>
-                  <div className="line-clamp-1 text-xs text-muted-foreground">{item.issue}</div>
-                </TableCell>
-                <TableCell><PriorityBadge priority={item.priority} /></TableCell>
-                <TableCell><LinkedIds ids={[item.linkedRiskId, item.linkedActionId, item.linkedIdeaId]} /></TableCell>
-                <TableCell>{item.owner}</TableCell>
-                <TableCell><DueBadge state={item.dueState} label={item.dueDate} /></TableCell>
-                <TableCell><Badge variant="secondary">{item.status}</Badge></TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setActiveRecord(item)}>
-                    <Eye className="mr-2 h-4 w-4" />
-                    Open
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {qiItems.map((item) => {
+              const isExpanded = expandedLinkedRowId === item.id;
+
+              return (
+                <Fragment key={item.id}>
+                  <TableRow
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
+                    aria-controls={`${item.id}-links`}
+                    className="cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                    onClick={() => toggleLinkedRow(item.id)}
+                    onKeyDown={(event) => handleLinkedRowKeyDown(event, item.id)}
+                  >
+                    <TableCell className={idCellClass}>{item.id}</TableCell>
+                    <TableCell className="min-w-48">
+                      <div className="font-medium">{item.title}</div>
+                      <div className="line-clamp-1 text-xs text-muted-foreground">{item.issue}</div>
+                    </TableCell>
+                    <TableCell><PriorityBadge priority={item.priority} /></TableCell>
+                    <TableCell>{item.owner}</TableCell>
+                    <TableCell><DueBadge state={item.dueState} label={item.dueDate} /></TableCell>
+                    <TableCell><StatusBadge status={item.status} /></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`View ${item.id} details`}
+                          onClick={(event) => { event.stopPropagation(); setActiveRecord(item); }}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          <Eye className="h-4 w-4 xl:mr-2" />
+                          <span className="hidden xl:inline">View details</span>
+                        </Button>
+                        <ExpandAssociatedRecordsButton
+                          recordId={item.id}
+                          isExpanded={isExpanded}
+                          onToggle={toggleLinkedRow}
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {isExpanded && (
+                    <ExpandedLinkedRecordsRow
+                      id={`${item.id}-links`}
+                      colSpan={7}
+                      sourceRecord={item}
+                      onOpenRecord={setActiveRecord}
+                    />
+                  )}
+                </Fragment>
+              );
+            })}
           </RegisterTable>
         </TabsContent>
 
         <TabsContent value="ideas" className="space-y-4">
+          <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-base font-semibold">Bright Ideas</h2>
+              <p className="text-sm text-muted-foreground">
+                Capture practical improvement suggestions before they become formal QI items, actions or risks.
+              </p>
+            </div>
+            <Button onClick={() => openForm({ mode: "idea" })}>
+              <Lightbulb className="mr-2 h-4 w-4" />
+              Submit a Bright Idea
+            </Button>
+          </div>
           <RegisterTable
             title="Bright Ideas"
             icon={Lightbulb}
-            columns={["ID", "Idea", "Submitted by", "Decision", "Status", "Links", ""]}
+            columns={["ID", "Idea", "Submitted by", "Decision", "Status", ""]}
             emptyLabel="No Bright Ideas to show."
           >
-            {brightIdeas.map((idea) => (
-              <TableRow key={idea.id}>
-                <TableCell className="font-mono text-xs">{idea.id}</TableCell>
-                <TableCell className="min-w-64">
-                  <div className="font-medium">{idea.title}</div>
-                  <div className="line-clamp-1 text-xs text-muted-foreground">{idea.whyNeeded}</div>
-                </TableCell>
-                <TableCell>
-                  <div>{idea.submittedBy}</div>
-                  <div className="text-xs text-muted-foreground">{idea.submittedDate}</div>
-                </TableCell>
-                <TableCell><DecisionBadge decision={idea.decision} /></TableCell>
-                <TableCell><Badge variant="secondary">{idea.status}</Badge></TableCell>
-                <TableCell><LinkedIds ids={[idea.linkedRecordId]} /></TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setActiveRecord(idea)}>
-                    <Eye className="mr-2 h-4 w-4" />
-                    Open
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {brightIdeas.map((idea) => {
+              const isExpanded = expandedLinkedRowId === idea.id;
+
+              return (
+                <Fragment key={idea.id}>
+                  <TableRow
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
+                    aria-controls={`${idea.id}-links`}
+                    className="cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                    onClick={() => toggleLinkedRow(idea.id)}
+                    onKeyDown={(event) => handleLinkedRowKeyDown(event, idea.id)}
+                  >
+                    <TableCell className={idCellClass}>{idea.id}</TableCell>
+                    <TableCell className="min-w-48">
+                      <div className="font-medium">{idea.title}</div>
+                      <div className="line-clamp-1 text-xs text-muted-foreground">{idea.whyNeeded}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div>{idea.submittedBy}</div>
+                      <div className="text-xs text-muted-foreground">{idea.submittedDate}</div>
+                    </TableCell>
+                    <TableCell><DecisionBadge decision={idea.decision} /></TableCell>
+                    <TableCell><StatusBadge status={idea.status} /></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`View ${idea.id} details`}
+                          onClick={(event) => { event.stopPropagation(); setActiveRecord(idea); }}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          <Eye className="h-4 w-4 xl:mr-2" />
+                          <span className="hidden xl:inline">View details</span>
+                        </Button>
+                        <ExpandAssociatedRecordsButton
+                          recordId={idea.id}
+                          isExpanded={isExpanded}
+                          onToggle={toggleLinkedRow}
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {isExpanded && (
+                    <ExpandedLinkedRecordsRow
+                      id={`${idea.id}-links`}
+                      colSpan={6}
+                      sourceRecord={idea}
+                      onOpenRecord={setActiveRecord}
+                    />
+                  )}
+                </Fragment>
+              );
+            })}
           </RegisterTable>
         </TabsContent>
 
@@ -1259,18 +1572,21 @@ export default function SafetyRiskModule() {
                 <Table className="min-w-[720px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-44">Likelihood</TableHead>
+                      <TableHead className="w-44 bg-muted/40 text-foreground">Likelihood</TableHead>
                       {consequenceLabels.map((label) => (
-                        <TableHead key={label} className="text-center">{label}</TableHead>
+                        <TableHead key={label} className="bg-muted/40 text-center text-foreground">{label}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {likelihoodLabels.map((likelihood, rowIndex) => (
                       <TableRow key={likelihood}>
-                        <TableCell className="font-medium">{likelihood}</TableCell>
+                        <TableCell className="font-medium text-foreground">{likelihood}</TableCell>
                         {riskMatrix[rowIndex].map((rating, columnIndex) => (
-                          <TableCell key={`${likelihood}-${consequenceLabels[columnIndex]}`} className="text-center">
+                          <TableCell
+                            key={`${likelihood}-${consequenceLabels[columnIndex]}`}
+                            className={cn("border text-center", ratingCellStyles[rating])}
+                          >
                             <RiskRatingBadge rating={rating} />
                           </TableCell>
                         ))}
@@ -1279,37 +1595,63 @@ export default function SafetyRiskModule() {
                   </TableBody>
                 </Table>
               </div>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                <GuidanceBlock title="Likelihood definitions" text="Use the best available evidence for how often the event could happen in the current season." />
-                <GuidanceBlock title="Consequence examples" text="Consider injury, child safety, financial, reputation, compliance and operational impacts." />
-                <GuidanceBlock title="Risk response guide" text="Very High and High risks need visible ownership, controls and committee review." />
-                <GuidanceBlock title="Inherent vs residual risk" text="Inherent risk is before controls. Residual risk is after current controls are considered." />
-                <GuidanceBlock title="Review frequency" text="Use shorter review cycles for higher residual ratings or weak controls." />
-                <GuidanceBlock title="Categories" text="Keep categories practical so committee members can find similar issues quickly." />
-              </div>
+              <Tabs defaultValue="likelihood" className="space-y-3">
+                <TabsList className="grid h-auto w-full grid-cols-2 bg-muted/70 md:grid-cols-3 xl:grid-cols-5">
+                  {matrixGuidanceTabs.map((section) => (
+                    <TabsTrigger
+                      key={section.value}
+                      value={section.value}
+                      className="text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground"
+                    >
+                      {section.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {matrixGuidanceTabs.map((section) => (
+                  <TabsContent key={section.value} value={section.value}>
+                    <GuidanceBlock title={section.title} items={section.items} />
+                  </TabsContent>
+                ))}
+              </Tabs>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="audit" className="space-y-4">
+          <AuditFilterBar
+            dateFrom={auditDateFrom}
+            onDateFromChange={setAuditDateFrom}
+            dateTo={auditDateTo}
+            onDateToChange={setAuditDateTo}
+            user={auditUser}
+            onUserChange={setAuditUser}
+            users={auditUsers}
+            recordType={auditRecordType}
+            onRecordTypeChange={setAuditRecordType}
+            recordId={auditRecordId}
+            onRecordIdChange={setAuditRecordId}
+            action={auditAction}
+            onActionChange={setAuditAction}
+            actions={auditActions}
+          />
           <RegisterTable
             title="Audit History"
             icon={History}
             columns={["Date", "User", "Record", "Action", "Field", ""]}
             emptyLabel="No audit rows to show."
           >
-            {auditEvents.map((event) => (
-              <TableRow key={event.id}>
+            {filteredAuditEvents.map((event) => (
+              <TableRow key={event.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setActiveRecord(event)}>
                 <TableCell className="whitespace-nowrap">{event.date}</TableCell>
                 <TableCell>{event.user}</TableCell>
                 <TableCell>
-                  <div className="font-mono text-xs">{event.record}</div>
+                  <div className="whitespace-nowrap font-mono text-xs">{event.record}</div>
                   <div className="text-xs text-muted-foreground">{event.recordType}</div>
                 </TableCell>
                 <TableCell>{event.action}</TableCell>
                 <TableCell>{event.fieldChanged}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setActiveRecord(event)}>
+                  <Button variant="ghost" size="sm" onClick={(clickEvent) => { clickEvent.stopPropagation(); setActiveRecord(event); }}>
                     <Eye className="mr-2 h-4 w-4" />
                     Open
                   </Button>
@@ -1336,6 +1678,7 @@ export default function SafetyRiskModule() {
         record={activeRecord}
         onOpenChange={(open) => !open && setActiveRecord(null)}
         onOpenForm={openForm}
+        onOpenRecord={setActiveRecord}
       />
       <AlertDialog open={showUnsavedWarning} onOpenChange={setShowUnsavedWarning}>
         <AlertDialogContent>
@@ -1370,8 +1713,14 @@ function LoadingState() {
 }
 
 function AddRecordButton({ onOpenForm }: { onOpenForm: (mode: SafetyFormMode) => void }) {
+  const [open, setOpen] = useState(false);
+  const openFormAndCloseMenu = (mode: SafetyFormMode) => {
+    setOpen(false);
+    onOpenForm(mode);
+  };
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline">
           <Plus className="mr-2 h-4 w-4" />
@@ -1380,13 +1729,10 @@ function AddRecordButton({ onOpenForm }: { onOpenForm: (mode: SafetyFormMode) =>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>Prototype forms</DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => onOpenForm("risk")}>Add risk</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onOpenForm("action")}>Add action</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onOpenForm("qi")}>Add QI item</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onOpenForm("idea")}>Submit Bright Idea</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => onOpenForm("committee-review")}>Committee Bright Idea review</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onOpenForm("risk-review")}>Record risk review</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => openFormAndCloseMenu("risk")}>Add risk</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => openFormAndCloseMenu("action")}>Add action</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => openFormAndCloseMenu("qi")}>Add QI item</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => openFormAndCloseMenu("idea")}>Submit Bright Idea</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -1405,8 +1751,8 @@ function MetricCard({
 }) {
   const toneClass = {
     neutral: "text-muted-foreground",
-    warning: "text-amber-700",
-    critical: "text-rose-700",
+    warning: "text-amber-700 dark:text-amber-300",
+    critical: "text-rose-700 dark:text-rose-300",
   }[tone];
 
   return (
@@ -1424,9 +1770,9 @@ function MetricCard({
 
 function AlertChip({ label, tone }: { label: string; tone: "neutral" | "warning" | "critical" }) {
   const className = {
-    neutral: "border-slate-200 bg-slate-50 text-slate-700",
-    warning: "border-amber-200 bg-amber-50 text-amber-800",
-    critical: "border-rose-200 bg-rose-50 text-rose-800",
+    neutral: "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200",
+    warning: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200",
+    critical: "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200",
   }[tone];
 
   return (
@@ -1459,15 +1805,49 @@ function ChartCard({
   );
 }
 
+function ThemedChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number; color?: string; payload?: ChartDatum }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="rounded-md border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-md">
+      {label && <div className="mb-1 font-medium">{label}</div>}
+      <div className="space-y-1">
+        {payload.map((entry) => {
+          const colour = entry.color || entry.payload?.fill || "hsl(var(--primary))";
+          const name = entry.name === "value" ? entry.payload?.name : entry.name;
+
+          return (
+            <div key={`${name}-${entry.value}`} className="flex items-center gap-2 text-muted-foreground">
+              <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: colour }} />
+              <span>{name || "Count"}</span>
+              <span className="font-medium text-popover-foreground">{entry.value}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function SimpleBarChart({ data }: { data: ChartDatum[] }) {
+  const axisTick = { fontSize: 11, fill: "hsl(var(--muted-foreground))" };
+
   return (
     <div className="h-56">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 24 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-          <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-15} textAnchor="end" height={48} />
-          <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-          <Tooltip />
+          <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="name" tick={axisTick} axisLine={{ stroke: "hsl(var(--border))" }} tickLine={false} angle={-15} textAnchor="end" height={48} />
+          <YAxis allowDecimals={false} tick={axisTick} axisLine={{ stroke: "hsl(var(--border))" }} tickLine={false} />
+          <Tooltip content={<ThemedChartTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.35)" }} wrapperStyle={{ outline: "none" }} />
           <Bar dataKey="value" radius={[4, 4, 0, 0]}>
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.fill} />
@@ -1490,7 +1870,7 @@ function DonutChart({ data }: { data: ChartDatum[] }) {
                 <Cell key={entry.name} fill={entry.fill} />
               ))}
             </Pie>
-            <Tooltip />
+            <Tooltip content={<ThemedChartTooltip />} wrapperStyle={{ outline: "none" }} />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -1519,6 +1899,14 @@ function FilterBar({
   category,
   onCategoryChange,
   categories,
+  owner,
+  onOwnerChange,
+  owners,
+  reviewState,
+  onReviewStateChange,
+  scope,
+  onScopeChange,
+  scopes,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -1529,11 +1917,19 @@ function FilterBar({
   category: string;
   onCategoryChange: (value: string) => void;
   categories: string[];
+  owner: string;
+  onOwnerChange: (value: string) => void;
+  owners: string[];
+  reviewState: string;
+  onReviewStateChange: (value: string) => void;
+  scope: string;
+  onScopeChange: (value: string) => void;
+  scopes: string[];
 }) {
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px_180px]">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_150px_150px_180px_160px_160px_180px]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
@@ -1546,6 +1942,9 @@ function FilterBar({
           <FilterSelect value={rating} onValueChange={onRatingChange} options={ratingOptions} label="Rating" />
           <FilterSelect value={status} onValueChange={onStatusChange} options={statusOptions} label="Status" />
           <FilterSelect value={category} onValueChange={onCategoryChange} options={["__all__", ...categories]} label="Category" />
+          <FilterSelect value={owner} onValueChange={onOwnerChange} options={["__all__", ...owners]} label="Owner" />
+          <FilterSelect value={reviewState} onValueChange={onReviewStateChange} options={reviewStateOptions} label="Review due" />
+          <FilterSelect value={scope} onValueChange={onScopeChange} options={["__all__", ...scopes]} label="Scope" />
         </div>
       </CardContent>
     </Card>
@@ -1580,6 +1979,76 @@ function FilterSelect({
   );
 }
 
+function AuditFilterBar({
+  dateFrom,
+  onDateFromChange,
+  dateTo,
+  onDateToChange,
+  user,
+  onUserChange,
+  users,
+  recordType,
+  onRecordTypeChange,
+  recordId,
+  onRecordIdChange,
+  action,
+  onActionChange,
+  actions,
+}: {
+  dateFrom: string;
+  onDateFromChange: (value: string) => void;
+  dateTo: string;
+  onDateToChange: (value: string) => void;
+  user: string;
+  onUserChange: (value: string) => void;
+  users: string[];
+  recordType: string;
+  onRecordTypeChange: (value: string) => void;
+  recordId: string;
+  onRecordIdChange: (value: string) => void;
+  action: string;
+  onActionChange: (value: string) => void;
+  actions: string[];
+}) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[150px_150px_180px_170px_minmax(0,1fr)_180px]">
+          <div className="space-y-1">
+            <Label htmlFor="audit-date-from" className="text-xs text-muted-foreground">From</Label>
+            <Input id="audit-date-from" type="date" value={dateFrom} onChange={(event) => onDateFromChange(event.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="audit-date-to" className="text-xs text-muted-foreground">To</Label>
+            <Input id="audit-date-to" type="date" value={dateTo} onChange={(event) => onDateToChange(event.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">User</Label>
+            <FilterSelect value={user} onValueChange={onUserChange} options={["__all__", ...users]} label="User" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Record type</Label>
+            <FilterSelect value={recordType} onValueChange={onRecordTypeChange} options={["__all__", "Risk", "Action", "QI", "Bright Idea"]} label="Record type" />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="audit-record-id" className="text-xs text-muted-foreground">Record ID</Label>
+            <Input
+              id="audit-record-id"
+              value={recordId}
+              onChange={(event) => onRecordIdChange(event.target.value)}
+              placeholder="Search R-001, A-001..."
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Action type</Label>
+            <FilterSelect value={action} onValueChange={onActionChange} options={["__all__", ...actions]} label="Action" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function RegisterTable({
   title,
   icon: Icon,
@@ -1606,7 +2075,7 @@ function RegisterTable({
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>{columns.map((column) => <TableHead key={column}>{column}</TableHead>)}</TableRow>
+            <TableRow>{columns.map((column) => <TableHead key={column} className="whitespace-nowrap">{column}</TableHead>)}</TableRow>
           </TableHeader>
           <TableBody>
             {hasRows ? children : (
@@ -1620,6 +2089,208 @@ function RegisterTable({
         </Table>
       </div>
     </Card>
+  );
+}
+
+function ExpandAssociatedRecordsButton({
+  recordId,
+  isExpanded,
+  onToggle,
+}: {
+  recordId: string;
+  isExpanded: boolean;
+  onToggle: (recordId: string) => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8 shrink-0"
+      aria-label={`${isExpanded ? "Hide" : "Show"} associated records for ${recordId}`}
+      aria-expanded={isExpanded}
+      aria-controls={`${recordId}-links`}
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle(recordId);
+      }}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
+    </Button>
+  );
+}
+
+const associationGroups: Array<{
+  kind: CoreSafetyRecord["kind"];
+  label: string;
+  emptyLabel: string;
+}> = [
+  { kind: "risk", label: "Associated risks", emptyLabel: "No associated risks." },
+  { kind: "action", label: "Associated actions", emptyLabel: "No associated actions." },
+  { kind: "qi", label: "Associated QI items", emptyLabel: "No associated QI items." },
+  { kind: "idea", label: "Associated Bright Ideas", emptyLabel: "No associated Bright Ideas." },
+];
+
+function ExpandedLinkedRecordsRow({
+  id,
+  colSpan,
+  sourceRecord,
+  onOpenRecord,
+}: {
+  id: string;
+  colSpan: number;
+  sourceRecord: CoreSafetyRecord;
+  onOpenRecord: (record: SafetyRecord) => void;
+}) {
+  const linkedRecords = getAssociatedSafetyRecords(sourceRecord);
+  const visibleGroups = associationGroups.filter((group) => group.kind !== sourceRecord.kind);
+
+  return (
+    <TableRow id={id} className="bg-muted/35 hover:bg-muted/35">
+      <TableCell colSpan={colSpan} className="px-6 py-5">
+        <div className="space-y-5">
+          {visibleGroups.map((group) => (
+            <AssociatedRecordSection
+              key={group.kind}
+              headingId={`${id}-${group.kind}`}
+              label={group.label}
+              emptyLabel={group.emptyLabel}
+              records={linkedRecords.filter((record) => record.kind === group.kind)}
+              onOpenRecord={onOpenRecord}
+            />
+          ))}
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function AssociatedRecordSection({
+  headingId,
+  label,
+  emptyLabel,
+  records,
+  onOpenRecord,
+}: {
+  headingId: string;
+  label: string;
+  emptyLabel: string;
+  records: CoreSafetyRecord[];
+  onOpenRecord: (record: SafetyRecord) => void;
+}) {
+  return (
+    <section aria-labelledby={headingId}>
+      <h4 id={headingId} className="text-xs font-semibold uppercase text-foreground">
+        {label}
+      </h4>
+      {records.length === 0 ? (
+        <p className="mt-1.5 text-sm text-muted-foreground">{emptyLabel}</p>
+      ) : (
+        <div className="mt-1 overflow-x-auto">
+          <div className="min-w-[720px]">
+            {records.map((record) => (
+              <AssociatedRecordSummary
+                key={record.id}
+                record={record}
+                onOpenRecord={onOpenRecord}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AssociatedRecordSummary({
+  record,
+  onOpenRecord,
+}: {
+  record: CoreSafetyRecord;
+  onOpenRecord: (record: SafetyRecord) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="grid w-full grid-cols-[5.5rem_minmax(12rem,1fr)_9rem_10rem_9rem] items-center gap-3 border-t px-1 py-2.5 text-left transition-colors hover:bg-background/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60 dark:hover:bg-background/25"
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpenRecord(record);
+      }}
+    >
+      <span className="flex items-center gap-2 whitespace-nowrap font-mono text-xs">
+        <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+        {record.id}
+      </span>
+      <span className="truncate text-sm font-medium" title={record.title}>{record.title}</span>
+      {record.kind === "risk" && (
+        <>
+          <span className="justify-self-start"><RiskRatingBadge rating={record.residualRating} /></span>
+          <CompactLabel label="Owner" value={record.owner} />
+          <CompactDueSummary label="Review" state={record.reviewState} date={record.nextReview} />
+        </>
+      )}
+      {record.kind === "action" && (
+        <>
+          <CompactLabel label="Owner" value={record.owner} />
+          <CompactDueSummary label="Due" state={record.dueState} date={record.dueDate} />
+          <span className="justify-self-start"><StatusBadge status={record.status} /></span>
+        </>
+      )}
+      {record.kind === "qi" && (
+        <>
+          <CompactLabel label="Owner" value={record.owner} />
+          <CompactDueSummary label="Due" state={record.dueState} date={record.dueDate} />
+          <span className="justify-self-start"><StatusBadge status={record.status} /></span>
+        </>
+      )}
+      {record.kind === "idea" && (
+        <>
+          <CompactLabel label="By" value={`${record.submittedBy} - ${record.submittedDate}`} />
+          {record.decision === "Pending" ? (
+            <CompactLabel label="Decision" value="Not decided" />
+          ) : (
+            <span className="justify-self-start"><DecisionBadge decision={record.decision} /></span>
+          )}
+          <span className="justify-self-start"><StatusBadge status={record.status} /></span>
+        </>
+      )}
+    </button>
+  );
+}
+
+function CompactLabel({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="truncate text-xs" title={`${label}: ${value}`}>
+      <span className="text-muted-foreground">{label}: </span>
+      <span className="font-medium text-foreground">{value}</span>
+    </span>
+  );
+}
+
+function CompactDueSummary({
+  label,
+  state,
+  date,
+}: {
+  label: string;
+  state: DueState | ReviewState;
+  date: string;
+}) {
+  const tone = state === "Overdue"
+    ? "text-rose-700 dark:text-rose-200"
+    : state === "Due soon"
+      ? "text-amber-700 dark:text-amber-200"
+      : state === "Complete"
+        ? "text-emerald-700 dark:text-emerald-200"
+        : "text-foreground";
+
+  return (
+    <span className={cn("whitespace-nowrap text-xs font-medium", tone)}>
+      <span className="text-muted-foreground">{label}: </span>
+      {date} ({state === "Current" ? "On track" : state})
+    </span>
   );
 }
 
@@ -1641,62 +2312,66 @@ function RiskRatingBadge({ rating }: { rating: RiskRating }) {
 
 function PriorityBadge({ priority }: { priority: QiRecord["priority"] }) {
   const className = {
-    Low: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    Medium: "border-amber-200 bg-amber-50 text-amber-800",
-    High: "border-orange-200 bg-orange-50 text-orange-800",
+    Low: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
+    Medium: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200",
+    High: "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-200",
   }[priority];
   return <Badge variant="outline" className={className}>{priority}</Badge>;
 }
 
+function StatusBadge({ status }: { status: RiskStatus | ActionStatus | QiStatus | BrightIdeaStatus }) {
+  const className =
+    status === "Complete" || status === "Controlled" || status === "Accepted" || status === "Approved"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+      : status === "Blocked" || status === "Entered in error"
+        ? "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200"
+        : status === "Awaiting decision" || status === "Under review" || status === "In progress"
+          ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200"
+          : "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200";
+
+  return <Badge variant="outline" className={cn("whitespace-nowrap", className)}>{status}</Badge>;
+}
+
 function DecisionBadge({ decision }: { decision: BrightIdeaRecord["decision"] }) {
+  if (decision === "Pending") {
+    return <span className="text-sm text-muted-foreground">-</span>;
+  }
+
   const className = {
-    Pending: "border-amber-200 bg-amber-50 text-amber-800",
-    Accept: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    Defer: "border-blue-200 bg-blue-50 text-blue-700",
-    Reject: "border-rose-200 bg-rose-50 text-rose-800",
-    Close: "border-slate-200 bg-slate-50 text-slate-700",
-  }[decision];
+    Accept: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
+    Defer: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-200",
+    Reject: "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200",
+    Close: "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200",
+  }[decision as Exclude<BrightIdeaRecord["decision"], "Pending">];
   return <Badge variant="outline" className={className}>{decision}</Badge>;
 }
 
 function DueBadge({ state, label }: { state: DueState | ReviewState; label: string }) {
   const className = state === "Overdue"
-    ? "border-rose-200 bg-rose-50 text-rose-800"
+    ? "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200"
     : state === "Due soon"
-      ? "border-amber-200 bg-amber-50 text-amber-800"
+      ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200"
       : state === "Complete"
-        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-        : "border-slate-200 bg-slate-50 text-slate-700";
+        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+        : "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200";
 
   return (
     <div className="space-y-1">
-      <Badge variant="outline" className={cn("whitespace-nowrap", className)}>{state}</Badge>
+      <Badge variant="outline" className={cn("whitespace-nowrap", className)}>{state === "Current" ? "On track" : state}</Badge>
       <div className="whitespace-nowrap text-xs text-muted-foreground">{label}</div>
     </div>
   );
 }
 
-function LinkedIds({ ids }: { ids: Array<string | undefined> }) {
-  const visibleIds = ids.filter(Boolean) as string[];
-  if (visibleIds.length === 0) return <span className="text-sm text-muted-foreground">-</span>;
-
-  return (
-    <div className="flex flex-wrap gap-1">
-      {visibleIds.map((id) => (
-        <Badge key={id} variant="outline" className="font-mono text-xs">
-          <Link2 className="mr-1 h-3 w-3" />
-          {id}
-        </Badge>
-      ))}
-    </div>
-  );
-}
-
-function GuidanceBlock({ title, text }: { title: string; text: string }) {
+function GuidanceBlock({ title, items }: { title: string; items: string[] }) {
   return (
     <div className="rounded-md border p-4">
       <h3 className="font-medium">{title}</h3>
-      <p className="mt-2 text-sm text-muted-foreground">{text}</p>
+      <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -1752,6 +2427,7 @@ function SafetyFormDialog({
               {mode === "idea" && <BrightIdeaForm values={values} onValueChange={onValueChange} />}
               {mode === "committee-review" && <CommitteeReviewForm values={values} onValueChange={onValueChange} />}
               {mode === "risk-review" && <RiskReviewForm values={values} onValueChange={onValueChange} />}
+              {mode === "link-records" && <LinkRecordsForm values={values} onValueChange={onValueChange} />}
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
@@ -1791,7 +2467,7 @@ function RiskWizardProgress({ step }: { step: number }) {
           className={cn(
             "rounded-md border px-3 py-2 text-sm",
             index === step ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground",
-            index < step && "border-emerald-200 bg-emerald-50 text-emerald-700",
+            index < step && "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
           )}
         >
           <div className="text-xs font-medium">Step {index + 1}</div>
@@ -1816,13 +2492,16 @@ function RiskFormStep({
 
   if (step === 0) {
     return (
-      <FormGrid>
-        <TextField label="Organisation scope" field="scope" values={values} onValueChange={onValueChange} />
-        <SelectField label="Risk type" field="type" values={values} onValueChange={onValueChange} options={["Operational", "Clinical", "Governance", "Environmental", "Conduct"]} />
-        <TextField label="Category" field="category" values={values} onValueChange={onValueChange} />
-        <TextField label="Owner" field="owner" values={values} onValueChange={onValueChange} />
-        <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["Open", "In progress", "Controlled", "Closed"]} />
-      </FormGrid>
+      <div className="space-y-4">
+        <LinkedContextBanner ids={[values.linkedActionId, values.linkedQiId, values.linkedIdeaId]} />
+        <FormGrid>
+          <TextField label="Organisation scope" field="scope" values={values} onValueChange={onValueChange} />
+          <SelectField label="Risk type" field="type" values={values} onValueChange={onValueChange} options={["Operational", "Clinical", "Governance", "Environmental", "Conduct"]} />
+          <TextField label="Category" field="category" values={values} onValueChange={onValueChange} />
+          <TextField label="Owner" field="owner" values={values} onValueChange={onValueChange} />
+          <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["Open", "In progress", "Controlled", "Closed", "Entered in error"]} />
+        </FormGrid>
+      </div>
     );
   }
 
@@ -1888,25 +2567,39 @@ function ActionForm({
 }) {
   return (
     <div className="space-y-4">
-      <LinkedContextBanner ids={[values.linkedRiskId, values.linkedQiId, values.linkedIdeaId]} />
-      <FormGrid>
-        <TextField label="Action title" field="title" values={values} onValueChange={onValueChange} />
-        <TextField label="Owner" field="owner" values={values} onValueChange={onValueChange} />
-        <TextField label="Due date" field="dueDate" values={values} onValueChange={onValueChange} />
-        <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["Not started", "In progress", "Blocked", "Complete"]} />
-        <TextField label="Risk link" field="linkedRiskId" values={values} onValueChange={onValueChange} />
-        <TextField label="QI link" field="linkedQiId" values={values} onValueChange={onValueChange} />
-      </FormGrid>
-      <DetailSection title="BE SMART">
+      <DetailSection title="Basics and links">
+        <FormGrid>
+          <TextField label="Action title" field="title" values={values} onValueChange={onValueChange} />
+          <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["Not started", "In progress", "Blocked", "Complete", "Entered in error"]} />
+        </FormGrid>
+        <PermanentRelationshipPanel ids={[values.linkedRiskId, values.linkedQiId, values.linkedIdeaId]} />
+      </DetailSection>
+      <DetailSection title="BE - Baseline and Evaluate">
         <div className="grid gap-3">
           <TextAreaField label="Baseline" field="baseline" values={values} onValueChange={onValueChange} />
           <TextAreaField label="Evaluate" field="evaluate" values={values} onValueChange={onValueChange} />
+        </div>
+      </DetailSection>
+      <DetailSection title="SMART treatment">
+        <div className="grid gap-3">
           <TextAreaField label="Specific" field="specific" values={values} onValueChange={onValueChange} />
           <TextAreaField label="Measurable" field="measurable" values={values} onValueChange={onValueChange} />
           <TextAreaField label="Achievable" field="achievable" values={values} onValueChange={onValueChange} />
           <TextAreaField label="Relevant" field="relevant" values={values} onValueChange={onValueChange} />
           <TextAreaField label="Time-bound" field="timeBound" values={values} onValueChange={onValueChange} />
         </div>
+      </DetailSection>
+      <DetailSection title="Responsibility, resources and due date">
+        <FormGrid>
+          <TextField label="Owner" field="owner" values={values} onValueChange={onValueChange} />
+          <TextField label="Due date" field="dueDate" values={values} onValueChange={onValueChange} />
+        </FormGrid>
+        <TextAreaField label="Resources or support needed" field="resources" values={values} onValueChange={onValueChange} />
+      </DetailSection>
+      <DetailSection title="Review and save note">
+        <p className="text-sm text-muted-foreground">
+          This prototype validates the action draft locally only. It will not create or update a live action record.
+        </p>
       </DetailSection>
     </div>
   );
@@ -1921,7 +2614,6 @@ function QiForm({
 }) {
   return (
     <div className="space-y-4">
-      <LinkedContextBanner ids={[values.linkedRiskId, values.linkedActionId, values.linkedIdeaId]} />
       <FormGrid>
         <TextField label="QI title" field="title" values={values} onValueChange={onValueChange} />
         <TextField label="Source" field="source" values={values} onValueChange={onValueChange} />
@@ -1929,11 +2621,9 @@ function QiForm({
         <TextField label="Owner" field="owner" values={values} onValueChange={onValueChange} />
         <TextField label="Due date" field="dueDate" values={values} onValueChange={onValueChange} />
         <SelectField label="Priority" field="priority" values={values} onValueChange={onValueChange} options={["Low", "Medium", "High"]} />
-        <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["New", "Awaiting decision", "Approved", "In progress", "Complete"]} />
-        <TextField label="Risk link" field="linkedRiskId" values={values} onValueChange={onValueChange} />
-        <TextField label="Action link" field="linkedActionId" values={values} onValueChange={onValueChange} />
-        <TextField label="Bright Idea link" field="linkedIdeaId" values={values} onValueChange={onValueChange} />
+        <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["New", "Awaiting decision", "Approved", "In progress", "Complete", "Entered in error"]} />
       </FormGrid>
+      <PermanentRelationshipPanel ids={[values.linkedRiskId, values.linkedActionId, values.linkedIdeaId]} />
       <TextAreaField label="Issue or opportunity identified" field="issue" values={values} onValueChange={onValueChange} />
       <TextAreaField label="Required action" field="requiredAction" values={values} onValueChange={onValueChange} />
       <TextAreaField label="Outcome" field="outcome" values={values} onValueChange={onValueChange} />
@@ -1954,7 +2644,7 @@ function BrightIdeaForm({
         <TextField label="Idea title" field="title" values={values} onValueChange={onValueChange} />
         <TextField label="Submitted by" field="submittedBy" values={values} onValueChange={onValueChange} />
         <TextField label="Organisation scope" field="scope" values={values} onValueChange={onValueChange} />
-        <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["Submitted", "Under review", "Accepted", "Deferred", "Closed"]} />
+        <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["Submitted", "Under review", "Accepted", "Deferred", "Closed", "Entered in error"]} />
       </FormGrid>
       <TextAreaField label="Why it is needed" field="whyNeeded" values={values} onValueChange={onValueChange} />
       <TextAreaField label="Suggested implementation" field="suggestedImplementation" values={values} onValueChange={onValueChange} />
@@ -1976,7 +2666,7 @@ function CommitteeReviewForm({
     <div className="space-y-4">
       <LinkedContextBanner ids={[values.ideaId, values.linkedRecordId]} />
       <FormGrid>
-        <TextField label="Bright Idea ID" field="ideaId" values={values} onValueChange={onValueChange} />
+        <ReadOnlyField label="Bright Idea ID" value={values.ideaId || "No source idea selected"} />
         <SelectField label="Committee decision" field="decision" values={values} onValueChange={onValueChange} options={ideaDecisionOptions} />
         <SelectField label="Conversion or link" field="conversion" values={values} onValueChange={onValueChange} options={conversionOptions} />
         <TextField label="Resulting or linked record" field="linkedRecordId" values={values} onValueChange={onValueChange} />
@@ -2010,10 +2700,35 @@ function RiskReviewForm({
         <SelectField label="Residual likelihood" field="residualLikelihood" values={values} onValueChange={onValueChange} options={formLikelihoodOptions} />
         <SelectField label="Residual consequence" field="residualConsequence" values={values} onValueChange={onValueChange} options={formConsequenceOptions} />
         <RatingPreview label="Calculated residual rating" rating={residualRating} />
-        <SelectField label="Risk status" field="status" values={values} onValueChange={onValueChange} options={["Open", "In progress", "Controlled", "Closed"]} />
+        <SelectField label="Risk status" field="status" values={values} onValueChange={onValueChange} options={["Open", "In progress", "Controlled", "Closed", "Entered in error"]} />
       </FormGrid>
       <TextAreaField label="Review notes" field="reviewNotes" values={values} onValueChange={onValueChange} />
       <TextAreaField label="Evidence or follow-up" field="evidence" values={values} onValueChange={onValueChange} />
+    </div>
+  );
+}
+
+function LinkRecordsForm({
+  values,
+  onValueChange,
+}: {
+  values: Record<string, string>;
+  onValueChange: (field: string, value: string) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <LinkedContextBanner ids={[values.sourceRecordId, values.linkedRiskId, values.linkedActionId, values.linkedQiId, values.linkedIdeaId]} />
+      <FormGrid>
+        <TextField label="Source record" field="sourceRecordId" values={values} onValueChange={onValueChange} />
+        <TextField label="Existing risk ID" field="linkedRiskId" values={values} onValueChange={onValueChange} />
+        <TextField label="Existing action ID" field="linkedActionId" values={values} onValueChange={onValueChange} />
+        <TextField label="Existing QI ID" field="linkedQiId" values={values} onValueChange={onValueChange} />
+        <TextField label="Existing Bright Idea ID" field="linkedIdeaId" values={values} onValueChange={onValueChange} />
+      </FormGrid>
+      <TextAreaField label="Link reason or notes" field="linkNotes" values={values} onValueChange={onValueChange} />
+      <div className="rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
+        This prototype validates the relationship only in the browser. It does not create a live link yet.
+      </div>
     </div>
   );
 }
@@ -2041,6 +2756,52 @@ function TextField({
         value={values[field] || ""}
         onChange={(event) => onValueChange(field, event.target.value)}
       />
+    </div>
+  );
+}
+
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="min-h-10 rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function PermanentRelationshipPanel({ ids }: { ids: Array<string | undefined> }) {
+  const visibleIds = ids.filter((id) => Boolean(id?.trim())) as string[];
+
+  return (
+    <div className="rounded-md border bg-muted/40 p-4">
+      <div className="text-sm font-medium">Permanent source relationship</div>
+      {visibleIds.length === 0 ? (
+        <p className="mt-1 text-sm text-muted-foreground">
+          No source record selected. This prototype record will be treated as independent.
+        </p>
+      ) : (
+        <div className="mt-3 grid gap-2 md:grid-cols-2">
+          {visibleIds.map((id) => {
+            const record = findSafetyRecordById(id);
+            return (
+              <div key={id} className="rounded-md border bg-background/80 p-3 text-sm">
+                <div className="flex items-center gap-2 font-medium">
+                  <Link2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-mono text-xs">{id}</span>
+                </div>
+                <p className="mt-1 line-clamp-2 text-muted-foreground">
+                  {record ? getRecordSubtitle(record) : "Source record selected during creation."}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <p className="mt-3 text-xs text-muted-foreground">
+        After saving, this relationship is read-only. A wrong link should be marked Entered in error and replaced rather than silently moved.
+      </p>
     </div>
   );
 }
@@ -2124,7 +2885,7 @@ function LinkedContextBanner({ ids }: { ids: Array<string | undefined> }) {
       <div className="text-sm font-medium">Linked record context</div>
       <div className="mt-2 flex flex-wrap gap-2">
         {visibleIds.map((id) => (
-          <Badge key={id} variant="outline" className="font-mono text-xs">
+          <Badge key={id} variant="outline" className="whitespace-nowrap font-mono text-xs">
             <Link2 className="mr-1 h-3 w-3" />
             {id}
           </Badge>
@@ -2138,7 +2899,7 @@ function FormErrors({ errors }: { errors: string[] }) {
   if (errors.length === 0) return null;
 
   return (
-    <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+    <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200">
       <div className="font-medium">Please check these fields</div>
       <ul className="mt-2 list-inside list-disc space-y-1">
         {errors.map((error) => (
@@ -2153,7 +2914,7 @@ function PrototypeSaveBanner({ message }: { message: string | null }) {
   if (!message) return null;
 
   return (
-    <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+    <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
       <CheckCircle2 className="mt-0.5 h-4 w-4" />
       <div>
         <div className="font-medium">Prototype save complete</div>
@@ -2167,26 +2928,28 @@ function SafetyDetailDrawer({
   record,
   onOpenChange,
   onOpenForm,
+  onOpenRecord,
 }: {
   record: SafetyRecord | null;
   onOpenChange: (open: boolean) => void;
   onOpenForm: (options: OpenFormOptions) => void;
+  onOpenRecord: (record: SafetyRecord) => void;
 }) {
   return (
     <Sheet open={Boolean(record)} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+      <SheetContent className="flex w-full max-w-none flex-col overflow-hidden p-0 sm:max-w-none lg:max-w-[600px]">
         {record && (
           <>
-            <SheetHeader className="pr-8">
+            <SheetHeader className="sticky top-0 z-10 border-b bg-background p-6 pr-12">
               <SheetTitle>{getRecordTitle(record)}</SheetTitle>
               <SheetDescription>{getRecordSubtitle(record)}</SheetDescription>
             </SheetHeader>
-            <div className="mt-6 space-y-4">
-              {record.kind === "risk" && <RiskDetail risk={record} onOpenForm={onOpenForm} />}
-              {record.kind === "action" && <ActionDetail action={record} onOpenForm={onOpenForm} />}
-              {record.kind === "qi" && <QiDetail item={record} onOpenForm={onOpenForm} />}
-              {record.kind === "idea" && <BrightIdeaDetail idea={record} onOpenForm={onOpenForm} />}
-              {record.kind === "audit" && <AuditDetail event={record} />}
+            <div className="flex-1 space-y-4 overflow-y-auto p-6">
+              {record.kind === "risk" && <RiskDetail risk={record} onOpenForm={onOpenForm} onOpenRecord={onOpenRecord} />}
+              {record.kind === "action" && <ActionDetail action={record} onOpenForm={onOpenForm} onOpenRecord={onOpenRecord} />}
+              {record.kind === "qi" && <QiDetail item={record} onOpenForm={onOpenForm} onOpenRecord={onOpenRecord} />}
+              {record.kind === "idea" && <BrightIdeaDetail idea={record} onOpenForm={onOpenForm} onOpenRecord={onOpenRecord} />}
+              {record.kind === "audit" && <AuditDetail event={record} onOpenRecord={onOpenRecord} />}
             </div>
           </>
         )}
@@ -2198,13 +2961,15 @@ function SafetyDetailDrawer({
 function RiskDetail({
   risk,
   onOpenForm,
+  onOpenRecord,
 }: {
   risk: RiskRecord;
   onOpenForm: (options: OpenFormOptions) => void;
+  onOpenRecord: (record: SafetyRecord) => void;
 }) {
   return (
     <>
-      <div className="flex flex-wrap gap-2">
+      <DetailActions>
         <Button size="sm" onClick={() => onOpenForm({ mode: "risk", context: { riskId: risk.id } })}>
           Edit risk
         </Button>
@@ -2217,7 +2982,7 @@ function RiskDetail({
         <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "risk-review", context: { riskId: risk.id } })}>
           Record review
         </Button>
-      </div>
+      </DetailActions>
       <DetailGrid>
         <DetailField label="Category" value={risk.category} />
         <DetailField label="Type" value={risk.type} />
@@ -2243,7 +3008,7 @@ function RiskDetail({
       </DetailSection>
       <DetailSection title="Linked records">
         <div className="grid gap-2 sm:grid-cols-2">
-          {[...risk.linkedActions, ...risk.linkedQi].map((id) => <LinkedRecordCard key={id} id={id} />)}
+          {[...risk.linkedActions, ...risk.linkedQi].map((id) => <LinkedRecordCard key={id} id={id} onOpenRecord={onOpenRecord} />)}
         </div>
       </DetailSection>
     </>
@@ -2253,20 +3018,19 @@ function RiskDetail({
 function ActionDetail({
   action,
   onOpenForm,
+  onOpenRecord,
 }: {
   action: ActionRecord;
   onOpenForm: (options: OpenFormOptions) => void;
+  onOpenRecord: (record: SafetyRecord) => void;
 }) {
   return (
     <>
-      <div className="flex flex-wrap gap-2">
+      <DetailActions>
         <Button size="sm" onClick={() => onOpenForm({ mode: "action", context: { actionId: action.id } })}>
           Edit action
         </Button>
-        <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "qi", context: { actionId: action.id, riskId: action.linkedRiskId } })}>
-          Add linked QI
-        </Button>
-      </div>
+      </DetailActions>
       <DetailGrid>
         <DetailField label="Owner" value={action.owner} />
         <DetailField label="Status" value={action.status} />
@@ -2285,6 +3049,13 @@ function ActionDetail({
           <DetailField label="Time-bound" value={action.timeBound} />
         </div>
       </DetailSection>
+      <DetailSection title="Linked records">
+        <div className="grid gap-2 sm:grid-cols-2">
+          {[action.linkedRiskId, action.linkedQiId]
+            .filter(Boolean)
+            .map((id) => <LinkedRecordCard key={id} id={id as string} onOpenRecord={onOpenRecord} />)}
+        </div>
+      </DetailSection>
     </>
   );
 }
@@ -2292,20 +3063,32 @@ function ActionDetail({
 function QiDetail({
   item,
   onOpenForm,
+  onOpenRecord,
 }: {
   item: QiRecord;
   onOpenForm: (options: OpenFormOptions) => void;
+  onOpenRecord: (record: SafetyRecord) => void;
 }) {
+  const originatingIdea = item.linkedIdeaId ? brightIdeas.find((idea) => idea.id === item.linkedIdeaId) : undefined;
+
   return (
     <>
-      <div className="flex flex-wrap gap-2">
+      <DetailActions>
         <Button size="sm" onClick={() => onOpenForm({ mode: "qi", context: { qiId: item.id } })}>
           Edit QI item
         </Button>
-        <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "action", context: { qiId: item.id, riskId: item.linkedRiskId } })}>
-          Add linked action
+        <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "risk", context: { qiId: item.id } })}>
+          Create linked risk
         </Button>
-      </div>
+        <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "action", context: { qiId: item.id, riskId: item.linkedRiskId } })}>
+          Create linked action
+        </Button>
+        {originatingIdea && (
+          <Button size="sm" variant="outline" onClick={() => onOpenRecord(originatingIdea)}>
+            View originating Bright Idea
+          </Button>
+        )}
+      </DetailActions>
       <DetailGrid>
         <DetailField label="Source" value={item.source} />
         <DetailField label="Area" value={item.area} />
@@ -2323,7 +3106,7 @@ function QiDetail({
         <div className="grid gap-2 sm:grid-cols-2">
           {[item.linkedRiskId, item.linkedActionId, item.linkedIdeaId]
             .filter(Boolean)
-            .map((id) => <LinkedRecordCard key={id} id={id as string} />)}
+            .map((id) => <LinkedRecordCard key={id} id={id as string} onOpenRecord={onOpenRecord} />)}
         </div>
       </DetailSection>
     </>
@@ -2333,15 +3116,22 @@ function QiDetail({
 function BrightIdeaDetail({
   idea,
   onOpenForm,
+  onOpenRecord,
 }: {
   idea: BrightIdeaRecord;
   onOpenForm: (options: OpenFormOptions) => void;
+  onOpenRecord: (record: SafetyRecord) => void;
 }) {
+  const linkedRecord = idea.linkedRecordId ? findSafetyRecordById(idea.linkedRecordId) : undefined;
+
   return (
     <>
-      <div className="flex flex-wrap gap-2">
+      <DetailActions>
         <Button size="sm" onClick={() => onOpenForm({ mode: "committee-review", context: { ideaId: idea.id } })}>
           Review idea
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "risk", context: { ideaId: idea.id } })}>
+          Create linked risk
         </Button>
         <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "qi", context: { ideaId: idea.id } })}>
           Create linked QI
@@ -2349,13 +3139,13 @@ function BrightIdeaDetail({
         <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "action", context: { ideaId: idea.id } })}>
           Create linked action
         </Button>
-      </div>
+      </DetailActions>
       <DetailGrid>
         <DetailField label="Submitted by" value={idea.submittedBy} />
         <DetailField label="Submitted date" value={idea.submittedDate} />
         <DetailField label="Scope" value={idea.scope} />
         <DetailField label="Status" value={idea.status} />
-        <DetailField label="Decision" value={idea.decision} />
+        <DetailField label="Decision" value={idea.decision === "Pending" ? "No committee decision recorded yet" : idea.decision} />
         <DetailField label="Linked record" value={idea.linkedRecordId || "-"} />
       </DetailGrid>
       <DetailSection title="Suggestion">
@@ -2367,11 +3157,24 @@ function BrightIdeaDetail({
       <DetailSection title="Committee discussion">
         <p className="text-sm text-muted-foreground">{idea.committeeNotes}</p>
       </DetailSection>
+      {linkedRecord && (
+        <DetailSection title="Linked records">
+          <LinkedRecordCard id={linkedRecord.id} onOpenRecord={onOpenRecord} />
+        </DetailSection>
+      )}
     </>
   );
 }
 
-function AuditDetail({ event }: { event: AuditRecord }) {
+function AuditDetail({
+  event,
+  onOpenRecord,
+}: {
+  event: AuditRecord;
+  onOpenRecord: (record: SafetyRecord) => void;
+}) {
+  const relatedRecord = event.relatedRecordId ? findSafetyRecordById(event.relatedRecordId) : undefined;
+
   return (
     <>
       <DetailGrid>
@@ -2379,15 +3182,31 @@ function AuditDetail({ event }: { event: AuditRecord }) {
         <DetailField label="User" value={event.user} />
         <DetailField label="Record" value={event.record} />
         <DetailField label="Record type" value={event.recordType} />
+        <DetailField label="Organisation scope" value={event.scope} />
         <DetailField label="Action" value={event.action} />
         <DetailField label="Field changed" value={event.fieldChanged} />
+        <DetailField label="Related record" value={event.relatedRecordId || "-"} />
       </DetailGrid>
       <DetailSection title="Change detail">
         <DetailField label="Previous value" value={event.previousValue} />
         <DetailField label="New value" value={event.newValue} />
         <DetailField label="Reason" value={event.reason} />
       </DetailSection>
+      {relatedRecord && (
+        <DetailSection title="Related record detail">
+          <LinkedRecordCard id={relatedRecord.id} onOpenRecord={onOpenRecord} />
+          <DetailField label="Summary" value={getRecordSubtitle(relatedRecord)} />
+        </DetailSection>
+      )}
     </>
+  );
+}
+
+function DetailActions({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="sticky top-0 z-10 -mx-1 flex flex-wrap gap-2 border-b bg-background/95 px-1 pb-3 backdrop-blur">
+      {children}
+    </div>
   );
 }
 
@@ -2422,13 +3241,80 @@ function DetailRating({ label, rating }: { label: string; rating: RiskRating }) 
   );
 }
 
-function LinkedRecordCard({ id }: { id: string }) {
+function LinkedRecordCard({
+  id,
+  onOpenRecord,
+}: {
+  id: string;
+  onOpenRecord: (record: SafetyRecord) => void;
+}) {
+  const linkedRecord = findSafetyRecordById(id);
+
   return (
-    <div className="flex items-center gap-2 rounded-md border p-3 text-sm">
+    <button
+      type="button"
+      className="flex items-center gap-2 rounded-md border p-3 text-left text-sm transition-colors hover:bg-muted/50"
+      onClick={() => {
+        if (linkedRecord) onOpenRecord(linkedRecord);
+      }}
+      disabled={!linkedRecord}
+    >
       <Link2 className="h-4 w-4 text-muted-foreground" />
-      <span className="font-mono text-xs">{id}</span>
-    </div>
+      <span className="whitespace-nowrap font-mono text-xs">{id}</span>
+    </button>
   );
+}
+
+function findSafetyRecordById(id: string): SafetyRecord | undefined {
+  return (
+    risks.find((risk) => risk.id === id) ||
+    actions.find((action) => action.id === id) ||
+    qiItems.find((item) => item.id === id) ||
+    brightIdeas.find((idea) => idea.id === id) ||
+    auditEvents.find((event) => event.id === id)
+  );
+}
+
+function getAssociatedSafetyRecords(sourceRecord: CoreSafetyRecord): CoreSafetyRecord[] {
+  const records: CoreSafetyRecord[] = [...risks, ...actions, ...qiItems, ...brightIdeas];
+  const recordsById = new Map(records.map((record) => [record.id, record]));
+  const visitedIds = new Set([sourceRecord.id]);
+  const pendingIds = [sourceRecord.id];
+
+  while (pendingIds.length > 0) {
+    const currentId = pendingIds.shift();
+    if (!currentId) continue;
+
+    const currentRecord = recordsById.get(currentId);
+    if (!currentRecord) continue;
+
+    const currentLinks = new Set(getDirectAssociationIds(currentRecord));
+
+    records.forEach((candidate) => {
+      if (visitedIds.has(candidate.id)) return;
+
+      const candidateLinksBack = getDirectAssociationIds(candidate).includes(currentRecord.id);
+      if (!currentLinks.has(candidate.id) && !candidateLinksBack) return;
+
+      visitedIds.add(candidate.id);
+      pendingIds.push(candidate.id);
+    });
+  }
+
+  return records.filter((record) => record.id !== sourceRecord.id && visitedIds.has(record.id));
+}
+
+function getDirectAssociationIds(record: CoreSafetyRecord): string[] {
+  if (record.kind === "risk") return [...record.linkedActions, ...record.linkedQi];
+  if (record.kind === "action") return [record.linkedRiskId, record.linkedQiId].filter(isRecordId);
+  if (record.kind === "qi") {
+    return [record.linkedRiskId, record.linkedActionId, record.linkedIdeaId].filter(isRecordId);
+  }
+  return [record.linkedRecordId].filter(isRecordId);
+}
+
+function isRecordId(value: string | undefined): value is string {
+  return typeof value === "string" && value.length > 0;
 }
 
 function getRecordTitle(record: SafetyRecord) {
@@ -2461,10 +3347,10 @@ function createInitialFormValues(
       category: risk?.category || "Safety",
       owner: risk?.owner || "",
       status: risk?.status || "Open",
-      title: risk?.title || idea?.title || "",
-      riskEvent: risk?.title || "",
-      consequences: risk?.summary || "",
-      summary: risk?.summary || "",
+      title: risk?.title || idea?.title || qi?.title || action?.title || "",
+      riskEvent: risk?.title || qi?.issue || idea?.whyNeeded || "",
+      consequences: risk?.summary || qi?.issue || idea?.whyNeeded || "",
+      summary: risk?.summary || qi?.issue || idea?.whyNeeded || "",
       inherentLikelihood: risk?.likelihood || "Possible",
       inherentConsequence: risk?.consequence || "Moderate",
       existingControls: risk?.existingControls || "",
@@ -2475,6 +3361,9 @@ function createInitialFormValues(
       reviewFrequency: "Quarterly",
       nextReview: risk?.nextReview || "",
       evidence: risk?.evidence || "",
+      linkedActionId: context.actionId || "",
+      linkedQiId: context.qiId || "",
+      linkedIdeaId: context.ideaId || "",
     };
   }
 
@@ -2494,6 +3383,7 @@ function createInitialFormValues(
       achievable: action?.achievable || "",
       relevant: action?.relevant || idea?.whyNeeded || "",
       timeBound: action?.timeBound || "",
+      resources: "",
     };
   }
 
@@ -2540,6 +3430,18 @@ function createInitialFormValues(
     };
   }
 
+  if (mode === "link-records") {
+    const sourceRecordId = risk?.id || action?.id || qi?.id || idea?.id || "";
+    return {
+      sourceRecordId,
+      linkedRiskId: risk?.id || action?.linkedRiskId || qi?.linkedRiskId || "",
+      linkedActionId: action?.id || qi?.linkedActionId || "",
+      linkedQiId: qi?.id || action?.linkedQiId || "",
+      linkedIdeaId: idea?.id || qi?.linkedIdeaId || "",
+      linkNotes: "",
+    };
+  }
+
   return {
     riskId: risk?.id || "",
     reviewedBy: "Safety Lead",
@@ -2559,6 +3461,7 @@ function getFormTitle(mode: SafetyFormMode, context: SafetyFormContext) {
   if (mode === "qi") return context.qiId ? `Edit ${context.qiId}` : "Add QI Item";
   if (mode === "idea") return "Submit Bright Idea";
   if (mode === "committee-review") return "Committee Bright Idea Review";
+  if (mode === "link-records") return "Manage Linked Records";
   return "Record Risk Review";
 }
 
@@ -2568,6 +3471,7 @@ function getFormDescription(mode: SafetyFormMode, context: SafetyFormContext) {
   if (mode === "qi") return context.ideaId ? "QI form carrying text across from the Bright Idea." : "Independent or linked quality improvement form.";
   if (mode === "idea") return "Simple suggestion form for signed-in users.";
   if (mode === "committee-review") return "Committee decision and conversion notes for a Bright Idea.";
+  if (mode === "link-records") return "Prototype link manager for connecting existing mock records.";
   return "Risk review form using the same matrix as the risk form.";
 }
 
@@ -2612,6 +3516,10 @@ function validateSafetyForm(mode: SafetyFormMode, values: Record<string, string>
     requireField("committeeNotes", "Committee discussion");
   }
 
+  if (mode === "link-records") {
+    requireField("sourceRecordId", "Source record");
+  }
+
   if (mode === "risk-review") {
     requireField("riskId", "Risk ID");
     requireField("reviewedBy", "Reviewed by");
@@ -2633,7 +3541,28 @@ function getPrototypeSaveMessage(mode: SafetyFormMode, context: SafetyFormContex
   if (mode === "qi") return `QI draft validated locally.${suffix}`;
   if (mode === "idea") return "Bright Idea draft validated locally.";
   if (mode === "committee-review") return `Committee review draft validated locally.${suffix}`;
+  if (mode === "link-records") return `Linked-record draft validated locally.${suffix}`;
   return `Risk review draft validated locally.${suffix}`;
+}
+
+function parseDateFilter(value: string): Date | null {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parseAuditEventDate(value: string): Date | null {
+  const [datePart] = value.split(" ");
+  const [day, month, year] = datePart.split("/").map(Number);
+  if (!day || !month || !year) return null;
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function endOfDay(date: Date): Date {
+  const end = new Date(date);
+  end.setHours(23, 59, 59, 999);
+  return end;
 }
 
 function calculateRiskRating(likelihood: string | undefined, consequence: string | undefined): RiskRating {
