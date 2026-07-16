@@ -223,17 +223,24 @@ const ideaDecisionOptions = ["Pending", "Accept", "Defer", "Reject", "Close"];
 const conversionOptions = ["Create risk", "Create action", "Create QI item", "Link to existing record", "Close without conversion"];
 
 const ratingStyles: Record<RiskRating, string> = {
-  Low: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
-  Medium: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200",
-  High: "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-200",
-  "Very High": "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200",
+  Low: "border-emerald-400 bg-emerald-100 text-emerald-900 dark:border-emerald-600 dark:bg-emerald-950/70 dark:text-emerald-100",
+  Medium: "border-yellow-500 bg-yellow-100 text-yellow-950 dark:border-yellow-600 dark:bg-yellow-950/70 dark:text-yellow-100",
+  High: "border-orange-600 bg-orange-200 text-orange-950 dark:border-orange-500 dark:bg-orange-950 dark:text-orange-100",
+  "Very High": "border-red-800 bg-red-700 text-white dark:border-red-500 dark:bg-red-900 dark:text-white",
 };
 
 const ratingCellStyles: Record<RiskRating, string> = {
-  Low: "border-emerald-100 bg-emerald-50/80 dark:border-emerald-900/80 dark:bg-emerald-950/35",
-  Medium: "border-amber-100 bg-amber-50/80 dark:border-amber-900/80 dark:bg-amber-950/35",
-  High: "border-orange-100 bg-orange-50/80 dark:border-orange-900/80 dark:bg-orange-950/35",
-  "Very High": "border-rose-100 bg-rose-50/80 dark:border-rose-900/80 dark:bg-rose-950/35",
+  Low: "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/45",
+  Medium: "border-yellow-500 bg-yellow-100 dark:border-yellow-600 dark:bg-yellow-950/65",
+  High: "border-orange-600 bg-orange-200 dark:border-orange-500 dark:bg-orange-950",
+  "Very High": "border-red-800 bg-red-300 dark:border-red-500 dark:bg-red-950",
+};
+
+const matrixRatingLabelStyles: Record<RiskRating, string> = {
+  Low: "border-emerald-800 bg-emerald-700 text-white dark:border-emerald-400 dark:bg-emerald-800",
+  Medium: "border-yellow-700 bg-yellow-400 text-yellow-950 dark:border-yellow-300 dark:bg-yellow-500",
+  High: "border-orange-900 bg-orange-600 text-white dark:border-orange-300 dark:bg-orange-700",
+  "Very High": "border-red-950 bg-red-800 text-white dark:border-red-300 dark:bg-red-800",
 };
 
 const idCellClass = "w-20 min-w-20 whitespace-nowrap font-mono text-xs";
@@ -1572,22 +1579,22 @@ export default function SafetyRiskModule() {
                 <Table className="min-w-[720px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-44 bg-muted/40 text-foreground">Likelihood</TableHead>
+                      <TableHead className="w-44 bg-muted/70 font-bold text-foreground">Likelihood</TableHead>
                       {consequenceLabels.map((label) => (
-                        <TableHead key={label} className="bg-muted/40 text-center text-foreground">{label}</TableHead>
+                        <TableHead key={label} className="bg-muted/70 text-center font-bold text-foreground">{label}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {likelihoodLabels.map((likelihood, rowIndex) => (
                       <TableRow key={likelihood}>
-                        <TableCell className="font-medium text-foreground">{likelihood}</TableCell>
+                        <TableCell className="bg-muted/35 font-bold text-foreground">{likelihood}</TableCell>
                         {riskMatrix[rowIndex].map((rating, columnIndex) => (
                           <TableCell
                             key={`${likelihood}-${consequenceLabels[columnIndex]}`}
-                            className={cn("border text-center", ratingCellStyles[rating])}
+                            className={cn("border-2 text-center", ratingCellStyles[rating])}
                           >
-                            <RiskRatingBadge rating={rating} />
+                            <MatrixRatingLabel rating={rating} />
                           </TableCell>
                         ))}
                       </TableRow>
@@ -1596,12 +1603,12 @@ export default function SafetyRiskModule() {
                 </Table>
               </div>
               <Tabs defaultValue="likelihood" className="space-y-3">
-                <TabsList className="grid h-auto w-full grid-cols-2 bg-muted/70 md:grid-cols-3 xl:grid-cols-5">
+                <TabsList className="grid h-auto w-full grid-cols-2 gap-1 border bg-muted/80 p-1 md:grid-cols-3 xl:grid-cols-5">
                   {matrixGuidanceTabs.map((section) => (
                     <TabsTrigger
                       key={section.value}
                       value={section.value}
-                      className="text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground"
+                      className="font-medium text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                     >
                       {section.label}
                     </TabsTrigger>
@@ -2013,14 +2020,14 @@ function AuditFilterBar({
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[150px_150px_180px_170px_minmax(0,1fr)_180px]">
-          <div className="space-y-1">
+        <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[10rem_10rem_11rem_10.5rem_minmax(0,1fr)_11rem]">
+          <div className="space-y-1 sm:max-w-40">
             <Label htmlFor="audit-date-from" className="text-xs text-muted-foreground">From</Label>
-            <Input id="audit-date-from" type="date" value={dateFrom} onChange={(event) => onDateFromChange(event.target.value)} />
+            <Input className="h-9" id="audit-date-from" type="date" value={dateFrom} onChange={(event) => onDateFromChange(event.target.value)} />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 sm:max-w-40">
             <Label htmlFor="audit-date-to" className="text-xs text-muted-foreground">To</Label>
-            <Input id="audit-date-to" type="date" value={dateTo} onChange={(event) => onDateToChange(event.target.value)} />
+            <Input className="h-9" id="audit-date-to" type="date" value={dateTo} onChange={(event) => onDateToChange(event.target.value)} />
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">User</Label>
@@ -2132,6 +2139,15 @@ const associationGroups: Array<{
   { kind: "idea", label: "Associated Bright Ideas", emptyLabel: "No associated Bright Ideas." },
 ];
 
+const associationSummaryGridClass = "grid-cols-[5.5rem_minmax(12rem,1fr)_9rem_10rem_9rem]";
+
+const associationColumnLabels: Record<CoreSafetyRecord["kind"], [string, string, string, string, string]> = {
+  risk: ["ID", "Risk / summary", "Rating", "Owner", "Review"],
+  action: ["ID", "Action / summary", "Owner", "Due", "Status"],
+  qi: ["ID", "QI item / summary", "Owner", "Due", "Status"],
+  idea: ["ID", "Bright Idea / summary", "Submitted by", "Decision", "Status"],
+};
+
 function ExpandedLinkedRecordsRow({
   id,
   colSpan,
@@ -2189,6 +2205,11 @@ function AssociatedRecordSection({
       ) : (
         <div className="mt-1 overflow-x-auto">
           <div className="min-w-[720px]">
+            <div className={cn("grid w-full items-center gap-3 border-y bg-muted/45 px-1 py-2 text-[11px] font-semibold uppercase text-muted-foreground", associationSummaryGridClass)}>
+              {associationColumnLabels[records[0].kind].map((column) => (
+                <span key={column}>{column}</span>
+              ))}
+            </div>
             {records.map((record) => (
               <AssociatedRecordSummary
                 key={record.id}
@@ -2213,7 +2234,7 @@ function AssociatedRecordSummary({
   return (
     <button
       type="button"
-      className="grid w-full grid-cols-[5.5rem_minmax(12rem,1fr)_9rem_10rem_9rem] items-center gap-3 border-t px-1 py-2.5 text-left transition-colors hover:bg-background/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60 dark:hover:bg-background/25"
+      className={cn("grid w-full items-start gap-3 border-b px-1 py-2.5 text-left transition-colors hover:bg-background/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60 dark:hover:bg-background/25", associationSummaryGridClass)}
       onClick={(event) => {
         event.stopPropagation();
         onOpenRecord(record);
@@ -2223,33 +2244,33 @@ function AssociatedRecordSummary({
         <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
         {record.id}
       </span>
-      <span className="truncate text-sm font-medium" title={record.title}>{record.title}</span>
+      <span className="line-clamp-3 text-sm font-medium leading-5" title={record.title}>{record.title}</span>
       {record.kind === "risk" && (
         <>
           <span className="justify-self-start"><RiskRatingBadge rating={record.residualRating} /></span>
-          <CompactLabel label="Owner" value={record.owner} />
-          <CompactDueSummary label="Review" state={record.reviewState} date={record.nextReview} />
+          <CompactValue value={record.owner} />
+          <CompactDueSummary state={record.reviewState} date={record.nextReview} />
         </>
       )}
       {record.kind === "action" && (
         <>
-          <CompactLabel label="Owner" value={record.owner} />
-          <CompactDueSummary label="Due" state={record.dueState} date={record.dueDate} />
+          <CompactValue value={record.owner} />
+          <CompactDueSummary state={record.dueState} date={record.dueDate} />
           <span className="justify-self-start"><StatusBadge status={record.status} /></span>
         </>
       )}
       {record.kind === "qi" && (
         <>
-          <CompactLabel label="Owner" value={record.owner} />
-          <CompactDueSummary label="Due" state={record.dueState} date={record.dueDate} />
+          <CompactValue value={record.owner} />
+          <CompactDueSummary state={record.dueState} date={record.dueDate} />
           <span className="justify-self-start"><StatusBadge status={record.status} /></span>
         </>
       )}
       {record.kind === "idea" && (
         <>
-          <CompactLabel label="By" value={`${record.submittedBy} - ${record.submittedDate}`} />
+          <CompactValue value={`${record.submittedBy} - ${record.submittedDate}`} />
           {record.decision === "Pending" ? (
-            <CompactLabel label="Decision" value="Not decided" />
+            <CompactValue value="Not decided" />
           ) : (
             <span className="justify-self-start"><DecisionBadge decision={record.decision} /></span>
           )}
@@ -2260,21 +2281,18 @@ function AssociatedRecordSummary({
   );
 }
 
-function CompactLabel({ label, value }: { label: string; value: string }) {
+function CompactValue({ value }: { value: string }) {
   return (
-    <span className="truncate text-xs" title={`${label}: ${value}`}>
-      <span className="text-muted-foreground">{label}: </span>
-      <span className="font-medium text-foreground">{value}</span>
+    <span className="line-clamp-3 text-xs font-medium leading-4 text-foreground" title={value}>
+      {value}
     </span>
   );
 }
 
 function CompactDueSummary({
-  label,
   state,
   date,
 }: {
-  label: string;
   state: DueState | ReviewState;
   date: string;
 }) {
@@ -2287,9 +2305,9 @@ function CompactDueSummary({
         : "text-foreground";
 
   return (
-    <span className={cn("whitespace-nowrap text-xs font-medium", tone)}>
-      <span className="text-muted-foreground">{label}: </span>
-      {date} ({state === "Current" ? "On track" : state})
+    <span className={cn("text-xs font-medium leading-4", tone)} title={`${date} (${state === "Current" ? "On track" : state})`}>
+      <span className="block">{date}</span>
+      <span className="block">{state === "Current" ? "On track" : state}</span>
     </span>
   );
 }
@@ -2363,14 +2381,36 @@ function DueBadge({ state, label }: { state: DueState | ReviewState; label: stri
   );
 }
 
+function MatrixRatingLabel({ rating }: { rating: RiskRating }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn("min-w-20 justify-center whitespace-nowrap border-2 font-bold shadow-sm", matrixRatingLabelStyles[rating])}
+    >
+      {rating}
+    </Badge>
+  );
+}
+
 function GuidanceBlock({ title, items }: { title: string; items: string[] }) {
   return (
     <div className="rounded-md border p-4">
-      <h3 className="font-medium">{title}</h3>
-      <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
-        {items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
+      <h3 className="font-semibold">{title}</h3>
+      <ul className="mt-2 space-y-2 text-sm leading-6 text-muted-foreground">
+        {items.map((item) => {
+          const separatorIndex = item.indexOf(":");
+
+          return (
+            <li key={item}>
+              {separatorIndex > -1 ? (
+                <>
+                  <span className="font-bold text-foreground">{item.slice(0, separatorIndex + 1)}</span>
+                  {item.slice(separatorIndex + 1)}
+                </>
+              ) : item}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
