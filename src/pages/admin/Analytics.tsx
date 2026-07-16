@@ -39,6 +39,51 @@ import {
 // Cast the Supabase client to `any` type to widen API support for these tables
 const supabase = originalSupabase as any;
 
+// Small local row types keep the new MVP reliability queries clear while the
+// generated Supabase types wait for the approved live migration/regeneration.
+type PublishableSessionRow = {
+  id: string;
+  fixture_id: string | null;
+  result_check_round: number;
+};
+
+type IncorrectCheckRow = {
+  session_id: string;
+  result_check_round: number;
+};
+
+type AnalyticsVoteRow = {
+  id: string;
+  session_id: string;
+  player_id: string;
+  points: number;
+  voter_profile_id: string | null;
+  created_at: string | null;
+  profile_id?: string | null;
+  player_name?: string | null;
+  vote_count?: number;
+};
+
+type AuditVoteRow = AnalyticsVoteRow & {
+  voter_profile_id: string;
+  created_at: string;
+};
+
+type ResultRpcRow = {
+  player_id: string;
+  profile_id: string | null;
+  player_name: string | null;
+  points: number | string | null;
+  vote_count: number | string | null;
+};
+
+type SubmissionRow = {
+  id: string;
+  session_id: string;
+  voter_profile_id: string;
+  submitted_at: string;
+};
+
 export default function Analytics() {
   const { toast } = useToast();
   
@@ -54,6 +99,7 @@ export default function Analytics() {
   // Main data lists fetched from Supabase
   const [sessions, setSessions] = useState<any[]>([]);
   const [votes, setVotes] = useState<any[]>([]);
+  const [auditVotes, setAuditVotes] = useState<AuditVoteRow[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [revsportsPlayers, setRevsportsPlayers] = useState<any[]>([]);
@@ -65,12 +111,12 @@ export default function Analytics() {
   const [dataLoading, setDataLoading] = useState(true);
   const [analyticsCascade, setAnalyticsCascade] = useState<CascadeValue>(emptyCascadeValue);
 
-  // Filter States: Grade, Rounds (multi-select), Date Range, Voter, and Voted For
+  // Filter states for the published aggregate view. Individual voter filters
+  // belong only in the restricted raw-ballot audit below.
   const [selectedGrade, setSelectedGrade] = useState<string>("all");
   const [selectedRounds, setSelectedRounds] = useState<string[]>(["all"]);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [selectedVoter, setSelectedVoter] = useState<string>("all");
   const [selectedVotedFor, setSelectedVotedFor] = useState<string>("all");
 
   // Filter States for Individual Votes Log table: Grade, Rounds (multi-select), Date Range, Voter, and Voted For
@@ -109,29 +155,88 @@ export default function Analytics() {
       // Step A: Load MVP Voting Sessions
       const { data: sessionsData, error: sessionsErr } = await supabase
         .from("mvp_voting_sessions")
-        .select("id, fixture_id, grade, round, game_date, home_team, away_team, status, opened_at, closes_at, fixtures(id, division_id, home_team_id, away_team_id)")
+        .select("id, fixture_id, team_id, grade, round, game_date, home_team, away_team, status, opened_at, closes_at, result_check_round, fixtures(id, division_id, home_team_id, away_team_id)")
+        .eq("status", "CLOSED")
+        .not("team_id", "is", null)
         .order("game_date", { ascending: false });
 
       if (sessionsErr) throw sessionsErr;
-      const loadedSessions = sessionsData || [];
+      let loadedSessions = (sessionsData || []) as PublishableSessionRow[];
+
+      // Closed results are publishable only when the current review round has no concern.
+      if (loadedSessions.length > 0) {
+        const { data: incorrectChecks, error: checksError } = await supabase
+          .from("mvp_result_checks")
+          .select("session_id, result_check_round, response")
+          .in("session_id", loadedSessions.map((session) => session.id))
+          .eq("response", "INCORRECT");
+        if (checksError) throw checksError;
+
+        const typedIncorrectChecks = (incorrectChecks || []) as IncorrectCheckRow[];
+        const unresolvedSessionIds = new Set(
+          typedIncorrectChecks
+            .filter((check) => {
+              const session = loadedSessions.find((item) => item.id === check.session_id);
+              return session && check.result_check_round === session.result_check_round;
+            })
+            .map((check) => check.session_id),
+        );
+        loadedSessions = loadedSessions.filter((session) => !unresolvedSessionIds.has(session.id));
+      }
       setSessions(loadedSessions);
 
-      // Step B: Load MVP Votes
-      const { data: votesData, error: votesErr } = await supabase
-        .from("mvp_votes")
-        .select("id, session_id, player_id, points, voter_profile_id, created_at");
+      // Step B: Load safe published aggregates. Only Association and Super Admins
+      // also load the individual raw ballot audit.
+      let loadedVotes: AnalyticsVoteRow[] = [];
+      let loadedAuditVotes: AuditVoteRow[] = [];
+      const publishableSessionIds = loadedSessions.map((session) => session.id);
 
-      if (votesErr) throw votesErr;
-      const loadedVotes = votesData || [];
+      if (publishableSessionIds.length > 0) {
+        const aggregateResponses = await Promise.all(
+          publishableSessionIds.map(async (sessionId: string) => {
+            const { data, error } = await supabase.rpc("get_mvp_session_results", {
+              p_session_id: sessionId,
+            });
+            if (error) throw error;
+            const resultRows = (data || []) as ResultRpcRow[];
+            return resultRows.map((row) => ({
+              id: `aggregate-${sessionId}-${row.player_id}`,
+              session_id: sessionId,
+              player_id: row.player_id,
+              profile_id: row.profile_id || null,
+              player_name: row.player_name || null,
+              points: Number(row.points || 0),
+              vote_count: Number(row.vote_count || 0),
+              voter_profile_id: null,
+              created_at: null,
+            }));
+          }),
+        );
+        loadedVotes = aggregateResponses.flat();
+
+        if (isPrivilegedAdmin) {
+          const { data: votesData, error: votesErr } = await supabase
+            .from("mvp_votes")
+            .select("id, session_id, player_id, points, voter_profile_id, created_at")
+            .in("session_id", publishableSessionIds);
+          if (votesErr) throw votesErr;
+          loadedAuditVotes = (votesData || []) as AuditVoteRow[];
+        }
+      }
+
       setVotes(loadedVotes);
+      setAuditVotes(loadedAuditVotes);
 
       // Step C: Load vote submission markers and eligible voters.
-      const { data: submissionsData, error: submissionsErr } = await supabase
-        .from("mvp_vote_submissions")
-        .select("id, session_id, voter_profile_id, submitted_at");
-
-      if (submissionsErr) throw submissionsErr;
-      const loadedSubmissions = submissionsData || [];
+      let loadedSubmissions: SubmissionRow[] = [];
+      if (publishableSessionIds.length > 0) {
+        const { data: submissionsData, error: submissionsErr } = await supabase
+          .from("mvp_vote_submissions")
+          .select("id, session_id, voter_profile_id, submitted_at")
+          .in("session_id", publishableSessionIds);
+        if (submissionsErr) throw submissionsErr;
+        loadedSubmissions = submissionsData || [];
+      }
       setSubmissions(loadedSubmissions);
 
       const fixtureIds = Array.from(new Set(loadedSessions.map((session: any) => session.fixture_id).filter(Boolean)));
@@ -153,7 +258,9 @@ export default function Analytics() {
 
       // Step D: Load Player Names from revsports_players
       // We extract all unique player_ids that received votes to lookup their names and profiles
-      const uniquePlayerIds = Array.from(new Set(loadedVotes.map((v: any) => v.player_id))).filter(Boolean);
+      const uniquePlayerIds = Array.from(
+        new Set([...loadedVotes, ...loadedAuditVotes].map((v: any) => v.player_id)),
+      ).filter(Boolean);
       
       let loadedPlayers: any[] = [];
       if (uniquePlayerIds.length > 0) {
@@ -171,8 +278,9 @@ export default function Analytics() {
       // Step E: Load Registered Profiles
       // We query profile information for all voters and players who have a linked profile
       const profileIds = new Set<string>();
-      loadedVotes.forEach((v: any) => {
+      [...loadedVotes, ...loadedAuditVotes].forEach((v: any) => {
         if (v.voter_profile_id) profileIds.add(v.voter_profile_id);
+        if (v.profile_id) profileIds.add(v.profile_id);
       });
       loadedSubmissions.forEach((submission: any) => {
         if (submission.voter_profile_id) profileIds.add(submission.voter_profile_id);
@@ -212,7 +320,7 @@ export default function Analytics() {
     if (isAnyAdmin) {
       loadData();
     }
-  }, [isAnyAdmin]);
+  }, [isAnyAdmin, isPrivilegedAdmin]);
 
   useEffect(() => {
     if (!isSuperAdmin && scopedAssociationIds.length === 1) {
@@ -287,29 +395,23 @@ export default function Analytics() {
       return true;
     }
 
-    const fixture = getSessionFixture(session);
-    if (!fixture) return false;
-
-    const fixtureTeamIds = [fixture.home_team_id, fixture.away_team_id].filter(Boolean);
-    const fixtureTeams = fixtureTeamIds.map((teamId) => teamById.get(teamId)).filter(Boolean);
+    const sessionTeam = teamById.get(session.team_id);
+    if (!sessionTeam) return false;
 
     if (cascade.associationId !== ALL_CASCADE_VALUE) {
-      const hasAssociation = fixtureTeams.some((team) => {
-        const club = clubById.get(team.club_id);
-        return club?.association_id === cascade.associationId;
-      });
-      if (!hasAssociation) return false;
+      const club = clubById.get(sessionTeam.club_id);
+      if (club?.association_id !== cascade.associationId) return false;
     }
 
-    if (cascade.clubId !== ALL_CASCADE_VALUE && !fixtureTeams.some((team) => team.club_id === cascade.clubId)) {
+    if (cascade.clubId !== ALL_CASCADE_VALUE && sessionTeam.club_id !== cascade.clubId) {
       return false;
     }
 
-    if (cascade.divisionId !== ALL_CASCADE_VALUE && fixture.division_id !== cascade.divisionId) {
+    if (cascade.divisionId !== ALL_CASCADE_VALUE && sessionTeam.division_id !== cascade.divisionId) {
       return false;
     }
 
-    if (cascade.teamId !== ALL_CASCADE_VALUE && !fixtureTeamIds.includes(cascade.teamId)) {
+    if (cascade.teamId !== ALL_CASCADE_VALUE && session.team_id !== cascade.teamId) {
       return false;
     }
 
@@ -330,12 +432,12 @@ export default function Analytics() {
 
   // Distinct voters from the entire unfiltered votes dataset for the Voter selector dropdown
   const distinctVotersListAll = useMemo(() => {
-    const voterIds = Array.from(new Set(votes.map((v) => v.voter_profile_id).filter(Boolean)));
+    const voterIds = Array.from(new Set(auditVotes.map((v) => v.voter_profile_id).filter(Boolean)));
     return voterIds.map((id) => ({
       id,
       name: profileNameMap.get(id) || "Unknown Voter",
     })).sort((a, b) => a.name.localeCompare(b.name));
-  }, [votes, profileNameMap]);
+  }, [auditVotes, profileNameMap]);
 
   // Distinct deduplicated players from the entire unfiltered votes dataset for the Voted For selector dropdown.
   // Utilises the exact same grouping logic as the standings leaderboard.
@@ -408,8 +510,7 @@ export default function Analytics() {
     return new Set(filteredSessions.map((s) => s.id));
   }, [filteredSessions]);
 
-  // Filter votes belonging to matches that passed the session filter,
-  // and also apply voter and voted for filters.
+  // Filter published aggregate rows by session and selected player.
   const filteredVotes = useMemo(() => {
     return votes.filter((vote) => {
       // 1. Session filter (Grade, Round, Date Range)
@@ -417,12 +518,7 @@ export default function Analytics() {
         return false;
       }
 
-      // 2. Voter Filter
-      if (selectedVoter !== "all" && vote.voter_profile_id !== selectedVoter) {
-        return false;
-      }
-
-      // 3. Voted For (Player) Filter
+      // 2. Voted For (Player) Filter
       if (selectedVotedFor !== "all") {
         const pId = vote.player_id;
         let groupKey = "";
@@ -445,7 +541,7 @@ export default function Analytics() {
 
       return true;
     });
-  }, [votes, filteredSessionIds, selectedVoter, selectedVotedFor, revsportsPlayerMap]);
+  }, [votes, filteredSessionIds, selectedVotedFor, revsportsPlayerMap]);
 
   // Separate filter logic for Individual Votes Log
   const logFilteredSessions = useMemo(() => {
@@ -474,7 +570,7 @@ export default function Analytics() {
   }, [logFilteredSessions]);
 
   const logFilteredVotes = useMemo(() => {
-    return votes.filter((vote) => {
+    return auditVotes.filter((vote) => {
       if (!logFilteredSessionIds.has(vote.session_id)) {
         return false;
       }
@@ -502,11 +598,14 @@ export default function Analytics() {
       }
       return true;
     });
-  }, [votes, logFilteredSessionIds, logSelectedVoter, logSelectedVotedFor, revsportsPlayerMap]);
+  }, [auditVotes, logFilteredSessionIds, logSelectedVoter, logSelectedVotedFor, revsportsPlayerMap]);
 
   // 7. COMPILING METRICS (Stats Cards)
   // Compute votes count, voter pool and averages from filtered data
-  const totalVotesCount = filteredVotes.length;
+  const totalVotesCount = filteredVotes.reduce(
+    (total, vote) => total + Number(vote.vote_count || 1),
+    0,
+  );
   const distinctSessionsCount = filteredSessions.length;
   
   // Calculate average votes per game
@@ -517,9 +616,12 @@ export default function Analytics() {
 
   // Count distinct profiles who submitted votes
   const distinctVotersCount = useMemo(() => {
-    const voters = filteredVotes.map((v) => v.voter_profile_id).filter(Boolean);
+    const voters = submissions
+      .filter((submission) => filteredSessionIds.has(submission.session_id))
+      .map((submission) => submission.voter_profile_id)
+      .filter(Boolean);
     return new Set(voters).size;
-  }, [filteredVotes]);
+  }, [submissions, filteredSessionIds]);
 
   const voteCompletionRows = useMemo(() => {
     const submissionMap = new Map<string, any>();
@@ -529,7 +631,18 @@ export default function Analytics() {
 
     return filteredSessions
       .flatMap((session) => {
-        const sessionVoters = eligibleVoters.filter((player) => player.fixture_id === session.fixture_id);
+        const fixture = getSessionFixture(session);
+        const sessionSide = fixture?.home_team_id === session.team_id
+          ? "home"
+          : fixture?.away_team_id === session.team_id
+            ? "away"
+            : null;
+        const sessionVoters = eligibleVoters.filter(
+          (player) =>
+            player.fixture_id === session.fixture_id &&
+            sessionSide &&
+            player.team_side === sessionSide,
+        );
         return sessionVoters.map((player) => {
           const submission = submissionMap.get(`${session.id}:${player.profile_id}`);
           return {
@@ -579,7 +692,7 @@ export default function Analytics() {
 
       const current = statsMap.get(groupKey) || { name, points: 0, votesCount: 0 };
       current.points += vote.points || 0;
-      current.votesCount += 1;
+      current.votesCount += Number(vote.vote_count || 1);
       statsMap.set(groupKey, current);
     });
 
@@ -654,7 +767,6 @@ export default function Analytics() {
     setSelectedRounds(["all"]);
     setStartDate("");
     setEndDate("");
-    setSelectedVoter("all");
     setSelectedVotedFor("all");
   };
 
@@ -663,7 +775,7 @@ export default function Analytics() {
     analyticsCascade.clubId !== ALL_CASCADE_VALUE ||
     analyticsCascade.divisionId !== ALL_CASCADE_VALUE ||
     analyticsCascade.teamId !== ALL_CASCADE_VALUE;
-  const hasActiveFilters = cascadeHasActiveFilters || selectedGrade !== "all" || !selectedRounds.includes("all") || startDate || endDate || selectedVoter !== "all" || selectedVotedFor !== "all";
+  const hasActiveFilters = cascadeHasActiveFilters || selectedGrade !== "all" || !selectedRounds.includes("all") || startDate || endDate || selectedVotedFor !== "all";
 
   const handleLogRoundToggle = (round: string) => {
     if (round === "all") {
@@ -734,7 +846,7 @@ export default function Analytics() {
             <BarChart3 className="h-8 w-8 text-primary" /> Analytics
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Visualise standings and vote data metrics
+            Published team results only — closed sessions with no unresolved score concern
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={loadData} disabled={dataLoading} className="self-start md:self-auto gap-2">
@@ -837,24 +949,6 @@ export default function Analytics() {
                       </div>
                     </PopoverContent>
                   </Popover>
-                </div>
-
-                {/* Voter Selector Filter */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Voter</Label>
-                  <Select value={selectedVoter} onValueChange={setSelectedVoter}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="All Voters" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Voters</SelectItem>
-                      {distinctVotersListAll.map((v) => (
-                        <SelectItem key={v.id} value={v.id}>
-                          {v.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 {/* Voted For Player Selector Filter */}

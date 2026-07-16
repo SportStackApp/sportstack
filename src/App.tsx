@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Link, Routes, Route, useLocation, useParams } from "react-router-dom";
 
 // Pages
 import Landing from "./pages/Landing";
@@ -79,6 +79,33 @@ import { AppModeProvider } from "./contexts/AppModeContext";
 
 const queryClient = new QueryClient();
 
+const RetiredMvpTokenRoute = () => (
+  <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-12">
+    <div className="w-full max-w-md rounded-xl border bg-card p-6 text-center shadow-sm">
+      <h1 className="text-2xl font-display font-semibold text-foreground">MVP voting has moved</h1>
+      <p className="mt-3 text-sm text-muted-foreground">
+        Private token links are no longer used. Sign in to see the team voting rounds linked to your match attendance.
+      </p>
+      <div className="mt-6 flex flex-col gap-3">
+        <Link className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" to="/login">
+          Sign in
+        </Link>
+        <Link className="text-sm font-medium text-primary hover:underline" to="/mvp-votes">
+          Already signed in? Open MVP Votes
+        </Link>
+      </div>
+    </div>
+  </main>
+);
+
+// Remount the ballot when a notification or link switches directly between
+// session IDs so no form state can carry into the next match.
+const MvpVoteCastRoute = () => {
+  const { sessionId } = useParams();
+  const location = useLocation();
+  return <MvpVoteCast key={`${sessionId}:${location.key}`} />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -98,7 +125,7 @@ const App = () => (
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/pending" element={<Pending />} />
-                  <Route path="/vote/:token" element={<VotingPortal />} />
+                  <Route path="/vote/:token" element={<RetiredMvpTokenRoute />} />
 
                   {/* Protected Routes with App Layout */}
                   <Route element={<ProtectedRoute />}>
@@ -118,7 +145,7 @@ const App = () => (
                       <Route path="/umpire/vote" element={<UmpireVoteSubmit />} />
                       <Route path="/voting" element={<VotingPortal />} />
                       <Route path="/mvp-votes" element={<MvpVotes />} />
-                      <Route path="/mvp-votes/:sessionId" element={<MvpVoteCast />} />
+                      <Route path="/mvp-votes/:sessionId" element={<MvpVoteCastRoute />} />
                       <Route path="/profile" element={<Profile />} />
                       
                       {/* Admin Routes */}

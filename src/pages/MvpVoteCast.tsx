@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase as originalSupabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,22 +10,34 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Star, Trophy, Clock, CheckCircle2, ChevronLeft, Calendar, ShieldAlert, MapPin, Shield } from "lucide-react";
+import {
+  getMvpErrorMessage,
+  getMvpSessionDisplayState,
+  isMvpUpgradeUnavailable,
+  normaliseMvpResultCheckState,
+  type MvpResultCheckResponse,
+  type MvpResultCheckState,
+  type MvpSessionStatus,
+} from "@/lib/mvpVoting";
+import { Star, Trophy, Clock, CheckCircle2, ChevronLeft, Calendar, ShieldAlert, MapPin, Shield, TriangleAlert } from "lucide-react";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabase = originalSupabase as any;
+const DEFAULT_ASSOCIATION_TIMEZONE = "Australia/Melbourne";
 
 interface MvpSession {
   id: string;
   fixture_id: string;
-  match_url: string;
+  team_id: string | null;
+  match_url: string | null;
   grade: string;
   round: string;
   game_date: string;
   home_team: string;
   away_team: string;
-  status: string;
-  closes_at: string;
+  status: MvpSessionStatus;
+  closes_at: string | null;
+  result_check_round: number;
 }
 
 interface ScoreboardTeam {
@@ -69,7 +81,12 @@ type ScorerDialogTeam = "home" | "away";
 interface ClubAssociationRow {
   id: string;
   association_id: string | null;
-  associations: { id: string; name: string | null; abbreviation: string | null } | null;
+  associations: {
+    id: string;
+    name: string | null;
+    abbreviation: string | null;
+    timezone: string | null;
+  } | null;
 }
 
 interface GoalScorer {
@@ -83,7 +100,7 @@ interface RevsportsPlayer {
   id: string;
   player_name: string;
   team: string;
-  team_side: string | null;
+  team_side: "home" | "away" | null;
   team_label: string | null;
   jersey: string | null;
   profile_id: string | null;
@@ -97,7 +114,6 @@ export default function MvpVoteCast() {
   
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<MvpSession | null>(null);
-  const [isClosed, setIsClosed] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
   const [eligiblePlayers, setEligiblePlayers] = useState<RevsportsPlayer[]>([]);
   const [errorState, setErrorState] = useState<string | null>(null);
@@ -105,22 +121,56 @@ export default function MvpVoteCast() {
   const [scorerDialogTeam, setScorerDialogTeam] = useState<ScorerDialogTeam | null>(null);
   const [goalScorers, setGoalScorers] = useState<GoalScorer[]>([]);
   const [associationContext, setAssociationContext] = useState<string | null>(null);
+  const [associationTimeZone, setAssociationTimeZone] = useState(DEFAULT_ASSOCIATION_TIMEZONE);
+  const [schemaUnavailable, setSchemaUnavailable] = useState(false);
+  const [resultCheck, setResultCheck] = useState<MvpResultCheckState>(() => normaliseMvpResultCheckState(null));
+  const [checkingResult, setCheckingResult] = useState(false);
+  const [concernDialogOpen, setConcernDialogOpen] = useState(false);
+  const [resultComment, setResultComment] = useState("");
 
   const [votes, setVotes] = useState({ vote3: "__none__", vote2: "__none__", vote1: "__none__" });
   const [shoutout, setShoutout] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  const refreshResultCheckState = useCallback(async () => {
+    if (!sessionId) return;
+
+    const { data, error } = await supabase.rpc("get_mvp_result_check_state", {
+      p_session_id: sessionId,
+    });
+    if (error) throw error;
+    setResultCheck(normaliseMvpResultCheckState(data));
+  }, [sessionId]);
+
   useEffect(() => {
     const loadVotingDetails = async () => {
       if (!user || !sessionId) return;
       setLoading(true);
       setErrorState(null);
+      setSchemaUnavailable(false);
+      setSession(null);
+      setHasVoted(false);
+      setEligiblePlayers([]);
+      setFixture(null);
+      setScorerDialogTeam(null);
+      setGoalScorers([]);
+      setAssociationContext(null);
+      setAssociationTimeZone(DEFAULT_ASSOCIATION_TIMEZONE);
+      setSuccess(false);
+      setVotes({ vote3: "__none__", vote2: "__none__", vote1: "__none__" });
+      setShoutout("");
+      setSubmitting(false);
+      setResultCheck(normaliseMvpResultCheckState(null));
+      setCheckingResult(false);
+      setConcernDialogOpen(false);
+      setResultComment("");
       try {
-        // 1. Fetch voting session details
+        // The explicit new columns make a pre-migration database fail clearly,
+        // instead of silently treating every round as an old fixture-wide round.
         const { data: sessionData, error: sessionErr } = await supabase
           .from("mvp_voting_sessions")
-          .select("*")
+          .select("id, fixture_id, team_id, match_url, grade, round, game_date, home_team, away_team, status, closes_at, result_check_round")
           .eq("id", sessionId)
           .maybeSingle();
 
@@ -132,8 +182,19 @@ export default function MvpVoteCast() {
         }
 
         const typedSession = sessionData as MvpSession;
+        if (!typedSession.team_id) {
+          setErrorState("This older fixture-wide voting round is available from your submitted history only.");
+          setLoading(false);
+          return;
+        }
+        if (typedSession.status === "PENDING") {
+          setErrorState("This team voting round has not been opened yet.");
+          setLoading(false);
+          return;
+        }
         setSession(typedSession);
 
+        let fixtureRowForEligibility: FixtureScoreRow | null = null;
         const { data: fixtureData, error: fixtureErr } = await supabase
           .from("fixtures")
           .select("id, fixture_date, home_score, away_score, round_number, home_team_id, away_team_id, venue_id, pitch_id")
@@ -144,6 +205,7 @@ export default function MvpVoteCast() {
           console.warn("Fixture scoreboard context unavailable:", fixtureErr);
         } else {
           const fixtureRow = fixtureData as FixtureScoreRow | null;
+          fixtureRowForEligibility = fixtureRow;
           if (fixtureRow) {
             let homeTeam: ScoreboardTeam | null = null;
             let awayTeam: ScoreboardTeam | null = null;
@@ -171,20 +233,23 @@ export default function MvpVoteCast() {
                 if (clubIds.length > 0) {
                   const { data: clubData, error: clubErr } = await supabase
                     .from("clubs")
-                    .select("id, association_id, associations(id, name, abbreviation)")
+                    .select("id, association_id, associations(id, name, abbreviation, timezone)")
                     .in("id", clubIds);
 
                   if (clubErr) {
                     console.warn("Scoreboard association context unavailable:", clubErr);
                     setAssociationContext(null);
+                    setAssociationTimeZone(DEFAULT_ASSOCIATION_TIMEZONE);
                   } else {
                     const association = ((clubData as ClubAssociationRow[]) || [])
                       .map((club) => club.associations)
                       .find(Boolean);
                     setAssociationContext(association?.abbreviation || association?.name || null);
+                    setAssociationTimeZone(association?.timezone || DEFAULT_ASSOCIATION_TIMEZONE);
                   }
                 } else {
                   setAssociationContext(null);
+                  setAssociationTimeZone(DEFAULT_ASSOCIATION_TIMEZONE);
                 }
               }
             }
@@ -265,17 +330,7 @@ export default function MvpVoteCast() {
           setGoalScorers(scorers);
         }
 
-        // Admin controls whether a voting session is open. Some reopened
-        // sessions can have an old closes_at value, so status is the source of truth.
-        const closed = typedSession.status !== "OPEN";
-        setIsClosed(closed);
-
-        if (closed) {
-          setLoading(false);
-          return;
-        }
-
-        // 2. Check if user already submitted their vote
+        // A submitted player can still check the match result while the round is open.
         const { data: submissionData, error: submissionErr } = await supabase
           .from("mvp_vote_submissions")
           .select("id")
@@ -286,16 +341,17 @@ export default function MvpVoteCast() {
         if (submissionErr) throw submissionErr;
         if (submissionData) {
           setHasVoted(true);
-          setLoading(false);
-          return;
+        } else {
+          setHasVoted(false);
         }
 
-        // 3. Find current user's player row in revsports_players
+        // Attendance and the fixture side are the authoritative eligibility checks.
         const { data: voterRow, error: voterErr } = await supabase
           .from("revsports_players")
           .select("id, team, team_side, team_label")
           .eq("fixture_id", typedSession.fixture_id)
           .eq("profile_id", user.id)
+          .eq("attended", true)
           .maybeSingle();
 
         if (voterErr) throw voterErr;
@@ -305,13 +361,22 @@ export default function MvpVoteCast() {
           return;
         }
 
-        // 4. Fetch ALL attended players in this fixture, then filter in JS.
-        // We match on the voter's team value INCLUDING null. PostgREST .eq() cannot
-        // match null (SQL "= null" is never true), and for many Grampians fixtures the
-        // Pumas players come through from the scraper with team = null while the
-        // opposition has a real team name. So we fetch everything and compare in JS,
-        // where null === null works correctly. This keeps the voter on their own side
-        // of the game (teammates + fill-ins) and excludes the opposition.
+        if (!fixtureRowForEligibility || !voterRow.team_side) {
+          setErrorState("Your attended home or away team could not be confirmed for this match.");
+          setLoading(false);
+          return;
+        }
+
+        const attendedTeamId = voterRow.team_side === "home"
+          ? fixtureRowForEligibility.home_team_id
+          : fixtureRowForEligibility.away_team_id;
+        if (attendedTeamId !== typedSession.team_id) {
+          setErrorState("This voting round belongs to the other team in the match.");
+          setLoading(false);
+          return;
+        }
+
+        // Only attended players on the session's fixture side can appear on the ballot.
         const { data: allRows, error: teammateErr } = await supabase
           .from("revsports_players")
           .select("id, player_name, team, team_side, team_label, jersey, profile_id")
@@ -322,36 +387,32 @@ export default function MvpVoteCast() {
 
         const typedRows = (allRows as RevsportsPlayer[]) || [];
 
-        // voterRow.team may be null; (a == null && b == null) || a === b handles both cases
-        const sameSide = (player: RevsportsPlayer) => {
-          if (voterRow.team_side && player.team_side) {
-            return player.team_side === voterRow.team_side;
-          }
-          if (voterRow.team_label && player.team_label) {
-            return player.team_label === voterRow.team_label;
-          }
-          return (player.team == null && voterRow.team == null) || player.team === voterRow.team;
-        };
-
-        // Eligible = same side as voter, excluding the voter themselves
         const eligible = typedRows.filter(
-          (p) => sameSide(p) && p.id !== voterRow.id && p.profile_id !== user.id
+          (player) =>
+            player.team_side === voterRow.team_side &&
+            player.id !== voterRow.id &&
+            player.profile_id !== user.id,
         );
 
-        // Sort alphabetically
         const sorted = eligible.sort((a, b) => a.player_name.localeCompare(b.player_name));
         setEligiblePlayers(sorted);
-      } catch (err) {
-        const error = err as Error;
+
+        await refreshResultCheckState();
+      } catch (error) {
         console.error("Error loading voting details:", error);
-        setErrorState(error.message || "Failed to load voting details.");
+        if (isMvpUpgradeUnavailable(error)) {
+          setSchemaUnavailable(true);
+          setErrorState("The secure team voting update has not been added to the database yet. No action is needed from you.");
+        } else {
+          setErrorState(getMvpErrorMessage(error, "MVP voting details could not be loaded. Please try again."));
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    loadVotingDetails();
-  }, [user, sessionId, toast]);
+    void loadVotingDetails();
+  }, [user, sessionId, refreshResultCheckState]);
 
   const checkDuplicate = (val: string) => {
     if (val === "__none__") return false;
@@ -361,72 +422,104 @@ export default function MvpVoteCast() {
 
   const hasDuplicates = checkDuplicate(votes.vote3) || checkDuplicate(votes.vote2) || checkDuplicate(votes.vote1);
   const allSelected = votes.vote3 !== "__none__" && votes.vote2 !== "__none__" && votes.vote1 !== "__none__";
+  const sessionDisplayState = session
+    ? getMvpSessionDisplayState(session.status, session.closes_at)
+    : "closed";
+  const resultCheckRequired = resultCheck.requiresCheck && !resultCheck.response;
+  const canCastBallot =
+    sessionDisplayState === "open" &&
+    !hasVoted &&
+    resultCheck.canVote &&
+    !resultCheckRequired;
 
   const onSubmit = async () => {
-    if (!user || !sessionId || !allSelected || hasDuplicates || submitting) return;
+    if (!user || !sessionId || !canCastBallot || !allSelected || hasDuplicates || submitting) return;
     setSubmitting(true);
     try {
-      const submittedAt = new Date().toISOString();
-
-      // Save vote rows first. If RLS blocks this step, do not create the
-      // submission marker, otherwise the round disappears without a full vote.
-      const votesToInsert = [
-        {
-          session_id: sessionId,
-          voter_profile_id: user.id,
-          player_id: votes.vote3,
-          points: 3,
-          created_at: submittedAt
-        },
-        {
-          session_id: sessionId,
-          voter_profile_id: user.id,
-          player_id: votes.vote2,
-          points: 2,
-          created_at: submittedAt
-        },
-        {
-          session_id: sessionId,
-          voter_profile_id: user.id,
-          player_id: votes.vote1,
-          points: 1,
-          created_at: submittedAt
-        }
-      ];
-
-      const { error: votesErr } = await supabase
-        .from("mvp_votes")
-        .insert(votesToInsert);
-
-      if (votesErr) throw votesErr;
-
-      // Record the submission after the vote rows are safely saved.
-      const { error: subErr } = await supabase
-        .from("mvp_vote_submissions")
-        .insert({
-          session_id: sessionId,
-          voter_profile_id: user.id,
-          shoutout: shoutout.trim() || null,
-          submitted_at: submittedAt
-        });
-
-      if (subErr) throw subErr;
+      // The database function locks the session and saves all three votes plus
+      // the submission marker in one transaction. A failure leaves no partial ballot.
+      const { error } = await supabase.rpc("submit_mvp_ballot", {
+        p_session_id: sessionId,
+        p_three_point_player_id: votes.vote3,
+        p_two_point_player_id: votes.vote2,
+        p_one_point_player_id: votes.vote1,
+        p_shoutout: shoutout.trim() || null,
+      });
+      if (error) throw error;
 
       setSuccess(true);
+      setHasVoted(true);
       toast({
-        title: "Success",
-        description: "Votes submitted successfully."
+        title: "Ballot submitted",
+        description: "Your 3, 2 and 1 point votes were saved together."
       });
-    } catch (err) {
-      const error = err as Error;
+    } catch (error) {
       console.error("Error submitting votes:", error);
+
+      // A teammate may have raised a result concern while this ballot was open.
+      // Refresh the secure result-check state and session status so the player
+      // immediately sees the required Correct / Incorrect choice after a reject.
+      await Promise.allSettled([
+        refreshResultCheckState(),
+        supabase
+          .from("mvp_voting_sessions")
+          .select("status, closes_at, result_check_round")
+          .eq("id", sessionId)
+          .maybeSingle()
+          .then(({ data, error: sessionError }: { data: Partial<MvpSession> | null; error: unknown }) => {
+            if (sessionError || !data) return;
+            setSession((current) => current ? { ...current, ...data } : current);
+          }),
+      ]);
+
       toast({
-        title: "Submission failed",
-        description: error.message || "Failed to submit votes. Please try again.",
+        title: "Ballot not submitted",
+        description: getMvpErrorMessage(error, "Your ballot could not be saved. Please try again."),
         variant: "destructive"
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const recordResultCheck = async (response: MvpResultCheckResponse) => {
+    if (!sessionId || checkingResult || resultCheck.response) return;
+
+    setCheckingResult(true);
+    try {
+      const { data, error } = await supabase.rpc("record_mvp_result_check", {
+        p_session_id: sessionId,
+        p_response: response,
+        p_comment: response === "INCORRECT" ? resultComment.trim() || null : null,
+      });
+      if (error) throw error;
+
+      const returnedState = Array.isArray(data) ? data[0] : data;
+      if (returnedState && typeof returnedState === "object") {
+        const returnedStatus = (returnedState as { status?: MvpSessionStatus }).status;
+        if (returnedStatus) {
+          setSession((current) => current ? { ...current, status: returnedStatus } : current);
+        }
+      }
+
+      await refreshResultCheckState();
+      setConcernDialogOpen(false);
+      setResultComment("");
+      toast({
+        title: response === "CORRECT" ? "Result confirmed" : "Result concern recorded",
+        description: response === "CORRECT"
+          ? "You can continue to the MVP ballot."
+          : "Team staff will review the recorded match result.",
+      });
+    } catch (error) {
+      console.error("Error recording MVP result check:", error);
+      toast({
+        title: "Result check not saved",
+        description: getMvpErrorMessage(error, "Your result check could not be saved. Please try again."),
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingResult(false);
     }
   };
 
@@ -435,7 +528,7 @@ export default function MvpVoteCast() {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-      timeZone: "Australia/Melbourne"
+      timeZone: associationTimeZone,
     });
   };
 
@@ -444,7 +537,7 @@ export default function MvpVoteCast() {
     return new Date(dateStr).toLocaleTimeString("en-AU", {
       hour: "numeric",
       minute: "2-digit",
-      timeZone: "Australia/Melbourne"
+      timeZone: associationTimeZone,
     });
   };
 
@@ -632,6 +725,86 @@ export default function MvpVoteCast() {
     </div>
   );
 
+  const ResultCheckPanel = () => {
+    if (sessionDisplayState !== "open") return null;
+
+    if (resultCheck.response === "CORRECT") {
+      return (
+        <Card className="border-green-200 bg-green-50/50">
+          <CardContent className="flex items-start gap-3 pt-6">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
+            <div>
+              <p className="font-semibold text-green-900">You confirmed the match result</p>
+              <p className="mt-1 text-sm text-green-800">Your result check is saved for this review round.</p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (resultCheck.response === "INCORRECT") {
+      return (
+        <Card className="border-amber-300 bg-amber-50/60">
+          <CardContent className="flex items-start gap-3 pt-6">
+            <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+            <div>
+              <p className="font-semibold text-amber-950">You reported that the match result is not correct</p>
+              <p className="mt-1 text-sm text-amber-900">
+                Team staff will review it. You cannot cast a ballot during this review round.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (resultCheckRequired) {
+      return (
+        <Card className="border-amber-300 bg-amber-50/60">
+          <CardHeader>
+            <CardTitle className="text-lg">Please check the match result first</CardTitle>
+            <CardDescription>
+              {resultCheck.incorrectCount} {resultCheck.incorrectCount === 1 ? "teammate has" : "teammates have"} reported a concern.
+              Confirm whether the scoreboard above is correct before voting.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <Button disabled={checkingResult} onClick={() => void recordResultCheck("CORRECT")}>
+              Results are correct
+            </Button>
+            <Button
+              variant="outline"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              disabled={checkingResult}
+              onClick={() => setConcernDialogOpen(true)}
+            >
+              Results are not correct
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card>
+        <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold">Does the scoreboard look wrong?</p>
+            <p className="mt-1 text-sm text-muted-foreground">Report it before submitting your ballot.</p>
+          </div>
+          <Button
+            variant="outline"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={checkingResult}
+            onClick={() => setConcernDialogOpen(true)}
+          >
+            These match results are not correct
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 container py-6 mx-auto max-w-3xl animate-fade-in">
@@ -661,18 +834,22 @@ export default function MvpVoteCast() {
   if (errorState) {
     return (
       <div className="space-y-6 container py-6 mx-auto max-w-3xl animate-fade-in">
-        <Link to="/mvp-votes">
-          <Button variant="ghost" size="sm" className="gap-2">
+        <Button asChild variant="ghost" size="sm" className="gap-2">
+          <Link to="/mvp-votes">
             <ChevronLeft className="h-4 w-4" />
             Back to MVP Votes
-          </Button>
-        </Link>
-        <Card className="border-destructive/30 text-center py-8">
+          </Link>
+        </Button>
+        <Card className={schemaUnavailable ? "border-amber-300 bg-amber-50/50 text-center py-8" : "border-destructive/30 text-center py-8"}>
           <CardHeader>
-            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
-              <ShieldAlert className="h-6 w-6 text-destructive" />
+            <div className={schemaUnavailable ? "mx-auto w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mb-2" : "mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-2"}>
+              {schemaUnavailable
+                ? <TriangleAlert className="h-6 w-6 text-amber-700" />
+                : <ShieldAlert className="h-6 w-6 text-destructive" />}
             </div>
-            <CardTitle className="text-xl font-semibold">Error</CardTitle>
+            <CardTitle className="text-xl font-semibold">
+              {schemaUnavailable ? "MVP voting upgrade not ready yet" : "MVP voting unavailable"}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground text-sm max-w-sm mx-auto">
@@ -684,98 +861,84 @@ export default function MvpVoteCast() {
     );
   }
 
-  if (isClosed) {
-    return (
-      <div className="space-y-6 container py-6 mx-auto max-w-3xl animate-fade-in">
-        <Link to="/mvp-votes">
-          <Button variant="ghost" size="sm" className="gap-2">
-            <ChevronLeft className="h-4 w-4" />
-            Back to MVP Votes
-          </Button>
-        </Link>
-        <Scoreboard />
-        <Card className="mx-auto max-w-xl text-center py-8">
-          <CardHeader>
-            <div className="mx-auto w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mb-2">
-              <Clock className="h-6 w-6 text-amber-600" />
-            </div>
-            <CardTitle className="text-xl font-semibold">Voting Closed</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground text-sm">
-              Voting has closed for this game.
-            </p>
-            <Link to="/mvp-votes">
-              <Button>Back to MVP Votes</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (hasVoted) {
-    return (
-      <div className="space-y-6 container py-6 mx-auto max-w-3xl animate-fade-in">
-        <Link to="/mvp-votes">
-          <Button variant="ghost" size="sm" className="gap-2">
-            <ChevronLeft className="h-4 w-4" />
-            Back to MVP Votes
-          </Button>
-        </Link>
-        <Scoreboard />
-        <Card className="mx-auto max-w-xl text-center py-8">
-          <CardHeader>
-            <div className="mx-auto w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-2">
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
-            </div>
-            <CardTitle className="text-xl font-semibold">Already Voted</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground text-sm">
-              You've already voted for this game. Thank you!
-            </p>
-            <Link to="/mvp-votes">
-              <Button>Back to MVP Votes</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (success) {
-    return (
-      <div className="space-y-6 container py-6 mx-auto max-w-3xl animate-fade-in">
-        {session && <Scoreboard />}
-        <Card className="mx-auto max-w-xl border-green-200 bg-green-50/50 text-center py-8">
-          <CardContent className="pt-6 space-y-4">
-            <div className="mx-auto w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
-            </div>
-            <h2 className="text-xl font-semibold text-green-800">
-              Votes submitted! Thanks for voting.
-            </h2>
-            <Link to="/mvp-votes" className="block pt-2">
-              <Button>Back to MVP Votes</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 container py-6 mx-auto max-w-3xl animate-fade-in">
-      <Link to="/mvp-votes">
-        <Button variant="ghost" size="sm" className="gap-2">
+      <Button asChild variant="ghost" size="sm" className="gap-2">
+        <Link to="/mvp-votes">
           <ChevronLeft className="h-4 w-4" />
           Back to MVP Votes
-        </Button>
-      </Link>
+        </Link>
+      </Button>
 
       <Scoreboard />
 
+      <ResultCheckPanel />
+
+      {sessionDisplayState === "disputed" && (
+        <Card className="mx-auto max-w-xl border-red-300 bg-red-50/50 text-center py-8">
+          <CardHeader>
+            <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-2">
+              <TriangleAlert className="h-6 w-6 text-red-700" />
+            </div>
+            <CardTitle className="text-xl font-semibold">Match result under review</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Voting is paused while team staff check the recorded result. Your existing ballot, if any, remains saved.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {sessionDisplayState === "expired" && (
+        <Card className="mx-auto max-w-xl text-center py-8">
+          <CardHeader>
+            <div className="mx-auto w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mb-2">
+              <Clock className="h-6 w-6 text-amber-700" />
+            </div>
+            <CardTitle className="text-xl font-semibold">Voting time expired</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              The deadline has passed. You can request a reopen from the MVP Votes page.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {sessionDisplayState === "closed" && (
+        <Card className="mx-auto max-w-xl text-center py-8">
+          <CardHeader>
+            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-2">
+              <Clock className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <CardTitle className="text-xl font-semibold">Voting closed</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              This team voting round has been closed.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {sessionDisplayState === "open" && hasVoted && (
+        <Card className="mx-auto max-w-xl border-green-200 bg-green-50/50 text-center py-8">
+          <CardContent className="pt-6 space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle2 className="h-6 w-6 text-green-700" />
+            </div>
+            <h2 className="text-xl font-semibold text-green-900">
+              {success ? "Ballot submitted. Thanks for voting." : "Your ballot is already submitted."}
+            </h2>
+            <p className="text-sm text-green-800">
+              You can still check the match result above while this round remains open.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {sessionDisplayState === "open" && !hasVoted && canCastBallot && (
       <Card className="mx-auto max-w-xl">
         <CardHeader className="bg-muted/30 border-b pb-4">
           <div className="hidden">
@@ -801,13 +964,13 @@ export default function MvpVoteCast() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                  <Label className="font-semibold text-sm">3 Votes (Best Player)</Label>
+                  <Label htmlFor="mvp-vote-3" className="font-semibold text-sm">3 Votes (Best Player)</Label>
                 </div>
                 <Select
                   value={votes.vote3}
                   onValueChange={(val) => setVotes((v) => ({ ...v, vote3: val }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="mvp-vote-3">
                     <SelectValue placeholder="Select a player" />
                   </SelectTrigger>
                   <SelectContent>
@@ -825,13 +988,13 @@ export default function MvpVoteCast() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 fill-gray-400 text-gray-400" />
-                  <Label className="font-semibold text-sm">2 Votes (Second Best)</Label>
+                  <Label htmlFor="mvp-vote-2" className="font-semibold text-sm">2 Votes (Second Best)</Label>
                 </div>
                 <Select
                   value={votes.vote2}
                   onValueChange={(val) => setVotes((v) => ({ ...v, vote2: val }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="mvp-vote-2">
                     <SelectValue placeholder="Select a player" />
                   </SelectTrigger>
                   <SelectContent>
@@ -849,13 +1012,13 @@ export default function MvpVoteCast() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 fill-amber-700 text-amber-700" />
-                  <Label className="font-semibold text-sm">1 Vote (Third Best)</Label>
+                  <Label htmlFor="mvp-vote-1" className="font-semibold text-sm">1 Vote (Third Best)</Label>
                 </div>
                 <Select
                   value={votes.vote1}
                   onValueChange={(val) => setVotes((v) => ({ ...v, vote1: val }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="mvp-vote-1">
                     <SelectValue placeholder="Select a player" />
                   </SelectTrigger>
                   <SelectContent>
@@ -878,12 +1041,13 @@ export default function MvpVoteCast() {
               {/* Shoutout Section */}
               <div className="space-y-2 pt-4 border-t border-border">
                 <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-1.5 font-semibold text-sm">
-                    Club Champion Shoutout <Trophy className="h-4 w-4 text-yellow-500" />
+                  <Label htmlFor="mvp-shoutout" className="flex items-center gap-1.5 font-semibold text-sm">
+                    Team Shoutout <Trophy className="h-4 w-4 text-yellow-500" />
                   </Label>
                   <span className="text-xs text-muted-foreground">{shoutout.length}/200</span>
                 </div>
                 <Textarea
+                  id="mvp-shoutout"
                   placeholder="Give a shoutout to someone who made a difference — on or off the field"
                   className="resize-none h-24 text-sm"
                   maxLength={200}
@@ -896,15 +1060,59 @@ export default function MvpVoteCast() {
               <Button
                 className="w-full mt-4"
                 size="lg"
-                disabled={!allSelected || hasDuplicates || submitting}
-                onClick={onSubmit}
+                disabled={!allSelected || hasDuplicates || submitting || !canCastBallot}
+                onClick={() => void onSubmit()}
               >
-                {submitting ? "Submitting..." : "Submit Votes"}
+                {submitting ? "Submitting..." : "Submit Ballot"}
               </Button>
             </>
           )}
         </CardContent>
       </Card>
+      )}
+
+      {sessionDisplayState === "open" && !hasVoted && !canCastBallot && (
+        <Card className="mx-auto max-w-xl border-dashed">
+          <CardContent className="pt-6 text-center text-sm text-muted-foreground">
+            {resultCheck.response === "INCORRECT"
+              ? "Your ballot is locked for this review round because you reported that the result is incorrect."
+              : "Check the match result above before the ballot becomes available."}
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={concernDialogOpen} onOpenChange={setConcernDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report an incorrect match result?</DialogTitle>
+            <DialogDescription>
+              This records your concern for team staff. The MVP module does not change the fixture score.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="mvp-result-comment">Comment (optional)</Label>
+              <Textarea
+                id="mvp-result-comment"
+                value={resultComment}
+                onChange={(event) => setResultComment(event.target.value)}
+                maxLength={500}
+                className="min-h-24 resize-none"
+                placeholder="Briefly explain what looks wrong"
+              />
+              <p className="text-right text-xs text-muted-foreground">{resultComment.length}/500</p>
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="outline" disabled={checkingResult} onClick={() => setConcernDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" disabled={checkingResult} onClick={() => void recordResultCheck("INCORRECT")}>
+                {checkingResult ? "Saving..." : "Confirm result is not correct"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
