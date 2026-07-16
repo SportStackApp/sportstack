@@ -225,6 +225,12 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       ],
     },
     {
+      heading: "MVP Voting",
+      items: [
+        { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
+      ],
+    },
+    {
       heading: "Admin",
       items: [
         { path: "/admin/teams", label: "Teams", icon: Shield },
@@ -242,6 +248,12 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/mvp-votes", label: "MVP Votes", icon: Vote },
         { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/chat", label: "Chat", icon: MessageCircle },
+      ],
+    },
+    {
+      heading: "MVP Voting",
+      items: [
+        { path: "/admin/mvp-voting", label: "Manage Voting", icon: Trophy },
       ],
     },
     {
@@ -278,9 +290,22 @@ const MOBILE_NAV: Record<AppMode, NavItem[]> = {
 
 interface Notification {
   id: string;
-  type: string;
+  type: string | null;
   title: string;
-  message: string;
+  message: string | null;
+  body: string | null;
+  action_url: string | null;
+  read: boolean;
+  created_at: string;
+}
+
+interface NotificationRow {
+  id: string;
+  type?: string | null;
+  title: string;
+  message?: string | null;
+  body?: string | null;
+  action_url?: string | null;
   read: boolean;
   created_at: string;
 }
@@ -410,7 +435,6 @@ const AppLayout = () => {
   const [playerTeamName, setPlayerTeamName] = useState("");
   const [playerLogoUrl, setPlayerLogoUrl] = useState<string | null>(null);
   const [voterTeamMemberships, setVoterTeamMemberships] = useState<VoterTeamMembership[]>([]);
-  const [isVoter, setIsVoter] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackScreenshots, setFeedbackScreenshots] = useState<File[]>([]);
@@ -420,19 +444,58 @@ const AppLayout = () => {
   const isBrandNewUser = roles.length === 0;
 
 
-  // Fetch notifications from DB
+  // Keep the bell current without requiring a page refresh.
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setNotifications([]);
+      return;
+    }
+
+    let active = true;
     const fetchNotifications = async () => {
-      const { data } = await supabase
+      const result = await supabase
         .from("notifications")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(20);
-      setNotifications(data || []);
+
+      if (active && !result.error) {
+        const rows = (result.data || []) as unknown as NotificationRow[];
+        setNotifications(
+          rows.map((row) => ({
+            id: row.id,
+            type: row.type || null,
+            title: row.title,
+            message: row.message || row.body || null,
+            body: row.body || null,
+            action_url: row.action_url || null,
+            read: row.read,
+            created_at: row.created_at,
+          })),
+        );
+      }
     };
-    fetchNotifications();
+
+    void fetchNotifications();
+    const channel = supabase
+      .channel(`notifications:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => void fetchNotifications(),
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      void supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Fetch pending request count for admin badge
@@ -564,24 +627,6 @@ const AppLayout = () => {
     setSelectedTeamId,
   ]);
 
-  // Fetch VOTER role status
-  useEffect(() => {
-    if (!user) {
-      setIsVoter(false);
-      return;
-    }
-    const checkVoterRole = async () => {
-      const { data } = await supabase
-        .from("user_roles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("role", "VOTER")
-        .maybeSingle();
-      setIsVoter(!!data);
-    };
-    checkVoterRole();
-  }, [user]);
-
   // Auto-switch viewingAs based on cascade selection (only if not manually overridden)
   useEffect(() => {
     if (mode !== "super_admin") return;
@@ -618,13 +663,42 @@ const AppLayout = () => {
       if (selectedAssociationId && item.path === "/admin/associations") return false;
       if (selectedClubId && item.path === "/admin/clubs") return false;
       if (selectedTeamId && item.path === "/admin/teams") return false;
-      if (item.path === "/mvp-votes" && !isVoter) return false;
       if (showAdminDropdown && section.heading === "Admin") return false;
       return true;
     }),
   })).filter((section) => section.items.length > 0);
   const mobileNavItems = isBrandNewUser ? MOBILE_NAV.player.filter((item) => item.path === "/dashboard") : MOBILE_NAV[mode];
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleNotificationClick = async (notification: Notification) => {
+    if (user && !notification.read) {
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id ? { ...item, read: true } : item,
+        ),
+      );
+
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("id", notification.id)
+        .eq("user_id", user.id);
+
+      if (error) {
+        setNotifications((current) =>
+          current.map((item) =>
+            item.id === notification.id ? { ...item, read: false } : item,
+          ),
+        );
+      }
+    }
+
+    if (notification.action_url?.startsWith("/")) {
+      navigate(notification.action_url, {
+        state: { notificationRefreshAt: Date.now() },
+      });
+    }
+  };
 
   const visibleAdminDropdownSections = ADMIN_DROPDOWN_SECTIONS.map((section) => ({
     ...section,
@@ -1408,10 +1482,12 @@ const AppLayout = () => {
                     <p className="p-4 text-sm text-muted-foreground">No notifications</p>
                   ) : (
                     notifications.map((notification) => (
-                      <div
+                      <button
+                        type="button"
                         key={notification.id}
+                        onClick={() => void handleNotificationClick(notification)}
                         className={cn(
-                          "p-3 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer",
+                          "w-full p-3 border-b border-border last:border-0 text-left hover:bg-muted/50 cursor-pointer",
                           !notification.read && "bg-muted/30"
                         )}
                       >
@@ -1419,7 +1495,9 @@ const AppLayout = () => {
                           <span className="text-lg">🔔</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground">{notification.title}</p>
-                            <p className="text-sm text-muted-foreground">{notification.message}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {notification.message || notification.body || "Open to view details."}
+                            </p>
                             <p className="text-xs text-muted-foreground mt-1">
                               {new Date(notification.created_at).toLocaleDateString("en-AU", {
                                 day: "numeric",
@@ -1431,7 +1509,7 @@ const AppLayout = () => {
                             <Badge className="bg-primary text-primary-foreground text-xs">New</Badge>
                           )}
                         </div>
-                      </div>
+                      </button>
                     ))
                   )}
                 </div>

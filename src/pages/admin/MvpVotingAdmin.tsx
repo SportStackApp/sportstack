@@ -1,43 +1,134 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { supabase as originalSupabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Trophy, ChevronLeft, ChevronRight, RefreshCw, Mail, XCircle, CheckCircle2, Clock, Users 
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
-} from "@/components/ui/table";
-import { 
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle 
+  AlertTriangle,
+  CalendarDays,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Eye,
+  Lock,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Play,
+  Power,
+  RefreshCw,
+  ShieldCheck,
+  Square,
+  Trophy,
+  Users,
+  XCircle,
+} from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { AdminCascadeFilters } from "@/components/admin/AdminCascadeFilters";
 import { type CascadeValue } from "@/lib/adminCascade";
+import {
+  getMvpErrorMessage,
+  getMvpSessionDisplayState,
+  isMvpUpgradeUnavailable,
+  type MvpSessionStatus,
+} from "@/lib/mvpVoting";
 
-// Widened Supabase client type for these custom MVP queries
+// The checked-in generated types intentionally remain unchanged until the
+// approved migration is applied and the types can be regenerated from Supabase.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabase = originalSupabase as any;
+
+type SessionStatus = MvpSessionStatus;
+type LifecycleKind = "open" | "close" | "reopen" | "resolve";
+
+interface AssociationOption {
+  id: string;
+  name: string;
+  timezone: string | null;
+}
+
+interface ClubOption {
+  id: string;
+  name: string;
+  association_id: string;
+}
+
+interface DivisionOption {
+  id: string;
+  name: string;
+  association_id: string;
+}
+
+interface TeamOption {
+  id: string;
+  name: string;
+  club_id: string;
+  division_id: string | null;
+  mvp_enabled: boolean;
+}
+
+interface VenueOption {
+  id: string;
+  name: string;
+}
+
+interface FixtureSummary {
+  id: string;
+  fixture_date: string;
+  status: string;
+  home_team_id: string;
+  away_team_id: string;
+  home_score: number | null;
+  away_score: number | null;
+  division_id: string | null;
+  venue_id: string | null;
+  round_number: number | string | null;
+}
 
 interface MvpSession {
   id: string;
-  grade: string;
-  round: string;
-  game_date: string;
-  home_team: string;
-  away_team: string;
-  status: string;
-  opened_at: string;
-  closes_at: string;
+  fixture_id: string;
+  team_id: string | null;
+  grade: string | null;
+  round: string | null;
+  game_date: string | null;
+  home_team: string | null;
+  away_team: string | null;
+  status: SessionStatus;
+  opened_at: string | null;
+  closes_at: string | null;
+  result_check_round: number;
+  voting_cycle: number;
+  locked_at: string | null;
+  locked_reason: string | null;
   votedCount?: number;
-  totalVoters?: number;
+  totalVoters?: number | null;
+  fixture?: FixtureSummary;
+}
+
+interface OpenCandidate extends FixtureSummary {
+  homeTeamName: string;
+  awayTeamName: string;
+  venueName: string;
 }
 
 interface RankedResult {
@@ -48,9 +139,18 @@ interface RankedResult {
 
 interface VoterStatus {
   id: string;
-  revsports_player_id: string;
+  revsports_player_id: string | null;
   voted_at: string | null;
   player_name: string;
+  result_response: "CORRECT" | "INCORRECT" | null;
+}
+
+interface ResultConcern {
+  id: string;
+  voter_profile_id: string;
+  reporterName: string;
+  comment: string | null;
+  created_at: string;
 }
 
 interface Shoutout {
@@ -58,80 +158,264 @@ interface Shoutout {
   text: string;
 }
 
+interface RawBallot {
+  voterId: string;
+  voterName: string;
+  choices: Array<{ points: number; playerName: string }>;
+}
+
+interface SubmissionRow {
+  id?: string;
+  session_id?: string;
+  voter_profile_id: string;
+  shoutout: string | null;
+  submitted_at: string | null;
+}
+
+interface ResultCheckRow {
+  id: string;
+  voter_profile_id: string;
+  response: "CORRECT" | "INCORRECT";
+  comment: string | null;
+  created_at: string;
+  result_check_round: number;
+}
+
+interface AttendedPlayerRow {
+  id: string;
+  fixture_id?: string;
+  player_name: string | null;
+  profile_id: string;
+  team_side: "home" | "away";
+}
+
+interface ProfileNameRow {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+}
+
+interface VoteRow {
+  voter_profile_id: string | null;
+  player_id: string;
+  points: number;
+}
+
+interface VoteRecipientRow {
+  id: string;
+  player_name: string | null;
+  profile_id: string | null;
+}
+
+interface AggregateResultRow {
+  player_id?: string;
+  playerId?: string;
+  player_name?: string;
+  name?: string;
+  total_points?: number;
+  points?: number;
+}
+
+interface AggregateResultPayload {
+  results?: AggregateResultRow[];
+  rows?: AggregateResultRow[];
+  data?: AggregateResultRow[];
+}
+
+interface LifecycleDialogState {
+  kind: LifecycleKind;
+  session: MvpSession | null;
+  fixture: OpenCandidate | null;
+}
+
+const MVP_UPGRADE_MESSAGE =
+  "The MVP reliability database upgrade has not been applied yet. Session controls are disabled until the approved Supabase migrations are applied.";
+
+const isUpgradeMissingError = (error: unknown) => {
+  const value = error as { code?: string; message?: string } | null;
+  const message = value?.message?.toLowerCase() || "";
+  return (
+    isMvpUpgradeUnavailable(error) ||
+    ["42P01", "42703", "42883", "PGRST202", "PGRST204", "PGRST205"].includes(value?.code || "") ||
+    message.includes("mvp_enabled") ||
+    message.includes("mvp_result_checks") ||
+    message.includes("does not exist") ||
+    message.includes("could not find the function")
+  );
+};
+
+const friendlyMvpError = (error: unknown) => {
+  const value = error as { message?: string } | null;
+  const message = value?.message || "The action could not be completed.";
+  const namedMessages: Record<string, string> = {
+    NOT_AUTHORISED: "You do not have permission to manage this team.",
+    TEAM_MVP_DISABLED: "MVP voting is turned off for this team.",
+    LEGACY_SESSION_READ_ONLY: "Legacy voting sessions are read-only and cannot be reopened.",
+    SESSION_NOT_FOUND: "This voting session could not be found.",
+    SESSION_NOT_OPEN: "This voting session is not open.",
+    SESSION_EXPIRED: "This voting session has already expired.",
+    SESSION_DISPUTED: "This voting session is paused while the match result is reviewed.",
+    RESULT_CONCERN_UNRESOLVED: "Review the unresolved match-result concern before closing this session.",
+    FIXTURE_NOT_COMPLETED: "The fixture must be marked as completed before voting can open.",
+    SCORES_MISSING: "Both fixture scores must be recorded before voting can open.",
+    INVALID_CLOSE_TIME: "Choose a closing time in the future.",
+  };
+
+  const match = Object.keys(namedMessages).find((key) => message.includes(key));
+  return match ? namedMessages[match] : getMvpErrorMessage(error, message);
+};
+
+const localDateTimeValue = (date: Date) => {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(
+    date.getMinutes(),
+  )}`;
+};
+
+const MAX_VOTING_WINDOW_MS = 72 * 60 * 60 * 1000;
+const DEFAULT_ASSOCIATION_TIMEZONE = "Australia/Melbourne";
+const defaultCloseValue = () => localDateTimeValue(new Date(Date.now() + MAX_VOTING_WINDOW_MS));
+const maximumCloseValue = () => localDateTimeValue(new Date(Date.now() + MAX_VOTING_WINDOW_MS));
+
+const extractSessionId = (data: unknown) => {
+  const value = data as { session_id?: string; id?: string; data?: { session_id?: string; id?: string } } | null;
+  return value?.session_id || value?.id || value?.data?.session_id || value?.data?.id || null;
+};
+
 export default function MvpVotingAdmin() {
   const { toast } = useToast();
-  const { loading: scopeLoading, isSuperAdmin, highestScopedRole, scopedAssociationIds } = useAdminScope();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const handledDetailLocationKey = useRef<string | null>(null);
+  const {
+    loading: scopeLoading,
+    isAnyAdmin,
+    isSuperAdmin,
+    scopedRoles,
+    scopedTeamIds,
+  } = useAdminScope();
 
   const [view, setView] = useState<"list" | "detail">("list");
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [allAssociations, setAllAssociations] = useState<AssociationOption[]>([]);
+  const [allClubs, setAllClubs] = useState<ClubOption[]>([]);
+  const [allDivisions, setAllDivisions] = useState<DivisionOption[]>([]);
+  const [allTeams, setAllTeams] = useState<TeamOption[]>([]);
+  const [allVenues, setAllVenues] = useState<VenueOption[]>([]);
+  const [referenceDataLoaded, setReferenceDataLoaded] = useState(false);
+  const [schemaReady, setSchemaReady] = useState(true);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
-  // Reference data states
-  const [allAssociations, setAllAssociations] = useState<{ id: string; name: string }[]>([]);
-  const [allClubs, setAllClubs] = useState<{ id: string; name: string; association_id: string }[]>([]);
-  const [allDivisions, setAllDivisions] = useState<{ id: string; name: string; association_id: string }[]>([]);
-  const [allTeams, setAllTeams] = useState<{ id: string; name: string; club_id: string; division_id: string | null }[]>([]);
+  const [filterAssociation, setFilterAssociation] = useState("ALL");
+  const [filterClub, setFilterClub] = useState("ALL");
+  const [filterDivision, setFilterDivision] = useState("ALL");
+  const [filterTeam, setFilterTeam] = useState("ALL");
+  const [filterStatus, setFilterStatus] = useState("ALL");
+  const [filterRound, setFilterRound] = useState("");
+  const [showLegacy, setShowLegacy] = useState(false);
 
-  // Filter states
-  const [filterAssociation, setFilterAssociation] = useState<string>("ALL");
-  const [filterClub, setFilterClub] = useState<string>("ALL");
-  const [filterDivision, setFilterDivision] = useState<string>("ALL");
-  const [filterTeam, setFilterTeam] = useState<string>("ALL");
-  const [filterStatus, setFilterStatus] = useState<string>("OPEN"); // Default OPEN
-  const [filterRound, setFilterRound] = useState<string>("");
-
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
-
-  // List view states
   const [sessions, setSessions] = useState<MvpSession[]>([]);
   const [listLoading, setListLoading] = useState(true);
+  const [openCandidates, setOpenCandidates] = useState<OpenCandidate[]>([]);
+  const [candidateSearch, setCandidateSearch] = useState("");
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
 
-  // Detail view states
   const [sessionDetails, setSessionDetails] = useState<MvpSession | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [resultsError, setResultsError] = useState<string | null>(null);
   const [results, setResults] = useState<RankedResult[]>([]);
   const [voters, setVoters] = useState<VoterStatus[]>([]);
+  const [resultConcerns, setResultConcerns] = useState<ResultConcern[]>([]);
   const [shoutouts, setShoutouts] = useState<Shoutout[]>([]);
+  const [rawBallots, setRawBallots] = useState<RawBallot[]>([]);
 
-  // Dialog and action states
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedCancelToken, setSelectedCancelToken] = useState<VoterStatus | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rowActionLoading, setRowActionLoading] = useState<string | null>(null);
+  const [lifecycleDialog, setLifecycleDialog] = useState<LifecycleDialogState | null>(null);
+  const [lifecycleCloseAt, setLifecycleCloseAt] = useState(defaultCloseValue);
+  const [teamToggleTarget, setTeamToggleTarget] = useState<boolean | null>(null);
+  const [withdrawVoter, setWithdrawVoter] = useState<VoterStatus | null>(null);
+  const [withdrawReason, setWithdrawReason] = useState("");
 
-  const hasAccess = isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN";
+  const hasAccess = isAnyAdmin;
+  const hasRawAuditRole =
+    isSuperAdmin || scopedRoles.some((role) => role.role === "ASSOCIATION_ADMIN");
+  const deepLinkedSessionId = searchParams.get("session");
 
-  // Load reference data on mount
-  useEffect(() => {
-    const loadRefData = async () => {
-      try {
-        const [assocRes, clubRes, divRes, teamRes] = await Promise.all([
-          supabase.from("associations").select("id, name").order("name"),
-          supabase.from("clubs").select("id, name, association_id").order("name"),
-          supabase.from("divisions").select("id, name, association_id").order("name"),
-          supabase.from("teams").select("id, name, club_id, division_id").order("name"),
-        ]);
+  const visibleTeams = useMemo(
+    () => (isSuperAdmin ? allTeams : allTeams.filter((team) => scopedTeamIds.includes(team.id))),
+    [allTeams, isSuperAdmin, scopedTeamIds],
+  );
 
-        setAllAssociations(assocRes.data || []);
-        setAllClubs(clubRes.data || []);
-        setAllDivisions(divRes.data || []);
-        setAllTeams(teamRes.data || []);
-      } catch (err) {
-        console.error("Error loading reference data:", err);
-      }
-    };
-    
-    loadRefData();
-  }, []);
+  const visibleClubIds = useMemo(() => new Set(visibleTeams.map((team) => team.club_id)), [visibleTeams]);
+  const visibleClubs = useMemo(
+    () => (isSuperAdmin ? allClubs : allClubs.filter((club) => visibleClubIds.has(club.id))),
+    [allClubs, isSuperAdmin, visibleClubIds],
+  );
+  const visibleAssociationIds = useMemo(
+    () => new Set(visibleClubs.map((club) => club.association_id)),
+    [visibleClubs],
+  );
+  const visibleAssociations = useMemo(
+    () =>
+      isSuperAdmin
+        ? allAssociations
+        : allAssociations.filter((association) => visibleAssociationIds.has(association.id)),
+    [allAssociations, isSuperAdmin, visibleAssociationIds],
+  );
+  const visibleDivisionIds = useMemo(
+    () => new Set(visibleTeams.map((team) => team.division_id).filter(Boolean)),
+    [visibleTeams],
+  );
+  const visibleDivisions = useMemo(
+    () => (isSuperAdmin ? allDivisions : allDivisions.filter((division) => visibleDivisionIds.has(division.id))),
+    [allDivisions, isSuperAdmin, visibleDivisionIds],
+  );
+  const selectedTeam = useMemo(
+    () => visibleTeams.find((team) => team.id === filterTeam) || null,
+    [filterTeam, visibleTeams],
+  );
 
-  // Initialize and restrict association admin to their scoped association
-  useEffect(() => {
-    if (!isSuperAdmin && scopedAssociationIds && scopedAssociationIds.length > 0) {
-      setFilterAssociation(scopedAssociationIds[0]);
-    }
-  }, [isSuperAdmin, scopedAssociationIds]);
+  const canAuditRawBallotsForSession = useCallback(
+    (session: MvpSession | null) => {
+      if (!session) return false;
+      if (isSuperAdmin) return true;
+
+      const teamIds = session.team_id
+        ? [session.team_id]
+        : [session.fixture?.home_team_id, session.fixture?.away_team_id].filter(
+            (teamId): teamId is string => Boolean(teamId),
+          );
+
+      return teamIds.some((teamId) => {
+        const team = allTeams.find((item) => item.id === teamId);
+        const club = team ? allClubs.find((item) => item.id === team.club_id) : null;
+        if (!club) return false;
+        return scopedRoles.some(
+          (role) => role.role === "ASSOCIATION_ADMIN" && role.association_id === club.association_id,
+        );
+      });
+    },
+    [allClubs, allTeams, isSuperAdmin, scopedRoles],
+  );
+
+  const visibleOpenCandidates = useMemo(() => {
+    const query = candidateSearch.trim().toLowerCase();
+    if (!query) return openCandidates;
+    return openCandidates.filter((fixture) =>
+      [
+        fixture.homeTeamName,
+        fixture.awayTeamName,
+        fixture.venueName,
+        fixture.round_number == null ? "" : `round ${fixture.round_number}`,
+        fixture.fixture_date,
+      ].some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [candidateSearch, openCandidates]);
 
   const filterCascade: CascadeValue = {
     associationId: filterAssociation,
@@ -140,498 +424,946 @@ export default function MvpVotingAdmin() {
     teamId: filterTeam,
   };
 
-  const handleCascadeChange = (nextValue: CascadeValue) => {
+  const filteredTeamIds = useMemo(() => {
+    return visibleTeams
+      .filter((team) => {
+        const club = allClubs.find((item) => item.id === team.club_id);
+        if (filterAssociation !== "ALL" && club?.association_id !== filterAssociation) return false;
+        if (filterClub !== "ALL" && team.club_id !== filterClub) return false;
+        if (filterDivision !== "ALL" && team.division_id !== filterDivision) return false;
+        if (filterTeam !== "ALL" && team.id !== filterTeam) return false;
+        return true;
+      })
+      .map((team) => team.id);
+  }, [allClubs, filterAssociation, filterClub, filterDivision, filterTeam, visibleTeams]);
+
+  const handleCascadeChange = useCallback((nextValue: CascadeValue) => {
     setFilterAssociation(nextValue.associationId);
     setFilterClub(nextValue.clubId);
     setFilterDivision(nextValue.divisionId);
     setFilterTeam(nextValue.teamId);
+    setCandidateSearch("");
     setCurrentPage(1);
-  };
+  }, []);
 
-  // Load session list
-  const loadSessions = async () => {
-    setListLoading(true);
+  const markUpgradeMissing = useCallback(() => {
+    setSchemaReady(false);
+    setUpgradeError(MVP_UPGRADE_MESSAGE);
+  }, []);
+
+  const loadReferenceData = useCallback(async () => {
+    setReferenceDataLoaded(false);
+    setSchemaReady(true);
+    setUpgradeError(null);
+
     try {
-      // Resolve Association/Club filters to a list of team IDs first (home OR
-      // away), since clubs.association_id and teams.club_id only exist on the
-      // team row, and a club/association can appear on either side of a
-      // fixture. This avoids a 3-level-deep nested PostgREST filter that
-      // previously only matched the home team and silently hid away games.
-      let teamIdsForClubOrAssoc: string[] | null = null;
-      if (filterAssociation !== "ALL" || filterClub !== "ALL") {
-        let teamQuery = supabase.from("teams").select("id, club_id, clubs!inner(id, association_id)");
-        if (filterClub !== "ALL") {
-          teamQuery = teamQuery.eq("club_id", filterClub);
-        }
-        if (filterAssociation !== "ALL") {
-          teamQuery = teamQuery.eq("clubs.association_id", filterAssociation);
-        }
-        const { data: matchingTeams, error: teamErr } = await teamQuery;
-        if (teamErr) throw teamErr;
-        teamIdsForClubOrAssoc = (matchingTeams || []).map((t: any) => t.id);
-      }
+      const [associationResult, clubResult, divisionResult, venueResult] = await Promise.all([
+        supabase.from("associations").select("id, name, timezone").order("name"),
+        supabase.from("clubs").select("id, name, association_id").order("name"),
+        supabase.from("divisions").select("id, name, association_id").order("name"),
+        supabase.from("venues").select("id, name").order("name"),
+      ]);
 
-      let query = supabase
-        .from("mvp_voting_sessions")
-        .select(`
-          *,
-          fixtures!inner(
-            id,
-            division_id,
-            home_team_id,
-            away_team_id,
-            round_number
-          )
-        `, { count: "exact" });
+      if (associationResult.error) throw associationResult.error;
+      if (clubResult.error) throw clubResult.error;
+      if (divisionResult.error) throw divisionResult.error;
+      if (venueResult.error) throw venueResult.error;
 
-      // Apply Filters
-      if (teamIdsForClubOrAssoc !== null) {
-        if (teamIdsForClubOrAssoc.length === 0) {
-          // No teams match this association/club combo — short-circuit to empty results
-          setSessions([]);
-          setTotalCount(0);
-          setListLoading(false);
-          return;
-        }
-        const idList = teamIdsForClubOrAssoc.join(",");
-        query = query.or(`home_team_id.in.(${idList}),away_team_id.in.(${idList})`, { foreignTable: "fixtures" });
-      }
-      if (filterDivision !== "ALL") {
-        query = query.eq("fixtures.division_id", filterDivision);
-      }
-      if (filterTeam !== "ALL") {
-        query = query.or(`home_team_id.eq.${filterTeam},away_team_id.eq.${filterTeam}`, { foreignTable: "fixtures" });
-      }
-      if (filterStatus !== "ALL") {
-        query = query.eq("status", filterStatus);
-      }
-      if (filterRound.trim() !== "") {
-        query = query.ilike("round", `%Round ${filterRound}%`);
-      }
+      const teamResult = await supabase
+        .from("teams")
+        .select("id, name, club_id, division_id, mvp_enabled")
+        .order("name");
 
-      // Order and Paginate
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
+      let teamData: TeamOption[];
 
-      const { data, error, count } = await query
-        .order("game_date", { ascending: false })
-        .range(from, to);
-
-      if (error) throw error;
-
-      setTotalCount(count || 0);
-
-      if (data) {
-        // Fetch submission counts and eligible voter counts in bulk for this page's sessions
-        const sessionIds = data.map((s: any) => s.id);
-        const fixtureIds = data.map((s: any) => s.fixture_id).filter(Boolean);
-
-        // 1. Bulk fetch submission counts (votedCount)
-        const submissionsGroup: Record<string, number> = {};
-        if (sessionIds.length > 0) {
-          const { data: subsData, error: subsErr } = await supabase
-            .from("mvp_vote_submissions")
-            .select("session_id")
-            .in("session_id", sessionIds);
-          
-          if (subsErr) throw subsErr;
-
-          (subsData || []).forEach((sub: any) => {
-            submissionsGroup[sub.session_id] = (submissionsGroup[sub.session_id] || 0) + 1;
-          });
-        }
-
-        // 2. Bulk fetch eligible voters
-        const voterCountsGroup: Record<string, number> = {};
-        if (fixtureIds.length > 0) {
-          const { data: playersData, error: playersErr } = await supabase
-            .from("revsports_players")
-            .select("fixture_id, profile_id, team")
-            .in("fixture_id", fixtureIds)
-            .eq("attended", true)
-            .not("profile_id", "is", null);
-
-          if (playersErr) throw playersErr;
-
-          // Group by fixture_id and count distinct profile_ids for Pumas side (team is null or "Grampians Hockey Club")
-          const fixtureVoterProfiles: Record<string, Set<string>> = {};
-          (playersData || []).forEach((row: any) => {
-            const isPumas = row.team === null || row.team === "Grampians Hockey Club";
-            if (isPumas) {
-              if (!fixtureVoterProfiles[row.fixture_id]) {
-                fixtureVoterProfiles[row.fixture_id] = new Set();
-              }
-              fixtureVoterProfiles[row.fixture_id].add(row.profile_id);
-            }
-          });
-
-          Object.entries(fixtureVoterProfiles).forEach(([fixId, profSet]) => {
-            voterCountsGroup[fixId] = profSet.size;
-          });
-        }
-
-        const sessionsWithCounts = data.map((session: any) => ({
-          ...session,
-          votedCount: submissionsGroup[session.id] || 0,
-          totalVoters: voterCountsGroup[session.fixture_id] || 0,
+      if (teamResult.error && isUpgradeMissingError(teamResult.error)) {
+        markUpgradeMissing();
+        const fallback = await supabase.from("teams").select("id, name, club_id, division_id").order("name");
+        if (fallback.error) throw fallback.error;
+        teamData = ((fallback.data || []) as Omit<TeamOption, "mvp_enabled">[]).map((team) => ({
+          ...team,
+          mvp_enabled: false,
         }));
-
-        setSessions(sessionsWithCounts);
+      } else if (teamResult.error) {
+        throw teamResult.error;
       } else {
-        setSessions([]);
+        teamData = (teamResult.data || []) as TeamOption[];
       }
-    } catch (err: any) {
+
+      setAllAssociations(associationResult.data || []);
+      setAllClubs(clubResult.data || []);
+      setAllDivisions(divisionResult.data || []);
+      setAllVenues(venueResult.data || []);
+      setAllTeams(teamData);
+    } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error loading sessions",
-        description: err.message || "An unexpected error occurred.",
+        title: "Could not load MVP administration",
+        description: friendlyMvpError(error),
       });
+    } finally {
+      setReferenceDataLoaded(true);
+    }
+  }, [markUpgradeMissing, toast]);
+
+  useEffect(() => {
+    if (!scopeLoading && hasAccess) void loadReferenceData();
+  }, [hasAccess, loadReferenceData, scopeLoading]);
+
+  useEffect(() => {
+    if (!isSuperAdmin && visibleAssociations.length === 1 && filterAssociation === "ALL") {
+      setFilterAssociation(visibleAssociations[0].id);
+    }
+  }, [filterAssociation, isSuperAdmin, visibleAssociations]);
+
+  const loadSessions = useCallback(async () => {
+    if (!schemaReady || !referenceDataLoaded) {
+      setSessions([]);
+      setTotalCount(0);
+      setListLoading(false);
+      return;
+    }
+
+    setListLoading(true);
+    try {
+      if (!showLegacy && filteredTeamIds.length === 0) {
+        setSessions([]);
+        setTotalCount(0);
+        return;
+      }
+
+      let legacyFixtureIds: string[] | null = null;
+      if (showLegacy && (!isSuperAdmin || filteredTeamIds.length !== allTeams.length)) {
+        if (filteredTeamIds.length === 0) {
+          setSessions([]);
+          setTotalCount(0);
+          return;
+        }
+        const idList = filteredTeamIds.join(",");
+        const { data: fixtureRows, error: fixtureScopeError } = await supabase
+          .from("fixtures")
+          .select("id")
+          .or(`home_team_id.in.(${idList}),away_team_id.in.(${idList})`);
+        if (fixtureScopeError) throw fixtureScopeError;
+        legacyFixtureIds = ((fixtureRows || []) as Array<{ id: string }>).map((fixture) => fixture.id);
+        if (legacyFixtureIds.length === 0) {
+          setSessions([]);
+          setTotalCount(0);
+          return;
+        }
+      }
+
+      let query = supabase.from("mvp_voting_sessions").select("*", { count: "exact" });
+      if (showLegacy) {
+        query = query.is("team_id", null);
+        if (legacyFixtureIds) query = query.in("fixture_id", legacyFixtureIds);
+      } else {
+        query = query.not("team_id", "is", null);
+        const unrestrictedSuperView =
+          isSuperAdmin &&
+          filterAssociation === "ALL" &&
+          filterClub === "ALL" &&
+          filterDivision === "ALL" &&
+          filterTeam === "ALL";
+        if (!unrestrictedSuperView) query = query.in("team_id", filteredTeamIds);
+      }
+      if (filterStatus !== "ALL") query = query.eq("status", filterStatus);
+      if (filterRound.trim()) query = query.ilike("round", `%${filterRound.trim()}%`);
+
+      const from = (currentPage - 1) * pageSize;
+      const { data, error, count } = await query
+        .order("game_date", { ascending: false })
+        .range(from, from + pageSize - 1);
+
+      if (error) throw error;
+      const sessionRows = (data || []) as MvpSession[];
+      const sessionIds = sessionRows.map((session) => session.id);
+      const fixtureIds = Array.from(new Set(sessionRows.map((session) => session.fixture_id).filter(Boolean)));
+
+      const [fixtureResult, submissionResult, playerResult] = await Promise.all([
+        fixtureIds.length
+          ? supabase
+              .from("fixtures")
+              .select(
+                "id, fixture_date, status, home_team_id, away_team_id, home_score, away_score, division_id, venue_id, round_number",
+              )
+              .in("id", fixtureIds)
+          : Promise.resolve({ data: [], error: null }),
+        sessionIds.length
+          ? supabase.from("mvp_vote_submissions").select("session_id").in("session_id", sessionIds)
+          : Promise.resolve({ data: [], error: null }),
+        fixtureIds.length
+          ? supabase
+              .from("revsports_players")
+              .select("fixture_id, profile_id, team_side")
+              .in("fixture_id", fixtureIds)
+              .eq("attended", true)
+              .not("profile_id", "is", null)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (fixtureResult.error) throw fixtureResult.error;
+      if (submissionResult.error) throw submissionResult.error;
+      if (playerResult.error) throw playerResult.error;
+
+      const fixturesById = new Map<string, FixtureSummary>(
+        (fixtureResult.data || []).map((fixture: FixtureSummary) => [fixture.id, fixture]),
+      );
+      const submissionCounts = new Map<string, number>();
+      ((submissionResult.data || []) as Array<{ session_id: string }>).forEach((submission) => {
+        submissionCounts.set(submission.session_id, (submissionCounts.get(submission.session_id) || 0) + 1);
+      });
+
+      const playerProfiles = new Map<string, Map<"home" | "away", Set<string>>>();
+      ((playerResult.data || []) as AttendedPlayerRow[]).forEach((player) => {
+        if (player.team_side !== "home" && player.team_side !== "away") return;
+        if (!playerProfiles.has(player.fixture_id)) {
+          playerProfiles.set(
+            player.fixture_id,
+            new Map([
+              ["home", new Set<string>()],
+              ["away", new Set<string>()],
+            ]),
+          );
+        }
+        playerProfiles.get(player.fixture_id)?.get(player.team_side)?.add(player.profile_id);
+      });
+
+      setSessions(
+        sessionRows.map((session) => {
+          const fixture = fixturesById.get(session.fixture_id);
+          const side =
+            session.team_id && fixture
+              ? fixture.home_team_id === session.team_id
+                ? "home"
+                : fixture.away_team_id === session.team_id
+                  ? "away"
+                  : null
+              : null;
+          return {
+            ...session,
+            fixture,
+            votedCount: submissionCounts.get(session.id) || 0,
+            totalVoters: side ? playerProfiles.get(session.fixture_id)?.get(side)?.size || 0 : null,
+          };
+        }),
+      );
+      setTotalCount(count || 0);
+    } catch (error) {
+      if (isUpgradeMissingError(error)) markUpgradeMissing();
+      toast({
+        variant: "destructive",
+        title: "Could not load voting sessions",
+        description: isUpgradeMissingError(error) ? MVP_UPGRADE_MESSAGE : friendlyMvpError(error),
+      });
+      setSessions([]);
+      setTotalCount(0);
     } finally {
       setListLoading(false);
     }
-  };
-
-  // Load session detail view data
-  const loadSessionDetails = async (sessionId: string) => {
-    setDetailLoading(true);
-    try {
-      // 1. Load session row
-      const { data: sessionRow, error: sErr } = await supabase
-        .from("mvp_voting_sessions")
-        .select("*")
-        .eq("id", sessionId)
-        .maybeSingle();
-
-      if (sErr) throw sErr;
-      if (!sessionRow) throw new Error("Session not found");
-
-      setSessionDetails(sessionRow);
-
-      // 2. Fetch all submissions for this session (login-based model).
-      //    Each row = one voter who has voted, plus their optional shoutout text.
-      const { data: submissionsData, error: subErr } = await supabase
-        .from("mvp_vote_submissions")
-        .select("id, voter_profile_id, shoutout, submitted_at")
-        .eq("session_id", sessionId);
-
-      if (subErr) throw subErr;
-
-      const submissions = submissionsData || [];
-      const votedProfileIds = new Set(submissions.map((s: any) => s.voter_profile_id));
-
-      // 3. Build the eligible-voter list = distinct attended players in this fixture
-      //    who have a linked profile. Mark who has voted (has a submission row).
-      let mappedVoters: VoterStatus[] = [];
-      const profileNameMap: Record<string, string> = {};
-      if (sessionRow.fixture_id) {
-        const { data: attendedRowsRaw, error: attErr } = await supabase
-          .from("revsports_players")
-          .select("id, player_name, profile_id, team")
-          .eq("fixture_id", sessionRow.fixture_id)
-          .eq("attended", true)
-          .not("profile_id", "is", null);
-
-        if (attErr) throw attErr;
-
-        // Same Pumas-side rule as loadSessions: team is null or "Grampians Hockey Club"
-        // for our side; the opposition always has a distinct real team name. This keeps
-        // opposition players (and anyone else, e.g. an umpire with an unrelated player
-        // profile) out of the eligible-voter list.
-        const attendedRows = (attendedRowsRaw || []).filter(
-          (r: any) => r.team === null || r.team === "Grampians Hockey Club"
-        );
-
-        // Resolve real names from profiles for nicer display
-        const profileIds = Array.from(
-          new Set([...(attendedRows || []).map((r: any) => r.profile_id), ...submissions.map((s: any) => s.voter_profile_id)])
-        ).filter(Boolean);
-        if (profileIds.length > 0) {
-          const { data: profs } = await supabase
-            .from("profiles")
-            .select("id, first_name, last_name")
-            .in("id", profileIds);
-          (profs || []).forEach((p: any) => {
-            profileNameMap[p.id] = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
-          });
-        }
-
-        // Deduplicate by profile_id (a player may appear once per fixture, but be safe)
-        const seen = new Set<string>();
-        mappedVoters = (attendedRows || [])
-          .filter((r: any) => {
-            if (seen.has(r.profile_id)) return false;
-            seen.add(r.profile_id);
-            return true;
-          })
-          .map((r: any) => ({
-            id: r.profile_id,
-            revsports_player_id: r.id,
-            voted_at: votedProfileIds.has(r.profile_id) ? "voted" : null,
-            player_name: profileNameMap[r.profile_id] || r.player_name || "Unknown Player",
-          }));
-      }
-      setVoters(mappedVoters);
-
-      // 4. Shoutouts (Grampians Champion) = non-empty shoutout text on submissions
-      const mappedShoutouts: Shoutout[] = submissions
-        .filter((s: any) => s.shoutout && s.shoutout.trim() !== "")
-        .map((s: any) => ({
-          voterName: profileNameMap[s.voter_profile_id] || "A teammate",
-          text: s.shoutout.trim(),
-        }));
-      setShoutouts(mappedShoutouts);
-
-      // 5. Load votes for this session and calculate the ranked leaderboard.
-      //    Votes are keyed by session_id (not token_id) in the login-based model.
-      //    player_id points at a revsports_players row id.
-      let rankedResults: RankedResult[] = [];
-      const { data: votesData, error: vErr } = await supabase
-        .from("mvp_votes")
-        .select("player_id, points")
-        .eq("session_id", sessionId);
-
-      if (vErr) throw vErr;
-
-      if (votesData && votesData.length > 0) {
-        const uniqueRecipients = Array.from(new Set(votesData.map((v: any) => v.player_id)));
-        const recipientNamesMap: Record<string, string> = {};
-
-        if (uniqueRecipients.length > 0) {
-          // Get revsports rows (for name + profile link)
-          const { data: recipientsData } = await supabase
-            .from("revsports_players")
-            .select("id, player_name, profile_id")
-            .in("id", uniqueRecipients);
-
-          // Prefer the real profile name where we have it, else the scraped name
-          const recProfileIds = (recipientsData || []).map((r: any) => r.profile_id).filter(Boolean);
-          const recProfileNames: Record<string, string> = {};
-          if (recProfileIds.length > 0) {
-            const { data: recProfs } = await supabase
-              .from("profiles")
-              .select("id, first_name, last_name")
-              .in("id", recProfileIds);
-            (recProfs || []).forEach((p: any) => {
-              recProfileNames[p.id] = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
-            });
-          }
-          (recipientsData || []).forEach((r: any) => {
-            recipientNamesMap[r.id] = (r.profile_id && recProfileNames[r.profile_id]) || r.player_name || "Unknown Player";
-          });
-        }
-
-        // Group and sum points by recipient
-        const groups: Record<string, { name: string; points: number }> = {};
-        votesData.forEach((v: any) => {
-          const name = recipientNamesMap[v.player_id] || "Unknown Player";
-          if (!groups[v.player_id]) {
-            groups[v.player_id] = { name, points: 0 };
-          }
-          groups[v.player_id].points += v.points || 0;
-        });
-
-        rankedResults = Object.entries(groups).map(([playerId, val]) => ({
-          playerId,
-          name: val.name,
-          points: val.points,
-        })).sort((a, b) => b.points - a.points);
-      }
-      setResults(rankedResults);
-
-    } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Error loading session details",
-        description: err.message || "An unexpected error occurred.",
-      });
-      setView("list");
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (hasAccess && view === "list") {
-      loadSessions();
-    }
   }, [
-    hasAccess,
-    view,
+    allTeams.length,
     currentPage,
-    pageSize,
     filterAssociation,
     filterClub,
     filterDivision,
-    filterTeam,
+    filterRound,
     filterStatus,
-    filterRound
+    filterTeam,
+    filteredTeamIds,
+    isSuperAdmin,
+    markUpgradeMissing,
+    pageSize,
+    referenceDataLoaded,
+    schemaReady,
+    showLegacy,
+    toast,
   ]);
 
-  // Action: Reopen closed session
-  const handleReopenSession = async () => {
-    if (!sessionDetails) return;
-    setActionLoading(true);
+  const loadOpenCandidates = useCallback(async () => {
+    if (!schemaReady || !selectedTeam) {
+      setOpenCandidates([]);
+      return;
+    }
+
+    setCandidatesLoading(true);
     try {
-      const closesAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
-      const { error: updateErr } = await supabase
-        .from("mvp_voting_sessions")
-        .update({ 
-          status: "OPEN", 
-          closes_at: closesAt 
-        })
-        .eq("id", sessionDetails.id);
+      const fixtureRows: FixtureSummary[] = [];
+      const fixturePageSize = 500;
+      for (let from = 0; ; from += fixturePageSize) {
+        const { data, error } = await supabase
+          .from("fixtures")
+          .select(
+            "id, fixture_date, status, home_team_id, away_team_id, home_score, away_score, division_id, venue_id, round_number",
+          )
+          .eq("status", "COMPLETED")
+          .or(`home_team_id.eq.${selectedTeam.id},away_team_id.eq.${selectedTeam.id}`)
+          .not("home_score", "is", null)
+          .not("away_score", "is", null)
+          .order("fixture_date", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, from + fixturePageSize - 1);
+        if (error) throw error;
 
-      if (updateErr) throw updateErr;
+        const page = (data || []) as FixtureSummary[];
+        fixtureRows.push(...page);
+        if (page.length < fixturePageSize) break;
+      }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error: auditErr } = await supabase
-        .from("mvp_vote_audit")
-        .insert({
-          action: "REOPEN",
-          session_id: sessionDetails.id,
-          changed_by: user?.id,
-          reason: "Admin reopened session",
-        });
+      const fixtureIds = fixtureRows.map((fixture) => fixture.id);
+      const existingRows: Array<{ fixture_id: string }> = [];
+      const fixtureIdChunkSize = 200;
+      for (let start = 0; start < fixtureIds.length; start += fixtureIdChunkSize) {
+        const fixtureIdChunk = fixtureIds.slice(start, start + fixtureIdChunkSize);
+        const { data, error } = await supabase
+          .from("mvp_voting_sessions")
+          .select("fixture_id")
+          .eq("team_id", selectedTeam.id)
+          .in("fixture_id", fixtureIdChunk);
+        if (error) throw error;
+        existingRows.push(...((data || []) as Array<{ fixture_id: string }>));
+      }
 
-      if (auditErr) throw auditErr;
-
-      toast({
-        title: "Session Reopened",
-        description: "The voting session is now OPEN for 72 hours.",
-      });
-
-      await loadSessionDetails(sessionDetails.id);
-    } catch (err: any) {
+      const existingFixtureIds = new Set(
+        existingRows.map((row) => row.fixture_id),
+      );
+      setOpenCandidates(
+        fixtureRows
+          .filter((fixture: FixtureSummary) => !existingFixtureIds.has(fixture.id))
+          .map((fixture: FixtureSummary) => ({
+            ...fixture,
+            homeTeamName: allTeams.find((team) => team.id === fixture.home_team_id)?.name || "Home team",
+            awayTeamName: allTeams.find((team) => team.id === fixture.away_team_id)?.name || "Away team",
+            venueName: allVenues.find((venue) => venue.id === fixture.venue_id)?.name || "Venue not recorded",
+          })),
+      );
+    } catch (error) {
+      if (isUpgradeMissingError(error)) markUpgradeMissing();
       toast({
         variant: "destructive",
-        title: "Error reopening session",
-        description: err.message || "An unexpected error occurred.",
+        title: "Could not load completed fixtures",
+        description: isUpgradeMissingError(error) ? MVP_UPGRADE_MESSAGE : friendlyMvpError(error),
       });
+      setOpenCandidates([]);
     } finally {
-      setActionLoading(false);
+      setCandidatesLoading(false);
+    }
+  }, [allTeams, allVenues, markUpgradeMissing, schemaReady, selectedTeam, toast]);
+
+  const loadSessionDetails = useCallback(
+    async (sessionId: string) => {
+      setDetailLoading(true);
+      setDetailError(null);
+      setResultsError(null);
+      setResults([]);
+      setVoters([]);
+      setResultConcerns([]);
+      setShoutouts([]);
+      setRawBallots([]);
+
+      try {
+        const { data: sessionRow, error: sessionError } = await supabase
+          .from("mvp_voting_sessions")
+          .select("*")
+          .eq("id", sessionId)
+          .maybeSingle();
+        if (sessionError) throw sessionError;
+        if (!sessionRow) throw new Error("This voting session could not be found or is outside your scope.");
+
+        const { data: fixtureRow, error: fixtureError } = await supabase
+          .from("fixtures")
+          .select(
+            "id, fixture_date, status, home_team_id, away_team_id, home_score, away_score, division_id, venue_id, round_number",
+          )
+          .eq("id", sessionRow.fixture_id)
+          .maybeSingle();
+        if (fixtureError) throw fixtureError;
+        if (!fixtureRow) throw new Error("The fixture linked to this session could not be found.");
+
+        const detailSession = { ...sessionRow, fixture: fixtureRow } as MvpSession;
+        setSessionDetails(detailSession);
+
+        const [submissionResult, checkResult] = await Promise.all([
+          supabase
+            .from("mvp_vote_submissions")
+            .select("id, voter_profile_id, shoutout, submitted_at")
+            .eq("session_id", sessionId),
+          supabase
+            .from("mvp_result_checks")
+            .select("id, voter_profile_id, response, comment, created_at, result_check_round")
+            .eq("session_id", sessionId)
+            .eq("result_check_round", sessionRow.result_check_round)
+            .order("created_at", { ascending: true }),
+        ]);
+        if (submissionResult.error) throw submissionResult.error;
+        if (checkResult.error) throw checkResult.error;
+
+        const submissions = (submissionResult.data || []) as SubmissionRow[];
+        const checks = (checkResult.data || []) as ResultCheckRow[];
+        const votedProfileIds = new Set(submissions.map((submission) => submission.voter_profile_id));
+        const checkByProfile = new Map<string, "CORRECT" | "INCORRECT">(
+          checks.map((check) => [check.voter_profile_id, check.response]),
+        );
+
+        let attendedRows: AttendedPlayerRow[] = [];
+        if (detailSession.team_id) {
+          const expectedSide =
+            fixtureRow.home_team_id === detailSession.team_id
+              ? "home"
+              : fixtureRow.away_team_id === detailSession.team_id
+                ? "away"
+                : null;
+          if (!expectedSide) throw new Error("The voting team does not belong to this fixture.");
+
+          const { data: attendedData, error: attendedError } = await supabase
+            .from("revsports_players")
+            .select("id, player_name, profile_id, team_side")
+            .eq("fixture_id", detailSession.fixture_id)
+            .eq("team_side", expectedSide)
+            .eq("attended", true)
+            .not("profile_id", "is", null);
+          if (attendedError) throw attendedError;
+          attendedRows = (attendedData || []) as AttendedPlayerRow[];
+        }
+
+        const profileIds = Array.from(
+          new Set([
+            ...attendedRows.map((row) => row.profile_id),
+            ...submissions.map((submission) => submission.voter_profile_id),
+            ...checks.map((check) => check.voter_profile_id),
+          ]),
+        ).filter(Boolean);
+        const profileNames = new Map<string, string>();
+        if (profileIds.length) {
+          const { data: profiles, error: profileError } = await supabase
+            .from("profiles")
+            .select("id, first_name, last_name")
+            .in("id", profileIds);
+          if (profileError) throw profileError;
+          ((profiles || []) as ProfileNameRow[]).forEach((profile) => {
+            profileNames.set(
+              profile.id,
+              [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() || "Unnamed player",
+            );
+          });
+        }
+
+        const seenProfiles = new Set<string>();
+        const eligibleVoters: VoterStatus[] = detailSession.team_id
+          ? attendedRows
+              .filter((row) => {
+                if (seenProfiles.has(row.profile_id)) return false;
+                seenProfiles.add(row.profile_id);
+                return true;
+              })
+              .map((row) => ({
+                id: row.profile_id,
+                revsports_player_id: row.id,
+                voted_at: votedProfileIds.has(row.profile_id) ? "voted" : null,
+                player_name: profileNames.get(row.profile_id) || row.player_name || "Unnamed player",
+                result_response: checkByProfile.get(row.profile_id) || null,
+              }))
+          : submissions.map((submission) => ({
+              id: submission.voter_profile_id,
+              revsports_player_id: null,
+              voted_at: submission.submitted_at || "voted",
+              player_name: profileNames.get(submission.voter_profile_id) || "Legacy voter",
+              result_response: checkByProfile.get(submission.voter_profile_id) || null,
+            }));
+        setVoters(eligibleVoters.sort((a, b) => a.player_name.localeCompare(b.player_name)));
+
+        const incorrectChecks = checks.filter((check) => check.response === "INCORRECT");
+        setResultConcerns(
+          incorrectChecks.map((check) => ({
+            id: check.id,
+            voter_profile_id: check.voter_profile_id,
+            reporterName: profileNames.get(check.voter_profile_id) || "Unnamed player",
+            comment: check.comment,
+            created_at: check.created_at,
+          })),
+        );
+
+        const canPublishAggregates = detailSession.status === "CLOSED" && incorrectChecks.length === 0;
+        if (canPublishAggregates) {
+          const { data: resultData, error: resultError } = await supabase.rpc("get_mvp_session_results", {
+            p_session_id: sessionId,
+          });
+          if (resultError) {
+            setResultsError(
+              isUpgradeMissingError(resultError) ? MVP_UPGRADE_MESSAGE : friendlyMvpError(resultError),
+            );
+          } else {
+            const resultValue = resultData as unknown as AggregateResultRow[] | AggregateResultPayload;
+            const rows = Array.isArray(resultValue)
+              ? resultValue
+              : resultValue?.results || resultValue?.rows || resultValue?.data || [];
+            setResults(
+              (rows || [])
+                .map((row) => ({
+                  playerId: row.player_id || row.playerId,
+                  name: row.player_name || row.name || "Unnamed player",
+                  points: Number(row.total_points ?? row.points ?? 0),
+                }))
+                .sort((a: RankedResult, b: RankedResult) => b.points - a.points),
+            );
+          }
+
+          setShoutouts(
+            submissions
+              .filter((submission) => submission.shoutout?.trim())
+              .map((submission) => ({
+                voterName: profileNames.get(submission.voter_profile_id) || "A teammate",
+                text: submission.shoutout.trim(),
+              })),
+          );
+        }
+
+        if (canAuditRawBallotsForSession(detailSession)) {
+          const { data: voteRows, error: voteError } = await supabase
+            .from("mvp_votes")
+            .select("voter_profile_id, player_id, points")
+            .eq("session_id", sessionId)
+            .order("points", { ascending: false });
+          if (voteError) throw voteError;
+
+          const typedVoteRows = (voteRows || []) as VoteRow[];
+          const recipientIds = Array.from(new Set(typedVoteRows.map((vote) => vote.player_id).filter(Boolean)));
+          const recipientNames = new Map<string, string>();
+          if (recipientIds.length) {
+            const { data: recipients, error: recipientError } = await supabase
+              .from("revsports_players")
+              .select("id, player_name, profile_id")
+              .in("id", recipientIds);
+            if (recipientError) throw recipientError;
+
+            const recipientProfileIds = Array.from(
+              new Set(
+                ((recipients || []) as VoteRecipientRow[])
+                  .map((recipient) => recipient.profile_id)
+                  .filter((profileId): profileId is string => Boolean(profileId)),
+              ),
+            );
+            const recipientProfileNames = new Map<string, string>();
+            if (recipientProfileIds.length) {
+              const { data: recipientProfiles, error: recipientProfileError } = await supabase
+                .from("profiles")
+                .select("id, first_name, last_name")
+                .in("id", recipientProfileIds);
+              if (recipientProfileError) throw recipientProfileError;
+              ((recipientProfiles || []) as ProfileNameRow[]).forEach((profile) => {
+                recipientProfileNames.set(
+                  profile.id,
+                  [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim(),
+                );
+              });
+            }
+            ((recipients || []) as VoteRecipientRow[]).forEach((recipient) => {
+              recipientNames.set(
+                recipient.id,
+                recipientProfileNames.get(recipient.profile_id) || recipient.player_name || "Unnamed player",
+              );
+            });
+          }
+
+          const grouped = new Map<string, RawBallot>();
+          typedVoteRows.forEach((vote) => {
+            const voterId = vote.voter_profile_id || "legacy-token-voter";
+            if (!grouped.has(voterId)) {
+              grouped.set(voterId, {
+                voterId,
+                voterName: profileNames.get(voterId) || "Legacy token voter",
+                choices: [],
+              });
+            }
+            grouped.get(voterId)?.choices.push({
+              points: Number(vote.points),
+              playerName: recipientNames.get(vote.player_id) || "Unnamed player",
+            });
+          });
+          setRawBallots(Array.from(grouped.values()).sort((a, b) => a.voterName.localeCompare(b.voterName)));
+        }
+      } catch (error) {
+        if (isUpgradeMissingError(error)) markUpgradeMissing();
+        setDetailError(isUpgradeMissingError(error) ? MVP_UPGRADE_MESSAGE : friendlyMvpError(error));
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [canAuditRawBallotsForSession, markUpgradeMissing],
+  );
+
+  useEffect(() => {
+    if (hasAccess && referenceDataLoaded && view === "list") void loadSessions();
+  }, [hasAccess, loadSessions, referenceDataLoaded, schemaReady, view]);
+
+  useEffect(() => {
+    if (hasAccess && referenceDataLoaded && view === "list") void loadOpenCandidates();
+  }, [hasAccess, loadOpenCandidates, referenceDataLoaded, schemaReady, view]);
+
+  useEffect(() => {
+    if (
+      hasAccess &&
+      referenceDataLoaded &&
+      schemaReady &&
+      deepLinkedSessionId &&
+      (view !== "detail" ||
+        selectedSessionId !== deepLinkedSessionId ||
+        handledDetailLocationKey.current !== location.key)
+    ) {
+      handledDetailLocationKey.current = location.key;
+      setView("detail");
+      setSelectedSessionId(deepLinkedSessionId);
+      void loadSessionDetails(deepLinkedSessionId);
+    }
+  }, [
+    deepLinkedSessionId,
+    hasAccess,
+    loadSessionDetails,
+    location.key,
+    referenceDataLoaded,
+    schemaReady,
+    selectedSessionId,
+    view,
+  ]);
+
+  const openSessionDetail = (sessionId: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("session", sessionId);
+    setSearchParams(next);
+    setSelectedSessionId(sessionId);
+    setView("detail");
+  };
+
+  const returnToList = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("session");
+    setSearchParams(next);
+    setView("list");
+    handledDetailLocationKey.current = null;
+    setSelectedSessionId(null);
+    setSessionDetails(null);
+    setDetailError(null);
+    setResults([]);
+    setVoters([]);
+    setResultConcerns([]);
+    setRawBallots([]);
+  };
+
+  const openLifecycleDialog = (
+    kind: LifecycleKind,
+    session: MvpSession | null,
+    fixture: OpenCandidate | null = null,
+  ) => {
+    setLifecycleCloseAt(defaultCloseValue());
+    setLifecycleDialog({ kind, session, fixture });
+  };
+
+  const sendOpeningEmail = async (sessionId: string) => {
+    const { data, error } = await supabase.functions.invoke("mvp-voting-email-reminders", {
+      body: { action: "opened", session_id: sessionId },
+    });
+    if (error || data?.error) {
+      toast({
+        variant: "destructive",
+        title: "Voting opened, but the email failed",
+        description: friendlyMvpError(error || new Error(data.error)),
+      });
+      return;
+    }
+
+    const sent = Number(data?.sent || 0);
+    const skipped = Number(data?.skipped || 0);
+    const failed = Number(data?.failed || 0);
+    if (failed > 0) {
+      toast({
+        variant: "destructive",
+        title: "Voting opened, but some emails failed",
+        description: `Sent ${sent}. Skipped ${skipped}. Failed ${failed}.`,
+      });
+    } else if (sent === 0 || skipped > 0) {
+      toast({
+        title: sent === 0 ? "Voting opened; no opening email was sent" : "Voting opened; some emails were skipped",
+        description: `Sent ${sent}. Skipped ${skipped}. Failed ${failed}.`,
+      });
     }
   };
 
-  // Action: Resend voting reminder to players who have not voted.
-  const handleResendToNonVoters = async () => {
-    if (!sessionDetails) return;
-    setActionLoading(true);
+  const handleLifecycleConfirm = async () => {
+    if (!lifecycleDialog) return;
+    const { kind, session, fixture } = lifecycleDialog;
+    let closesAt: string | null = null;
+    if (kind !== "close") {
+      const closeDate = new Date(lifecycleCloseAt);
+      if (!lifecycleCloseAt || Number.isNaN(closeDate.getTime()) || closeDate.getTime() <= Date.now()) {
+        toast({
+          variant: "destructive",
+          title: "Choose a future closing time",
+          description: "The closing time must be later than the current time.",
+        });
+        return;
+      }
+      if (closeDate.getTime() > Date.now() + MAX_VOTING_WINDOW_MS) {
+        toast({
+          variant: "destructive",
+          title: "Choose an earlier closing time",
+          description: "MVP voting can stay open for no more than 72 hours.",
+        });
+        return;
+      }
+      closesAt = closeDate.toISOString();
+    }
+
+    const loadingKey = `${kind}-${session?.id || fixture?.id || "session"}`;
+    setActionLoading(loadingKey);
     try {
-      const { data, error } = await supabase.functions.invoke("mvp-voting-email-reminders", {
-        body: {
-          action: "manual_resend",
-          session_id: sessionDetails.id,
-        },
+      let result: { data: unknown; error: unknown };
+      if (kind === "open") {
+        const fixtureId = fixture?.id || session?.fixture_id;
+        const teamId = session?.team_id || selectedTeam?.id;
+        if (!fixtureId || !teamId) throw new Error("Select a team-owned fixture before opening voting.");
+        result = await supabase.rpc("open_mvp_voting_session", {
+          p_fixture_id: fixtureId,
+          p_team_id: teamId,
+          p_closes_at: closesAt,
+        });
+      } else if (kind === "close") {
+        if (!session) throw new Error("Select a voting session first.");
+        result = await supabase.rpc("close_mvp_voting_session", { p_session_id: session.id });
+      } else if (kind === "reopen") {
+        if (!session) throw new Error("Select a voting session first.");
+        result = await supabase.rpc("reopen_mvp_voting_session", {
+          p_session_id: session.id,
+          p_closes_at: closesAt,
+        });
+      } else {
+        if (!session) throw new Error("Select a voting session first.");
+        result = await supabase.rpc("resolve_mvp_result_dispute", {
+          p_session_id: session.id,
+          p_closes_at: closesAt,
+        });
+      }
+
+      if (result.error) throw result.error;
+      let sessionId = session?.id || extractSessionId(result.data);
+      if (!sessionId && kind === "open") {
+        const fixtureId = fixture?.id || session?.fixture_id;
+        const teamId = session?.team_id || selectedTeam?.id;
+        const { data: openedSession, error: lookupError } = await supabase
+          .from("mvp_voting_sessions")
+          .select("id")
+          .eq("fixture_id", fixtureId)
+          .eq("team_id", teamId)
+          .maybeSingle();
+        if (lookupError) throw lookupError;
+        sessionId = openedSession?.id || null;
+      }
+
+      const successTitles: Record<LifecycleKind, string> = {
+        open: "Voting opened",
+        close: "Voting closed",
+        reopen: "Voting reopened",
+        resolve: "Concern resolved and voting reopened",
+      };
+      toast({
+        title: successTitles[kind],
+        description:
+          kind === "close"
+            ? "The aggregate result can now be published if no concern is unresolved."
+            : "The voting round is open until the selected closing time.",
       });
 
+      setLifecycleDialog(null);
+      await Promise.all([loadSessions(), loadOpenCandidates()]);
+      if (sessionId && kind !== "close") await sendOpeningEmail(sessionId);
+      if (sessionId && (view === "detail" || kind === "open")) openSessionDetail(sessionId);
+      else if (session?.id && view === "detail") await loadSessionDetails(session.id);
+    } catch (error) {
+      if (isUpgradeMissingError(error)) markUpgradeMissing();
+      toast({
+        variant: "destructive",
+        title: `Could not ${kind} voting`,
+        description: isUpgradeMissingError(error) ? MVP_UPGRADE_MESSAGE : friendlyMvpError(error),
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleTeamToggleConfirm = async () => {
+    if (!selectedTeam || teamToggleTarget === null) return;
+    setActionLoading(`toggle-${selectedTeam.id}`);
+    try {
+      const { error } = await supabase.rpc("set_team_mvp_enabled", {
+        p_team_id: selectedTeam.id,
+        p_enabled: teamToggleTarget,
+      });
       if (error) throw error;
 
+      setAllTeams((teams) =>
+        teams.map((team) => (team.id === selectedTeam.id ? { ...team, mvp_enabled: teamToggleTarget } : team)),
+      );
       toast({
-        title: "Reminder sent",
-        description: `Sent ${data?.sent || 0} email(s). Skipped ${data?.skipped || 0}. Failed ${data?.failed || 0}.`,
+        title: teamToggleTarget ? "Team MVP voting enabled" : "Team MVP voting turned off",
+        description: teamToggleTarget
+          ? "Authorised people can now open voting for completed fixtures."
+          : "Pending and open rounds were closed. Disputed rounds remain available for review.",
       });
-    } catch (err) {
+      setTeamToggleTarget(null);
+      await loadSessions();
+      if (sessionDetails) await loadSessionDetails(sessionDetails.id);
+    } catch (error) {
+      if (isUpgradeMissingError(error)) markUpgradeMissing();
       toast({
         variant: "destructive",
-        title: "Reminder failed",
-        description: err instanceof Error ? err.message : "The reminder email could not be sent.",
+        title: "Could not change the team setting",
+        description: isUpgradeMissingError(error) ? MVP_UPGRADE_MESSAGE : friendlyMvpError(error),
       });
     } finally {
-      setActionLoading(false);
+      setActionLoading(null);
     }
   };
 
-  // Action: Resend voting reminder to one eligible player who has not voted.
+  const handleResendToNonVoters = async () => {
+    if (!sessionDetails) return;
+    setActionLoading(`remind-${sessionDetails.id}`);
+    try {
+      const { data, error } = await supabase.functions.invoke("mvp-voting-email-reminders", {
+        body: { action: "manual_resend", session_id: sessionDetails.id },
+      });
+      if (error || data?.error) throw error || new Error(data.error);
+      const sent = Number(data?.sent || 0);
+      const skipped = Number(data?.skipped || 0);
+      const failed = Number(data?.failed || 0);
+      toast({
+        variant: failed > 0 || sent === 0 ? "destructive" : "default",
+        title: failed > 0 ? "Some reminders failed" : sent > 0 ? "Reminder sent" : "No reminder was sent",
+        description: `Sent ${sent}. Skipped ${skipped}. Failed ${failed}.`,
+      });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Reminder failed", description: friendlyMvpError(error) });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleResendToVoter = async (voter: VoterStatus) => {
     if (!sessionDetails) return;
     setRowActionLoading(`resend-${voter.id}`);
     try {
       const { data, error } = await supabase.functions.invoke("mvp-voting-email-reminders", {
-        body: {
-          action: "manual_resend",
-          session_id: sessionDetails.id,
-          profile_id: voter.id,
-        },
+        body: { action: "manual_resend", session_id: sessionDetails.id, profile_id: voter.id },
       });
-
-      if (error) throw error;
-
+      if (error || data?.error) throw error || new Error(data.error);
+      const sent = Number(data?.sent || 0);
+      const skipped = Number(data?.skipped || 0);
+      const failed = Number(data?.failed || 0);
       toast({
-        title: "Reminder sent",
-        description: `Sent ${data?.sent || 0} email(s). Skipped ${data?.skipped || 0}. Failed ${data?.failed || 0}.`,
+        variant: failed > 0 || sent === 0 ? "destructive" : "default",
+        title: failed > 0 ? "Reminder failed" : sent > 0 ? "Reminder sent" : "No reminder was sent",
+        description: `Sent ${sent}. Skipped ${skipped}. Failed ${failed}.`,
       });
-
-      await loadSessionDetails(sessionDetails.id);
-    } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "Reminder failed",
-        description: err instanceof Error ? err.message : "The reminder email could not be sent.",
-      });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Reminder failed", description: friendlyMvpError(error) });
     } finally {
       setRowActionLoading(null);
     }
   };
 
-  // Action: Withdraw a submitted vote so the player can vote again.
-  const handleCancelVoteConfirm = async () => {
-    if (!selectedCancelToken || !sessionDetails) return;
-    setActionLoading(true);
-    try {
-      // In the login-based model, selectedCancelToken.id holds the voter's PROFILE id.
-      // 1. Delete this voter's three vote rows for this session.
-      const { error: delErr } = await supabase
-        .from("mvp_votes")
-        .delete()
-        .eq("session_id", sessionDetails.id)
-        .eq("voter_profile_id", selectedCancelToken.id);
-
-      if (delErr) throw delErr;
-
-      // 2. Delete their submission row so they show as "Pending" and can re-vote.
-      const { error: subDelErr } = await supabase
-        .from("mvp_vote_submissions")
-        .delete()
-        .eq("session_id", sessionDetails.id)
-        .eq("voter_profile_id", selectedCancelToken.id);
-
-      if (subDelErr) throw subDelErr;
-
-      // 3. Write audit log
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error: auditErr } = await supabase
-        .from("mvp_vote_audit")
-        .insert({
-          action: "WITHDRAW_VOTE",
-          session_id: sessionDetails.id,
-          changed_by: user?.id,
-          reason: "Admin withdrew vote for resubmission",
-        });
-
-      if (auditErr) throw auditErr;
-
-      toast({
-        title: "Vote Withdrawn",
-        description: `${selectedCancelToken.player_name} can now submit their vote again.`,
-      });
-
-      setDialogOpen(false);
-      setSelectedCancelToken(null);
-      await loadSessionDetails(sessionDetails.id);
-    } catch (err: any) {
+  const handleWithdrawConfirm = async () => {
+    if (!withdrawVoter || !sessionDetails || !canAuditRawBallotsForSession(sessionDetails)) return;
+    if (!withdrawReason.trim()) {
       toast({
         variant: "destructive",
-        title: "Error cancelling vote",
-        description: err.message || "An unexpected error occurred.",
+        title: "Add a reason",
+        description: "A withdrawal reason is required for the audit record.",
+      });
+      return;
+    }
+
+    setActionLoading(`withdraw-${withdrawVoter.id}`);
+    try {
+      const { error } = await supabase.rpc("withdraw_mvp_submission", {
+        p_session_id: sessionDetails.id,
+        p_voter_profile_id: withdrawVoter.id,
+        p_reason: withdrawReason.trim(),
+      });
+      if (error) throw error;
+      toast({
+        title: "Vote withdrawn",
+        description: `${withdrawVoter.player_name} can submit a replacement ballot while the round is open.`,
+      });
+      setWithdrawVoter(null);
+      setWithdrawReason("");
+      await loadSessionDetails(sessionDetails.id);
+    } catch (error) {
+      if (isUpgradeMissingError(error)) markUpgradeMissing();
+      toast({
+        variant: "destructive",
+        title: "Could not withdraw the vote",
+        description: isUpgradeMissingError(error) ? MVP_UPGRADE_MESSAGE : friendlyMvpError(error),
       });
     } finally {
-      setActionLoading(false);
+      setActionLoading(null);
     }
+  };
+
+  const getTeamTimezone = (teamId: string | null | undefined) => {
+    const team = allTeams.find((item) => item.id === teamId);
+    const club = team ? allClubs.find((item) => item.id === team.club_id) : null;
+    return allAssociations.find((item) => item.id === club?.association_id)?.timezone || DEFAULT_ASSOCIATION_TIMEZONE;
+  };
+  const getSessionTimezone = (session: MvpSession) =>
+    getTeamTimezone(session.team_id || session.fixture?.home_team_id);
+
+  const formatDate = (value: string | null | undefined, timeZone = DEFAULT_ASSOCIATION_TIMEZONE) => {
+    if (!value) return "Not recorded";
+    return new Intl.DateTimeFormat("en-AU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone,
+    }).format(new Date(value));
+  };
+
+  const formatDateTime = (value: string | null | undefined, timeZone = DEFAULT_ASSOCIATION_TIMEZONE) => {
+    if (!value) return "Not set";
+    return new Intl.DateTimeFormat("en-AU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone,
+    }).format(new Date(value));
+  };
+
+  const getTeamName = (teamId: string | null | undefined) =>
+    allTeams.find((team) => team.id === teamId)?.name || "Legacy fixture-wide session";
+  const getVenueName = (venueId: string | null | undefined) =>
+    allVenues.find((venue) => venue.id === venueId)?.name || "Venue not recorded";
+  const isExpired = (session: MvpSession) =>
+    getMvpSessionDisplayState(session.status, session.closes_at) === "expired";
+  const isReminderAvailable = (session: MvpSession) => session.status === "OPEN" && !isExpired(session);
+  const isWithdrawalAvailable = (session: MvpSession) =>
+    Boolean(session.team_id) && (session.status === "OPEN" || session.status === "RESULT_DISPUTED");
+  const selectedTeamForDetail = sessionDetails?.team_id
+    ? allTeams.find((team) => team.id === sessionDetails.team_id) || null
+    : null;
+  const aggregatesEligible = sessionDetails?.status === "CLOSED" && resultConcerns.length === 0;
+
+  const getStatusBadge = (session: MvpSession) => {
+    if (isExpired(session)) return <Badge variant="outline">EXPIRED</Badge>;
+    if (session.status === "PENDING") return <Badge className="bg-amber-100 text-amber-800">PENDING</Badge>;
+    if (session.status === "OPEN") return <Badge className="bg-green-100 text-green-800">OPEN</Badge>;
+    if (session.status === "RESULT_DISPUTED") {
+      return <Badge className="bg-red-100 text-red-800">RESULT CONCERN</Badge>;
+    }
+    return <Badge variant="secondary">CLOSED</Badge>;
   };
 
   if (scopeLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto space-y-6 p-4 md:p-6">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -640,197 +1372,309 @@ export default function MvpVotingAdmin() {
 
   if (!hasAccess) {
     return (
-      <div className="container mx-auto p-6 flex justify-center items-center min-h-[400px]">
-        <Card className="w-full max-w-md border-red-200 bg-red-50/50 shadow-lg">
+      <div className="container mx-auto flex min-h-[400px] items-center justify-center p-4 md:p-6">
+        <Card className="w-full max-w-md border-red-200 bg-red-50/50">
           <CardHeader>
-            <CardTitle className="text-red-700 flex items-center gap-2">
-              <XCircle className="h-5 w-5" /> Access Denied
+            <CardTitle className="flex items-center gap-2 text-red-700">
+              <XCircle className="h-5 w-5" /> Access denied
             </CardTitle>
-            <CardDescription className="text-red-600 font-medium">
-              Administrative permissions required.
+            <CardDescription className="text-red-700">
+              MVP voting is available to scoped coaches, team managers, club administrators, association administrators and
+              super administrators.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-gray-700 text-sm">
-              You must be a Super Admin or Association Admin to view this page.
-            </p>
-          </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Format Australian dates
-  const formatDateString = (dateStr: string) => {
-    return new Intl.DateTimeFormat("en-AU", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }).format(new Date(dateStr));
-  };
-
-  const formatDateTimeString = (dateStr: string) => {
-    return new Intl.DateTimeFormat("en-AU", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }).format(new Date(dateStr));
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">PENDING</Badge>;
-      case "OPEN":
-        return <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">OPEN</Badge>;
-      case "CLOSED":
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-100">CLOSED</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6">
+    <div className="container mx-auto space-y-6 p-4 md:p-6">
+      {upgradeError && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>MVP database upgrade required</AlertTitle>
+          <AlertDescription>{upgradeError}</AlertDescription>
+        </Alert>
+      )}
+
       {view === "list" ? (
         <div className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h1 className="text-3xl font-black tracking-tight text-gray-900 flex items-center gap-2">
-                <Trophy className="h-8 w-8 text-yellow-500 fill-yellow-500/20" /> MVP Voting
+              <h1 className="flex items-center gap-2 text-3xl font-black tracking-tight">
+                <Trophy className="h-8 w-8 text-yellow-500" /> MVP Voting
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Manage best-on-ground voting sessions
+              <p className="mt-1 text-sm text-muted-foreground">
+                Control each team’s voting rounds, reminders and result concerns.
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={loadSessions} className="self-start md:self-auto gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 self-start"
+              onClick={async () => {
+                await loadReferenceData();
+                await loadSessions();
+              }}
+              disabled={Boolean(actionLoading)}
+            >
               <RefreshCw className="h-4 w-4" /> Refresh
             </Button>
           </div>
 
-          {/* Filters UI */}
-          <div className="flex flex-wrap items-center gap-4 bg-muted/20 p-4 rounded-lg border border-border">
-            <AdminCascadeFilters
-              associations={allAssociations}
-              clubs={allClubs}
-              divisions={allDivisions}
-              teams={allTeams}
-              value={filterCascade}
-              onChange={handleCascadeChange}
-              disabledAssociation={!isSuperAdmin}
-              className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-              triggerClassName="w-48 min-w-0 overflow-hidden h-9"
-              labelClassName="text-sm font-semibold"
-            />
-
-            {/* Status filter */}
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-semibold">Status:</Label>
-              <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setCurrentPage(1); }}>
-                <SelectTrigger className="w-36 h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="OPEN">Open</SelectItem>
-                  <SelectItem value="CLOSED">Closed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Round filter */}
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-semibold">Round:</Label>
-              <Input
-                className="h-9 w-20"
-                type="number"
-                placeholder="All"
-                value={filterRound}
-                onChange={(e) => {
-                  setFilterRound(e.target.value);
-                  setCurrentPage(1);
-                }}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base">Scope and filters</CardTitle>
+              <CardDescription>Select the association, club and division before selecting a team.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <AdminCascadeFilters
+                associations={visibleAssociations}
+                clubs={visibleClubs}
+                divisions={visibleDivisions}
+                teams={visibleTeams}
+                value={filterCascade}
+                onChange={handleCascadeChange}
+                disabledAssociation={!isSuperAdmin && visibleAssociations.length === 1}
+                className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+                triggerClassName="w-full min-w-0 overflow-hidden"
               />
-            </div>
-          </div>
+              <div className="flex flex-wrap items-end gap-4">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={filterStatus}
+                    onValueChange={(value) => {
+                      setFilterStatus(value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-44">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">All statuses</SelectItem>
+                      <SelectItem value="PENDING">Pending</SelectItem>
+                      <SelectItem value="OPEN">Open</SelectItem>
+                      <SelectItem value="RESULT_DISPUTED">Result concern</SelectItem>
+                      <SelectItem value="CLOSED">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="round-filter">Round</Label>
+                  <Input
+                    id="round-filter"
+                    className="w-32"
+                    placeholder="All rounds"
+                    value={filterRound}
+                    onChange={(event) => {
+                      setFilterRound(event.target.value);
+                      setCurrentPage(1);
+                    }}
+                  />
+                </div>
+                {hasRawAuditRole && (
+                  <div className="flex items-center gap-2 pb-2">
+                    <Switch
+                      id="legacy-audit"
+                      checked={showLegacy}
+                      onCheckedChange={(checked) => {
+                        setShowLegacy(checked);
+                        setCurrentPage(1);
+                      }}
+                    />
+                    <Label htmlFor="legacy-audit">Legacy audit</Label>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-          <Card className="shadow-sm border-border bg-card">
+          {selectedTeam && !showLegacy && (
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Power className="h-4 w-4" /> {selectedTeam.name} MVP setting
+                </CardTitle>
+                <CardDescription>
+                  Turning this off closes pending and open rounds. Result concerns stay visible for review.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-semibold">MVP voting is {selectedTeam.mvp_enabled ? "on" : "off"}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedTeam.mvp_enabled
+                      ? "Authorised people can open a completed fixture."
+                      : "No new team voting round can be opened."}
+                  </p>
+                </div>
+                <Switch
+                  checked={selectedTeam.mvp_enabled}
+                  onCheckedChange={setTeamToggleTarget}
+                  disabled={!schemaReady || Boolean(actionLoading)}
+                  aria-label={`Turn MVP voting ${selectedTeam.mvp_enabled ? "off" : "on"} for ${selectedTeam.name}`}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {selectedTeam && !showLegacy && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <CalendarDays className="h-4 w-4" /> Completed fixtures ready to open
+                </CardTitle>
+                <CardDescription>
+                  This creates the selected team’s round only. The other team remains independent.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Input
+                  value={candidateSearch}
+                  onChange={(event) => setCandidateSearch(event.target.value)}
+                  placeholder="Search by team, venue, round or date"
+                  aria-label="Search completed fixtures"
+                  disabled={candidatesLoading}
+                />
+                {candidatesLoading ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-14 w-full" />
+                    <Skeleton className="h-14 w-full" />
+                  </div>
+                ) : openCandidates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No completed fixture is waiting for a team voting round.</p>
+                ) : visibleOpenCandidates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No completed fixture matches this search.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {visibleOpenCandidates.map((fixture) => (
+                      <div
+                        key={fixture.id}
+                        className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold">
+                            {fixture.homeTeamName} {fixture.home_score}–{fixture.away_score} {fixture.awayTeamName}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(fixture.fixture_date, getTeamTimezone(selectedTeam.id))} · {fixture.venueName}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="gap-2 self-start sm:self-auto"
+                          onClick={() => openLifecycleDialog("open", null, fixture)}
+                          disabled={!schemaReady || !selectedTeam.mvp_enabled || Boolean(actionLoading)}
+                        >
+                          <Play className="h-4 w-4" /> Open voting
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{showLegacy ? "Legacy session audit" : "Team voting sessions"}</CardTitle>
+              <CardDescription>
+                {showLegacy
+                  ? "Legacy fixture-wide rounds are read-only and cannot be reopened."
+                  : "Completion names are visible here, but individual ballot choices remain restricted."}
+              </CardDescription>
+            </CardHeader>
             <CardContent className="p-0">
               {listLoading ? (
-                <div className="p-6 space-y-4">
-                  <Skeleton className="h-8 w-full" />
+                <div className="space-y-3 p-6">
                   <Skeleton className="h-12 w-full" />
                   <Skeleton className="h-12 w-full" />
                   <Skeleton className="h-12 w-full" />
                 </div>
               ) : sessions.length === 0 ? (
-                <div className="p-12 text-center text-muted-foreground text-sm">
-                  No MVP voting sessions found.
-                </div>
+                <div className="p-10 text-center text-sm text-muted-foreground">No matching voting sessions found.</div>
               ) : (
                 <>
                   <div className="overflow-x-auto">
                     <Table>
-                      <TableHeader className="bg-muted/40">
+                      <TableHeader>
                         <TableRow>
-                          <TableHead className="font-semibold text-foreground">Grade</TableHead>
-                          <TableHead className="font-semibold text-foreground">Round</TableHead>
-                          <TableHead className="font-semibold text-foreground">Game Date</TableHead>
-                          <TableHead className="font-semibold text-foreground">Teams</TableHead>
-                          <TableHead className="font-semibold text-foreground">Status</TableHead>
-                          <TableHead className="font-semibold text-foreground">Voted</TableHead>
-                          <TableHead className="text-right font-semibold text-foreground">Actions</TableHead>
+                          <TableHead>Team</TableHead>
+                          <TableHead>Fixture</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Completed</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sessions.map((session) => (
-                          <TableRow key={session.id} className="hover:bg-muted/30 transition-colors">
-                            <TableCell className="font-medium">{session.grade}</TableCell>
-                            <TableCell>{session.round}</TableCell>
-                            <TableCell>{formatDateString(session.game_date)}</TableCell>
-                            <TableCell className="font-semibold">
-                              {session.home_team} <span className="text-muted-foreground font-normal">vs</span> {session.away_team}
-                            </TableCell>
-                            <TableCell>{getStatusBadge(session.status)}</TableCell>
-                            <TableCell className="font-medium text-muted-foreground">
-                              <span className="text-foreground font-bold">{session.votedCount}</span> / {session.totalVoters}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setView("detail");
-                                  setSelectedSessionId(session.id);
-                                  loadSessionDetails(session.id);
-                                }}
-                              >
-                                View Results
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {sessions.map((session) => {
+                          const team = allTeams.find((item) => item.id === session.team_id);
+                          const fixture = session.fixture;
+                          const homeName =
+                            allTeams.find((item) => item.id === fixture?.home_team_id)?.name || session.home_team || "Home";
+                          const awayName =
+                            allTeams.find((item) => item.id === fixture?.away_team_id)?.name || session.away_team || "Away";
+                          return (
+                            <TableRow key={session.id}>
+                              <TableCell className="w-64 max-w-xs font-semibold">
+                                <span className="block truncate">{team?.name || "Legacy fixture-wide"}</span>
+                              </TableCell>
+                              <TableCell className="min-w-64">
+                                <span className="font-medium">{homeName} vs {awayName}</span>
+                                <span className="block text-xs text-muted-foreground">
+                                  {session.round || (fixture?.round_number ? `Round ${fixture.round_number}` : "Round not recorded")}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                {formatDate(session.game_date || fixture?.fixture_date, getSessionTimezone(session))}
+                              </TableCell>
+                              <TableCell>{getStatusBadge(session)}</TableCell>
+                              <TableCell>
+                                <span className="font-semibold">{session.votedCount || 0}</span>
+                                {session.totalVoters === null || session.totalVoters === undefined
+                                  ? ""
+                                  : ` / ${session.totalVoters}`}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  {!showLegacy && session.status === "PENDING" && team?.mvp_enabled && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="gap-1"
+                                      onClick={() => openLifecycleDialog("open", session)}
+                                      disabled={Boolean(actionLoading)}
+                                    >
+                                      <Play className="h-3.5 w-3.5" /> Open
+                                    </Button>
+                                  )}
+                                  <Button size="sm" variant="outline" onClick={() => openSessionDetail(session.id)}>
+                                    {session.status === "RESULT_DISPUTED" ? "Review" : "Manage"}
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
-
-                  {/* Pagination controls */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t bg-muted/20">
+                  <div className="flex flex-col items-center justify-between gap-3 border-t p-4 sm:flex-row">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>Show</span>
                       <Select
-                        value={pageSize.toString()}
-                        onValueChange={(v) => {
-                          setPageSize(Number(v));
+                        value={String(pageSize)}
+                        onValueChange={(value) => {
+                          setPageSize(Number(value));
                           setCurrentPage(1);
                         }}
                       >
-                        <SelectTrigger className="w-16 h-8">
+                        <SelectTrigger className="w-20">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -839,37 +1683,24 @@ export default function MvpVotingAdmin() {
                           <SelectItem value="50">50</SelectItem>
                         </SelectContent>
                       </Select>
-                      <span>per page</span>
-                      <span className="ml-2 font-medium">
-                        {totalCount > 0
-                          ? `Showing ${Math.min(totalCount, (currentPage - 1) * pageSize + 1)}-${Math.min(
-                              totalCount,
-                              currentPage * pageSize
-                            )} of ${totalCount}`
-                          : "Showing 0-0 of 0"}
-                      </span>
+                      <span>of {totalCount}</span>
                     </div>
-
-                    <div className="flex items-center gap-2">
+                    <div className="flex gap-2">
                       <Button
-                        variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        variant="outline"
+                        onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                         disabled={currentPage === 1}
-                        className="h-8 px-2"
                       >
-                        <ChevronLeft className="h-4 w-4" />
-                        Previous
+                        <ChevronLeft className="mr-1 h-4 w-4" /> Previous
                       </Button>
                       <Button
-                        variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage((p) => Math.min(Math.ceil(totalCount / pageSize), p + 1))}
+                        variant="outline"
+                        onClick={() => setCurrentPage((page) => page + 1)}
                         disabled={currentPage >= Math.ceil(totalCount / pageSize)}
-                        className="h-8 px-2"
                       >
-                        Next
-                        <ChevronRight className="h-4 w-4" />
+                        Next <ChevronRight className="ml-1 h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -879,237 +1710,240 @@ export default function MvpVotingAdmin() {
           </Card>
         </div>
       ) : (
-        // DETAIL VIEW
         <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setView("list");
-                setSelectedSessionId(null);
-                setSessionDetails(null);
-                setResults([]);
-                setVoters([]);
-              }}
-              className="gap-1.5"
-            >
-              <ChevronLeft className="h-4 w-4" /> Back to all sessions
-            </Button>
-          </div>
+          <Button variant="ghost" size="sm" className="gap-1" onClick={returnToList}>
+            <ChevronLeft className="h-4 w-4" /> Back to sessions
+          </Button>
 
-          {detailLoading || !sessionDetails ? (
-            <div className="space-y-6">
-              <Skeleton className="h-32 w-full" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Skeleton className="h-64 w-full" />
-                <Skeleton className="h-64 w-full" />
-              </div>
+          {detailLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-40 w-full" />
+              <Skeleton className="h-64 w-full" />
             </div>
+          ) : detailError || !sessionDetails ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Could not open this session</AlertTitle>
+              <AlertDescription>{detailError || "The session is unavailable."}</AlertDescription>
+            </Alert>
           ) : (
             <>
-              <Card className="overflow-hidden border-border bg-gradient-to-r from-card to-muted/20 shadow-md">
-                <CardHeader className="pb-4 border-b bg-card">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold tracking-wide text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full">
-                          {sessionDetails.grade}
-                        </span>
-                        <span className="text-xs font-medium text-muted-foreground uppercase">
-                          • {sessionDetails.round}
-                        </span>
+              <Card>
+                <CardHeader className="border-b">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        {getStatusBadge(sessionDetails)}
+                        {!sessionDetails.team_id && <Badge variant="outline">LEGACY READ-ONLY</Badge>}
                       </div>
-                      <CardTitle className="text-2xl font-black text-foreground">
-                        {sessionDetails.home_team} vs {sessionDetails.away_team}
-                      </CardTitle>
-                      <CardDescription className="text-sm font-semibold text-gray-700">
-                        {formatDateString(sessionDetails.game_date)}
+                      <CardTitle className="truncate text-2xl">{getTeamName(sessionDetails.team_id)}</CardTitle>
+                      <CardDescription className="mt-1 text-base">
+                        {allTeams.find((team) => team.id === sessionDetails.fixture?.home_team_id)?.name || sessionDetails.home_team}
+                        {" vs "}
+                        {allTeams.find((team) => team.id === sessionDetails.fixture?.away_team_id)?.name || sessionDetails.away_team}
                       </CardDescription>
                     </div>
-                    <div className="flex items-center gap-2 self-start md:self-auto">
-                      {getStatusBadge(sessionDetails.status)}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => loadSessionDetails(sessionDetails.id)}
-                        disabled={actionLoading}
-                        className="h-8 w-8 p-0"
-                      >
-                        <RefreshCw className={`h-4 w-4 ${actionLoading ? "animate-spin" : ""}`} />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => loadSessionDetails(sessionDetails.id)}
+                      disabled={Boolean(actionLoading)}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                    </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-6 pb-6 bg-card/40">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground block text-xs">Voting Opened</span>
-                        <span className="font-semibold flex items-center gap-1.5 mt-0.5">
-                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                          {formatDateTimeString(sessionDetails.opened_at)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground block text-xs">Voting Closes</span>
-                        <span className="font-semibold flex items-center gap-1.5 mt-0.5">
-                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                          {formatDateTimeString(sessionDetails.closes_at)}
-                        </span>
-                      </div>
+                <CardContent className="space-y-5 pt-5">
+                  <div className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                      <span className="text-muted-foreground">Fixture date</span>
+                      <p className="font-semibold">
+                        {formatDate(
+                          sessionDetails.fixture?.fixture_date || sessionDetails.game_date,
+                          getSessionTimezone(sessionDetails),
+                        )}
+                      </p>
                     </div>
+                    <div>
+                      <span className="text-muted-foreground">Score</span>
+                      <p className="font-semibold">
+                        {sessionDetails.fixture?.home_score ?? "–"} – {sessionDetails.fixture?.away_score ?? "–"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Opened</span>
+                      <p className="font-semibold">
+                        {formatDateTime(sessionDetails.opened_at, getSessionTimezone(sessionDetails))}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Closes</span>
+                      <p className="font-semibold">
+                        {formatDateTime(sessionDetails.closes_at, getSessionTimezone(sessionDetails))}
+                      </p>
+                    </div>
+                  </div>
 
-                    <div className="flex flex-wrap gap-2 pt-2 md:pt-0">
-                      {sessionDetails.status === "CLOSED" && (
+                  {sessionDetails.team_id && (
+                    <div className="flex flex-wrap gap-2 border-t pt-4">
+                      {sessionDetails.status === "PENDING" && (
                         <Button
-                          variant="outline"
-                          onClick={handleReopenSession}
-                          disabled={actionLoading}
                           className="gap-2"
+                          onClick={() => openLifecycleDialog("open", sessionDetails)}
+                          disabled={!selectedTeamForDetail?.mvp_enabled || Boolean(actionLoading)}
                         >
-                          <RefreshCw className={`h-4 w-4 ${actionLoading ? "animate-spin" : ""}`} />
-                          Reopen Session
+                          <Play className="h-4 w-4" /> Open
                         </Button>
                       )}
                       {sessionDetails.status === "OPEN" && (
+                        <>
+                          <Button
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => openLifecycleDialog("close", sessionDetails)}
+                            disabled={resultConcerns.length > 0 || Boolean(actionLoading)}
+                            title={
+                              resultConcerns.length > 0
+                                ? "Resolve the match-result concern before closing"
+                                : "Close voting"
+                            }
+                          >
+                            <Square className="h-4 w-4" /> Close
+                          </Button>
+                          {!isExpired(sessionDetails) && (
+                            <Button
+                              variant="outline"
+                              className="gap-2"
+                              onClick={handleResendToNonVoters}
+                              disabled={!isReminderAvailable(sessionDetails) || Boolean(actionLoading)}
+                            >
+                              <Mail className="h-4 w-4" /> Remind non-voters
+                            </Button>
+                          )}
+                        </>
+                      )}
+                      {(sessionDetails.status === "CLOSED" ||
+                        (sessionDetails.status === "OPEN" && isExpired(sessionDetails))) &&
+                        resultConcerns.length === 0 && (
                         <Button
                           variant="outline"
-                          onClick={handleResendToNonVoters}
-                          disabled={actionLoading}
                           className="gap-2"
+                          onClick={() => openLifecycleDialog("reopen", sessionDetails)}
+                          disabled={!selectedTeamForDetail?.mvp_enabled || Boolean(actionLoading)}
                         >
-                          <Mail className="h-4 w-4" />
-                          Resend to Non-Voters
+                          <RefreshCw className="h-4 w-4" /> Reopen
+                        </Button>
+                      )}
+                      {(sessionDetails.status === "RESULT_DISPUTED" || resultConcerns.length > 0) && (
+                        <Button
+                          variant="destructive"
+                          className="gap-2"
+                          onClick={() => openLifecycleDialog("resolve", sessionDetails)}
+                          disabled={!selectedTeamForDetail?.mvp_enabled || Boolean(actionLoading)}
+                        >
+                          <ShieldCheck className="h-4 w-4" /> Confirm corrected and reopen
                         </Button>
                       )}
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* RESULTS SECTION */}
-                <Card className="shadow-sm border-border">
-                  <CardHeader className="bg-muted/20 border-b py-4">
-                    <CardTitle className="text-base font-bold flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-yellow-500 fill-yellow-500/20" /> Results
+              {(resultConcerns.length > 0 || sessionDetails.status === "RESULT_DISPUTED") && (
+                <Card className="border-red-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base text-red-800">
+                      <AlertTriangle className="h-4 w-4" /> Review result concern
                     </CardTitle>
-                    <CardDescription>Live standings and point tallies</CardDescription>
+                    <CardDescription>
+                      {resultConcerns.length} player{resultConcerns.length === 1 ? " has" : "s have"} reported the result in
+                      review round {sessionDetails.result_check_round}.
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-0">
-                    {results.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground text-sm">
-                        No votes have been submitted yet.
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-3 rounded-lg bg-muted/30 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="flex items-start gap-2">
+                        <CalendarDays className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                        <span>
+                          {formatDate(sessionDetails.fixture?.fixture_date, getSessionTimezone(sessionDetails))}
+                        </span>
                       </div>
+                      <div className="font-semibold">
+                        {sessionDetails.fixture?.home_score ?? "–"} – {sessionDetails.fixture?.away_score ?? "–"}
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                        <span>{getVenueName(sessionDetails.fixture?.venue_id)}</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Users className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                        <span>{resultConcerns.length} incorrect report{resultConcerns.length === 1 ? "" : "s"}</span>
+                      </div>
+                    </div>
+                    {resultConcerns.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">The session is disputed, but no visible report was returned.</p>
                     ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-16 font-semibold">Rank</TableHead>
-                            <TableHead className="font-semibold">Player Name</TableHead>
-                            <TableHead className="text-right font-semibold">Points</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {results.map((res, index) => {
-                            const isWinner = index === 0;
-                            return (
-                              <TableRow 
-                                key={res.playerId} 
-                                className={`${isWinner ? "bg-amber-50/70 hover:bg-amber-50" : "hover:bg-muted/30"} transition-colors`}
-                              >
-                                <TableCell className="font-bold text-center">
-                                  {isWinner ? "🥇 1" : index + 1}
-                                </TableCell>
-                                <TableCell className={`font-semibold ${isWinner ? "text-amber-900" : ""}`}>
-                                  {res.name}
-                                </TableCell>
-                                <TableCell className={`text-right font-black ${isWinner ? "text-amber-900 text-base" : ""}`}>
-                                  {res.points}
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
+                      <div className="space-y-3">
+                        {resultConcerns.map((concern) => (
+                          <div key={concern.id} className="rounded-lg border p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="font-semibold">{concern.reporterName}</p>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDateTime(concern.created_at, getSessionTimezone(sessionDetails))}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                              {concern.comment || "No comment was provided."}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     )}
+                    <Alert>
+                      <Lock className="h-4 w-4" />
+                      <AlertTitle>Correct the fixture first</AlertTitle>
+                      <AlertDescription>
+                        This page does not edit scores. Use the existing fixture process, then select “Confirm corrected and
+                        reopen”.
+                      </AlertDescription>
+                    </Alert>
                   </CardContent>
                 </Card>
+              )}
 
-                {/* VOTER STATUS SECTION */}
-                <Card className="shadow-sm border-border">
-                  <CardHeader className="bg-muted/20 border-b py-4">
-                    <CardTitle className="text-base font-bold flex items-center gap-2">
-                      <Users className="h-4 w-4 text-primary" /> Voter Status
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Trophy className="h-4 w-4 text-yellow-500" /> Aggregate result
                     </CardTitle>
-                    <CardDescription>Check who has voted and resend one reminder at a time</CardDescription>
+                    <CardDescription>Results are available only after a clean close.</CardDescription>
                   </CardHeader>
                   <CardContent className="p-0">
-                    {voters.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground text-sm">
-                        No eligible voters found for this session.
+                    {!aggregatesEligible ? (
+                      <div className="p-8 text-center text-sm text-muted-foreground">
+                        <Lock className="mx-auto mb-2 h-5 w-5" />
+                        Aggregate results are withheld until voting is closed with no unresolved concern.
                       </div>
+                    ) : resultsError ? (
+                      <div className="p-6 text-sm text-red-700">{resultsError}</div>
+                    ) : results.length === 0 ? (
+                      <div className="p-8 text-center text-sm text-muted-foreground">No votes were submitted.</div>
                     ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="font-semibold">Player Name</TableHead>
-                            <TableHead className="font-semibold">Status</TableHead>
-                            <TableHead className="text-right font-semibold">Actions</TableHead>
+                            <TableHead>Rank</TableHead>
+                            <TableHead>Player</TableHead>
+                            <TableHead className="text-right">Points</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {voters.map((voter) => (
-                            <TableRow key={voter.id} className="hover:bg-muted/30 transition-colors">
-                              <TableCell className="font-medium">{voter.player_name}</TableCell>
-                              <TableCell>
-                                {voter.voted_at ? (
-                                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
-                                    <CheckCircle2 className="h-3 w-3" /> Voted
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full">
-                                    <Clock className="h-3 w-3" /> Pending
-                                  </span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
-                                {voter.voted_at ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedCancelToken(voter);
-                                      setDialogOpen(true);
-                                    }}
-                                    disabled={actionLoading || rowActionLoading !== null}
-                                    className="h-8 gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    title="Withdraw vote"
-                                  >
-                                    <XCircle className="h-4 w-4" />
-                                    Withdraw
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleResendToVoter(voter)}
-                                    disabled={actionLoading || rowActionLoading !== null || sessionDetails.status !== "OPEN"}
-                                    className="h-8 gap-2"
-                                    title="Resend reminder to this player"
-                                  >
-                                    {rowActionLoading === `resend-${voter.id}` ? (
-                                      <RefreshCw className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <Mail className="h-4 w-4" />
-                                    )}
-                                    Resend
-                                  </Button>
-                                )}
-                                </div>
-                              </TableCell>
+                          {results.map((result, index) => (
+                            <TableRow key={result.playerId}>
+                              <TableCell className="font-semibold">{index + 1}</TableCell>
+                              <TableCell>{result.name}</TableCell>
+                              <TableCell className="text-right font-bold">{result.points}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -1117,68 +1951,260 @@ export default function MvpVotingAdmin() {
                     )}
                   </CardContent>
                 </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Users className="h-4 w-4" /> Voter completion
+                    </CardTitle>
+                    <CardDescription>Names and completion only. Ballot choices are not shown here.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {voters.length === 0 ? (
+                      <div className="p-8 text-center text-sm text-muted-foreground">No eligible voters found.</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Player</TableHead>
+                              <TableHead>Vote</TableHead>
+                              <TableHead>Result check</TableHead>
+                              <TableHead className="text-right">Action</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {voters.map((voter) => (
+                              <TableRow key={voter.id}>
+                                <TableCell className="font-medium">{voter.player_name}</TableCell>
+                                <TableCell>
+                                  {voter.voted_at ? (
+                                    <Badge className="bg-green-100 text-green-800">Voted</Badge>
+                                  ) : (
+                                    <Badge variant="outline">Pending</Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {voter.result_response === "INCORRECT" ? (
+                                    <Badge className="bg-red-100 text-red-800">Not correct</Badge>
+                                  ) : voter.result_response === "CORRECT" ? (
+                                    <Badge className="bg-green-100 text-green-800">Correct</Badge>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">Not checked</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {!voter.voted_at && voter.result_response !== "INCORRECT" ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleResendToVoter(voter)}
+                                      disabled={
+                                        !isReminderAvailable(sessionDetails) ||
+                                        Boolean(actionLoading) ||
+                                        Boolean(rowActionLoading)
+                                      }
+                                    >
+                                      {rowActionLoading === `resend-${voter.id}` ? (
+                                        <RefreshCw className="mr-1 h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <Mail className="mr-1 h-3.5 w-3.5" />
+                                      )}
+                                      Resend
+                                    </Button>
+                                  ) : !voter.voted_at ? (
+                                    <span className="text-xs font-medium text-red-700">Blocked this round</span>
+                                  ) : canAuditRawBallotsForSession(sessionDetails) ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-red-700"
+                                      onClick={() => {
+                                        setWithdrawVoter(voter);
+                                        setWithdrawReason("");
+                                      }}
+                                      disabled={!isWithdrawalAvailable(sessionDetails) || Boolean(actionLoading)}
+                                      title={
+                                        isWithdrawalAvailable(sessionDetails)
+                                          ? "Withdraw this ballot"
+                                          : "A published ballot cannot be withdrawn"
+                                      }
+                                    >
+                                      Withdraw
+                                    </Button>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">Complete</span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
 
-              {/* GRAMPIANS CHAMPION / SHOUTOUTS SECTION */}
-              <Card className="shadow-sm border-border">
-                <CardHeader className="bg-muted/20 border-b py-4">
-                  <CardTitle className="text-base font-bold flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-yellow-500 fill-yellow-500/20" /> Grampians Champion
-                  </CardTitle>
-                  <CardDescription>Off-field shoutouts from voters this round</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {shoutouts.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground text-sm">
-                      No shoutouts submitted for this round.
-                    </div>
-                  ) : (
-                    <ul className="divide-y">
-                      {shoutouts.map((s, idx) => (
-                        <li key={idx} className="p-4">
-                          <p className="text-sm text-foreground">“{s.text}”</p>
-                          <p className="text-xs text-muted-foreground mt-1">— {s.voterName}</p>
-                        </li>
+              {aggregatesEligible && shoutouts.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <MessageSquare className="h-4 w-4" /> Team shoutouts
+                    </CardTitle>
+                    <CardDescription>Off-field recognition shared with the closed round.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {shoutouts.map((shoutout, index) => (
+                        <div key={`${shoutout.voterName}-${index}`} className="rounded-lg border p-3">
+                          <p className="text-sm">“{shoutout.text}”</p>
+                          <p className="mt-1 text-xs text-muted-foreground">— {shoutout.voterName}</p>
+                        </div>
                       ))}
-                    </ul>
-                  )}
-                </CardContent>
-              </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {canAuditRawBallotsForSession(sessionDetails) && (
+                <Card className="border-blue-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Eye className="h-4 w-4" /> Restricted ballot audit
+                    </CardTitle>
+                    <CardDescription>
+                      Only scoped association administrators and super administrators can see who voted for whom.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {rawBallots.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No signed-in ballots are available for audit.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {rawBallots.map((ballot) => (
+                          <div key={ballot.voterId} className="rounded-lg border p-3">
+                            <p className="font-semibold">{ballot.voterName}</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {ballot.choices
+                                .slice()
+                                .sort((a, b) => b.points - a.points)
+                                .map((choice) => (
+                                  <Badge key={`${choice.points}-${choice.playerName}`} variant="outline">
+                                    {choice.points} point{choice.points === 1 ? "" : "s"}: {choice.playerName}
+                                  </Badge>
+                                ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </>
           )}
         </div>
       )}
 
-      {/* CONFIRMATION DIALOG FOR WITHDRAWING VOTE */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={Boolean(lifecycleDialog)} onOpenChange={(open) => !open && setLifecycleDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <XCircle className="h-5 w-5" /> Withdraw Player Vote
+            <DialogTitle>
+              {lifecycleDialog?.kind === "open" && "Open MVP voting"}
+              {lifecycleDialog?.kind === "close" && "Close MVP voting"}
+              {lifecycleDialog?.kind === "reopen" && "Reopen MVP voting"}
+              {lifecycleDialog?.kind === "resolve" && "Confirm corrected result and reopen"}
             </DialogTitle>
-            <DialogDescription className="pt-2 text-foreground font-medium">
-              Are you sure you want to withdraw {selectedCancelToken?.player_name}'s vote? They will be able to submit it again.
+            <DialogDescription>
+              {lifecycleDialog?.kind === "close"
+                ? "Closing publishes aggregate results only when no result concern is unresolved."
+                : lifecycleDialog?.kind === "resolve"
+                  ? "Confirm the fixture score has been corrected. This starts a new result-review and reminder cycle while preserving all existing votes and checks."
+                  : "The default window is 72 hours. You may choose an earlier closing time."}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDialogOpen(false);
-                setSelectedCancelToken(null);
-              }}
-              disabled={actionLoading}
-            >
+          {lifecycleDialog?.kind !== "close" && (
+            <div className="space-y-2 py-2">
+              <Label htmlFor="mvp-close-time">Voting closes (local time)</Label>
+              <Input
+                id="mvp-close-time"
+                type="datetime-local"
+                value={lifecycleCloseAt}
+                max={maximumCloseValue()}
+                onChange={(event) => setLifecycleCloseAt(event.target.value)}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLifecycleDialog(null)} disabled={Boolean(actionLoading)}>
               Cancel
             </Button>
             <Button
-              variant="destructive"
-              onClick={handleCancelVoteConfirm}
-              disabled={actionLoading}
-              className="gap-2"
+              variant={lifecycleDialog?.kind === "close" || lifecycleDialog?.kind === "resolve" ? "destructive" : "default"}
+              onClick={handleLifecycleConfirm}
+              disabled={Boolean(actionLoading)}
             >
-              {actionLoading && <RefreshCw className="h-4 w-4 animate-spin" />}
-              Withdraw Vote
+              {actionLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={teamToggleTarget !== null} onOpenChange={(open) => !open && setTeamToggleTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{teamToggleTarget ? "Enable" : "Turn off"} MVP voting?</DialogTitle>
+            <DialogDescription>
+              {teamToggleTarget
+                ? `This lets authorised people open team voting rounds for ${selectedTeam?.name || "this team"}.`
+                : "This closes every pending and open round for the team in one audited action. Disputed rounds remain visible."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTeamToggleTarget(null)} disabled={Boolean(actionLoading)}>
+              Cancel
+            </Button>
+            <Button
+              variant={teamToggleTarget ? "default" : "destructive"}
+              onClick={handleTeamToggleConfirm}
+              disabled={Boolean(actionLoading)}
+            >
+              {actionLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+              {teamToggleTarget ? "Enable" : "Turn off"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(withdrawVoter)} onOpenChange={(open) => !open && setWithdrawVoter(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <XCircle className="h-5 w-5" /> Withdraw submitted ballot
+            </DialogTitle>
+            <DialogDescription>
+              This audited action removes {withdrawVoter?.player_name}’s three vote rows and submission marker together.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="withdraw-reason">Reason</Label>
+            <Textarea
+              id="withdraw-reason"
+              value={withdrawReason}
+              onChange={(event) => setWithdrawReason(event.target.value)}
+              placeholder="Explain why this ballot must be withdrawn"
+              maxLength={500}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWithdrawVoter(null)} disabled={Boolean(actionLoading)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleWithdrawConfirm} disabled={Boolean(actionLoading)}>
+              {actionLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+              Withdraw ballot
             </Button>
           </DialogFooter>
         </DialogContent>

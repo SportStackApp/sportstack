@@ -14,21 +14,30 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Award, Calendar, CheckCircle2, Clock, History, Send, ShieldAlert, Star } from "lucide-react";
+import {
+  getMvpErrorMessage,
+  getMvpSessionDisplayState,
+  isMvpUpgradeUnavailable,
+  type MvpSessionDisplayState,
+  type MvpSessionStatus,
+} from "@/lib/mvpVoting";
+import { Award, Calendar, CheckCircle2, Clock, History, Send, Star, TriangleAlert } from "lucide-react";
 
+// MVP tables and functions are added before the generated client types are regenerated.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabase = originalSupabase as any;
 
 interface MvpSession {
   id: string;
   fixture_id: string;
+  team_id: string | null;
   match_url: string | null;
   grade: string;
   round: string;
   game_date: string;
   home_team: string;
   away_team: string;
-  status: string;
+  status: MvpSessionStatus;
   opened_at: string | null;
   closes_at: string | null;
 }
@@ -38,7 +47,7 @@ interface RevsportsPlayerRow {
   fixture_id: string;
   player_name: string;
   team: string | null;
-  team_side: string | null;
+  team_side: "home" | "away" | null;
   team_label: string | null;
   jersey: string | null;
   profile_id: string | null;
@@ -54,31 +63,27 @@ interface VoteRow {
   points: number;
 }
 
-interface FixtureScopeRow {
+interface FixtureTeamRow {
   id: string;
   home_team_id: string | null;
   away_team_id: string | null;
-  home_team?: TeamScopeRow | null;
-  away_team?: TeamScopeRow | null;
 }
 
-interface TeamScopeRow {
+interface TeamTimezoneRow {
   id: string;
-  name: string;
-  club_id: string | null;
-  clubs?: {
-    id: string;
-    name: string;
-    association_id: string | null;
+  clubs: {
+    associations: { timezone: string | null } | null;
   } | null;
 }
 
-type TileState = "open-unsubmitted" | "open-submitted" | "closed-submitted" | "closed-unsubmitted";
-
 interface SessionTile extends MvpSession {
-  tileState: TileState;
+  displayState: MvpSessionDisplayState;
   hasSubmitted: boolean;
+  isLegacy: boolean;
+  timezone: string;
 }
+
+const DEFAULT_ASSOCIATION_TIMEZONE = "Australia/Melbourne";
 
 const getSameSidePlayers = (
   players: RevsportsPlayerRow[],
@@ -88,41 +93,36 @@ const getSameSidePlayers = (
   const fixturePlayers = players.filter((player) => player.fixture_id === fixtureId);
   const voterRow = fixturePlayers.find((player) => player.profile_id === userId);
 
-  if (!voterRow) return [];
-
-  const sameSide = (player: RevsportsPlayerRow) => {
-    if (voterRow.team_side && player.team_side) {
-      return player.team_side === voterRow.team_side;
-    }
-    if (voterRow.team_label && player.team_label) {
-      return player.team_label === voterRow.team_label;
-    }
-    return (player.team == null && voterRow.team == null) || player.team === voterRow.team;
-  };
+  if (!voterRow?.team_side) return [];
 
   return fixturePlayers
-    .filter((player) => sameSide(player) && player.id !== voterRow.id && player.profile_id !== userId)
+    .filter(
+      (player) =>
+        player.team_side === voterRow.team_side &&
+        player.id !== voterRow.id &&
+        player.profile_id !== userId,
+    )
     .sort((a, b) => a.player_name.localeCompare(b.player_name));
 };
 
-const getTileState = (session: MvpSession, hasSubmitted: boolean): TileState => {
-  const isOpen = session.status === "OPEN";
-  if (isOpen && hasSubmitted) return "open-submitted";
-  if (isOpen) return "open-unsubmitted";
-  if (hasSubmitted) return "closed-submitted";
-  return "closed-unsubmitted";
-};
+const getStatusBadge = (session: SessionTile) => {
+  if (session.isLegacy) {
+    return { label: "History only", className: "bg-muted text-muted-foreground border-border" };
+  }
 
-const getStatusBadge = (tileState: TileState) => {
-  switch (tileState) {
-    case "open-unsubmitted":
-      return { label: "Open - vote now", className: "bg-primary/10 text-primary border-primary/20" };
-    case "open-submitted":
-      return { label: "Open - already submitted", className: "bg-green-100 text-green-800 border-green-200" };
-    case "closed-submitted":
-      return { label: "Closed - submitted", className: "bg-muted text-muted-foreground border-border" };
-    case "closed-unsubmitted":
-      return { label: "Closed - not submitted", className: "bg-amber-100 text-amber-800 border-amber-200" };
+  switch (session.displayState) {
+    case "open":
+      return session.hasSubmitted
+        ? { label: "Open - ballot submitted", className: "bg-green-100 text-green-800 border-green-200" }
+        : { label: "Open - vote now", className: "bg-primary/10 text-primary border-primary/20" };
+    case "expired":
+      return { label: "Voting time expired", className: "bg-amber-100 text-amber-800 border-amber-200" };
+    case "disputed":
+      return { label: "Result being reviewed", className: "bg-red-100 text-red-800 border-red-200" };
+    case "closed":
+      return session.hasSubmitted
+        ? { label: "Closed - ballot submitted", className: "bg-muted text-muted-foreground border-border" }
+        : { label: "Closed - not submitted", className: "bg-amber-100 text-amber-800 border-amber-200" };
   }
 };
 
@@ -147,11 +147,11 @@ export default function MvpVotes() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [isVoter, setIsVoter] = useState<boolean | null>(null);
+  const [schemaUnavailable, setSchemaUnavailable] = useState(false);
+  const [hasAttendedMatches, setHasAttendedMatches] = useState(false);
   const [sessions, setSessions] = useState<SessionTile[]>([]);
   const [players, setPlayers] = useState<RevsportsPlayerRow[]>([]);
   const [votes, setVotes] = useState<VoteRow[]>([]);
-  const [fixtureScopes, setFixtureScopes] = useState<Record<string, FixtureScopeRow>>({});
   const [selectedSession, setSelectedSession] = useState<SessionTile | null>(null);
   const [requestingSessionId, setRequestingSessionId] = useState<string | null>(null);
   const [requestedSessionIds, setRequestedSessionIds] = useState<Set<string>>(new Set());
@@ -160,108 +160,163 @@ export default function MvpVotes() {
     const loadVotingData = async () => {
       if (!user) return;
       setLoading(true);
+      setSchemaUnavailable(false);
+
       try {
-        const { data: roleData, error: roleError } = await supabase
-          .from("user_roles")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("role", "VOTER")
-          .maybeSingle();
-
-        if (roleError) throw roleError;
-
-        if (!roleData) {
-          setIsVoter(false);
-          setLoading(false);
-          return;
-        }
-
-        setIsVoter(true);
-
-        const { data: playersData, error: playersError } = await supabase
-          .from("revsports_players")
-          .select("id, fixture_id, player_name, team, team_side, team_label, jersey, profile_id")
-          .eq("profile_id", user.id)
-          .eq("attended", true);
-
-        if (playersError) throw playersError;
-
-        const voterRows = (playersData as RevsportsPlayerRow[] | null) || [];
-        const fixtureIds = Array.from(new Set(voterRows.map((player) => player.fixture_id).filter(Boolean)));
-
-        if (fixtureIds.length === 0) {
-          setSessions([]);
-          setPlayers([]);
-          setVotes([]);
-          setFixtureScopes({});
-          setLoading(false);
-          return;
-        }
-
-        const [sessionsRes, submissionsRes, allPlayersRes, votesRes, fixturesRes] = await Promise.all([
+        // Attendance and the recorded home/away side determine player access.
+        // A global VOTER role is deliberately not used as an eligibility shortcut.
+        const [voterRowsRes, submissionsRes] = await Promise.all([
           supabase
-            .from("mvp_voting_sessions")
-            .select("*")
-            .in("fixture_id", fixtureIds)
-            .order("game_date", { ascending: false }),
+            .from("revsports_players")
+            .select("id, fixture_id, player_name, team, team_side, team_label, jersey, profile_id")
+            .eq("profile_id", user.id)
+            .eq("attended", true),
           supabase
             .from("mvp_vote_submissions")
             .select("session_id")
             .eq("voter_profile_id", user.id),
-          supabase
-            .from("revsports_players")
-            .select("id, fixture_id, player_name, team, team_side, team_label, jersey, profile_id")
-            .in("fixture_id", fixtureIds)
-            .eq("attended", true),
+        ]);
+
+        if (voterRowsRes.error) throw voterRowsRes.error;
+        if (submissionsRes.error) throw submissionsRes.error;
+
+        const voterRows = (voterRowsRes.data as RevsportsPlayerRow[] | null) || [];
+        const fixtureIds = Array.from(new Set(voterRows.map((player) => player.fixture_id).filter(Boolean)));
+        const submittedSessionIds = new Set(
+          ((submissionsRes.data as SubmissionRow[] | null) || []).map((submission) => submission.session_id),
+        );
+        setHasAttendedMatches(fixtureIds.length > 0);
+
+        if (fixtureIds.length === 0 && submittedSessionIds.size === 0) {
+          setSessions([]);
+          setPlayers([]);
+          setVotes([]);
+          return;
+        }
+
+        let sessionsQuery = supabase
+          .from("mvp_voting_sessions")
+          .select("id, fixture_id, team_id, match_url, grade, round, game_date, home_team, away_team, status, opened_at, closes_at");
+
+        if (fixtureIds.length > 0 && submittedSessionIds.size > 0) {
+          sessionsQuery = sessionsQuery.or(
+            `fixture_id.in.(${fixtureIds.join(",")}),id.in.(${Array.from(submittedSessionIds).join(",")})`,
+          );
+        } else if (fixtureIds.length > 0) {
+          sessionsQuery = sessionsQuery.in("fixture_id", fixtureIds);
+        } else {
+          sessionsQuery = sessionsQuery.in("id", Array.from(submittedSessionIds));
+        }
+
+        const sessionsRes = await sessionsQuery.order("game_date", { ascending: false });
+        if (sessionsRes.error) throw sessionsRes.error;
+
+        const sessionRows = (sessionsRes.data as MvpSession[] | null) || [];
+        const relatedFixtureIds = Array.from(new Set([
+          ...fixtureIds,
+          ...sessionRows.map((session) => session.fixture_id),
+        ].filter(Boolean)));
+        const sessionTeamIds = Array.from(
+          new Set(sessionRows.map((session) => session.team_id).filter((teamId): teamId is string => Boolean(teamId))),
+        );
+        const emptyRows = Promise.resolve({ data: [], error: null });
+
+        const [allPlayersRes, votesRes, fixturesRes, teamTimezonesRes] = await Promise.all([
+          relatedFixtureIds.length > 0
+            ? supabase
+                .from("revsports_players")
+                .select("id, fixture_id, player_name, team, team_side, team_label, jersey, profile_id")
+                .in("fixture_id", relatedFixtureIds)
+                .eq("attended", true)
+            : emptyRows,
           supabase
             .from("mvp_votes")
             .select("session_id, player_id, points")
             .eq("voter_profile_id", user.id),
-          supabase
-            .from("fixtures")
-            .select("id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name, club_id, clubs(id, name, association_id)), away_team:teams!away_team_id(id, name, club_id, clubs(id, name, association_id))")
-            .in("id", fixtureIds),
+          relatedFixtureIds.length > 0
+            ? supabase
+                .from("fixtures")
+                .select("id, home_team_id, away_team_id")
+                .in("id", relatedFixtureIds)
+            : emptyRows,
+          sessionTeamIds.length > 0
+            ? supabase
+                .from("teams")
+                .select("id, clubs(associations(timezone))")
+                .in("id", sessionTeamIds)
+            : emptyRows,
         ]);
 
-        if (sessionsRes.error) throw sessionsRes.error;
-        if (submissionsRes.error) throw submissionsRes.error;
         if (allPlayersRes.error) throw allPlayersRes.error;
         if (votesRes.error) throw votesRes.error;
         if (fixturesRes.error) throw fixturesRes.error;
+        if (teamTimezonesRes.error) throw teamTimezonesRes.error;
 
-        const submittedSessionIds = new Set(
-          ((submissionsRes.data as SubmissionRow[] | null) || []).map((submission) => submission.session_id),
+        const fixturesById = new Map(
+          ((fixturesRes.data as FixtureTeamRow[] | null) || []).map((fixture) => [fixture.id, fixture]),
         );
-        const typedSessions = ((sessionsRes.data as MvpSession[] | null) || []).map((session) => {
-          const hasSubmitted = submittedSessionIds.has(session.id);
-          return {
-            ...session,
-            hasSubmitted,
-            tileState: getTileState(session, hasSubmitted),
-          };
-        });
-        const typedFixtures = (fixturesRes.data as FixtureScopeRow[] | null) || [];
+        const voterByFixtureId = new Map(voterRows.map((player) => [player.fixture_id, player]));
+        const timezoneByTeamId = new Map<string, string>(
+          ((teamTimezonesRes.data as TeamTimezoneRow[] | null) || []).map((team): [string, string] => [
+            team.id,
+            team.clubs?.associations?.timezone || DEFAULT_ASSOCIATION_TIMEZONE,
+          ]),
+        );
 
-        setSessions(typedSessions);
+        const visibleSessions = sessionRows
+          .filter((session) => session.status !== "PENDING")
+          .filter((session) => {
+            const hasSubmitted = submittedSessionIds.has(session.id);
+
+            // A validated submission remains visible as the player's own history
+            // even if later attendance imports change or lose the fixture-side row.
+            if (hasSubmitted) return true;
+            if (!session.team_id) return false;
+            if (session.status === "CLOSED" && !session.opened_at) return false;
+
+            const fixture = fixturesById.get(session.fixture_id);
+            const voterRow = voterByFixtureId.get(session.fixture_id);
+            if (!fixture || !voterRow?.team_side) return false;
+
+            const attendedTeamId = voterRow.team_side === "home"
+              ? fixture.home_team_id
+              : fixture.away_team_id;
+            return attendedTeamId === session.team_id;
+          })
+          .map((session): SessionTile => {
+            const hasSubmitted = submittedSessionIds.has(session.id);
+            return {
+              ...session,
+              hasSubmitted,
+              isLegacy: !session.team_id,
+              displayState: getMvpSessionDisplayState(session.status, session.closes_at),
+              timezone: session.team_id
+                ? timezoneByTeamId.get(session.team_id) || DEFAULT_ASSOCIATION_TIMEZONE
+                : DEFAULT_ASSOCIATION_TIMEZONE,
+            };
+          });
+
+        setSessions(visibleSessions);
         setPlayers((allPlayersRes.data as RevsportsPlayerRow[] | null) || []);
         setVotes((votesRes.data as VoteRow[] | null) || []);
-        setFixtureScopes(
-          Object.fromEntries(typedFixtures.map((fixture) => [fixture.id, fixture])),
-        );
-      } catch (err) {
-        const error = err as Error;
+      } catch (error) {
         console.error("Error loading MVP votes data:", error);
-        toast({
-          title: "Error loading votes",
-          description: error.message || "Failed to load voting sessions.",
-          variant: "destructive",
-        });
+        if (isMvpUpgradeUnavailable(error)) {
+          setSchemaUnavailable(true);
+          setSessions([]);
+        } else {
+          toast({
+            title: "Could not load MVP voting",
+            description: getMvpErrorMessage(error, "MVP voting could not be loaded. Please try again."),
+            variant: "destructive",
+          });
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    loadVotingData();
+    void loadVotingData();
   }, [user, toast]);
 
   const selectedPlayers = useMemo(() => {
@@ -285,14 +340,12 @@ export default function MvpVotes() {
       .sort((a, b) => b.points - a.points);
   }, [selectedSession, votes]);
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("en-AU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      timeZone: "Australia/Melbourne",
-    });
-  };
+  const formatDate = (dateStr: string, timeZone: string) => new Date(dateStr).toLocaleDateString("en-AU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone,
+  });
 
   const getPlayerName = (playerId: string) => {
     const player = players.find((item) => item.id === playerId);
@@ -300,74 +353,25 @@ export default function MvpVotes() {
   };
 
   const requestReopen = async (session: SessionTile) => {
-    if (!user || requestingSessionId) return;
-
-    const fixture = fixtureScopes[session.fixture_id];
-    const teamIds = [fixture?.home_team_id, fixture?.away_team_id].filter(Boolean) as string[];
-    const clubIds = [
-      fixture?.home_team?.club_id,
-      fixture?.away_team?.club_id,
-    ].filter(Boolean) as string[];
-    const associationIds = [
-      fixture?.home_team?.clubs?.association_id,
-      fixture?.away_team?.clubs?.association_id,
-    ].filter(Boolean) as string[];
+    if (!user || requestingSessionId || !session.team_id) return;
 
     setRequestingSessionId(session.id);
     try {
-      const roleFilters = [
-        ...teamIds.map((id) => `and(role.in.(COACH,TEAM_MANAGER),team_id.eq.${id})`),
-        ...clubIds.map((id) => `and(role.eq.CLUB_ADMIN,club_id.eq.${id})`),
-        ...associationIds.map((id) => `and(role.eq.ASSOCIATION_ADMIN,association_id.eq.${id})`),
-        "role.eq.SUPER_ADMIN",
-      ];
-
-      const { data: adminRoles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .or(roleFilters.join(","));
-
-      if (rolesError) throw rolesError;
-
-      const recipientIds = Array.from(
-        new Set(((adminRoles as { user_id: string }[] | null) || []).map((role) => role.user_id).filter(Boolean)),
-      );
-
-      if (recipientIds.length === 0) {
-        toast({
-          title: "No admins found",
-          description: "No matching admins were found for this voting session.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const notifications = recipientIds.map((userId) => ({
-        user_id: userId,
-        type: "mvp_reopen_request",
-        title: "MVP voting reopen request",
-        message: `A player requested reopening ${session.home_team} vs ${session.away_team}, Round ${session.round}.`,
-        game_id: session.fixture_id,
-        team_id: teamIds[0] || null,
-      }));
-
-      const { error: notificationError } = await supabase
-        .from("notifications")
-        .insert(notifications);
-
-      if (notificationError) throw notificationError;
+      const { error } = await supabase.rpc("request_mvp_session_reopen", {
+        p_session_id: session.id,
+      });
+      if (error) throw error;
 
       setRequestedSessionIds((current) => new Set([...current, session.id]));
       toast({
         title: "Request sent",
-        description: "The reopen request has been sent to the relevant admins.",
+        description: "The team staff have been asked to review this voting round.",
       });
-    } catch (err) {
-      const error = err as Error;
+    } catch (error) {
       console.error("Error requesting MVP reopen:", error);
       toast({
-        title: "Request failed",
-        description: error.message || "Could not send the reopen request.",
+        title: "Request not sent",
+        description: getMvpErrorMessage(error, "The reopen request could not be sent. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -378,47 +382,11 @@ export default function MvpVotes() {
   if (loading) {
     return (
       <div className="space-y-6 container py-6 mx-auto max-w-7xl animate-fade-in">
-        <div>
-          <Skeleton className="h-10 w-48 mb-2" />
-          <Skeleton className="h-5 w-80" />
-        </div>
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-5 w-80" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="flex flex-col justify-between">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-center gap-2 mb-2">
-                  <Skeleton className="h-5 w-24" />
-                  <Skeleton className="h-5 w-16" />
-                </div>
-                <Skeleton className="h-6 w-3/4 mt-2" />
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-10 w-full mt-2" />
-              </CardContent>
-            </Card>
-          ))}
+          {[1, 2, 3].map((item) => <Skeleton key={item} className="h-64 w-full" />)}
         </div>
-      </div>
-    );
-  }
-
-  if (isVoter === false) {
-    return (
-      <div className="container py-12 mx-auto max-w-md animate-fade-in">
-        <Card className="border-destructive/30 shadow-sm text-center">
-          <CardHeader className="pt-8">
-            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
-              <ShieldAlert className="h-6 w-6 text-destructive" />
-            </div>
-            <CardTitle className="text-xl font-semibold">Access Denied</CardTitle>
-          </CardHeader>
-          <CardContent className="pb-8">
-            <p className="text-muted-foreground text-sm">
-              You must have the VOTER role assigned to access MVP voting. Please contact your administrator.
-            </p>
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -427,25 +395,43 @@ export default function MvpVotes() {
     <div className="space-y-6 container py-6 mx-auto max-w-7xl animate-fade-in">
       <div>
         <h1 className="text-3xl font-display text-foreground font-semibold">MVP Votes</h1>
-        <p className="text-muted-foreground mt-1">Vote for recent games and review your previous votes</p>
+        <p className="text-muted-foreground mt-1">Vote for your team and review your previous ballots</p>
       </div>
 
-      {sessions.length === 0 ? (
+      {schemaUnavailable ? (
+        <Card className="border-amber-300 bg-amber-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <TriangleAlert className="h-5 w-5 text-amber-700" />
+              MVP voting upgrade not ready yet
+            </CardTitle>
+            <CardDescription>
+              The secure team voting update has not been added to the database yet. No action is needed from you.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : sessions.length === 0 ? (
         <Card className="border-dashed py-16 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-primary/5 flex items-center justify-center mb-4">
             <Award className="h-6 w-6 text-primary opacity-60" />
           </div>
           <CardTitle className="text-lg font-medium text-foreground">No MVP voting rounds found</CardTitle>
-          <CardDescription className="mt-1 text-sm text-muted-foreground">
-            Eligible voting rounds will appear here after you are linked to the game lineup.
+          <CardDescription className="mt-1 text-sm text-muted-foreground max-w-md">
+            {hasAttendedMatches
+              ? "Your team's open voting rounds and submitted history will appear here."
+              : "Rounds will appear after you are linked as an attended player in a match lineup."}
           </CardDescription>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sessions.map((session) => {
-            const statusBadge = getStatusBadge(session.tileState);
-            const countdown = session.status === "OPEN" ? formatDuration(session.closes_at) : null;
+            const statusBadge = getStatusBadge(session);
+            const countdown = session.displayState === "open" ? formatDuration(session.closes_at) : null;
             const requestSent = requestedSessionIds.has(session.id);
+            const canRequestReopen =
+              !session.isLegacy &&
+              !session.hasSubmitted &&
+              (session.displayState === "closed" || session.displayState === "expired");
 
             return (
               <Card key={session.id} className="flex flex-col justify-between hover:shadow-md transition-shadow">
@@ -466,7 +452,7 @@ export default function MvpVotes() {
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 shrink-0 text-muted-foreground/75" />
-                      <span>{formatDate(session.game_date)}</span>
+                      <span>{formatDate(session.game_date, session.timezone)}</span>
                     </div>
                     {countdown && (
                       <div className="flex items-center gap-2">
@@ -478,29 +464,42 @@ export default function MvpVotes() {
                   <Badge variant="outline" className={statusBadge.className}>
                     {statusBadge.label}
                   </Badge>
-                  {session.tileState === "open-unsubmitted" && (
-                    <Link to={`/mvp-votes/${session.id}`} className="block w-full">
-                      <Button className="w-full" variant="default">
-                        Vote Now
-                      </Button>
-                    </Link>
-                  )}
-                  {(session.tileState === "open-submitted" || session.tileState === "closed-submitted") && (
-                    <Button className="w-full gap-2" variant="outline" onClick={() => setSelectedSession(session)}>
-                      <History className="h-4 w-4" />
-                      View My Votes
+
+                  {session.displayState === "open" && !session.hasSubmitted && (
+                    <Button asChild className="w-full">
+                      <Link to={`/mvp-votes/${session.id}`}>Vote Now</Link>
                     </Button>
                   )}
-                  {session.tileState === "closed-unsubmitted" && (
+
+                  {session.displayState === "open" && session.hasSubmitted && !session.isLegacy && (
+                    <Button asChild className="w-full" variant="outline">
+                      <Link to={`/mvp-votes/${session.id}`}>Check Match Result</Link>
+                    </Button>
+                  )}
+
+                  {session.hasSubmitted && (
+                    <Button className="w-full gap-2" variant="outline" onClick={() => setSelectedSession(session)}>
+                      <History className="h-4 w-4" />
+                      View My Ballot
+                    </Button>
+                  )}
+
+                  {canRequestReopen && (
                     <Button
                       className="w-full gap-2"
                       variant="outline"
                       disabled={requestingSessionId === session.id || requestSent}
-                      onClick={() => requestReopen(session)}
+                      onClick={() => void requestReopen(session)}
                     >
                       <Send className="h-4 w-4" />
                       {requestSent ? "Request Sent" : requestingSessionId === session.id ? "Sending..." : "Request Reopen"}
                     </Button>
+                  )}
+
+                  {session.displayState === "disputed" && (
+                    <p className="text-sm text-muted-foreground">
+                      Team staff are checking the recorded match result. Voting and reminders are paused.
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -512,7 +511,7 @@ export default function MvpVotes() {
       <Dialog open={!!selectedSession} onOpenChange={(open) => !open && setSelectedSession(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>My MVP Votes</DialogTitle>
+            <DialogTitle>My MVP Ballot</DialogTitle>
             <DialogDescription>
               {selectedSession
                 ? `${selectedSession.home_team} vs ${selectedSession.away_team}, Round ${selectedSession.round}`
@@ -528,7 +527,7 @@ export default function MvpVotes() {
                   <div key={points} className="rounded-md border bg-muted/30 p-3">
                     <div className="flex items-center gap-2 text-sm font-semibold">
                       <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                      {points} {points === 1 ? "Vote" : "Votes"}
+                      {points} {points === 1 ? "Point" : "Points"}
                     </div>
                     <p className="mt-2 text-sm text-muted-foreground">
                       {vote ? getPlayerName(vote.player_id) : "No selection recorded"}
@@ -539,11 +538,9 @@ export default function MvpVotes() {
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-foreground">Players listed for this vote</h3>
+              <h3 className="text-sm font-semibold text-foreground">Teammates listed for this ballot</h3>
               {selectedPlayers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No linked player list was found for this game.
-                </p>
+                <p className="text-sm text-muted-foreground">No linked teammate list was found for this match.</p>
               ) : (
                 <div className="divide-y rounded-md border">
                   {selectedPlayers.map((player) => {
@@ -556,10 +553,10 @@ export default function MvpVotes() {
                         {points ? (
                           <Badge variant="outline" className="shrink-0 bg-green-100 text-green-800 border-green-200">
                             <CheckCircle2 className="mr-1 h-3 w-3" />
-                            {points} {points === 1 ? "vote" : "votes"}
+                            {points} {points === 1 ? "point" : "points"}
                           </Badge>
                         ) : (
-                          <span className="shrink-0 text-xs text-muted-foreground">No votes</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">No points</span>
                         )}
                       </div>
                     );
