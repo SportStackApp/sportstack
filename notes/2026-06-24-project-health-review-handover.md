@@ -8,7 +8,7 @@
 
 ## TL;DR for next session
 
-Two real bugs fixed and shipped to `dev` this session: the Roles & Teams save bug, and grade mismatch risk in fixture import. Database is fundamentally healthy. Next priority is the votes-privacy RLS gap (#3 below).
+Two real bugs fixed and shipped to `dev` this session: the Roles & Teams save bug, and grade mismatch risk in fixture import. Database is fundamentally healthy. Next priority is the Player MVP Voting privacy RLS gap (#3 below).
 
 ---
 
@@ -39,7 +39,7 @@ Two real bugs fixed and shipped to `dev` this session: the Roles & Teams save bu
 - Documented in: `notes/2026-06-24-revsports-mapping-id-decisions.md`. Committed: `b88d7ec`.
 
 ### 4. Fixed: stale `project-brief.md` — CONFIRMED FIXED
-- Was missing ~13 live routes (coaching, MVP voting, umpire portal, RevSports admin pages) and described MVP voting as "planned" when it's built and live.
+- Was missing ~13 live routes (coaching, Player MVP Voting, Umpire Match Voting, RevSports admin pages) and described Player MVP Voting as "planned" when it was built and live at the time.
 - Updated routes list and wording. This file is read first by AI coding tools, so the staleness was feeding them a wrong map of the app.
 - Committed: `4e6bd3f`.
 
@@ -53,9 +53,11 @@ Two real bugs fixed and shipped to `dev` this session: the Roles & Teams save bu
 ## Confirmed findings — NOT yet fixed (priority order for next session)
 
 ### 🟠 #3 — Votes privacy is screen-only, not enforced in the database
-RLS is enabled on `mvp_votes`, but the policy "Admins full access - mvp_votes" grants `ALL` (including SELECT) to 5 roles: SUPER_ADMIN, ASSOCIATION_ADMIN, CLUB_ADMIN, COACH, TEAM_MANAGER. Per the Analytics design, Club Admin/Coach/Team Manager should only see the aggregate leaderboard — but this policy lets them read every individual vote row directly via the API, bypassing the UI restriction.
-- **Proper fix (2 parts, not a quick toggle):** (a) build a totals-only leaderboard aggregate view/function that never exposes who-voted-for-whom; (b) then restrict raw `mvp_votes` SELECT to Super/Association Admin only.
-- **Caution:** check how the Analytics screen currently reads votes for those 3 roles before touching RLS — it may read raw votes in the browser, and tightening naively could blank the leaderboard for them.
+The historical heading's generic "Votes" means **Player MVP Voting** in this section.
+
+RLS is enabled on `mvp_votes`, but the policy "Admins full access - mvp_votes" grants `ALL` (including SELECT) to 5 roles: SUPER_ADMIN, ASSOCIATION_ADMIN, CLUB_ADMIN, COACH, TEAM_MANAGER. Per the Player MVP Voting Analytics design, Club Admin/Coach/Team Manager should only see the aggregate leaderboard — but this policy lets them read every individual Player MVP Voting row directly via the API, bypassing the UI restriction.
+- **Proper fix (2 parts, not a quick toggle):** (a) build a Player MVP Voting totals-only leaderboard aggregate view/function that never exposes who-voted-for-whom; (b) then restrict raw `mvp_votes` SELECT to Super/Association Admin only.
+- **Caution:** check how the Analytics screen currently reads Player MVP Voting rows for those 3 roles before touching RLS — it may read raw `mvp_votes` in the browser, and tightening naively could blank the leaderboard for them.
 - Severity: medium (needs a logged-in user with one of those 3 roles deliberately querying the API).
 
 ### 🟠 #4 — 8 duplicate profile name-groups, no UI to merge them yet
@@ -74,7 +76,7 @@ The `admin_merge_profiles` DB function exists and was used successfully once bef
 ## Key facts for next session
 
 - **Live counts (24 June 2026):** 728 profiles, 9,933 revsports_players, 579 fixtures, 135 mvp_votes, 1,227 team_memberships, 682 user_roles.
-- **No orphaned records found anywhere** — votes, memberships, roles all point to real rows. Genuinely healthy.
+- **No orphaned records found anywhere** — the checked Player MVP Voting rows, memberships, and roles all point to real rows. Genuinely healthy.
 - **RLS enabled on all key tables** — but enabled ≠ correctly scoped (see #3 above).
 - **Scraper already captures RevSports grade ID, venue ID, and competition ID** on every row of `revsports_players` (100%, 99%, ~100% coverage respectively) — no re-scrape needed for ID-based matching projects. The gap was always in the mapping tables / importer, not the scraper.
 - **`revsports_player_registry` and `revsports_player_history`** are separate Playwright-based scrapers (season stats + career history) — not reviewed in depth this session, flagged as untouched territory if doing a deeper pipeline pass later.
@@ -92,5 +94,5 @@ Nothing has been merged to `main` / deployed to Vercel yet — that's a separate
 
 ## Recommended next session starting point
 1. Test the Roles & Teams save fix in the app (quick, confirms #1 actually works end-to-end).
-2. Tackle #3 (votes privacy) — start by checking how Analytics currently reads votes for Club Admin/Coach/Team Manager, before touching RLS.
+2. Tackle #3 (Player MVP Voting privacy) — start by checking how Analytics currently reads `mvp_votes` for Club Admin/Coach/Team Manager, before touching RLS.
 3. Or: wire up the Profile Merge Tool UI and clean the 8 duplicate profiles (#4).

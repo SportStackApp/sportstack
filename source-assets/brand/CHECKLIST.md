@@ -28,7 +28,7 @@ Everything the sample pack contained, **plus** a new Animations section and reco
 
 **UI feature icons (SVG + PNG)**
 - [ ] clubs, fixtures, ladder, lineup, notifications, players, results, settings, stats, teams
-- [ ] ✨ umpiring, ✨ MVP voting, ✨ venues, ✨ divisions, ✨ requests/approvals, ✨ formations
+- [ ] ✨ umpiring, ✨ Player MVP Voting, ✨ Umpire Match Voting, ✨ venues, ✨ divisions, ✨ requests/approvals, ✨ formations
 
 ## 03 — App Icons
 - [ ] Full size set: 29, 40, 58, 60, 76, 80, 87, 120, 152, 167, 180, 192, 256, 512, 1024 (PNG)
@@ -63,7 +63,7 @@ Everything the sample pack contained, **plus** a new Animations section and reco
 - [ ] round fixtures
 - [ ] team selection
 - [ ] training update
-- [ ] ✨ MVP / voting open
+- [ ] ✨ Player MVP Voting open
 - [ ] ✨ fixture reminder ("this weekend")
 - [ ] ✨ welcome new member
 - [ ] ✨ sponsor thank-you

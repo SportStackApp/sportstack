@@ -1,6 +1,8 @@
 # SportStack — Session Handoff
 
-## Umpire Voting UI — Phase 4 & 5 Complete
+## Umpire Match Voting UI — Phase 4 & 5 Complete
+
+> Terminology clarification added 16 July 2026: this historical record is about **Umpire Match Voting**, not Player MVP Voting. The active workflow uses the historical `player_vote_submissions`, `player_vote_lines`, and `player_vote_edits` identifiers. Historical screen labels such as "Player Votes" are preserved where quoted. They describe the player-specific fields in the implementation at the time, not a product rule restricting Umpire Match Voting to players; the canonical purpose covers eligible people associated with the completed fixture.
 
 **Date:** 1 June 2026
 
@@ -8,10 +10,10 @@
 
 ## What We Did This Session
 
-Built the umpire vote submission UI in SportStack and completed all
+Built the Umpire Match Voting submission UI in SportStack and completed all
 umpire account setup. The old HB Umpire Portal data was already
 migrated (previous session). This session focused on creating umpire
-accounts and building the core voting interface.
+accounts and building the core Umpire Match Voting interface.
 
 ---
 
@@ -50,7 +52,7 @@ Profiles populated with names, `is_umpire = true` set on all.
 placeholder names used (L Drury, Shepherd J). Update when real
 names are known.
 
-### Vote submissions re-linked
+### Umpire Match Voting submissions re-linked
 - 48 of 49 submissions in `player_vote_submissions` now have
   `umpire_user_id` populated
 - 1 submission remains NULL (no email stored in old portal —
@@ -73,7 +75,7 @@ WHERE u.email = pvs.legacy_umpire_email
 
 ---
 
-## Phase 5 — Umpire Vote Submission UI ✅
+## Phase 5 — Umpire Match Voting Submission UI ✅
 
 ### New file created
 `src/pages/umpire/UmpireVoteSubmit.tsx`
@@ -90,7 +92,7 @@ Non-umpires are redirected to `/dashboard`.
   - Multi-association user → shows dropdown
 - **Cascade dropdowns:** Association → Round → Division → Fixture
   (each activates only after the one above is selected)
-- **Proxy voting:** checkbox at top of Step 1; when ticked shows
+- **Umpire Match Voting proxy submission:** checkbox at top of Step 1; when ticked shows
   umpire name + reason fields (both required)
 - **Vote structure by division type:**
   - Senior (Division 1 Open, Division 1 Women, Division 2 Open):
@@ -150,14 +152,14 @@ Non-umpires are redirected to `/dashboard`.
 | Fixtures form team dropdowns | Not populating |
 | Bobcats White unknown mapping | Waiting on cascade selector |
 | SUPER_ADMIN seed migration | Not started |
-| RLS policies for MVP voting tables | Required before go-live |
-| MVP admin dashboard | Not started |
+| RLS policies for Player MVP Voting tables | Required before go-live |
+| Player MVP Voting admin dashboard | Not started |
 | RevSports full scrape re-import | Not completed |
 
 ---
 
 ## Branch Status
 
-- All umpire voting work committed and pushed to `dev`
+- All Umpire Match Voting work committed and pushed to `dev`
 - `main` branch unchanged
 - Merge to `main` when ready for production deploy

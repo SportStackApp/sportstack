@@ -49,8 +49,8 @@
 **How:** Read `FixturesManagement.tsx`, check the teams fetch query and what filters/state it depends on.
 **Time:** ~30 min
 
-#### 3. Investigate VotingPortal.tsx — token lookup returns "invalid"
-**What:** `/vote/test-token-abc123` shows "Invalid Link" even though the token exists in the DB.
+#### 3. Investigate the legacy Player MVP Voting `VotingPortal.tsx` — token lookup returns "invalid"
+**What:** the historical Player MVP Voting route `/vote/test-token-abc123` shows "Invalid Link" even though the token exists in the DB.
 **Context:** RLS policies are confirmed correct. Likely a query structure issue in `VotingPortal.tsx` — the token lookup may be querying the wrong column or using the wrong filter.
 **How:** Open browser console on `/vote/test-token-abc123`, read the error, check the Supabase query in `VotingPortal.tsx`.
 **Time:** ~20–30 min
@@ -116,14 +116,14 @@
 
 #### 11. VOTER dashboard
 **What:** When a user with the VOTER role logs in, redirect them to a stripped-down dashboard (no sidebar) showing:
-- Open voting sessions for games where scrape data confirms they played
-- Their own historical votes
+- Open Player MVP Voting sessions for games where scrape data confirms they played
+- Their own historical Player MVP Voting choices
 **Depends on:** Player Mappings (Task 9) — without this, the app can't know which games a voter played in.
 **How:**
 1. In `AuthContext.tsx` or `ProtectedRoute.tsx`, detect VOTER role → redirect to `/voter/dashboard`
 2. Create `src/pages/VoterDashboard.tsx` — minimal layout, no sidebar
 3. Add route in `App.tsx` outside the `<AppLayout>` wrapper
-4. Query: voter profile → player mapping → revsports games → mvp_voting_sessions
+4. Query: Player MVP voter profile → player mapping → RevSports games → `mvp_voting_sessions`
 **Time:** ~90–120 min
 
 #### 12. Force password change on first VOTER login

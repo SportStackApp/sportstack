@@ -8,9 +8,9 @@
 ## What this session covered
 
 Started from a real bug you spotted: opposition players (and an umpire) were
-showing up as eligible MVP voters. Tracing that down led to a much bigger
+showing up as eligible Player MVP Voting participants. Tracing that down led to a much bigger
 discovery — the whole system for linking a scraped RevSports row to a real
-SportStack profile was broken in a way that went well beyond MVP voting.
+SportStack profile was broken in a way that went well beyond Player MVP Voting.
 
 ## What we found
 
@@ -22,12 +22,12 @@ RevSports data, and none of them talked to each other:
 2. `revsports_player_mappings` — a table built via the "RevSports Mappings"
    admin page, matching by name + club + grade + team + jersey
 3. `revsports_players.profile_id` — the field that actually matters (used by
-   fixtures, MVP voting, everything) — **nothing wrote to this automatically**
+   fixtures, Player MVP Voting, everything) — **nothing wrote to this automatically**
 
 So even when you'd correctly linked someone via #1 or #2, the real gameplay
 data in #3 never found out about it. That's why Harley S. and Reuben P. (both
 genuine fill-ins, both correctly flagged `is_fillin = true`) couldn't appear
-as MVP voters — no `profile_id` on their rows at all.
+as Player MVP Voting participants — no `profile_id` on their rows at all.
 
 ## What we fixed
 
@@ -85,6 +85,6 @@ have seen the result yet.
 ## Suggested next steps
 
 1. Check out the Round 7 result (Grampians 5–6 Lucas HC) if you haven't seen it
-2. Worth a quick look at the MVP voting admin page for Round 7 once a session
+2. Worth a quick look at the Player MVP Voting admin page for Round 7 once a session
    is opened for it, to see the linking working live in the real UI
 3. No urgent action needed — everything here is deployed and stable

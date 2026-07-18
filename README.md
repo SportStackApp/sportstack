@@ -10,11 +10,16 @@ Read these documents before making changes:
 - [Current state](docs/current-state.md)
 - [Codex handoff](CODEX_HANDOFF.md)
 - [Project brief](docs/project-brief.md)
+- [Voting modules terminology](docs/project-brief.md#voting-modules)
 - [Technical specification and system handoff](TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md)
 - [Project scope, UI/UX, and implementation plan](PROJECT_SCOPE_UI_UX_AND_IMPLEMENTATION_PLAN.md)
 - [Codex handoff extras](CODEX_HANDOFF_EXTRAS.md)
 
 `docs/current-state.md` is the short, living status file. Update it after meaningful Codex tasks, pull requests, schema changes, deployments, or confirmed live-data checks.
+
+## Voting modules
+
+SportStack has two separate modules: **Player MVP Voting** for player-to-player voting, and **Umpire Match Voting** for official votes submitted by assigned or authorised umpires. Use **Player MVP** and **Umpire Votes** only as short UI labels. Do not use a generic "Voting" or "Votes" label where it could refer to either module.
 
 ## Local setup
 

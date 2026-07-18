@@ -22,4 +22,5 @@ All notable repository-level changes should be recorded here.
 - Supabase is used for auth, database, storage, migrations, and Edge Functions, with one shared project for development and production data.
 - RevSports scraping workflows stage external hockey data into `revsports_*` tables before mapping and importing into live app tables.
 - Admin data quality and import workflows are active priority areas.
-- MVP voting module direction documented, including private voting links, 3/2/1 votes, attendance eligibility, voting windows, reminders, admin controls, and audit logging.
+- Player MVP Voting direction documented, including private voting links, 3/2/1 peer choices, attendance eligibility, voting windows, reminders, admin controls, and audit logging.
+- Umpire Match Voting documented as a separate authorised-umpire workflow with its own submissions, official vote lines, review, and results.

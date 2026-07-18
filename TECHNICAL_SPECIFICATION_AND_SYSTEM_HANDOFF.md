@@ -19,8 +19,8 @@
 | Project name | **SportStack** (repo/DB use "SportStack"; some user notes say "SportsStack" — see naming note below) |
 | Purpose | A private, browser-based sports administration platform that aggregates hockey match/player/fixture data from RevSports (revolutioniseSPORT) into a clean Supabase database, and provides admin, team, and player tooling on top of it. |
 | Main users | Association admins, club admins, team managers/coaches, players, umpires, and a super admin (the owner). |
-| Main goal | Replace manual spreadsheet/RevSports admin work for regional Victorian hockey associations with one clean system; deliver a Best-on-Ground/MVP voting workflow. |
-| Current development stage | Active development / pre-launch. Core data pipeline and admin CRUD exist; voting + several modules are partially built. |
+| Main goal | Replace manual spreadsheet/RevSports admin work for regional Victorian hockey associations with one clean system; deliver Player MVP Voting and Umpire Match Voting workflows. |
+| Current development stage | Active development / pre-launch. Core data pipeline and admin CRUD exist; both named voting modules and several other modules are at different stages. |
 | Production status | Deployed to Vercel (auto-deploy on push to `main`). Treat production data as **real** — 712 profiles, 9,372 scraped player rows, 517 fixtures already exist. |
 | Repository | `https://github.com/SportStackApp/sportstack` (GitHub org **SportStackApp**, repo **sportstack**). Clonable without credentials at time of writing. |
 | Important domains | `sportstackapp.com`, `sportstackapp.com.au`, `sportstackapp.online`, `grampianshockey.com`, `grampianshockey.com.au` (Hostinger). **UNKNOWN — needs confirmation:** which domain currently serves the live app. |
@@ -29,6 +29,16 @@
 | Supabase project | `svierarfcolhcfjpmwck` (dashboard: `https://supabase.com/dashboard/project/svierarfcolhcfjpmwck`). This single project is used for both dev and production. An older project `cdwpecmfzcvgyxjpikxb` appears in some notes but is **not in use**. |
 
 **Naming note (ASSUMPTION — confirm before implementation):** The repo, README, and database all say **SportStack**. Some user-side notes and the local folder path say **SportsStack** / **SportsStackApp**. Treat **SportStack** (one "s") as canonical unless told otherwise.
+
+### Voting terminology
+
+- **Player MVP Voting** is for players voting for their peers after a game. Short UI label: **Player MVP**. Suggested future namespace: `player_mvp`.
+- **Umpire Match Voting** is for assigned or authorised umpires submitting official post-match votes for eligible people associated with a completed fixture. Short UI label: **Umpire Votes**. Suggested future namespace: `umpire_match_votes`.
+- These are separate modules with separate audiences, permissions, workflows, submissions, and results. Avoid generic "Voting", "Votes", "the voting module", and "the MVP module" wording where it could mean either.
+- `mvp_*` is the current Player MVP Voting implementation. The active Umpire Match Voting implementation uses the historically misleading `player_vote_*` family: `player_vote_submissions`, `player_vote_lines`, and `player_vote_edits`.
+- Older or exported unprefixed `vote_submissions`, `vote_lines`, and `vote_edits` identifiers belong to Umpire Match Voting. Those exact names are not present in the current repository code or generated Supabase types, but that snapshot-specific absence does not mean they never existed.
+- The separate `umpire_vote_*` schema family describes umpire-related ratings linked to `umpire_fixtures`. Its current product purpose is **UNKNOWN — needs confirmation**; it is not the active Umpire Match Voting workflow.
+- Player-specific fields and names in the current Umpire Match Voting schema are implementation or legacy naming limitations. The product definition remains votes for eligible people associated with the completed fixture.
 
 ---
 
@@ -39,13 +49,13 @@
 2. **Stages** that raw data into `revsports_*` tables in Supabase.
 3. **Maps** raw RevSports names (teams, clubs, grades, venues, pitches, competitions, players, umpires) to clean internal entities via `revsports_*_mappings` tables.
 4. **Imports** mapped data into the native operational tables (`fixtures`, `teams`, `profiles`, etc.) via a bridge script (`fixture_import.py`).
-5. **Serves** a React single-page app for admins/teams/players, plus a token-based MVP/Best-on-Ground voting portal.
+5. **Serves** a React single-page app for admins/teams/players, including Player MVP Voting and Umpire Match Voting workflows.
 
 ### Main user flows
-- **Admin:** log in → pick mode/scope (Association → Club → Division → Team) → manage entities, fixtures, mappings, users, voting sessions.
+- **Admin:** log in → pick mode/scope (Association → Club → Division → Team) → manage entities, fixtures, mappings, users, Player MVP Voting sessions, and Umpire Match Voting submissions where authorised.
 - **Player/team:** log in → dashboard → view games, roster, lineup, chat, profile; set availability.
-- **Voter (public):** receive a private link `/vote/:token` → cast 3/2/1 Best-on-Ground votes without an account.
-- **Umpire:** submit player votes via `/umpire/vote`.
+- **Player MVP voter (historical public flow):** receive a private link `/vote/:token` → cast 3/2/1 Player MVP Voting choices without an account.
+- **Umpire:** submit official Umpire Match Voting choices via `/umpire/vote`.
 
 ### Main backend flows
 - **Auth:** Supabase Auth (email/password + Google SSO). A DB trigger `handle_new_user` creates a `profiles` row when an `auth.users` row is created.
@@ -68,10 +78,10 @@ RevSports site → Python scraper (GitHub Actions) → CSV in /data  +  revsport
 - **GitHub Actions** (5 workflows): `scrape-hb.yml`, `scrape-sunraysia.yml`, `scrape-wha.yml`, `player-registry.yml`, `player-history.yml`.
 - HB/Sunraysia run **daily at 2am AEST** and **hourly 8am–8pm on Sat & Sun** (staggered: HB on the hour, Sunraysia on the half hour). Scheduled runs always upload to Supabase and then run `fixture_import.py`.
 - Workflows commit CSV output back into `/data` (with `git pull --rebase -X theirs` before push to avoid conflicts).
-- **No Supabase cron jobs (pg_cron) confirmed.** **UNKNOWN — needs confirmation:** MVP voting auto-close currently has no scheduler.
+- **No Supabase cron jobs (pg_cron) confirmed.** **UNKNOWN — needs confirmation:** Player MVP Voting auto-close currently has no scheduler.
 
 ### Admin-only / restricted flows
-- All `/admin/*` routes, the RevSports mapping/unmatched screens, bulk import, and MVP voting admin are admin-gated in the UI and by RLS.
+- All `/admin/*` routes, the RevSports mapping/unmatched screens, bulk import, Player MVP Voting administration, and Umpire Match Voting administration are role-gated in the UI and by their respective data permissions.
 
 ### Architecture diagram (Mermaid)
 ```mermaid
@@ -96,7 +106,7 @@ flowchart TD
     SPA --> EF
     SPA --> STORE
     SPA -. deployed to .-> VERCEL[Vercel - auto deploy on main]
-    VOTER[Public voter] -->|/vote/:token| SPA
+    VOTER[Historical public Player MVP voter] -->|/vote/:token| SPA
 ```
 
 ---
@@ -133,7 +143,7 @@ SportStack has **no custom Node/Express server**. The "backend" is Supabase:
 | Edge Functions (deployed) | `create-player` (v2), `bulk-import` (v2), `bulk-import-players` (v1) — all `verify_jwt: true` |
 | Edge Functions (in repo `supabase/functions/`) | `create-player`, `bulk-import`, `clear-test-data` |
 | Auth/authorisation | Supabase Auth + Postgres RLS; `is_super_admin()` SECURITY DEFINER function |
-| Validation | Client-side (`zod`); DB-level CHECK constraints (e.g. vote points ∈ {1,2,3}, ratings 1–10) |
+| Validation | Client-side (`zod`); DB-level CHECK constraints, including 3/2/1 points for Player MVP Voting and Umpire Match Voting, plus 1–10 values in the separate umpire-rating schema |
 | Logging | Supabase dashboard logs; in-app audit tables (`mvp_vote_audit`, `umpire_audit_log`, `rg_audit_log`) |
 | Error handling | Client `try/catch` + toasts. **No centralised error reporting (e.g. Sentry) found.** |
 | Rate limiting | None in app code (Supabase platform defaults apply). |
@@ -184,7 +194,7 @@ SportStack has **no custom Node/Express server**. The "backend" is Supabase:
 | **Hostinger** | Domain registration (sportstackapp.*, grampianshockey.*) | Hostinger panel | none in repo | DNS records **UNKNOWN**. |
 | **Cloudflare** | DNS / CDN for some domains | Cloudflare dashboard | none in repo | **UNKNOWN** which domains route through it for the app. |
 | **Google OAuth** | Google SSO login | Supabase Auth providers + Google Cloud console | configured in Supabase, not repo | Redirect URLs must include production URL (README note). |
-| **Email/SMS provider (e.g. Resend)** | Voting trigger + reminder emails | **Not implemented yet** | **UNKNOWN** | `mvp_vote_tokens` has `email_sent_at` / `reminder_*` columns but no sending code found. PLANNED. |
+| **Email/SMS provider (e.g. Resend)** | Player MVP Voting trigger + reminder emails | **Not implemented yet** | **UNKNOWN** | `mvp_vote_tokens` has `email_sent_at` / `reminder_*` columns but no sending code found. PLANNED. |
 | **Activepieces** (`activepieces.barbi.beer`) | Automation (connected as an MCP/connector for the owner) | external | n/a | Not referenced in repo. Role TBD. |
 | **Zapier** | Automation (connector) | external | n/a | Not referenced in repo. |
 | **Docker / QNAP NAS** | Owner's local infra | external | n/a | Not part of the deployed app. |
@@ -403,21 +413,21 @@ Python deps: `pip install requests beautifulsoup4 supabase`. Owner's Python: `C:
 | `primary_change_requests` | 1 | Requests to change a player's primary team |
 | `notifications` / `notification_preferences` | 0 / 0 | In-app notifications (unused) |
 | `team_messages` | 0 | Team chat (unused) |
-| **MVP voting** | | |
+| **Player MVP Voting** | | |
 | `mvp_voting_sessions` | 2 | One voting session per game |
 | `mvp_vote_tokens` | 0 | Private voting links (+ email_sent/reminder timestamps) |
-| `mvp_votes` | 0 | Vote lines (points ∈ {1,2,3}) |
+| `mvp_votes` | 0 | Player MVP Voting lines (points ∈ {1,2,3}) |
 | `mvp_vote_audit` | 0 | Admin change audit |
 | `mvp_tokens` | 0 | Legacy/older token table (likely superseded) |
-| **Umpire voting** | | |
+| **Umpire rating schema (not the active Umpire Match Voting module)** | | |
 | `umpire_rounds` / `umpire_fixtures` | 0 / 0 | Umpire scheduling |
-| `umpire_vote_submissions` / `umpire_vote_lines` / `umpire_vote_edits` | 0 / 0 / 0 | Umpire→umpire ratings (1–10) |
+| `umpire_vote_submissions` / `umpire_vote_lines` / `umpire_vote_edits` | 0 / 0 / 0 | Ratings of umpires (1–10); current product status **UNKNOWN — needs confirmation** |
 | `umpire_guests` | 0 | Token-based guest umpires |
 | `umpire_audit_log` | 0 | Audit |
-| **Player vote (legacy umpire portal migration)** | | |
-| `player_vote_submissions` | 2 | Migrated player-vote submissions |
-| `player_vote_lines` | 3 | Vote lines (votes ∈ {1,2,3}) |
-| `player_vote_edits` | 0 | Edit audit |
+| **Umpire Match Voting (historical `player_vote_*` identifiers)** | | |
+| `player_vote_submissions` | 2 | Official completed-fixture submissions made by or for authorised umpires |
+| `player_vote_lines` | 3 | Umpire Match Voting lines for eligible people (votes ∈ {1,2,3}) |
+| `player_vote_edits` | 0 | Umpire Match Voting edit/status audit |
 | **Coaching** | | |
 | `player_position_preferences` | 0 | Player position prefs (1–4) |
 | `coach_position_assessments` | 0 | Coach assessments (1–4) |
@@ -495,10 +505,13 @@ erDiagram
     profiles ||--o{ user_roles : granted
     profiles ||--o{ team_memberships : member
     teams ||--o{ team_memberships : roster
-    fixtures ||--o{ mvp_voting_sessions : voting
+    fixtures ||--o{ mvp_voting_sessions : "Player MVP Voting"
     mvp_voting_sessions ||--o{ mvp_vote_tokens : issues
     mvp_voting_sessions ||--o{ mvp_votes : records
-    revsports_players ||--o{ mvp_vote_tokens : "voter player"
+    revsports_players ||--o{ mvp_vote_tokens : "Player MVP voter"
+    fixtures ||--o{ player_vote_submissions : "Umpire Match Voting"
+    player_vote_submissions ||--o{ player_vote_lines : records
+    player_vote_submissions ||--o{ player_vote_edits : audits
     profiles }o--|| auth_users : "id FK"
 ```
 
@@ -522,7 +535,7 @@ erDiagram
 |---|---|---|
 | **`division_id` NULL on ALL 517 fixtures** | `SELECT count(*) FROM fixtures WHERE division_id IS NULL` = 517 | Any join `fixtures → divisions → associations` returns zero rows. `fixture_import.py` is not setting it. |
 | **`season_id` NULL on ALL 517 fixtures** | same query for season_id = 517 | Fixtures not attributable to a season; ladder/season views break. |
-| **`revsports_players.profile_id` linked = 0** | `count WHERE profile_id IS NOT NULL` = 0 | Scraped players are not yet linked to real profiles → MVP voting player-matching incomplete. |
+| **`revsports_players.profile_id` linked = 0** | `count WHERE profile_id IS NOT NULL` = 0 | Scraped players are not yet linked to real profiles → Player MVP Voting player-matching incomplete. |
 | **678 of 712 profiles are placeholders** | `is_placeholder = true` | Most "users" are scraped stubs (`player.[id]@placeholder.sportstack.com.au`), not real logins. |
 | **`revsports_competition_mappings` FK targets `seasons`, not `competitions`** | FK `..._competition_id_fkey → seasons.id` | Naming is misleading; confirm intended target before changing import logic. |
 | **`revsports_player_registry` / `revsports_player_history` have RLS enabled but no policies** | absent from `pg_policies` | Frontend (anon/auth) cannot read them; only service role can. Confirm if intentional. |
@@ -534,7 +547,7 @@ erDiagram
 - Edge functions: `create-player`, `bulk-import`, `bulk-import-players` (+ reconcile `clear-test-data`).
 - Functions: `is_super_admin()`, `admin_save_user_roles`, `handle_new_user`, `rls_auto_enable`, `update_updated_at`.
 - Auth providers: Email/password + Google OAuth (redirect URLs configured).
-- Cron jobs: **None confirmed.** MVP auto-close scheduler is **PLANNED**.
+- Cron jobs: **None confirmed.** Player MVP Voting auto-close scheduler is **PLANNED**.
 
 ---
 
@@ -572,7 +585,7 @@ There is **no bespoke HTTP API**. Data access is:
 | Roles | `user_roles` rows, each with a `role` (enum) scoped by `association_id` / `club_id` / `team_id`. A user can hold multiple roles at different scopes. |
 | Role hierarchy | Managed in `src/hooks/useUserRole.ts` (`ROLE_HIERARCHY`, `getRoleDisplayName`, `getRoleEmoji`, `getRoleBadgeColor`). Update all four when adding a role. |
 | Admin scope | `src/hooks/useAdminScope.ts` + `AppModeContext`/`TeamContext` implement the Association→Club→Division→Team cascade. Switching a level must reset all levels below it. |
-| Frontend route protection | `src/components/auth/ProtectedRoute.tsx` wraps protected + admin routes. Public routes: `/`, `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/pending`, `/vote/:token`. |
+| Frontend route protection | `src/components/auth/ProtectedRoute.tsx` wraps protected + admin routes. Public routes include the historical Player MVP Voting token route `/vote/:token`. |
 | Backend permission checks | RLS on every table; `is_super_admin()` central; mapping/admin tables use `ALL`-command policies gated to admins; public-readable reference tables use `SELECT` policies. |
 | User ↔ records | via `user_roles` (scope) and `team_memberships` (roster). |
 | How to test permissions | `TestRoleContext` allows simulating roles in dev. Verify each role sees only its scope; verify anon can read only what `SELECT` policies allow; verify service-key operations stay server-side. |
@@ -589,7 +602,7 @@ There is **no bespoke HTTP API**. Data access is:
 | Email provider | **UNKNOWN — not implemented.** No Resend (or other) SDK in `package.json`, no email-sending Edge Function found. Owner notes list "email provider setup" as outstanding. |
 | Sending domain / from / reply-to | **UNKNOWN.** Likely a `sportstackapp.com.au` address once set up. |
 | Templates | None in repo. |
-| Triggering events (planned) | MVP voting: send private vote link on session open; reminders at 48h and 24h (columns `email_sent_at`, `reminder_48h_sent_at`, `reminder_24h_sent_at` exist on `mvp_vote_tokens`). |
+| Triggering events (planned) | Player MVP Voting: send private vote link on session open; reminders at 48h and 24h (columns `email_sent_at`, `reminder_48h_sent_at`, `reminder_24h_sent_at` exist on `mvp_vote_tokens`). |
 | In-app notifications | `notifications` + `notification_preferences` tables exist but are empty and unwired. |
 | Delivery logs / webhooks / bounce / unsubscribe | **UNKNOWN — not implemented.** |
 | Required DNS records | **UNKNOWN** (SPF/DKIM/DMARC needed once a provider is chosen). |
@@ -642,7 +655,7 @@ Plus the relevant manual smoke test from Doc 2 §12.
 |---|---|---|---|---|---|---|---|---|
 | `division_id` NULL on all fixtures | DB/Pipeline | High | division/season joins return 0 rows | `fixture_import.py` not resolving via `revsports_grade_mappings` | populate `division_id` during import; backfill existing 517 | `scraper/fixture_import.py`, migration | Read import script, log a dry-run mapping count | Re-run import on a copy; assert non-null counts |
 | `season_id` NULL on all fixtures | DB/Pipeline | High | season views broken | import not resolving via `revsports_competition_mappings` | populate `season_id` during import; backfill | `scraper/fixture_import.py` | same | same |
-| RevSports players not linked to profiles (0 links) | Pipeline/Voting | High | MVP voting matching incomplete | player-matching step not run | run/finish `revsports_player_mappings` → set `revsports_players.profile_id` | `scraper/*`, mapping admin pages | audit unmatched players | verify link counts |
+| RevSports players not linked to profiles (0 links) | Pipeline/Player MVP Voting | High | Player MVP Voting matching incomplete | player-matching step not run | run/finish `revsports_player_mappings` → set `revsports_players.profile_id` | `scraper/*`, mapping admin pages | audit unmatched players | verify link counts |
 | No build/lint gate in CI | CI/CD | High | broken code can deploy to prod | no workflow runs build | add a GitHub Action: `npm ci && npm run lint && tsc --noEmit && npm run build` on PRs to `main` | new `.github/workflows/ci.yml` | add non-blocking check first | PR triggers check |
 | Single Supabase project for dev+prod | Infra | High | local/test work can corrupt prod | cost/simplicity | create a separate dev project or use branches; gate destructive scripts | env config, scrapers | document the risk; add confirmation prompts | n/a |
 | Edge function repo↔deploy drift | Backend | Medium | unclear source of truth | manual deploys | reconcile `clear-test-data` (repo only) and `bulk-import-players` (deployed only) | `supabase/functions/*` | diff repo vs deployed | function smoke test |
@@ -666,11 +679,11 @@ Plus the relevant manual smoke test from Doc 2 §12.
 | RLS | Enabled everywhere; two staging tables have no policies (read-blocked). | Confirm intent; add explicit policies where the frontend must read. |
 | Admin privilege | `is_super_admin()` + `admin_save_user_roles` are SECURITY DEFINER. | Review function bodies to ensure they re-check the caller's privilege. |
 | File upload | `logos` bucket is **public**. | Ensure only admins can write; validate file type/size client+policy side. |
-| API abuse | No app-level rate limiting. | Rely on Supabase limits; consider per-token throttling on the public `/vote/:token` flow. |
+| API abuse | No app-level rate limiting. | Rely on Supabase limits; consider per-token throttling on the historical public Player MVP Voting `/vote/:token` flow. |
 | Email abuse | Not built yet. | When adding, use server-side sending only and per-token guards. |
 | Webhook validation | None present. | If adding (e.g. email provider), verify signatures. |
 | Dependency risk | Large Radix/shadcn surface; no automated audit. | Add `npm audit` / Dependabot. |
-| Public voting token | Tokens are 32-byte random hex (`gen_random_bytes`). | Good; ensure tokens expire and single-use is enforced server-side. |
+| Public Player MVP Voting token | Tokens are 32-byte random hex (`gen_random_bytes`). | Good; ensure tokens expire and single-use is enforced server-side. |
 | Single prod project | dev work hits prod. | Separate environments. |
 
 ---

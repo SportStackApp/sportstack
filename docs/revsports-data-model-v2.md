@@ -379,7 +379,7 @@ The source tables should mainly support:
 - admin mapping
 - import preview
 - audit and troubleshooting
-- voting eligibility until a cleaner attendance model exists
+- Player MVP Voting eligibility until a cleaner attendance model exists
 
 ## Promotion Rules
 
@@ -424,7 +424,7 @@ Recommended rules:
 - Future fixture date/time changes can usually auto-promote.
 - Completed scores and cards should be logged and reviewed or clearly auto-promoted with audit.
 - Team, player, venue, pitch, division, and season identity changes should require mapping or review.
-- Anything that affects votes, awards, or locked results should require review.
+- Anything that affects Player MVP Voting choices/results, Umpire Match Voting records/results, awards, or locked fixture results should require review.
 
 ### Fixtures
 
@@ -475,7 +475,7 @@ Preferred approach:
 Player appearances should become the base for:
 
 - match attendance
-- voting eligibility
+- Player MVP Voting eligibility
 - player stats
 - later line-up history
 
@@ -591,7 +591,7 @@ Compare:
 - completed score count
 - unmapped team count
 - unmapped player count
-- voting eligibility player count
+- Player MVP Voting eligibility player count
 
 ### Stage 6: Retire Old Tables
 

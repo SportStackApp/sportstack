@@ -26,6 +26,15 @@ of truth**; migration files may have drifted.
 
 If this order conflicts with older documentation, use the newer/current source and mark anything uncertain as `UNKNOWN — needs confirmation`.
 
+## Voting terminology
+
+SportStack has two separate voting modules. Always name the intended module:
+
+- **Player MVP Voting**: players vote for their peers after a game. Use **Player MVP** only where UI space is limited. Suggested namespace for future code: `player_mvp`.
+- **Umpire Match Voting**: assigned or authorised umpires submit official post-match votes for eligible people associated with a completed fixture. Use **Umpire Votes** only where UI space is limited. Suggested namespace for future code: `umpire_match_votes`.
+
+Do not call either module only "Voting", "Votes", "the voting module", or "the MVP module" when the meaning could be unclear. The modules have separate audiences, permissions, workflows, submissions, and results. See `docs/project-brief.md#voting-modules` for the current route, component, and database-identifier mapping.
+
 ## Setup commands
 ```bash
 npm install

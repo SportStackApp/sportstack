@@ -30,8 +30,10 @@ be treated as superseded by this investigation for these 7 names.
 
 Initial read (incorrect): 3 of the 4 "Ben S" profiles looked like empty,
 unused placeholder accounts (no club/grade/appearances showing in
-`revsports_players`, no roles, no votes, no team memberships, never logged
+`revsports_players`, no roles, no voting records in the tables checked at the time, no team memberships, never logged
 in via `auth.users`).
+
+The original investigation did not record which voting tables were checked, so this historical "no voting records" finding cannot be assigned safely to Player MVP Voting or Umpire Match Voting.
 
 **A delete was attempted on these 3 profiles and was correctly BLOCKED by a
 foreign key constraint** (`revsports_player_registry_profile_id_fkey`) —

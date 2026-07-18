@@ -17,7 +17,7 @@ Companion to `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` and
 | `DEPLOYMENT.md` | create | Vercel auto-deploy on `main`, build/output, rollback, env setup, GitHub Actions scraper schedule. |
 | `DATABASE.md` | create | Table inventory, enums, RLS approach, the division/season-null caveat, migration policy, the "live schema is source of truth" rule. |
 | `TESTING.md` | create | Manual smoke/regression checklist now; plan for Vitest + Playwright; the "run lint/tsc/build before submitting" rule. |
-| `SECURITY.md` | create | Secret handling, anon-vs-service key boundary, RLS, public-token voting notes, how to report issues. |
+| `SECURITY.md` | create | Secret handling, anon-vs-service key boundary, RLS, historical public-token Player MVP Voting notes, Umpire Match Voting permissions, and how to report issues. |
 | `CHANGELOG.md` | create | Human-readable change history (seed it from the `notes/` session handoffs). |
 
 > Many of these can be distilled directly from the two handoff documents and the existing
@@ -82,11 +82,11 @@ Tick these off; ★ = blocks related implementation.
 - [ ] ★ Whether the `rg_*` risk/governance suite is in SportStack scope
 - [ ] ★ Exact contracts for `admin_save_user_roles` overloads and the `create-player` / `bulk-import` / `bulk-import-players` Edge Functions
 - [ ] Repo access for Codex (confirm it can read/clone; provide a token if it ever becomes private)
-- [ ] Screenshots of key admin screens + the voting portal (for UI accuracy)
+- [ ] Screenshots of key admin screens + both Player MVP Voting and Umpire Match Voting screens (for UI accuracy)
 - [ ] Confirm production URL/domain and DNS provider (Cloudflare vs Hostinger)
 - [ ] Vercel project name + confirmation the `VITE_*` env vars are set there
 - [ ] Supabase service key kept secret (and rotated if ever exposed)
-- [ ] A test game (fixture) to run the MVP voting flow end-to-end
+- [ ] A test game (fixture) to run the Player MVP Voting flow end-to-end
 - [ ] A test login (a non-super-admin account per role) for permission testing
 - [ ] Whether the Supabase CLI is used locally, or only the SQL editor (affects migrations)
 - [ ] GitHub Actions secrets confirmed present: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`

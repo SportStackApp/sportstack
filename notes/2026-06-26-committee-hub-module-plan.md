@@ -40,7 +40,7 @@ Risk Guard has the more complete feature set and safer table naming. Where Safet
 First Aid / WWCC expiry tracking shouldn't just be a static date in a table — it needs a notification/reminder mechanism down the track, or nobody will check it. Not needed for v1, but should be designed with this in mind (e.g. don't make expiry dates hard to query later).
 
 ### Design note: Committee Voting as a reusable pattern
-Voting (create poll → cast vote → close → tally) is a generic pattern. SportStack already has something similar in MVP voting. Worth designing Committee Voting so its logic isn't hard-locked to "committee" context only — it could live inside Committee Hub in the UI, but the underlying voting logic should be generic enough to reuse elsewhere later.
+Committee Voting (create poll → cast committee ballot → close → tally) is a separate generic poll pattern. SportStack already has related workflow ideas in Player MVP Voting, but Committee Voting is not Player MVP Voting or Umpire Match Voting. Its logic should not be hard-locked to "committee" context only — it could live inside Committee Hub in the UI, while the underlying poll logic remains reusable later.
 
 ---
 

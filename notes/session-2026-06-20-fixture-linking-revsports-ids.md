@@ -2,7 +2,7 @@
 ## Fixture linking, admin match details popup, RevSports ID capture
 
 ## What we set out to do
-Resume work on the MVP voting portal — specifically the in-app voting
+Resume work on the Player MVP Voting portal — specifically the in-app player voting
 blocker (linking RevSports player records to real SportStack accounts).
 Got sidetracked into several adjacent fixes that needed to happen first.
 All good, useful progress — just not the original target yet.
@@ -74,7 +74,7 @@ that the code looked right.
 
 ## On the horizon
 
-- **Original goal, still pending:** in-app player voting page (see
+- **Original Player MVP Voting goal, still pending:** in-app player voting page (see
   your games, vote 3/2/1 for teammates). Blocked on profile_id linking
   being made reliable and automatic.
 - **profile_id auto-linking** — apply the same "stamp it at write time"

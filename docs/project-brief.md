@@ -19,7 +19,7 @@ The current app is hockey-focused, but decisions should avoid blocking future mu
 
 ## Current Priority
 
-Keep work focused on the existing SportStack app and the next MVP voting module work.
+Keep work focused on the existing SportStack app and the next Player MVP Voting work.
 
 Near-term priority areas:
 
@@ -27,12 +27,54 @@ Near-term priority areas:
 - Team, club, association, division, venue, fixture, and player management
 - Bulk player import reliability
 - RevSports data staging
-- MVP voting module
+- Player MVP Voting
+- Umpire Match Voting
 - Safe, clear admin workflows
 
-## MVP Voting Module
+## Voting modules
 
-The MVP voting module is built and live. It works as follows:
+SportStack has two separate voting modules. They must not share a generic name in documentation, UI planning, permissions, tests, or future code.
+
+| Canonical name | Audience | Purpose | Short UI label | Suggested future code namespace |
+|---|---|---|---|---|
+| **Player MVP Voting** | Players | Players vote for their peers after a game | **Player MVP** | `player_mvp` |
+| **Umpire Match Voting** | Assigned or authorised umpires | Umpires submit official post-match votes for eligible people associated with a completed fixture | **Umpire Votes** | `umpire_match_votes` |
+
+These modules have separate audiences, permissions, workflows, submissions, and results. Do not describe either one only as "Voting", "Votes", "the voting module", or "the MVP module" where the meaning could be unclear.
+
+### Current identifier mapping
+
+The current code and older exported material use identifiers from different schema snapshots:
+
+| Identifier | Canonical meaning and scope |
+|---|---|
+| `mvp_*` | Current **Player MVP Voting** implementation. Current examples include `mvp_voting_sessions`, `mvp_vote_submissions`, `mvp_votes`, and `mvp_vote_audit`. |
+| `player_vote_*` | Current active **Umpire Match Voting** implementation. The `player_` prefix is historically misleading. Current examples are `player_vote_submissions`, `player_vote_lines`, and `player_vote_edits`. |
+| `vote_submissions`, `vote_lines`, `vote_edits` | Older or exported **Umpire Match Voting** identifiers. These exact unprefixed names are not present in the current repository code or generated Supabase types, but documentation must not imply that they never existed. |
+| `umpire_vote_*` | A separate umpire-related or umpire-rating schema family. Generated columns describe ratings of umpires linked to `umpire_fixtures`; its current product purpose is **UNKNOWN — needs confirmation**. Do not silently assign it to either canonical module. |
+
+Current routes and code identifiers follow the same mapping:
+
+- Player MVP Voting currently uses `/mvp-votes`, `/mvp-votes/:sessionId`, `/admin/mvp-voting`, `MvpVotes`, `MvpVoteCast`, `MvpVotingAdmin`, and the `mvp_*` objects above.
+- Umpire Match Voting currently uses `/umpire/vote`, `/admin/umpire-voting`, `UmpireVoteSubmit`, `UmpireVotingModule`, `umpireVoteSchemes`, and the `player_vote_*` objects above.
+
+Renaming existing routes, components, services, hooks, database objects, tests, or production schema is outside this documentation rule. Any future rename needs its own reviewed compatibility and migration plan.
+
+### Documentation-only follow-up candidates
+
+These existing identifiers are not renamed by this terminology pass:
+
+- Player MVP Voting UI labels: `Voting Sessions`, `Manage Voting`, and `MVP Votes`. Prefer **Player MVP Sessions**, **Manage Player MVP Voting**, **Player MVP Results**, or **Player MVP Ballot** according to context. Use **Player MVP** where space is limited.
+- Umpire Match Voting UI labels: `Umpire Voting`, `Vote Submission`, `Vote Submissions`, `Player Votes`, and `UMPIRE VOTE PORTAL`. Prefer **Umpire Match Submissions**, **Manage Umpire Match Voting**, **Umpire Match Results**, **Umpire Match Ballot**, or **Votes Awarded** according to context. Use **Umpire Votes** where space is limited. `Player Votes` is especially ambiguous because it could mean votes cast by players or votes awarded by umpires.
+- Cross-module permission and description copy also needs a future UI review. Current examples include `Administer voting sessions`, `View admin results unless separately authorised`, `Umpire voting and related fixture context`, `Their own umpire vote submission`, `Record best-player votes for matches in SportStack`, and `umpire best-player votes`. The last two also narrow the Umpire Match Voting product definition and should be replaced with official post-match or eligible-person wording.
+- Player MVP Voting routes/components/services: `/vote/:token`, `/voting`, `/mvp-votes`, `/mvp-votes/:sessionId`, `/admin/mvp-voting`, `VotingPortal`, `MvpVotes`, `MvpVoteCast`, `MvpVotingAdmin`, `mvpVoting`, and `mvp-voting-email-reminders`.
+- Umpire Match Voting routes/components/services: `/umpire/vote`, `/admin/umpire-voting`, `UmpireVoteSubmit`, `UmpireVotingModule`, and `umpireVoteSchemes`.
+- Database families: `mvp_*` belongs to Player MVP Voting; `player_vote_*` belongs to the active Umpire Match Voting workflow despite its name. The separate `umpire_vote_*` rating family needs confirmation before any rename or reuse.
+- No voting-specific hook or current test name was found. Add future tests under explicit `player_mvp` or `umpire_match_votes` naming.
+
+## Player MVP Voting
+
+Player MVP Voting is built and live. It works as follows:
 
 - Players voting 3/2/1 for best-on-ground style points
 - Only players who attended a game can vote or be voted for
@@ -44,13 +86,17 @@ The MVP voting module is built and live. It works as follows:
 - Full audit logging for admin changes
 - RevSports scraped data staged before matching to real profiles
 
-Current voting-related database tables:
+Current Player MVP Voting database tables:
 
 - `revsports_players` stores scraped player/game data
 - `mvp_voting_sessions` stores one voting session per game
 - `mvp_vote_tokens` stores private voting tokens
-- `mvp_votes` stores vote lines
+- `mvp_votes` stores Player MVP Voting vote lines
 - `mvp_vote_audit` stores admin change history
+
+## Umpire Match Voting
+
+Umpire Match Voting is the official completed-fixture workflow used by assigned or authorised umpires to submit votes for eligible people associated with the fixture. Its product definition is not restricted to players. The current submission fields and `player_vote_submissions`, `player_vote_lines`, and `player_vote_edits` names are player-specific implementation or legacy naming limitations; they must not be used to narrow the module's purpose or as the module name.
 
 ## Architecture Rules
 
@@ -83,7 +129,7 @@ Public and auth:
 - `/forgot-password`
 - `/reset-password`
 - `/pending`
-- `/vote/:token` (public token-based voting link)
+- `/vote/:token` (legacy Player MVP Voting token route)
 
 Protected app:
 
@@ -96,10 +142,10 @@ Protected app:
 - `/coaching/:playerId`
 - `/chat`
 - `/profile`
-- `/voting`
-- `/mvp-votes`
-- `/mvp-votes/:sessionId`
-- `/umpire/vote`
+- `/voting` (legacy Player MVP Voting portal route)
+- `/mvp-votes` (Player MVP Voting)
+- `/mvp-votes/:sessionId` (Player MVP Voting submission/result flow)
+- `/umpire/vote` (Umpire Match Voting submission)
 
 Admin:
 
@@ -119,7 +165,8 @@ Admin:
 - `/admin/fixture-import`
 - `/admin/venues`
 - `/admin/requests`
-- `/admin/mvp-voting`
+- `/admin/mvp-voting` (Player MVP Voting administration)
+- `/admin/umpire-voting` (Umpire Match Voting administration)
 - `/admin/analytics`
 
 Entity dashboards:
@@ -179,7 +226,7 @@ npm run lint
 - Custom formation builder is parked until core features are stable.
 - Multi-sport support is a future goal, not current scope.
 - Root `test_*.js` files may be old investigation scripts and should be reviewed before cleanup.
-- Permission re-scope: add explicit concepts for vote-submission visibility, committee access, committee president access, and module enable/disable by association, club, division, and team.
+- Permission re-scope: define Player MVP Voting submission/result visibility separately from Umpire Match Voting submission/result visibility, alongside committee access, committee president access, and module enable/disable by association, club, division, and team.
 - Permission re-scope: parent permissions should flow down, but child scopes need clear exclude/override rules with warning prompts.
 - User profile address structure is parked for a later structured-address pass; keep current address changes small.
 - Formation/pitch rotation for mobile is parked for a later lineup/formation builder pass.

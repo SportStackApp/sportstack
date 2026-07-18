@@ -33,10 +33,10 @@ The Supabase emails for password resets, placeholder claim links, and welcome me
 **Status:** Parked - include in the permission/module re-scope
 
 **Do:**
-- Add explicit permission concepts for vote-submission visibility, committee access, and committee president access.
+- Add separate permission concepts for Player MVP Voting submission/result visibility and Umpire Match Voting submission/result visibility, plus committee access and committee president access.
 - Allow module enable/disable rules at association, club, division, and team level.
 - Keep inheritance clear: parent permissions flow down, but child scopes can be excluded or overridden with warning prompts.
-- Consider Club Admin visibility for vote submissions; do not hard-code this to Super Admin and Association Admin only.
+- Decide Club Admin visibility separately for Player MVP Voting submissions/results and Umpire Match Voting submissions/results; do not apply one module's rule to the other or hard-code both to Super Admin and Association Admin only.
 
 **Do not:**
 - Add one-off hard-coded permission checks that will need to be unwound during the re-scope.

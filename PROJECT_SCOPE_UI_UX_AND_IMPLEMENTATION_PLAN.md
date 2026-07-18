@@ -11,15 +11,21 @@
 
 ## 1. Product summary
 
-- **What it is:** A private web app that turns RevSports hockey competition data into a clean, admin-friendly system for regional Victorian associations, plus team/player tools and a Best-on-Ground/MVP voting workflow.
+- **What it is:** A private web app that turns RevSports hockey competition data into a clean, admin-friendly system for regional Victorian associations, plus team/player tools, Player MVP Voting, and Umpire Match Voting.
 - **Who it's for:** Hockey Ballarat (HB), Sunraysia Hockey Association (SHA), Wimmera Hockey Association (WHA) — their admins, clubs, teams, coaches, players, and umpires. The super admin/owner runs the platform.
-- **Problem it solves:** RevSports is read-only and clunky for admins; clubs juggle spreadsheets. SportStack centralises fixtures, rosters, results, player history, and voting.
-- **Success looks like:** Each association's fixtures/results/rosters load automatically from scrapers with clean mappings; admins manage entities without spreadsheets; the MVP voting round runs end-to-end (open → email links → votes → results) for a real game.
+- **Problem it solves:** RevSports is read-only and clunky for admins; clubs juggle spreadsheets. SportStack centralises fixtures, rosters, results, player history, Player MVP Voting, and Umpire Match Voting.
+- **Success looks like:** Each association's fixtures/results/rosters load automatically from scrapers with clean mappings; admins manage entities without spreadsheets; Player MVP Voting runs end-to-end for a real game; and authorised umpires can submit and administrators can review Umpire Match Voting records.
 - **What it is NOT (current scope):** not multi-sport yet, not multi-tenant/commercial, no payments, no full custom formation builder, no push notifications. (Per `docs/project-brief.md` "Do Not Build Unless Explicitly Asked".)
 
 ---
 
 ## 2. Current state
+
+Terminology used below:
+
+- **Player MVP Voting**: players vote for peers after a game. Short UI label: **Player MVP**. Suggested future namespace: `player_mvp`.
+- **Umpire Match Voting**: assigned or authorised umpires submit official post-match votes for eligible people associated with a completed fixture. Short UI label: **Umpire Votes**. Suggested future namespace: `umpire_match_votes`.
+- The modules have separate permissions, workflows, submissions, and results. Do not shorten either to a generic "Voting" or "Votes" label where the meaning could be unclear.
 
 | Feature | Status | Notes | Files/components | Next action |
 |---|---|---|---|---|
@@ -33,20 +39,20 @@
 | Fixtures management | **Built** | 517 fixtures; 221 completed with scores | `FixturesManagement.tsx`, `Games.tsx`, `GameDetail.tsx` | Depends on FK fix |
 | Bulk import / Add player | **Built** | Edge Functions back these | `BulkImport.tsx`, `AddPlayer.tsx`, edge fns | Reconcile `bulk-import-players` repo↔deploy |
 | Team memberships / roster | **Built** | 1,212 memberships | `Roster.tsx`, `team_memberships` | Verify single ACTIVE badge per user (per memory) |
-| MVP/Best-on-Ground voting | **Partial** | infra built (sessions, tokens, RLS, audit); 2 sessions, 0 tokens/votes | `VotingPortal.tsx`, `MvpVotingAdmin.tsx`, `mvp_*` tables | Player matching, email sending, auto-close |
-| Umpire voting (umpire→umpire) | **Schema only** | tables exist, 0 rows | `UmpireVoteSubmit.tsx`, `umpire_*` tables | Wire UI; needs umpire accounts |
-| Player-vote migration (legacy umpire portal) | **Partial** | 2 submissions / 3 lines migrated | `player_vote_*` tables | Re-link to umpire profiles once accounts exist |
+| Player MVP Voting | **Partial in this dated plan** | infra built (sessions, tokens, RLS, audit); 2 sessions, 0 tokens/votes | `VotingPortal.tsx`, `MvpVotingAdmin.tsx`, `mvp_*` tables | Player matching, email sending, auto-close |
+| Umpire Match Voting | **Partial in this dated plan** | legacy umpire-portal submissions and lines migrated | `UmpireVoteSubmit.tsx`, `player_vote_*` tables | Re-link historical submissions to umpire profiles where safe |
+| Umpire rating schema (separate, not Umpire Match Voting) | **Schema only** | `umpire_vote_*` tables contain umpire-rating fields and 0 rows | generated Supabase types, `umpire_*` tables | **UNKNOWN — needs confirmation** before product planning |
 | Coaching squad / assessments | **Partial** | UI present; assessment/preference tables empty | `coaching/*`, `coach_position_assessments`, `player_position_preferences` | Confirm scope |
 | Lineup planner | **Schema only** | `lineups` table empty; DnD libs installed | `Lineup.tsx`, `components/lineup/*` | Build (design agreed in memory) |
 | Chat / team messages | **Stub** | route exists; `team_messages` empty | `Chat.tsx` | Confirm if in scope |
 | Notifications (in-app) | **Stub** | tables empty, unwired | `notifications*` tables | Parked |
-| Email (voting links/reminders) | **Not built** | no provider/SDK | — | Choose provider; build sending |
+| Email (Player MVP Voting links/reminders) | **Not built** | no provider/SDK | — | Choose provider; build sending |
 | Risk/Governance (`rg_*`) | **Schema only** | full schema + RLS; ~0 data; matrix seeded | `rg_*` tables | Confirm whether in SportStack scope |
 | Automated tests / CI build gate | **Not built** | none | — | Add CI |
 
 **Works locally:** the SPA against the shared Supabase project; scrapers run from PowerShell.
 **Works in production:** the deployed SPA (Vercel) + scheduled scrapers.
-**Broken/uncertain:** fixture FK population (division/season); voting end-to-end; email; umpire voting UI.
+**Broken/uncertain in this dated plan:** fixture FK population (division/season); Player MVP Voting end-to-end; Player MVP Voting email; and the separate umpire-rating schema status.
 
 ---
 
@@ -56,15 +62,15 @@ Roles (live enum, 9): SUPER_ADMIN, ASSOCIATION_ADMIN, CLUB_ADMIN, TEAM_MANAGER, 
 
 | Role | Can see | Can do | Cannot do | Main screens | Edge cases |
 |---|---|---|---|---|---|
-| SUPER_ADMIN | Everything across all associations | All CRUD, mappings, imports, voting admin, user roles | n/a | all `/admin/*` | Only 1 exists (the owner); seed row reportedly disappears |
+| SUPER_ADMIN | Everything across all associations | All CRUD, mappings, imports, Player MVP Voting admin, Umpire Match Voting admin, user roles | n/a | all `/admin/*` | Only 1 exists (the owner); seed row reportedly disappears |
 | ASSOCIATION_ADMIN | Their association's clubs/teams/fixtures | Manage within association | Cross-association data | `/admin/*` scoped | Scope cascade must enforce association |
 | CLUB_ADMIN | Their club's teams/players | Manage club teams, rosters | Other clubs | club-scoped admin/dashboards | |
 | TEAM_MANAGER | Their team | Manage roster, lineup, availability | Other teams | `/roster`, `/games`, `/games/:id/lineup` | Often same person as COACH |
 | COACH | Their team + coaching tools | Assessments, squad view, lineup | Admin CRUD | `/coaching`, `/coaching/:playerId` | |
-| PLAYER | Their team(s), own profile | View games, set availability, vote | Admin/other teams | `/dashboard`, `/games`, `/profile` | Many are placeholder accounts |
-| UMPIRE | Umpire voting screens | Submit votes | Admin | `/umpire/vote` | Needs SportStack account |
-| UMPIRE_ADMIN | Umpire scheduling/voting admin | Manage umpire rounds/votes | non-umpire admin | umpire admin (UNKNOWN — confirm screen) | |
-| VOTER (public, token) | A single voting page | Cast 3/2/1 votes via `/vote/:token` | Anything else | `/vote/:token` (no login) | Token expiry + single-use |
+| PLAYER | Their team(s), own profile | View games, set availability, participate in Player MVP Voting | Admin/other teams | `/dashboard`, `/games`, `/profile`, `/mvp-votes` | Many are placeholder accounts |
+| UMPIRE | Umpire Match Voting screens | Submit official Umpire Match Voting choices | Admin | `/umpire/vote` | Needs SportStack account |
+| UMPIRE_ADMIN | Umpire scheduling and Umpire Match Voting admin | Manage umpire rounds and authorised submissions | non-umpire admin | umpire admin (UNKNOWN — confirm screen) | |
+| VOTER (historical public Player MVP token flow) | A single Player MVP Voting page | Cast 3/2/1 Player MVP choices via `/vote/:token` | Anything else | `/vote/:token` (no login) | Token expiry + single-use |
 
 ---
 
@@ -91,7 +97,7 @@ Roles (live enum, 9): SUPER_ADMIN, ASSOCIATION_ADMIN, CLUB_ADMIN, TEAM_MANAGER, 
 - Trigger: admin edit form. `updated_at` maintained by triggers. Confirm before overwriting scraped values.
 
 **Deleting/archiving**
-- Trigger: admin delete. **Order matters** for fixtures: delete `player_vote_edits` → `player_vote_lines` → `player_vote_submissions` → `fixtures`. Always confirm (destructive on prod).
+- Trigger: admin delete. **Order matters** for fixtures with Umpire Match Voting data: delete `player_vote_edits` → `player_vote_lines` → `player_vote_submissions` → `fixtures`. Always confirm (destructive on prod).
 
 **Searching/filtering**
 - Users page: planned Division/Team filter dropdowns + rows-per-page (10/25/50, default 25) across admin pages (per memory).
@@ -99,11 +105,14 @@ Roles (live enum, 9): SUPER_ADMIN, ASSOCIATION_ADMIN, CLUB_ADMIN, TEAM_MANAGER, 
 **Importing/exporting**
 - `/admin/bulk-import` (xlsx). Bulk import must **not** email players.
 
-**Email/notification flow (PLANNED)**
-- Trigger: open MVP session → issue tokens → send links → 48h/24h reminders. Currently no sending mechanism.
+**Player MVP Voting email/notification flow (PLANNED)**
+- Trigger: open Player MVP Voting session → issue tokens → send links → 48h/24h reminders. Currently no sending mechanism in this dated plan.
 
-**Voting (public)**
-- Trigger: voter opens `/vote/:token`. Steps: see eligible players (attended, no self-vote) → assign 3/2/1 → submit → token marked voted. Result: `mvp_votes` rows. Errors: expired/used token. Empty: closed session.
+**Player MVP Voting (historical public-token journey)**
+- Trigger: voter opens `/vote/:token`. Steps: see eligible players (attended, no self-vote) → assign 3/2/1 → submit → token marked voted. Result: `mvp_votes` rows. Errors: expired/used token. Empty: closed Player MVP Voting session.
+
+**Umpire Match Voting**
+- Trigger: assigned or authorised umpire opens `/umpire/vote`. Steps: select completed fixture → enter official eligible-person votes → review → submit. Result: `player_vote_submissions` and `player_vote_lines` rows. Admin review/history uses `player_vote_edits`.
 
 **Error recovery**
 - Toasts via `sonner`; failed writes surface errors. No global error boundary confirmed (consider adding).
@@ -127,7 +136,7 @@ Roles (live enum, 9): SUPER_ADMIN, ASSOCIATION_ADMIN, CLUB_ADMIN, TEAM_MANAGER, 
 | Signup | `/signup` | public | registration |
 | Forgot/Reset password | `/forgot-password`, `/reset-password` | public | password flow |
 | Pending | `/pending` | public/auth | awaiting role grant |
-| Voting portal (public) | `/vote/:token` | token | cast votes |
+| Player MVP Voting portal (historical public flow) | `/vote/:token` | token | cast Player MVP choices |
 
 **Protected app**
 | Screen | Route | Access | Purpose |
@@ -138,12 +147,12 @@ Roles (live enum, 9): SUPER_ADMIN, ASSOCIATION_ADMIN, CLUB_ADMIN, TEAM_MANAGER, 
 | Roster | `/roster` | team users | team members |
 | Coaching squad / player | `/coaching`, `/coaching/:playerId` | coach | assessments |
 | Chat | `/chat` | team users | team messages (stub) |
-| Umpire vote submit | `/umpire/vote` | umpire | submit umpire votes |
-| Voting (internal) | `/voting` | logged-in | voting portal |
+| Umpire Match Voting submission | `/umpire/vote` | umpire | submit official completed-fixture votes |
+| Player MVP Voting portal (legacy internal route) | `/voting` | logged-in | legacy Player MVP portal |
 | Profile | `/profile` | self | edit profile/avatar |
 
 **Admin** (`/admin` + 16 subroutes)
-`/admin`, `/admin/associations`, `/admin/competitions`, `/admin/clubs`, `/admin/teams`, `/admin/divisions`, `/admin/users`, `/admin/add-player`, `/admin/bulk-import`, `/admin/revsports-mappings`, `/admin/revsports-unmatched`, `/admin/fixtures`, `/admin/fixture-import`, `/admin/venues`, `/admin/requests`, `/admin/mvp-voting`.
+`/admin`, `/admin/associations`, `/admin/competitions`, `/admin/clubs`, `/admin/teams`, `/admin/divisions`, `/admin/users`, `/admin/add-player`, `/admin/bulk-import`, `/admin/revsports-mappings`, `/admin/revsports-unmatched`, `/admin/fixtures`, `/admin/fixture-import`, `/admin/venues`, `/admin/requests`, `/admin/mvp-voting` (Player MVP Voting), `/admin/umpire-voting` (Umpire Match Voting).
 
 **Entity dashboards** `/associations/:id`, `/clubs/:id`, `/admin/division`, `/teams/:id`.
 
@@ -173,11 +182,12 @@ For each admin screen: purpose = CRUD over its entity; data source = matching ta
 | Season / Competition | Season period / competition within it | assoc admin | assoc admin | assoc admin | admin | divisions, fixtures | SHA has Grass Field + Indoor; HB Winter |
 | Division | A grade (age/gender) | assoc admin | assoc admin | assoc admin | admin | teams, fixtures | age bounds via `min_age`/`max_age` |
 | Team | A team (club + division) | club/assoc admin | manager/admin | admin | admin, roster, dashboards | memberships, fixtures | prefer `team_divisions` over text `division` |
-| Player/Profile | A person | signup / import / scraper | self/admin | admin | profile, roster | memberships, votes | placeholder vs real (`is_placeholder`) |
+| Player/Profile | A person | signup / import / scraper | self/admin | admin | profile, roster | memberships, Player MVP Voting records, Umpire Match Voting eligibility | placeholder vs real (`is_placeholder`) |
 | Team membership | Player↔team link | manager/admin | manager/admin | manager/admin | roster | profile, team | one PRIMARY per player (intended) |
 | Fixture | A scheduled/played game | import/admin | admin | admin (ordered delete) | games, fixtures | teams, scores | `revsports_match_url` unique key |
-| MVP voting session | One voting round per game | admin | admin | admin | mvp-voting | tokens, votes | only attendees vote/are voted; no self-vote; 72h window |
-| Vote token | Private per-voter link | system on open | — | admin | (emailed) | session | random, expiring, single-use (target) |
+| Player MVP Voting session | One player-to-player voting round per game/team | admin | admin | admin | Player MVP Voting admin | tokens/submissions/vote lines | only eligible attendees vote/are voted; no self-vote; time-limited |
+| Player MVP Voting token | Historical private per-voter link | system on open | — | admin | emailed Player MVP link | Player MVP Voting session | random, expiring, single-use (target) |
+| Umpire Match Voting submission | One official umpire submission for a completed fixture | assigned/authorised umpire or approved proxy | authorised admin | authorised admin | Umpire Match Voting admin | `player_vote_lines`, `player_vote_edits`, fixture | separate permissions and results from Player MVP Voting |
 | RevSports staging rows | Raw scraped data | scraper | pipeline | admin | mappings/unmatched | mappings | not the final profile source |
 
 Future fields (ASSUMPTION): player DOB / Hockey Vic number (needs association export); umpire profile links; club colours/logos.
@@ -193,13 +203,14 @@ Future fields (ASSUMPTION): player DOB / Hockey Vic number (needs association ex
 
 ### In-progress
 - **Fixture import bridge** — progress: imports teams/scores; remaining: populate `division_id`/`season_id`, backfill 517; blocker: none; **Codex task:** see Phase 2 T-B1.
-- **MVP voting** — progress: schema + admin + portal; remaining: player matching, email sending, auto-close; blocker: email provider; **Codex task:** Phase 3 T-V1..V3.
+- **Player MVP Voting** — progress in this dated plan: schema + admin + portal; remaining: player matching, email sending, auto-close; blocker: email provider; **Codex task:** Phase 3 T-V1..V3.
 - **Coaching** — progress: UI; remaining: confirm assessment flow; blocker: scope confirmation.
 
 ### Planned
 - **Lineup Planner** — purpose: pick/position a team for a fixture; priority: medium; deps: fixtures stable; approach: fixture-scoped DnD + formation picker writing to `lineups`; acceptance: save/load a lineup per fixture.
-- **Umpire Management/Voting UI** — purpose: schedule umpires + ratings; priority: medium; deps: umpire accounts; approach: wire `umpire_*` tables to `/umpire/vote` + admin.
-- **Email system** — purpose: voting links + reminders; priority: high (unblocks voting); deps: provider choice + domain DNS; approach: server-side send via Edge Function/provider SDK.
+- **Umpire Match Voting UI** — purpose: official completed-fixture votes by authorised umpires; priority: medium; current active identifiers: `/umpire/vote`, `/admin/umpire-voting`, and `player_vote_*`.
+- **Umpire rating schema review** — purpose: decide whether `umpire_vote_*` rating tables are still a separate planned product; status: **UNKNOWN — needs confirmation**.
+- **Email system** — purpose: Player MVP Voting links + reminders; priority: high (unblocks that module); deps: provider choice + domain DNS; approach: server-side send via Edge Function/provider SDK.
 - **Stats/Ladder** — purpose: standings from fixtures; priority: medium; deps: fixture FK fix.
 - **Player Compliance/Registration, Committee Management** — future modules.
 
@@ -225,7 +236,7 @@ Future fields (ASSUMPTION): player DOB / Hockey Vic number (needs association ex
 - Goal: correct fixture FKs + mapping save bug. Tasks: (T-B1) make `fixture_import.py` populate `division_id` (via `revsports_grade_mappings`) and `season_id` (via `revsports_competition_mappings`); backfill 517 rows; (T-B2) fix mapping status flip-to-`matched`; (T-B3) duplicate-team-name import preview warning. Files: `scraper/fixture_import.py`, `RevSportsMappings.tsx`, `FixtureImport.tsx`. Risks: writes to prod — dry-run first. Acceptance: `fixtures WHERE division_id IS NULL` = 0; mappings save as matched. Tests: import dry-run counts; manual UI check.
 
 **Phase 3 — Complete unfinished core features**
-- Goal: MVP voting end-to-end. Tasks: (T-V1) link `revsports_players.profile_id` via player mappings; (T-V2) email provider + send links + 48h/24h reminders; (T-V3) session auto-close (scheduler). Files: scrapers/mapping admin, new email Edge Function, `MvpVotingAdmin.tsx`, `VotingPortal.tsx`. Risks: emailing real people — gate behind a test mode. Acceptance: a test game runs open→vote→close. Tests: token single-use; no self-vote; attendee-only.
+- Goal: Player MVP Voting end-to-end. Tasks: (T-V1) link `revsports_players.profile_id` via player mappings; (T-V2) email provider + send links + 48h/24h reminders; (T-V3) session auto-close (scheduler). Files: scrapers/mapping admin, new email Edge Function, `MvpVotingAdmin.tsx`, `VotingPortal.tsx`. Risks: emailing real people — gate behind a test mode. Acceptance: a test game runs open→vote→close. Tests: Player MVP token single-use; no self-vote; attendee-only.
 
 **Phase 4 — Improve UI/UX**
 - Goal: consistency. Tasks: apply dropdown-truncation standard everywhere; add rows-per-page (10/25/50) + Division/Team filters to admin pages; single ACTIVE badge per user on Users; team column format `Association / Club / Division / Team (+N more)`; apply timezone display fix. Files: `src/pages/admin/*`, shared table components. Risks: low. Acceptance: visual checks per page. Tests: build + manual.
@@ -295,7 +306,7 @@ Future fields (ASSUMPTION): player DOB / Hockey Vic number (needs association ex
 - **T-DOC1** Add `AGENTS.md`, `DEPLOYMENT.md`, `DATABASE.md`, `TESTING.md`, `SECURITY.md`, `CHANGELOG.md`. Risk: Low.
 
 ### Future features
-- **T-F1** Lineup Planner (writes `lineups`). **T-F2** Stats/Ladder (needs T-B1). **T-F3** Umpire voting UI. Risk: Med–High; each Confirm? **Yes.**
+- **T-F1** Lineup Planner (writes `lineups`). **T-F2** Stats/Ladder (needs T-B1). **T-F3** Umpire Match Voting UI. Risk: Med–High; each Confirm? **Yes.**
 
 ---
 
@@ -312,7 +323,7 @@ Future fields (ASSUMPTION): player DOB / Hockey Vic number (needs association ex
 | 4 Jun 2026 | Data | Data audit handoff | `notes/session-handoff-data-audit-2026-06-04.md` | — |
 | 5 Jun 2026 | Data | Cleanup: deleted dirty rows, fixed grade mappings, split SHA seasons, wiped HB/SHA fixtures for re-import | `notes/session-2026-06-05-data-alignment.md` | T-B1 |
 | date unknown | Pipeline | `revsports_match_url` unique key + re-scrape (fixtures now 517) | live DB | division/season still null |
-| date unknown | Voting | Player-vote migration (legacy umpire portal) | `player_vote_*` rows | re-link umpires |
+| date unknown | Umpire Match Voting | Legacy umpire-portal migration | `player_vote_*` rows | re-link umpires |
 | date unknown | CI | Node 24 deprecation fix + fixture_import step in workflows | workflow YAMLs | — |
 
 ---
@@ -358,7 +369,7 @@ Future fields (ASSUMPTION): player DOB / Hockey Vic number (needs association ex
 - Vercel project name + env values present?
 
 **Third-party**
-- [BLOCKER for voting] Email provider choice (Resend?) + sending domain.
+- [BLOCKER for Player MVP Voting] Email provider choice (Resend?) + sending domain.
 - Role of Activepieces/Zapier (if any) for SportStack.
 
 **Security**
@@ -416,12 +427,12 @@ REPORTING COMPLETED WORK
 
 ## 15. Final handoff summary
 
-- **Plain-English summary:** SportStack scrapes hockey data from RevSports, cleans and maps it in Supabase, and presents admin/team/player tools plus a Best-on-Ground voting flow, for three Victorian associations.
-- **Current state:** Core CRUD, auth, scrapers, and mappings work. Fixtures import but are missing division/season links. MVP voting is built but not yet running end-to-end (needs player matching + email). No tests/CI gate.
+- **Plain-English summary:** SportStack scrapes hockey data from RevSports, cleans and maps it in Supabase, and presents admin/team/player tools plus separate Player MVP Voting and Umpire Match Voting flows for three Victorian associations.
+- **Current state in this dated plan:** Core CRUD, auth, scrapers, and mappings work. Fixtures import but are missing division/season links. Player MVP Voting is built but not yet running end-to-end (needs player matching + email). Umpire Match Voting uses the historical `player_vote_*` data path. No tests/CI gate.
 - **Highest-risk areas:** (1) single prod Supabase project; (2) no build gate before auto-deploy to `main`; (3) fixture FK nulls breaking downstream joins; (4) service key in CI.
 - **Best first Codex task:** **Phase 0 findings report** (read-only) — confirm the docs vs the repo/DB and list mismatches. No code changes.
 - **Best second Codex task:** **T-S2 (CI build gate)** then **T-B1 (fix fixture `division_id`/`season_id`)** with a dry-run and owner confirmation.
-- **What the owner should prepare:** answers to the four blockers (§13); confirmation of npm vs Bun; Supabase service key kept secret; an email provider decision; a test game for the voting flow.
+- **What the owner should prepare:** answers to the four blockers (§13); confirmation of npm vs Bun; Supabase service key kept secret; an email provider decision; a test game for the Player MVP Voting flow.
 - **What Codex should NOT touch yet:** RLS/auth/role enum, Edge Functions, destructive data scripts, and anything that deploys to `main` — until Phase 0 is reviewed and the owner confirms.
 
 *End of Document 2.*

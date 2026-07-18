@@ -82,12 +82,12 @@ Sunraysia runs two separate competitions — Grass Field and Indoor. SportStack 
 
 ### 7. HB and SHA Fixtures Wiped — Ready for Scraper Import
 
-Old HB and SHA fixtures deleted along with all associated umpire vote test data. All 50 vote submissions were from test+ prefixed accounts. Last vote entry was 1 June 2026.
+Old HB and SHA fixtures deleted along with all associated Umpire Match Voting test data. All 50 Umpire Match Voting submissions were from `test+` prefixed accounts. Last Umpire Match Voting entry was 1 June 2026.
 
 **Deleted:**
-- 7 vote edits
-- 116 vote lines
-- 50 vote submissions
+- 7 Umpire Match Voting edit rows
+- 116 Umpire Match Voting line rows
+- 50 Umpire Match Voting submission rows
 - 114 HB fixtures
 - 90 SHA fixtures
 
@@ -157,6 +157,6 @@ When a mapping is saved, `status` stays as `'unmatched'` even when an ID is sele
 - `revsports_match_url` is the only reliable unique identifier linking scraper data to a specific game — use as upsert conflict key
 - SHA Indoor competition has only one grade: `Indoor Mixed`
 - `revsports_competition_mappings` uses column `competition_id` (not `season_id`)
-- Delete order for fixtures: `player_vote_edits` -> `player_vote_lines` -> `player_vote_submissions` -> `fixtures`
+- Umpire Match Voting delete order for fixtures: `player_vote_edits` -> `player_vote_lines` -> `player_vote_submissions` -> `fixtures`
 - WHA fixtures cover full season (Rounds 1-15, 177 games) — imported from spreadsheet, do not touch
 - Placeholder player emails follow pattern: `player.[revsports_player_id]@placeholder.sportstack.com.au`

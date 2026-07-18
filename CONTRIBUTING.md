@@ -18,7 +18,7 @@ Examples:
 
 - `docs(repo): add handoff documentation`
 - `fix(fixtures): handle missing venue names`
-- `feat(voting): add session status filter`
+- `feat(player-mvp): add Player MVP Voting session status filter`
 
 ## Pull request checklist
 

@@ -1,14 +1,14 @@
 # SportStack — Session Handover
 
 **Date:** 24 June 2026 (afternoon/evening session)
-**Type:** Verify previous fixes, close out votes-privacy gap, deploy to production, resolve duplicate-profile backlog
+**Type:** Verify previous fixes, close out the Player MVP Voting privacy gap, deploy to production, resolve duplicate-profile backlog
 **Continues from:** `2026-06-24-project-health-review-handover.md` (this morning's session)
 
 ---
 
 ## TL;DR for next session
 
-Two real fixes confirmed and deployed to production today: `admin_save_user_roles` save bug (tested ✅) and the MVP votes privacy RLS gap (built, tested across all 5 roles ✅, deployed ✅). The duplicate-profile backlog from this morning's review turned out to be a false alarm — 7 of 8 flagged names are genuinely different real people, and the 8th (Ben S) is a data gap between two scraper pipelines, not a duplicate. A delete was attempted on 3 "Ben S" profiles and correctly blocked by a foreign key constraint — no data was lost.
+Two real fixes confirmed and deployed to production today: `admin_save_user_roles` save bug (tested ✅) and the Player MVP Voting privacy RLS gap (built, tested across all 5 roles ✅, deployed ✅). The duplicate-profile backlog from this morning's review turned out to be a false alarm — 7 of 8 flagged names are genuinely different real people, and the 8th (Ben S) is a data gap between two scraper pipelines, not a duplicate. A delete was attempted on 3 "Ben S" profiles and correctly blocked by a foreign key constraint — no data was lost.
 
 ---
 
@@ -18,16 +18,16 @@ Two real fixes confirmed and deployed to production today: `admin_save_user_role
 - Tested live in the app: changed a role assignment for Aaron Mullane, saved, refreshed, reopened — change persisted correctly.
 - This closes out the fix from this morning's session.
 
-### 2. Fixed + tested + deployed: MVP votes privacy RLS gap
-- **Problem:** RLS policy on `mvp_votes` granted full read access (including who-voted-for-whom) to 5 roles: SUPER_ADMIN, ASSOCIATION_ADMIN, CLUB_ADMIN, COACH, TEAM_MANAGER. Per Aaron's stated rule, only Super Admin and Association Admin should see individual vote content — Club Admin/Coach/Team Manager should only see vote *submission status* ("voted: yes/no"), and Players should only see their own historic votes.
-- **Investigation before fixing:** confirmed via codebase search that Club Admin/Coach/Team Manager have no nav link to the screens that read raw `mvp_votes` (`Analytics.tsx`, `MvpVotingAdmin.tsx`) — those are Super Admin/Association Admin only in the UI. The page Club/Team roles actually use (`MvpVotes.tsx`) reads from `mvp_vote_submissions` instead, which was already correctly scoped (all 5 roles can read submission status only, no vote content). This meant tightening `mvp_votes` was low-risk — nothing the app shows those 3 roles depends on it.
+### 2. Fixed + tested + deployed: Player MVP Voting privacy RLS gap
+- **Problem:** RLS policy on `mvp_votes` granted full read access (including who-voted-for-whom) to 5 roles: SUPER_ADMIN, ASSOCIATION_ADMIN, CLUB_ADMIN, COACH, TEAM_MANAGER. Per Aaron's stated Player MVP Voting rule, only Super Admin and Association Admin should see individual choice content — Club Admin/Coach/Team Manager should only see Player MVP Voting *submission status* ("voted: yes/no"), and Players should only see their own historic choices.
+- **Investigation before fixing:** confirmed via codebase search that Club Admin/Coach/Team Manager have no nav link to the screens that read raw Player MVP Voting rows from `mvp_votes` (`Analytics.tsx`, `MvpVotingAdmin.tsx`) — those are Super Admin/Association Admin only in the UI. The Player MVP Voting page Club/Team roles actually use (`MvpVotes.tsx`) reads from `mvp_vote_submissions` instead, which was already correctly scoped (all 5 roles can read submission status only, no individual choice content). This meant tightening `mvp_votes` was low-risk — nothing the app shows those 3 roles depends on it.
 - **Fix applied:** dropped the old "Admins full access" policy, replaced with one limited to SUPER_ADMIN + ASSOCIATION_ADMIN only.
 - **Backup taken first:** `notes/2026-06-24-mvp_votes-policy-backup.sql` has the original policy text, restorable if needed.
-- **Tested live across all 5 roles via screenshots:** Player and Team Manager only see the basic vote-casting page (no privacy issue). Club Admin has no MVP Voting/Analytics nav item at all. Association Admin and Super Admin both see the full Individual Votes Log, correctly marked with a "RESTRICTED: VISIBLE TO SUPER AND ASSOCIATION ADMINS ONLY" badge that the UI already had — now the database actually enforces what that badge promises.
+- **Tested live across all 5 roles via screenshots:** Player and Team Manager only see the basic Player MVP Voting page (no privacy issue). Club Admin has no Player MVP Voting/Analytics nav item at all. Association Admin and Super Admin both see the full historical "Individual Votes Log", correctly marked with a "RESTRICTED: VISIBLE TO SUPER AND ASSOCIATION ADMINS ONLY" badge that the UI already had — now the database actually enforces what that badge promises.
 - Files: `supabase/migrations/20260624030000_restrict_mvp_votes_to_super_and_association_admin.sql`, `notes/2026-06-24-mvp_votes-policy-backup.sql`. Committed: `69fddc9`.
 
 ### 3. Deployed to production
-- Merged `dev` → `main` (6 commits, including this morning's `admin_save_user_roles` fix, grade ID matching fix, Profile Merge Tool, project-brief refresh, and today's votes-privacy fix).
+- Merged `dev` → `main` (6 commits, including this morning's `admin_save_user_roles` fix, grade ID matching fix, Profile Merge Tool, project-brief refresh, and today's Player MVP Voting privacy fix).
 - Pushed and confirmed live via Vercel MCP: deployment `dpl_2KhhM3ZQp8CCi2hPbLTHohHueqZy`, target `production`, state `READY`, commit `4a4278d`.
 - `dev` and `main` are now fully in sync (both at `4a4278d` before the next commit below).
 - Added `scratch/` (Aaron's one-off debug `.cjs` scripts) to `.gitignore` — keeps them off git permanently without needing to remember each time.
@@ -36,7 +36,7 @@ Two real fixes confirmed and deployed to production today: `admin_save_user_role
 - **Rule applied throughout:** different RevSports player ID + different club = different real person, not a duplicate. Same name alone isn't enough evidence (Aaron confirmed this from real-world knowledge of the comps — regional hockey has many genuinely different people sharing a first name + surname initial).
 - **7 of 8 confirmed as different real people**, no merge needed: Claire B, Hamish S, Hayden S, Lachlan M, Nick T, Reuben P, Riley K. Each pair has a different RevSports ID and a different club (or, for Riley K, same club but Aaron confirmed from direct knowledge they're two different real players).
 - **Ben S (×4 profiles) — near-miss caught, no data lost:**
-  - Initial read: 3 of 4 "Ben S" profiles looked like empty placeholder accounts (no club/grade/appearances in `revsports_players`, no roles, no votes, no team memberships, never logged in).
+  - Initial read: 3 of 4 "Ben S" profiles looked like empty placeholder accounts (no club/grade/appearances in `revsports_players`, no roles, no voting records in the tables checked at the time, no team memberships, never logged in). The historical record did not say which module's tables were checked.
   - A delete was attempted on these 3 profiles + their `auth.users` rows.
   - **The delete was correctly BLOCKED by a foreign key constraint** (`revsports_player_registry_profile_id_fkey`) before any data was removed.
   - Investigating the constraint revealed all 3 profiles have real season stats in `revsports_player_registry` (a season-totals table from the separate Playwright-based registry scraper, not reviewed in this morning's health review) — 6-7 games attended each, matching the same 3 real players (Ben S, Ben Schwedes, Ben Sturmfels) seen with full match data in `revsports_players`.
@@ -71,7 +71,7 @@ Two real fixes confirmed and deployed to production today: `admin_save_user_role
 ---
 
 ## Commits this session
-1. `69fddc9` (dev) — votes privacy RLS fix + policy backup + gitignore scratch/
+1. `69fddc9` (dev) — Player MVP Voting privacy RLS fix + policy backup + gitignore scratch/
 2. `4a4278d` (dev + main, via merge) — deploy of all 6 pending commits to production
 3. `813763e` (dev only) — duplicate profile investigation notes
 

@@ -1,4 +1,6 @@
-# Session Handover — MVP Voting Module Full Review (Grampians Pumas)
+# Session Handover — Player MVP Voting Full Review (Grampians Pumas)
+
+> Terminology clarification added 16 July 2026: this historical record is entirely about **Player MVP Voting**. Historical UI labels such as "MVP Votes" and "Voting Sessions" are preserved below because they were the labels shown at the time.
 
 **Date:** Sunday 21 June 2026 (overnight autonomous session)
 **Branch:** all work on `dev` (NOT yet merged to `main` — Vercel will not deploy until you merge)
@@ -6,7 +8,7 @@
 ---
 
 ## What you asked for
-A full end-to-end review of the voting module focused on Grampians Pumas: check the
+A full end-to-end review of Player MVP Voting focused on Grampians Pumas: check the
 session screen showing "0/0 voted" (wrong), make sure you can see who voted and their
 tally, make sure the Grampians Champion shoutout shows, set up newer rounds so one is
 open for you to test, and fix anything broken. You went to bed and left me to make the
@@ -15,7 +17,7 @@ calls, back up before destructive changes, and document everything.
 ## The three issues you raised — all fixed
 
 1. **"0 out of 0 voted" was wrong.**
-   The admin Voting Sessions page was still counting via the old token system (those
+   The Player MVP Voting admin "Voting Sessions" page was still counting via the old token system (those
    tables are empty under the new login-based model). Rewrote the counting to use the
    new `mvp_vote_submissions` table. Now shows real numbers:
    Round 1 = 14/14, Round 2 = 9/11, Round 3 = 9/12, Round 4 = 13/13, Round 5 = 0/9,
@@ -37,7 +39,7 @@ calls, back up before destructive changes, and document everything.
 
 The vote-casting page filtered eligible players by team name. But Pumas players come
 through the scraper with a BLANK team value (the opposition gets the real name).
-That filter would have returned an empty player list — nobody to vote for. Rewrote it
+That filter would have returned an empty Player MVP Voting candidate list. Rewrote it
 to match "same side as the voter" which handles the blank correctly. Verified it
 returns the correct 11 eligible players, including fill-in Nicholas H.
 
@@ -76,7 +78,7 @@ returns the correct 11 eligible players, including fill-in Nicholas H.
 - Admin Voting Sessions list — real voted/total counts
 - Admin View Results — leaderboard + voter status + shoutouts (Round 4)
 - Vote-casting form loads for the open Round 6 session with the 3/2/1 selects + shoutout
-- "Voting Closed" state for closed sessions
+- Player MVP Voting "Voting Closed" state for closed sessions
 - "You're all caught up" state on the MVP Votes list
 
 ## Still open (NOT done — by design, needs your input)
