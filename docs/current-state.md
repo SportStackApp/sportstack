@@ -86,6 +86,52 @@ After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
 
+Date: 2026-07-18
+
+What changed:
+
+- Added a RevSports placeholder planner that is read-only by default and produces a CSV report for unmatched external players.
+- Added a guarded, manual apply path that requires one RevSports player ID, an explicit confirmation flag, and a separate non-production Supabase project.
+- The apply path refuses the known live SportStack project, re-reads the source before writing, and only accepts a safe `create_placeholder` or `link_existing` result.
+- It creates or reuses one exact-ID profile, one appropriate team membership, and one matched external profile link without using display-name matching.
+- Validated Max F. (`XereEs8`) against SportStack Dev project `icqegnpjbizccjebjfhb`.
+- The first apply created one placeholder/Auth shell, one active `FILL_IN` membership for Blaze, and one matched external link.
+- The second apply safely stopped because the player was already linked. No duplicate profile, Auth shell, membership, or link was created.
+- The final dry-run reported `skip` / `already linked`.
+- The same-name Max F. profile with a different RevSports ID remained unchanged.
+- Player MVP Voting and Umpire Match Voting counts remained unchanged.
+- No production Supabase write, migration, RLS/Auth policy change, role change, Edge Function change, workflow change, scraper wiring, commit, push, or deployment was included.
+
+Files changed:
+
+- `scripts/revsports_placeholder_plan.py`
+- `tests/test_revsports_placeholder_plan.py`
+- `docs/revsports-post-mapping-next-steps.md`
+- `docs/current-state.md`
+
+Checks run:
+
+- `python -m unittest tests.test_revsports_placeholder_plan` passed all 28 tests.
+- `python -m py_compile scripts/revsports_placeholder_plan.py` passed.
+- The initial Dev dry-run returned one safe `create_placeholder` row for `XereEs8`, with exact external team ID `417788`, Blaze team ID `d76b45d9-9cc4-42de-a724-de9c0dcd95d6`, and `FILL_IN` membership.
+- Post-apply verification confirmed one placeholder profile, one Auth shell, one active `FILL_IN` membership, one matched external link, and zero `PRIMARY` memberships.
+- Player MVP Voting counts remained at 630 sessions, 85 submissions, and 255 votes.
+- Umpire Match Voting counts remained at 83 submissions, 271 lines, and 7 edits.
+
+What Aaron should test next:
+
+- Review the focused staged diff before committing.
+- No further database apply is needed for Max F.; the Dev validation is complete.
+- Keep the generated CSV reports local and do not include them in the commit.
+
+Risk level:
+
+- Medium. The default mode is read-only, but the explicitly confirmed apply mode uses a service-role credential and creates Auth/profile, membership, and external-link records.
+- Apply is manual, limited to one player, and blocked for the known live SportStack project.
+- No database migration is included.
+
+### Previous handoff entry
+
 Date: 2026-07-16
 
 What changed:
