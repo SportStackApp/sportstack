@@ -3119,35 +3119,98 @@ export type Database = {
       rg_audit_log: {
         Row: {
           action: string
+          association_id: string | null
           changed_at: string
+          club_id: string | null
+          field_name: string | null
           id: string
           new_data: Json | null
+          new_value: Json | null
           old_data: Json | null
+          previous_value: Json | null
+          reason: string | null
           record_id: string | null
+          record_reference: string | null
+          record_title: string | null
+          record_type: string | null
+          related_record_id: string | null
+          related_record_reference: string | null
+          related_record_title: string | null
+          related_record_type: string | null
           table_name: string | null
+          team_id: string | null
           user_id: string | null
         }
         Insert: {
           action: string
+          association_id?: string | null
           changed_at?: string
+          club_id?: string | null
+          field_name?: string | null
           id?: string
           new_data?: Json | null
+          new_value?: Json | null
           old_data?: Json | null
+          previous_value?: Json | null
+          reason?: string | null
           record_id?: string | null
+          record_reference?: string | null
+          record_title?: string | null
+          record_type?: string | null
+          related_record_id?: string | null
+          related_record_reference?: string | null
+          related_record_title?: string | null
+          related_record_type?: string | null
           table_name?: string | null
+          team_id?: string | null
           user_id?: string | null
         }
         Update: {
           action?: string
+          association_id?: string | null
           changed_at?: string
+          club_id?: string | null
+          field_name?: string | null
           id?: string
           new_data?: Json | null
+          new_value?: Json | null
           old_data?: Json | null
+          previous_value?: Json | null
+          reason?: string | null
           record_id?: string | null
+          record_reference?: string | null
+          record_title?: string | null
+          record_type?: string | null
+          related_record_id?: string | null
+          related_record_reference?: string | null
+          related_record_title?: string | null
+          related_record_type?: string | null
           table_name?: string | null
+          team_id?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "rg_audit_log_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_audit_log_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_audit_log_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rg_audit_log_user_id_fkey"
             columns: ["user_id"]
@@ -3159,39 +3222,108 @@ export type Database = {
       }
       rg_be_smart_actions: {
         Row: {
+          achievable: string | null
           action_text: string
           assigned_to: string | null
+          association_id: string
+          baseline: string | null
+          club_id: string | null
           created_at: string
+          created_by: string | null
+          display_number: number
           due_date: string | null
+          evaluate: string | null
           id: string
-          risk_id: string
+          last_change_reason: string
+          measurable: string | null
+          relevant: string | null
+          resources: string | null
+          risk_id: string | null
+          specific: string | null
           status: Database["public"]["Enums"]["action_status_enum"]
+          team_id: string | null
+          time_bound: string | null
+          title: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
+          achievable?: string | null
           action_text: string
           assigned_to?: string | null
+          association_id: string
+          baseline?: string | null
+          club_id?: string | null
           created_at?: string
+          created_by?: string | null
+          display_number?: number
           due_date?: string | null
+          evaluate?: string | null
           id?: string
-          risk_id: string
+          last_change_reason?: string
+          measurable?: string | null
+          relevant?: string | null
+          resources?: string | null
+          risk_id?: string | null
+          specific?: string | null
           status?: Database["public"]["Enums"]["action_status_enum"]
+          team_id?: string | null
+          time_bound?: string | null
+          title: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
+          achievable?: string | null
           action_text?: string
           assigned_to?: string | null
+          association_id?: string
+          baseline?: string | null
+          club_id?: string | null
           created_at?: string
+          created_by?: string | null
+          display_number?: number
           due_date?: string | null
+          evaluate?: string | null
           id?: string
-          risk_id?: string
+          last_change_reason?: string
+          measurable?: string | null
+          relevant?: string | null
+          resources?: string | null
+          risk_id?: string | null
+          specific?: string | null
           status?: Database["public"]["Enums"]["action_status_enum"]
+          team_id?: string | null
+          time_bound?: string | null
+          title?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "rg_be_smart_actions_assigned_to_fkey"
             columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_be_smart_actions_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_be_smart_actions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_be_smart_actions_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3203,34 +3335,212 @@ export type Database = {
             referencedRelation: "rg_risk_register"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "rg_be_smart_actions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_be_smart_actions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rg_bright_ideas: {
+        Row: {
+          association_id: string
+          club_id: string | null
+          committee_notes: string | null
+          could_assist: string | null
+          created_at: string
+          created_by: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision: string | null
+          decision_reason: string | null
+          display_number: number
+          id: string
+          last_change_reason: string
+          other_information: string | null
+          status: string
+          submitted_at: string
+          submitted_by: string | null
+          suggested_evaluation: string | null
+          suggested_implementation: string | null
+          team_id: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+          why_needed: string
+        }
+        Insert: {
+          association_id: string
+          club_id?: string | null
+          committee_notes?: string | null
+          could_assist?: string | null
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: string | null
+          decision_reason?: string | null
+          display_number?: number
+          id?: string
+          last_change_reason?: string
+          other_information?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          suggested_evaluation?: string | null
+          suggested_implementation?: string | null
+          team_id?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          why_needed: string
+        }
+        Update: {
+          association_id?: string
+          club_id?: string | null
+          committee_notes?: string | null
+          could_assist?: string | null
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: string | null
+          decision_reason?: string | null
+          display_number?: number
+          id?: string
+          last_change_reason?: string
+          other_information?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          suggested_evaluation?: string | null
+          suggested_implementation?: string | null
+          team_id?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          why_needed?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rg_bright_ideas_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_bright_ideas_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_bright_ideas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_bright_ideas_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_bright_ideas_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_bright_ideas_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_bright_ideas_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       rg_comments: {
         Row: {
+          association_id: string
+          club_id: string | null
           content: string
           created_at: string
           id: string
+          last_change_reason: string
           record_id: string
           table_name: string
+          team_id: string | null
           user_id: string | null
         }
         Insert: {
+          association_id: string
+          club_id?: string | null
           content: string
           created_at?: string
           id?: string
+          last_change_reason?: string
           record_id: string
           table_name: string
+          team_id?: string | null
           user_id?: string | null
         }
         Update: {
+          association_id?: string
+          club_id?: string | null
           content?: string
           created_at?: string
           id?: string
+          last_change_reason?: string
           record_id?: string
           table_name?: string
+          team_id?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "rg_comments_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_comments_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_comments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rg_comments_user_id_fkey"
             columns: ["user_id"]
@@ -3243,60 +3553,142 @@ export type Database = {
       rg_dropdown_values: {
         Row: {
           category: string
-          id: string
-          label: string
-          sort_order: number | null
-          value: string
-        }
-        Insert: {
-          category: string
-          id?: string
-          label: string
-          sort_order?: number | null
-          value: string
-        }
-        Update: {
-          category?: string
-          id?: string
-          label?: string
-          sort_order?: number | null
-          value?: string
-        }
-        Relationships: []
-      }
-      rg_quality_improvement_items: {
-        Row: {
-          association_id: string | null
-          club_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
           id: string
-          status: Database["public"]["Enums"]["action_status_enum"]
-          title: string
+          is_active: boolean
+          label: string
+          last_change_reason: string
+          settings_id: string
+          sort_order: number | null
           updated_at: string
+          updated_by: string | null
+          value: string
         }
         Insert: {
-          association_id?: string | null
-          club_id?: string | null
+          category: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
-          status?: Database["public"]["Enums"]["action_status_enum"]
-          title: string
+          is_active?: boolean
+          label: string
+          last_change_reason?: string
+          settings_id: string
+          sort_order?: number | null
           updated_at?: string
+          updated_by?: string | null
+          value: string
         }
         Update: {
-          association_id?: string | null
-          club_id?: string | null
+          category?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean
+          label?: string
+          last_change_reason?: string
+          settings_id?: string
+          sort_order?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rg_dropdown_values_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_dropdown_values_settings_id_fkey"
+            columns: ["settings_id"]
+            isOneToOne: false
+            referencedRelation: "rg_risk_settings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_dropdown_values_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rg_quality_improvement_items: {
+        Row: {
+          area: string | null
+          association_id: string
+          club_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_number: number
+          due_date: string | null
+          id: string
+          issue: string | null
+          last_change_reason: string
+          outcome: string | null
+          owner_id: string | null
+          priority: string
+          required_action: string | null
+          source: string | null
+          status: Database["public"]["Enums"]["action_status_enum"]
+          team_id: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          area?: string | null
+          association_id: string
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_number?: number
+          due_date?: string | null
+          id?: string
+          issue?: string | null
+          last_change_reason?: string
+          outcome?: string | null
+          owner_id?: string | null
+          priority?: string
+          required_action?: string | null
+          source?: string | null
           status?: Database["public"]["Enums"]["action_status_enum"]
+          team_id?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          area?: string | null
+          association_id?: string
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_number?: number
+          due_date?: string | null
+          id?: string
+          issue?: string | null
+          last_change_reason?: string
+          outcome?: string | null
+          owner_id?: string | null
+          priority?: string
+          required_action?: string | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["action_status_enum"]
+          team_id?: string | null
           title?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -3320,104 +3712,383 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "rg_quality_improvement_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_quality_improvement_items_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_quality_improvement_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rg_record_links: {
+        Row: {
+          action_id: string | null
+          association_id: string
+          bright_idea_id: string | null
+          club_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          last_change_reason: string
+          link_reason: string | null
+          qi_item_id: string | null
+          risk_id: string | null
+          team_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          action_id?: string | null
+          association_id: string
+          bright_idea_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          last_change_reason?: string
+          link_reason?: string | null
+          qi_item_id?: string | null
+          risk_id?: string | null
+          team_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          action_id?: string | null
+          association_id?: string
+          bright_idea_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          last_change_reason?: string
+          link_reason?: string | null
+          qi_item_id?: string | null
+          risk_id?: string | null
+          team_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rg_record_links_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "rg_be_smart_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_record_links_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_record_links_bright_idea_id_fkey"
+            columns: ["bright_idea_id"]
+            isOneToOne: false
+            referencedRelation: "rg_bright_ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_record_links_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_record_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_record_links_qi_item_id_fkey"
+            columns: ["qi_item_id"]
+            isOneToOne: false
+            referencedRelation: "rg_quality_improvement_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_record_links_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "rg_risk_register"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_record_links_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_record_links_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       rg_risk_guidance_sections: {
         Row: {
           category: string | null
           content: string | null
+          created_at: string
+          created_by: string | null
           id: string
+          is_active: boolean
+          last_change_reason: string
+          settings_id: string
           sort_order: number | null
           title: string
+          updated_at: string
+          updated_by: string | null
         }
         Insert: {
           category?: string | null
           content?: string | null
+          created_at?: string
+          created_by?: string | null
           id?: string
+          is_active?: boolean
+          last_change_reason?: string
+          settings_id: string
           sort_order?: number | null
           title: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           category?: string | null
           content?: string | null
+          created_at?: string
+          created_by?: string | null
           id?: string
+          is_active?: boolean
+          last_change_reason?: string
+          settings_id?: string
           sort_order?: number | null
           title?: string
+          updated_at?: string
+          updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rg_risk_guidance_sections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_guidance_sections_settings_id_fkey"
+            columns: ["settings_id"]
+            isOneToOne: false
+            referencedRelation: "rg_risk_settings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_guidance_sections_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rg_risk_matrix: {
         Row: {
           color: string
           consequence: number
+          created_at: string
+          created_by: string | null
           id: string
+          last_change_reason: string
           likelihood: number
           risk_level: string
+          settings_id: string
+          updated_at: string
+          updated_by: string | null
         }
         Insert: {
           color: string
           consequence: number
+          created_at?: string
+          created_by?: string | null
           id?: string
+          last_change_reason?: string
           likelihood: number
           risk_level: string
+          settings_id: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           color?: string
           consequence?: number
+          created_at?: string
+          created_by?: string | null
           id?: string
+          last_change_reason?: string
           likelihood?: number
           risk_level?: string
+          settings_id?: string
+          updated_at?: string
+          updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rg_risk_matrix_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_matrix_settings_id_fkey"
+            columns: ["settings_id"]
+            isOneToOne: false
+            referencedRelation: "rg_risk_settings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_matrix_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rg_risk_register: {
         Row: {
-          association_id: string | null
+          association_id: string
           category: string | null
           club_id: string | null
           consequence: number | null
+          consequences: string | null
           created_at: string
+          created_by: string | null
           description: string | null
+          display_number: number
+          evidence: string | null
+          existing_controls: string | null
           id: string
+          inherent_consequence: number | null
+          inherent_likelihood: number | null
+          inherent_rating: string | null
+          last_change_reason: string
           likelihood: number | null
+          next_review_date: string | null
           owner_id: string | null
+          residual_consequence: number | null
+          residual_likelihood: number | null
+          residual_rating: string | null
+          review_frequency: string | null
+          risk_event: string | null
           risk_score: number | null
+          risk_type: string | null
           status: Database["public"]["Enums"]["risk_status_enum"]
+          target_rating: string | null
           team_id: string | null
           title: string
+          treatment_plan: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
-          association_id?: string | null
+          association_id: string
           category?: string | null
           club_id?: string | null
           consequence?: number | null
+          consequences?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
+          display_number?: number
+          evidence?: string | null
+          existing_controls?: string | null
           id?: string
+          inherent_consequence?: number | null
+          inherent_likelihood?: number | null
+          inherent_rating?: string | null
+          last_change_reason?: string
           likelihood?: number | null
+          next_review_date?: string | null
           owner_id?: string | null
+          residual_consequence?: number | null
+          residual_likelihood?: number | null
+          residual_rating?: string | null
+          review_frequency?: string | null
+          risk_event?: string | null
           risk_score?: number | null
+          risk_type?: string | null
           status?: Database["public"]["Enums"]["risk_status_enum"]
+          target_rating?: string | null
           team_id?: string | null
           title: string
+          treatment_plan?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
-          association_id?: string | null
+          association_id?: string
           category?: string | null
           club_id?: string | null
           consequence?: number | null
+          consequences?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
+          display_number?: number
+          evidence?: string | null
+          existing_controls?: string | null
           id?: string
+          inherent_consequence?: number | null
+          inherent_likelihood?: number | null
+          inherent_rating?: string | null
+          last_change_reason?: string
           likelihood?: number | null
+          next_review_date?: string | null
           owner_id?: string | null
+          residual_consequence?: number | null
+          residual_likelihood?: number | null
+          residual_rating?: string | null
+          review_frequency?: string | null
+          risk_event?: string | null
           risk_score?: number | null
+          risk_type?: string | null
           status?: Database["public"]["Enums"]["risk_status_enum"]
+          target_rating?: string | null
           team_id?: string | null
           title?: string
+          treatment_plan?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -3435,6 +4106,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "rg_risk_register_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "rg_risk_register_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
@@ -3448,34 +4126,85 @@ export type Database = {
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "rg_risk_register_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       rg_risk_reviews: {
         Row: {
+          association_id: string
+          club_id: string | null
+          evidence: string | null
           id: string
+          last_change_reason: string
           new_status: Database["public"]["Enums"]["risk_status_enum"] | null
+          next_review_date: string | null
           notes: string | null
+          residual_consequence: number | null
+          residual_likelihood: number | null
+          residual_rating: string | null
+          review_reason: string | null
           reviewed_at: string
           reviewed_by: string | null
           risk_id: string
+          team_id: string | null
         }
         Insert: {
+          association_id: string
+          club_id?: string | null
+          evidence?: string | null
           id?: string
+          last_change_reason?: string
           new_status?: Database["public"]["Enums"]["risk_status_enum"] | null
+          next_review_date?: string | null
           notes?: string | null
+          residual_consequence?: number | null
+          residual_likelihood?: number | null
+          residual_rating?: string | null
+          review_reason?: string | null
           reviewed_at?: string
           reviewed_by?: string | null
           risk_id: string
+          team_id?: string | null
         }
         Update: {
+          association_id?: string
+          club_id?: string | null
+          evidence?: string | null
           id?: string
+          last_change_reason?: string
           new_status?: Database["public"]["Enums"]["risk_status_enum"] | null
+          next_review_date?: string | null
           notes?: string | null
+          residual_consequence?: number | null
+          residual_likelihood?: number | null
+          residual_rating?: string | null
+          review_reason?: string | null
           reviewed_at?: string
           reviewed_by?: string | null
           risk_id?: string
+          team_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "rg_risk_reviews_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_reviews_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rg_risk_reviews_reviewed_by_fkey"
             columns: ["reviewed_by"]
@@ -3488,6 +4217,87 @@ export type Database = {
             columns: ["risk_id"]
             isOneToOne: false
             referencedRelation: "rg_risk_register"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_reviews_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rg_risk_settings: {
+        Row: {
+          association_id: string | null
+          club_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          is_provisional: boolean
+          last_change_reason: string
+          name: string
+          scope_level: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_provisional?: boolean
+          last_change_reason?: string
+          name: string
+          scope_level: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_provisional?: boolean
+          last_change_reason?: string
+          name?: string
+          scope_level?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rg_risk_settings_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_settings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_settings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4757,7 +5567,16 @@ export type Database = {
       }
     }
     Enums: {
-      action_status_enum: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "OVERDUE"
+      action_status_enum:
+        | "PENDING"
+        | "IN_PROGRESS"
+        | "COMPLETED"
+        | "OVERDUE"
+        | "NEW"
+        | "AWAITING_DECISION"
+        | "APPROVED"
+        | "BLOCKED"
+        | "ENTERED_IN_ERROR"
       availability_status_enum:
         | "AVAILABLE"
         | "UNAVAILABLE"
@@ -4787,6 +5606,8 @@ export type Database = {
         | "RESOLVED"
         | "CLOSED"
         | "ACCEPTED"
+        | "CONTROLLED"
+        | "ENTERED_IN_ERROR"
       user_role_enum:
         | "SUPER_ADMIN"
         | "ASSOCIATION_ADMIN"
@@ -4924,7 +5745,17 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      action_status_enum: ["PENDING", "IN_PROGRESS", "COMPLETED", "OVERDUE"],
+      action_status_enum: [
+        "PENDING",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "OVERDUE",
+        "NEW",
+        "AWAITING_DECISION",
+        "APPROVED",
+        "BLOCKED",
+        "ENTERED_IN_ERROR",
+      ],
       availability_status_enum: [
         "AVAILABLE",
         "UNAVAILABLE",
@@ -4957,6 +5788,8 @@ export const Constants = {
         "RESOLVED",
         "CLOSED",
         "ACCEPTED",
+        "CONTROLLED",
+        "ENTERED_IN_ERROR",
       ],
       user_role_enum: [
         "SUPER_ADMIN",

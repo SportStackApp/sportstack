@@ -231,6 +231,12 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       ],
     },
     {
+      heading: "Safety",
+      items: [
+        { path: "/admin/safety-risk", label: "Safety Hub", icon: ShieldCheck },
+      ],
+    },
+    {
       heading: "Admin",
       items: [
         { path: "/admin/teams", label: "Teams", icon: Shield },

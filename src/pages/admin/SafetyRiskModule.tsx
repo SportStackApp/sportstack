@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { createContext, Fragment, useContext, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
@@ -83,6 +83,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useToast } from "@/hooks/use-toast";
 import { useTeamContext } from "@/contexts/TeamContext";
+import { supabase } from "@/integrations/supabase/client";
+import type { Json, Tables } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 
 type RiskRating = "Low" | "Medium" | "High" | "Very High";
@@ -101,6 +103,7 @@ interface RiskRecord {
   category: string;
   type: string;
   owner: string;
+  createdBy?: string;
   scope: string;
   status: RiskStatus;
   inherentRating: RiskRating;
@@ -123,6 +126,7 @@ interface ActionRecord {
   id: string;
   title: string;
   owner: string;
+  createdBy?: string;
   status: ActionStatus;
   dueDate: string;
   dueState: DueState;
@@ -144,6 +148,7 @@ interface QiRecord {
   source: string;
   area: string;
   owner: string;
+  createdBy?: string;
   priority: "Low" | "Medium" | "High";
   status: QiStatus;
   dueDate: string;
@@ -179,7 +184,7 @@ interface AuditRecord {
   date: string;
   user: string;
   record: string;
-  recordType: "Risk" | "Action" | "QI" | "Bright Idea";
+  recordType: "Risk" | "Action" | "QI" | "Bright Idea" | "Risk Review" | "Link" | "Settings" | "Comment";
   scope: string;
   relatedRecordId?: string;
   action: string;
@@ -210,6 +215,43 @@ interface ChartDatum {
   value: number;
   fill: string;
 }
+
+interface SafetyHubData {
+  risks: RiskRecord[];
+  actions: ActionRecord[];
+  qiItems: QiRecord[];
+  brightIdeas: BrightIdeaRecord[];
+  auditEvents: AuditRecord[];
+  riskMatrix: RiskRating[][];
+}
+
+interface SafetyHubDataContextValue extends SafetyHubData {
+  recordsById: Map<string, SafetyRecord>;
+}
+
+interface SafetyScopeSelection {
+  associationId?: string;
+  clubId?: string;
+  teamId?: string;
+}
+
+type SafetyRiskRow = Tables<"rg_risk_register">;
+type SafetyActionRow = Tables<"rg_be_smart_actions">;
+type SafetyQiRow = Tables<"rg_quality_improvement_items">;
+type SafetyIdeaRow = Tables<"rg_bright_ideas">;
+type SafetyLinkRow = Tables<"rg_record_links">;
+type SafetyReviewRow = Tables<"rg_risk_reviews">;
+type SafetyAuditRow = Tables<"rg_audit_log">;
+type SafetyMatrixRow = Tables<"rg_risk_matrix">;
+type SafetySettingsRow = Tables<"rg_risk_settings">;
+type ProfileRow = Tables<"profiles">;
+type AssociationRow = Tables<"associations">;
+type ClubRow = Tables<"clubs">;
+type TeamRow = Tables<"teams">;
+type ProfileSummary = Pick<ProfileRow, "id" | "first_name" | "last_name">;
+type AssociationSummary = Pick<AssociationRow, "id" | "name">;
+type ClubSummary = Pick<ClubRow, "id" | "name" | "association_id">;
+type TeamSummary = Pick<TeamRow, "id" | "name" | "club_id">;
 
 const ratingOrder: RiskRating[] = ["Very High", "High", "Medium", "Low"];
 const statusOptions = ["__all__", "Open", "In progress", "Controlled", "Closed", "Entered in error"];
@@ -254,7 +296,7 @@ const ratingColours: Record<RiskRating, string> = {
   "Very High": "#be123c",
 };
 
-const risks: RiskRecord[] = [
+const prototypeRisks: RiskRecord[] = [
   {
     kind: "risk",
     id: "R-001",
@@ -449,7 +491,7 @@ const risks: RiskRecord[] = [
   },
 ];
 
-const actions: ActionRecord[] = [
+const prototypeActions: ActionRecord[] = [
   {
     kind: "action",
     id: "A-001",
@@ -574,7 +616,7 @@ const actions: ActionRecord[] = [
   },
 ];
 
-const qiItems: QiRecord[] = [
+const prototypeQiItems: QiRecord[] = [
   {
     kind: "qi",
     id: "QI-001",
@@ -677,7 +719,7 @@ const qiItems: QiRecord[] = [
   },
 ];
 
-const brightIdeas: BrightIdeaRecord[] = [
+const prototypeBrightIdeas: BrightIdeaRecord[] = [
   {
     kind: "idea",
     id: "BI-001",
@@ -757,7 +799,7 @@ const brightIdeas: BrightIdeaRecord[] = [
   },
 ];
 
-const auditEvents: AuditRecord[] = [
+const prototypeAuditEvents: AuditRecord[] = [
   {
     kind: "audit",
     id: "AU-001",
@@ -835,13 +877,48 @@ const auditEvents: AuditRecord[] = [
   },
 ];
 
-const riskMatrix: RiskRating[][] = [
+const prototypeRiskMatrix: RiskRating[][] = [
   ["Low", "Low", "Low", "Medium", "High"],
   ["Low", "Low", "Medium", "High", "High"],
   ["Low", "Medium", "Medium", "High", "High"],
   ["Medium", "Medium", "Medium", "High", "Very High"],
   ["Medium", "Medium", "High", "Very High", "Very High"],
 ];
+
+const prototypeSafetyHubData: SafetyHubData = {
+  risks: prototypeRisks,
+  actions: prototypeActions,
+  qiItems: prototypeQiItems,
+  brightIdeas: prototypeBrightIdeas,
+  auditEvents: prototypeAuditEvents,
+  riskMatrix: prototypeRiskMatrix,
+};
+
+const emptySafetyHubData: SafetyHubData = {
+  risks: [],
+  actions: [],
+  qiItems: [],
+  brightIdeas: [],
+  auditEvents: [],
+  riskMatrix: prototypeRiskMatrix,
+};
+
+const SafetyHubDataContext = createContext<SafetyHubDataContextValue>({
+  ...prototypeSafetyHubData,
+  recordsById: new Map(
+    [
+      ...prototypeRisks,
+      ...prototypeActions,
+      ...prototypeQiItems,
+      ...prototypeBrightIdeas,
+      ...prototypeAuditEvents,
+    ].map((record) => [record.id, record]),
+  ),
+});
+
+function useSafetyHubData() {
+  return useContext(SafetyHubDataContext);
+}
 
 const likelihoodLabels = ["Rare", "Unlikely", "Possible", "Likely", "Almost Certain"];
 const consequenceLabels = ["Insignificant", "Minor", "Moderate", "Major", "Severe"];
@@ -909,6 +986,17 @@ export default function SafetyRiskModule() {
     selectedClub,
     selectedTeam,
   } = useTeamContext();
+  const [safetyData, setSafetyData] = useState<SafetyHubData>(emptySafetyHubData);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+  const {
+    risks,
+    actions,
+    qiItems,
+    brightIdeas,
+    auditEvents,
+    riskMatrix,
+  } = safetyData;
   const [activeRecord, setActiveRecord] = useState<SafetyRecord | null>(null);
   const [expandedLinkedRowId, setExpandedLinkedRowId] = useState<string | null>(null);
   const [riskSearch, setRiskSearch] = useState("");
@@ -934,12 +1022,67 @@ export default function SafetyRiskModule() {
   const [prototypeSaveMessage, setPrototypeSaveMessage] = useState<string | null>(null);
 
   const scopeLabel = selectedTeam?.name || selectedClub?.name || selectedAssociation?.name || "All accessible organisations";
+  const recordsById = useMemo(
+    () => new Map<string, SafetyRecord>(
+      [
+        ...risks,
+        ...actions,
+        ...qiItems,
+        ...brightIdeas,
+        ...auditEvents,
+      ].map((record) => [record.id, record]),
+    ),
+    [actions, auditEvents, brightIdeas, qiItems, risks],
+  );
+  const dataContextValue = useMemo<SafetyHubDataContextValue>(
+    () => ({ ...safetyData, recordsById }),
+    [recordsById, safetyData],
+  );
+
+  useEffect(() => {
+    if (scopeLoading || !isAnyAdmin) {
+      if (!scopeLoading) setDataLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setDataLoading(true);
+    setDataError(null);
+
+    loadSafetyHubData({
+      associationId: selectedAssociation?.id,
+      clubId: selectedClub?.id,
+      teamId: selectedTeam?.id,
+    })
+      .then((nextData) => {
+        if (cancelled) return;
+        setSafetyData(nextData);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setSafetyData(emptySafetyHubData);
+        setDataError(getErrorMessage(error));
+      })
+      .finally(() => {
+        if (!cancelled) setDataLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isAnyAdmin,
+    scopeLoading,
+    selectedAssociation?.id,
+    selectedClub?.id,
+    selectedTeam?.id,
+  ]);
 
   const openForm = ({ mode, context = {} }: OpenFormOptions) => {
     setActiveRecord(null);
     setFormMode(mode);
     setFormContext(context);
-    setFormValues(createInitialFormValues(mode, context, scopeLabel));
+    setFormValues(createInitialFormValues(mode, context, scopeLabel, safetyData));
     setFormStep(0);
     setFormErrors([]);
     setFormDirty(false);
@@ -993,34 +1136,39 @@ export default function SafetyRiskModule() {
     setPrototypeSaveMessage(message);
     setFormDirty(false);
     toast({
-      title: "Prototype form saved",
+      title: "Draft checked - not saved",
       description: message,
     });
   };
 
   const riskCategories = useMemo(
     () => Array.from(new Set(risks.map((risk) => risk.category))).sort(),
-    [],
+    [risks],
   );
 
   const riskOwners = useMemo(
     () => Array.from(new Set(risks.map((risk) => risk.owner))).sort(),
-    [],
+    [risks],
   );
 
   const riskScopes = useMemo(
     () => Array.from(new Set(risks.map((risk) => risk.scope))).sort(),
-    [],
+    [risks],
   );
 
   const auditUsers = useMemo(
     () => Array.from(new Set(auditEvents.map((event) => event.user))).sort(),
-    [],
+    [auditEvents],
   );
 
   const auditActions = useMemo(
     () => Array.from(new Set(auditEvents.map((event) => event.action))).sort(),
-    [],
+    [auditEvents],
+  );
+
+  const auditRecordTypes = useMemo(
+    () => Array.from(new Set(auditEvents.map((event) => event.recordType))).sort(),
+    [auditEvents],
   );
 
   const filteredAuditEvents = useMemo(() => {
@@ -1042,7 +1190,7 @@ export default function SafetyRiskModule() {
 
       return matchesFrom && matchesTo && matchesUser && matchesRecordType && matchesRecordId && matchesAction;
     });
-  }, [auditAction, auditDateFrom, auditDateTo, auditRecordId, auditRecordType, auditUser]);
+  }, [auditAction, auditDateFrom, auditDateTo, auditEvents, auditRecordId, auditRecordType, auditUser]);
 
   const filteredRisks = useMemo(() => {
     const search = riskSearch.trim().toLowerCase();
@@ -1059,7 +1207,7 @@ export default function SafetyRiskModule() {
       const matchesScope = riskScope === "__all__" || risk.scope === riskScope;
       return matchesSearch && matchesRating && matchesStatus && matchesCategory && matchesOwner && matchesReviewState && matchesScope;
     });
-  }, [riskCategory, riskOwner, riskRating, riskReviewState, riskScope, riskSearch, riskStatus]);
+  }, [riskCategory, riskOwner, riskRating, riskReviewState, riskScope, riskSearch, riskStatus, risks]);
 
   const ratingData = useMemo(
     () => ratingOrder.map((rating) => ({
@@ -1067,7 +1215,7 @@ export default function SafetyRiskModule() {
       value: risks.filter((risk) => risk.residualRating === rating).length,
       fill: ratingColours[rating],
     })),
-    [],
+    [risks],
   );
 
   const actionStatusData = useMemo(() => {
@@ -1077,7 +1225,7 @@ export default function SafetyRiskModule() {
       value: actions.filter((action) => action.status === status).length,
       fill: status === "Complete" ? "#059669" : status === "Blocked" || status === "Entered in error" ? "#be123c" : "#2563eb",
     }));
-  }, []);
+  }, [actions]);
 
   const categoryData = useMemo(
     () => riskCategories.map((category) => ({
@@ -1085,7 +1233,7 @@ export default function SafetyRiskModule() {
       value: risks.filter((risk) => risk.category === category).length,
       fill: "#2563eb",
     })),
-    [riskCategories],
+    [riskCategories, risks],
   );
 
   const qiStatusData = useMemo(() => {
@@ -1095,7 +1243,7 @@ export default function SafetyRiskModule() {
       value: qiItems.filter((item) => item.status === status).length,
       fill: status === "Complete" ? "#059669" : status === "Entered in error" ? "#be123c" : status === "Awaiting decision" ? "#d97706" : "#2563eb",
     }));
-  }, []);
+  }, [qiItems]);
 
   const highestRisks = [...risks]
     .sort((a, b) => ratingOrder.indexOf(a.residualRating) - ratingOrder.indexOf(b.residualRating))
@@ -1106,7 +1254,7 @@ export default function SafetyRiskModule() {
   const awaitingQi = qiItems.filter((item) => item.status === "Awaiting decision").length;
   const awaitingIdeas = brightIdeas.filter((idea) => idea.decision === "Pending").length;
   const overdueReviews = risks.filter((risk) => risk.reviewState === "Overdue").length;
-  const risksWithoutOwners = risks.filter((risk) => risk.owner === "Committee").length;
+  const risksWithoutOwners = risks.filter((risk) => risk.owner === "Unassigned").length;
   const risksWithoutControls = risks.filter((risk) => !risk.existingControls.trim()).length;
   const aboveTarget = risks.filter((risk) => ratingOrder.indexOf(risk.residualRating) < ratingOrder.indexOf(risk.targetRating)).length;
   const combinedDueItems = [
@@ -1145,7 +1293,7 @@ export default function SafetyRiskModule() {
       })),
   ].slice(0, 8);
 
-  if (scopeLoading) {
+  if (scopeLoading || dataLoading) {
     return <LoadingState />;
   }
 
@@ -1161,14 +1309,15 @@ export default function SafetyRiskModule() {
   }
 
   return (
-    <div className="min-w-0 space-y-6">
+    <SafetyHubDataContext.Provider value={dataContextValue}>
+      <div className="min-w-0 space-y-6">
       <div className="-mx-4 border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:-mx-6 lg:px-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <ShieldCheck className="h-6 w-6 text-primary" />
               <h1 className="text-2xl font-semibold tracking-tight">Safety Hub</h1>
-              <Badge variant="outline">Prototype</Badge>
+              <Badge variant="outline">Read-only pilot</Badge>
             </div>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
               Manage risks, actions, quality improvements and Bright Ideas across {scopeLabel}.
@@ -1189,10 +1338,19 @@ export default function SafetyRiskModule() {
           <TabsTrigger value="audit" className={safetyTabTriggerClass}>Audit History</TabsTrigger>
         </TabsList>
 
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
-          <div className="font-semibold">Demo data - not live committee records</div>
+        <div className={cn(
+          "rounded-lg border px-4 py-3 text-sm",
+          dataError
+            ? "border-red-300 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-950/50 dark:text-red-100"
+            : "border-sky-300 bg-sky-50 text-sky-950 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-100",
+        )}>
+          <div className="font-semibold">
+            {dataError ? "Safety Hub data could not be loaded" : "Read-only Supabase connection"}
+          </div>
           <p className="mt-1">
-            This Safety Hub is still a local mock prototype. It does not read or write live Supabase data.
+            {dataError
+              ? dataError
+              : "Registers and dashboard totals use your scoped Supabase records. Prototype forms still validate locally and do not write to the database."}
           </p>
         </div>
 
@@ -1298,7 +1456,7 @@ export default function SafetyRiskModule() {
           <RegisterTable
             title="Risk Register"
             icon={ShieldCheck}
-            columns={["ID", "Risk / summary", "Rating", "Owner", "Review", "Status", ""]}
+            columns={["ID", "Risk / summary", "Rating", "Owner / added by", "Review", "Status", ""]}
             emptyLabel="No risks match the selected filters."
           >
             {filteredRisks.map((risk) => {
@@ -1326,7 +1484,9 @@ export default function SafetyRiskModule() {
                         <div className="text-xs text-muted-foreground">Target {risk.targetRating}</div>
                       </div>
                     </TableCell>
-                    <TableCell>{risk.owner}</TableCell>
+                    <TableCell>
+                      <OwnerAndCreator owner={risk.owner} createdBy={risk.createdBy} />
+                    </TableCell>
                     <TableCell><DueBadge state={risk.reviewState} label={risk.nextReview} /></TableCell>
                     <TableCell><StatusBadge status={risk.status} /></TableCell>
                     <TableCell className="text-right">
@@ -1367,7 +1527,7 @@ export default function SafetyRiskModule() {
           <RegisterTable
             title="Actions"
             icon={ListChecks}
-            columns={["ID", "Action", "Owner", "Due", "Status", ""]}
+            columns={["ID", "Action", "Owner / added by", "Due", "Status", ""]}
             emptyLabel="No actions to show."
           >
             {actions.map((action) => {
@@ -1389,7 +1549,9 @@ export default function SafetyRiskModule() {
                       <div className="font-medium">{action.title}</div>
                       <div className="line-clamp-1 text-xs text-muted-foreground">{action.specific}</div>
                     </TableCell>
-                    <TableCell>{action.owner}</TableCell>
+                    <TableCell>
+                      <OwnerAndCreator owner={action.owner} createdBy={action.createdBy} />
+                    </TableCell>
                     <TableCell><DueBadge state={action.dueState} label={action.dueDate} /></TableCell>
                     <TableCell><StatusBadge status={action.status} /></TableCell>
                     <TableCell className="text-right">
@@ -1430,7 +1592,7 @@ export default function SafetyRiskModule() {
           <RegisterTable
             title="QI Register"
             icon={ClipboardCheck}
-            columns={["ID", "Improvement", "Priority", "Owner", "Due", "Status", ""]}
+            columns={["ID", "Improvement", "Priority", "Owner / added by", "Due", "Status", ""]}
             emptyLabel="No QI items to show."
           >
             {qiItems.map((item) => {
@@ -1453,7 +1615,9 @@ export default function SafetyRiskModule() {
                       <div className="line-clamp-1 text-xs text-muted-foreground">{item.issue}</div>
                     </TableCell>
                     <TableCell><PriorityBadge priority={item.priority} /></TableCell>
-                    <TableCell>{item.owner}</TableCell>
+                    <TableCell>
+                      <OwnerAndCreator owner={item.owner} createdBy={item.createdBy} />
+                    </TableCell>
                     <TableCell><DueBadge state={item.dueState} label={item.dueDate} /></TableCell>
                     <TableCell><StatusBadge status={item.status} /></TableCell>
                     <TableCell className="text-right">
@@ -1635,6 +1799,7 @@ export default function SafetyRiskModule() {
             users={auditUsers}
             recordType={auditRecordType}
             onRecordTypeChange={setAuditRecordType}
+            recordTypes={auditRecordTypes}
             recordId={auditRecordId}
             onRecordIdChange={setAuditRecordId}
             action={auditAction}
@@ -1701,7 +1866,8 @@ export default function SafetyRiskModule() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </SafetyHubDataContext.Provider>
   );
 }
 
@@ -1735,7 +1901,7 @@ function AddRecordButton({ onOpenForm }: { onOpenForm: (mode: SafetyFormMode) =>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>Prototype forms</DropdownMenuLabel>
+        <DropdownMenuLabel>Prototype forms - not saved</DropdownMenuLabel>
         <DropdownMenuItem onClick={() => openFormAndCloseMenu("risk")}>Add risk</DropdownMenuItem>
         <DropdownMenuItem onClick={() => openFormAndCloseMenu("action")}>Add action</DropdownMenuItem>
         <DropdownMenuItem onClick={() => openFormAndCloseMenu("qi")}>Add QI item</DropdownMenuItem>
@@ -1996,6 +2162,7 @@ function AuditFilterBar({
   users,
   recordType,
   onRecordTypeChange,
+  recordTypes,
   recordId,
   onRecordIdChange,
   action,
@@ -2011,6 +2178,7 @@ function AuditFilterBar({
   users: string[];
   recordType: string;
   onRecordTypeChange: (value: string) => void;
+  recordTypes: string[];
   recordId: string;
   onRecordIdChange: (value: string) => void;
   action: string;
@@ -2035,7 +2203,7 @@ function AuditFilterBar({
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Record type</Label>
-            <FilterSelect value={recordType} onValueChange={onRecordTypeChange} options={["__all__", "Risk", "Action", "QI", "Bright Idea"]} label="Record type" />
+            <FilterSelect value={recordType} onValueChange={onRecordTypeChange} options={["__all__", ...recordTypes]} label="Record type" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="audit-record-id" className="text-xs text-muted-foreground">Record ID</Label>
@@ -2142,9 +2310,9 @@ const associationGroups: Array<{
 const associationSummaryGridClass = "grid-cols-[5.5rem_minmax(12rem,1fr)_9rem_10rem_9rem]";
 
 const associationColumnLabels: Record<CoreSafetyRecord["kind"], [string, string, string, string, string]> = {
-  risk: ["ID", "Risk / summary", "Rating", "Owner", "Review"],
-  action: ["ID", "Action / summary", "Owner", "Due", "Status"],
-  qi: ["ID", "QI item / summary", "Owner", "Due", "Status"],
+  risk: ["ID", "Risk / summary", "Rating", "Owner / added by", "Review"],
+  action: ["ID", "Action / summary", "Owner / added by", "Due", "Status"],
+  qi: ["ID", "QI item / summary", "Owner / added by", "Due", "Status"],
   idea: ["ID", "Bright Idea / summary", "Submitted by", "Decision", "Status"],
 };
 
@@ -2159,7 +2327,11 @@ function ExpandedLinkedRecordsRow({
   sourceRecord: CoreSafetyRecord;
   onOpenRecord: (record: SafetyRecord) => void;
 }) {
-  const linkedRecords = getAssociatedSafetyRecords(sourceRecord);
+  const { risks, actions, qiItems, brightIdeas } = useSafetyHubData();
+  const linkedRecords = getAssociatedSafetyRecords(
+    sourceRecord,
+    [...risks, ...actions, ...qiItems, ...brightIdeas],
+  );
   const visibleGroups = associationGroups.filter((group) => group.kind !== sourceRecord.kind);
 
   return (
@@ -2248,20 +2420,20 @@ function AssociatedRecordSummary({
       {record.kind === "risk" && (
         <>
           <span className="justify-self-start"><RiskRatingBadge rating={record.residualRating} /></span>
-          <CompactValue value={record.owner} />
+          <OwnerAndCreator owner={record.owner} createdBy={record.createdBy} compact />
           <CompactDueSummary state={record.reviewState} date={record.nextReview} />
         </>
       )}
       {record.kind === "action" && (
         <>
-          <CompactValue value={record.owner} />
+          <OwnerAndCreator owner={record.owner} createdBy={record.createdBy} compact />
           <CompactDueSummary state={record.dueState} date={record.dueDate} />
           <span className="justify-self-start"><StatusBadge status={record.status} /></span>
         </>
       )}
       {record.kind === "qi" && (
         <>
-          <CompactValue value={record.owner} />
+          <OwnerAndCreator owner={record.owner} createdBy={record.createdBy} compact />
           <CompactDueSummary state={record.dueState} date={record.dueDate} />
           <span className="justify-self-start"><StatusBadge status={record.status} /></span>
         </>
@@ -2285,6 +2457,27 @@ function CompactValue({ value }: { value: string }) {
   return (
     <span className="line-clamp-3 text-xs font-medium leading-4 text-foreground" title={value}>
       {value}
+    </span>
+  );
+}
+
+function OwnerAndCreator({
+  owner,
+  createdBy,
+  compact = false,
+}: {
+  owner: string;
+  createdBy?: string;
+  compact?: boolean;
+}) {
+  return (
+    <span className="block min-w-0" title={`${owner}; added by ${createdBy || "not recorded"}`}>
+      <span className={cn("block font-medium text-foreground", compact ? "line-clamp-2 text-xs leading-4" : "text-sm")}>
+        {owner}
+      </span>
+      <span className="mt-0.5 block line-clamp-2 text-xs leading-4 text-muted-foreground">
+        Added by {createdBy || "not recorded"}
+      </span>
     </span>
   );
 }
@@ -2485,7 +2678,7 @@ function SafetyFormDialog({
                 </Button>
               ) : (
                 <Button type="button" onClick={onSubmit}>
-                  Save prototype
+                  Validate draft
                 </Button>
               )}
             </DialogFooter>
@@ -2538,7 +2731,8 @@ function RiskFormStep({
           <TextField label="Organisation scope" field="scope" values={values} onValueChange={onValueChange} />
           <SelectField label="Risk type" field="type" values={values} onValueChange={onValueChange} options={["Operational", "Clinical", "Governance", "Environmental", "Conduct"]} />
           <TextField label="Category" field="category" values={values} onValueChange={onValueChange} />
-          <TextField label="Owner" field="owner" values={values} onValueChange={onValueChange} />
+          <TextField label="Owner (optional)" field="owner" values={values} onValueChange={onValueChange} />
+          <AutomaticAddedByField />
           <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["Open", "In progress", "Controlled", "Closed", "Entered in error"]} />
         </FormGrid>
       </div>
@@ -2611,6 +2805,7 @@ function ActionForm({
         <FormGrid>
           <TextField label="Action title" field="title" values={values} onValueChange={onValueChange} />
           <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["Not started", "In progress", "Blocked", "Complete", "Entered in error"]} />
+          <AutomaticAddedByField />
         </FormGrid>
         <PermanentRelationshipPanel ids={[values.linkedRiskId, values.linkedQiId, values.linkedIdeaId]} />
       </DetailSection>
@@ -2631,7 +2826,7 @@ function ActionForm({
       </DetailSection>
       <DetailSection title="Responsibility, resources and due date">
         <FormGrid>
-          <TextField label="Owner" field="owner" values={values} onValueChange={onValueChange} />
+          <TextField label="Owner (optional)" field="owner" values={values} onValueChange={onValueChange} />
           <TextField label="Due date" field="dueDate" values={values} onValueChange={onValueChange} />
         </FormGrid>
         <TextAreaField label="Resources or support needed" field="resources" values={values} onValueChange={onValueChange} />
@@ -2658,7 +2853,8 @@ function QiForm({
         <TextField label="QI title" field="title" values={values} onValueChange={onValueChange} />
         <TextField label="Source" field="source" values={values} onValueChange={onValueChange} />
         <TextField label="Area" field="area" values={values} onValueChange={onValueChange} />
-        <TextField label="Owner" field="owner" values={values} onValueChange={onValueChange} />
+        <TextField label="Owner (optional)" field="owner" values={values} onValueChange={onValueChange} />
+        <AutomaticAddedByField />
         <TextField label="Due date" field="dueDate" values={values} onValueChange={onValueChange} />
         <SelectField label="Priority" field="priority" values={values} onValueChange={onValueChange} options={["Low", "Medium", "High"]} />
         <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["New", "Awaiting decision", "Approved", "In progress", "Complete", "Entered in error"]} />
@@ -2957,7 +3153,7 @@ function PrototypeSaveBanner({ message }: { message: string | null }) {
     <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
       <CheckCircle2 className="mt-0.5 h-4 w-4" />
       <div>
-        <div className="font-medium">Prototype save complete</div>
+        <div className="font-medium">Draft validation complete - not saved</div>
         <div>{message}</div>
       </div>
     </div>
@@ -3027,6 +3223,7 @@ function RiskDetail({
         <DetailField label="Category" value={risk.category} />
         <DetailField label="Type" value={risk.type} />
         <DetailField label="Owner" value={risk.owner} />
+        <DetailField label="Added by" value={risk.createdBy || "Not recorded"} />
         <DetailField label="Scope" value={risk.scope} />
         <DetailField label="Status" value={risk.status} />
         <DetailField label="Next review" value={risk.nextReview} />
@@ -3073,6 +3270,7 @@ function ActionDetail({
       </DetailActions>
       <DetailGrid>
         <DetailField label="Owner" value={action.owner} />
+        <DetailField label="Added by" value={action.createdBy || "Not recorded"} />
         <DetailField label="Status" value={action.status} />
         <DetailField label="Due date" value={action.dueDate} />
         <DetailField label="Risk link" value={action.linkedRiskId || "-"} />
@@ -3109,7 +3307,9 @@ function QiDetail({
   onOpenForm: (options: OpenFormOptions) => void;
   onOpenRecord: (record: SafetyRecord) => void;
 }) {
-  const originatingIdea = item.linkedIdeaId ? brightIdeas.find((idea) => idea.id === item.linkedIdeaId) : undefined;
+  const { recordsById } = useSafetyHubData();
+  const originatingRecord = item.linkedIdeaId ? recordsById.get(item.linkedIdeaId) : undefined;
+  const originatingIdea = originatingRecord?.kind === "idea" ? originatingRecord : undefined;
 
   return (
     <>
@@ -3133,6 +3333,7 @@ function QiDetail({
         <DetailField label="Source" value={item.source} />
         <DetailField label="Area" value={item.area} />
         <DetailField label="Owner" value={item.owner} />
+        <DetailField label="Added by" value={item.createdBy || "Not recorded"} />
         <DetailField label="Priority" value={item.priority} />
         <DetailField label="Status" value={item.status} />
         <DetailField label="Due date" value={item.dueDate} />
@@ -3162,7 +3363,8 @@ function BrightIdeaDetail({
   onOpenForm: (options: OpenFormOptions) => void;
   onOpenRecord: (record: SafetyRecord) => void;
 }) {
-  const linkedRecord = idea.linkedRecordId ? findSafetyRecordById(idea.linkedRecordId) : undefined;
+  const { recordsById } = useSafetyHubData();
+  const linkedRecord = idea.linkedRecordId ? recordsById.get(idea.linkedRecordId) : undefined;
 
   return (
     <>
@@ -3213,7 +3415,8 @@ function AuditDetail({
   event: AuditRecord;
   onOpenRecord: (record: SafetyRecord) => void;
 }) {
-  const relatedRecord = event.relatedRecordId ? findSafetyRecordById(event.relatedRecordId) : undefined;
+  const { recordsById } = useSafetyHubData();
+  const relatedRecord = event.relatedRecordId ? recordsById.get(event.relatedRecordId) : undefined;
 
   return (
     <>
@@ -3288,7 +3491,8 @@ function LinkedRecordCard({
   id: string;
   onOpenRecord: (record: SafetyRecord) => void;
 }) {
-  const linkedRecord = findSafetyRecordById(id);
+  const { recordsById } = useSafetyHubData();
+  const linkedRecord = recordsById.get(id);
 
   return (
     <button
@@ -3305,18 +3509,21 @@ function LinkedRecordCard({
   );
 }
 
-function findSafetyRecordById(id: string): SafetyRecord | undefined {
+function AutomaticAddedByField() {
   return (
-    risks.find((risk) => risk.id === id) ||
-    actions.find((action) => action.id === id) ||
-    qiItems.find((item) => item.id === id) ||
-    brightIdeas.find((idea) => idea.id === id) ||
-    auditEvents.find((event) => event.id === id)
+    <div className="space-y-2">
+      <Label>Added by</Label>
+      <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 text-sm text-muted-foreground">
+        Current signed-in user
+      </div>
+    </div>
   );
 }
 
-function getAssociatedSafetyRecords(sourceRecord: CoreSafetyRecord): CoreSafetyRecord[] {
-  const records: CoreSafetyRecord[] = [...risks, ...actions, ...qiItems, ...brightIdeas];
+function getAssociatedSafetyRecords(
+  sourceRecord: CoreSafetyRecord,
+  records: CoreSafetyRecord[],
+): CoreSafetyRecord[] {
   const recordsById = new Map(records.map((record) => [record.id, record]));
   const visitedIds = new Set([sourceRecord.id]);
   const pendingIds = [sourceRecord.id];
@@ -3374,11 +3581,12 @@ function createInitialFormValues(
   mode: SafetyFormMode,
   context: SafetyFormContext,
   scopeLabel: string,
+  data: SafetyHubData,
 ): Record<string, string> {
-  const risk = context.riskId ? risks.find((item) => item.id === context.riskId) : undefined;
-  const action = context.actionId ? actions.find((item) => item.id === context.actionId) : undefined;
-  const qi = context.qiId ? qiItems.find((item) => item.id === context.qiId) : undefined;
-  const idea = context.ideaId ? brightIdeas.find((item) => item.id === context.ideaId) : undefined;
+  const risk = context.riskId ? data.risks.find((item) => item.id === context.riskId) : undefined;
+  const action = context.actionId ? data.actions.find((item) => item.id === context.actionId) : undefined;
+  const qi = context.qiId ? data.qiItems.find((item) => item.id === context.qiId) : undefined;
+  const idea = context.ideaId ? data.brightIdeas.find((item) => item.id === context.ideaId) : undefined;
 
   if (mode === "risk") {
     return {
@@ -3523,7 +3731,6 @@ function validateSafetyForm(mode: SafetyFormMode, values: Record<string, string>
 
   if (mode === "risk") {
     requireField("title", "Short title");
-    requireField("owner", "Owner");
     requireField("riskEvent", "Risk event");
     requireField("existingControls", "Existing controls");
     requireField("treatmentPlan", "Treatment plan");
@@ -3531,7 +3738,6 @@ function validateSafetyForm(mode: SafetyFormMode, values: Record<string, string>
 
   if (mode === "action") {
     requireField("title", "Action title");
-    requireField("owner", "Owner");
     requireField("dueDate", "Due date");
     requireField("specific", "Specific");
     requireField("timeBound", "Time-bound");
@@ -3539,7 +3745,6 @@ function validateSafetyForm(mode: SafetyFormMode, values: Record<string, string>
 
   if (mode === "qi") {
     requireField("title", "QI title");
-    requireField("owner", "Owner");
     requireField("issue", "Issue or opportunity");
     requireField("requiredAction", "Required action");
   }
@@ -3568,6 +3773,510 @@ function validateSafetyForm(mode: SafetyFormMode, values: Record<string, string>
   }
 
   return errors;
+}
+
+async function loadSafetyHubData(scope: SafetyScopeSelection): Promise<SafetyHubData> {
+  const [
+    riskResult,
+    actionResult,
+    qiResult,
+    ideaResult,
+    linkResult,
+    reviewResult,
+    auditResult,
+    matrixResult,
+    settingsResult,
+    profileResult,
+    associationResult,
+    clubResult,
+    teamResult,
+  ] = await Promise.all([
+    supabase.from("rg_risk_register").select("*").order("display_number"),
+    supabase.from("rg_be_smart_actions").select("*").order("display_number"),
+    supabase.from("rg_quality_improvement_items").select("*").order("display_number"),
+    supabase.from("rg_bright_ideas").select("*").order("display_number"),
+    supabase.from("rg_record_links").select("*").eq("is_active", true),
+    supabase.from("rg_risk_reviews").select("*").order("reviewed_at", { ascending: false }),
+    supabase.from("rg_audit_log").select("*").order("changed_at", { ascending: false }).limit(500),
+    supabase.from("rg_risk_matrix").select("*").order("likelihood").order("consequence"),
+    supabase.from("rg_risk_settings").select("*").eq("is_active", true),
+    supabase.from("profiles").select("id, first_name, last_name"),
+    supabase.from("associations").select("id, name"),
+    supabase.from("clubs").select("id, name, association_id"),
+    supabase.from("teams").select("id, name, club_id"),
+  ]);
+
+  const results = [
+    riskResult,
+    actionResult,
+    qiResult,
+    ideaResult,
+    linkResult,
+    reviewResult,
+    auditResult,
+    matrixResult,
+    settingsResult,
+    profileResult,
+    associationResult,
+    clubResult,
+    teamResult,
+  ];
+  const failedResult = results.find((result) => result.error);
+  if (failedResult?.error) throw failedResult.error;
+
+  return buildSafetyHubData({
+    scope,
+    riskRows: filterSafetyRows(riskResult.data ?? [], scope),
+    actionRows: filterSafetyRows(actionResult.data ?? [], scope),
+    qiRows: filterSafetyRows(qiResult.data ?? [], scope),
+    ideaRows: filterSafetyRows(ideaResult.data ?? [], scope),
+    linkRows: filterSafetyRows(linkResult.data ?? [], scope),
+    reviewRows: filterSafetyRows(reviewResult.data ?? [], scope),
+    auditRows: filterSafetyRows(auditResult.data ?? [], scope),
+    matrixRows: matrixResult.data ?? [],
+    settingsRows: settingsResult.data ?? [],
+    profiles: profileResult.data ?? [],
+    associations: associationResult.data ?? [],
+    clubs: clubResult.data ?? [],
+    teams: teamResult.data ?? [],
+  });
+}
+
+function filterSafetyRows<T extends {
+  association_id: string | null;
+  club_id: string | null;
+  team_id: string | null;
+}>(rows: T[], scope: SafetyScopeSelection): T[] {
+  if (scope.teamId) return rows.filter((row) => row.team_id === scope.teamId);
+  if (scope.clubId) return rows.filter((row) => row.club_id === scope.clubId);
+  if (scope.associationId) return rows.filter((row) => row.association_id === scope.associationId);
+  return rows;
+}
+
+function buildSafetyHubData({
+  scope,
+  riskRows,
+  actionRows,
+  qiRows,
+  ideaRows,
+  linkRows,
+  reviewRows,
+  auditRows,
+  matrixRows,
+  settingsRows,
+  profiles,
+  associations,
+  clubs,
+  teams,
+}: {
+  scope: SafetyScopeSelection;
+  riskRows: SafetyRiskRow[];
+  actionRows: SafetyActionRow[];
+  qiRows: SafetyQiRow[];
+  ideaRows: SafetyIdeaRow[];
+  linkRows: SafetyLinkRow[];
+  reviewRows: SafetyReviewRow[];
+  auditRows: SafetyAuditRow[];
+  matrixRows: SafetyMatrixRow[];
+  settingsRows: SafetySettingsRow[];
+  profiles: ProfileSummary[];
+  associations: AssociationSummary[];
+  clubs: ClubSummary[];
+  teams: TeamSummary[];
+}): SafetyHubData {
+  const profileNames = new Map(
+    profiles.map((profile) => [profile.id, formatProfileName(profile)]),
+  );
+  const associationNames = new Map(associations.map((association) => [association.id, association.name]));
+  const clubNames = new Map(clubs.map((club) => [club.id, club.name]));
+  const teamNames = new Map(teams.map((team) => [team.id, team.name]));
+
+  const displayByDatabaseId = new Map<string, string>();
+  riskRows.forEach((row) => displayByDatabaseId.set(row.id, formatDisplayId("R", row.display_number)));
+  actionRows.forEach((row) => displayByDatabaseId.set(row.id, formatDisplayId("A", row.display_number)));
+  qiRows.forEach((row) => displayByDatabaseId.set(row.id, formatDisplayId("QI", row.display_number)));
+  ideaRows.forEach((row) => displayByDatabaseId.set(row.id, formatDisplayId("BI", row.display_number)));
+
+  const linkedDisplayIds = buildLinkedDisplayIds(
+    linkRows,
+    actionRows,
+    displayByDatabaseId,
+  );
+  const latestReviewByRisk = new Map<string, SafetyReviewRow>();
+  reviewRows.forEach((review) => {
+    if (!latestReviewByRisk.has(review.risk_id)) latestReviewByRisk.set(review.risk_id, review);
+  });
+
+  const risks = riskRows.map<RiskRecord>((row) => {
+    const latestReview = latestReviewByRisk.get(row.id);
+    const links = linkedDisplayIds.get(row.id) ?? [];
+    const residualLikelihood = row.residual_likelihood ?? row.likelihood;
+    const residualConsequence = row.residual_consequence ?? row.consequence;
+
+    return {
+      kind: "risk",
+      id: displayByDatabaseId.get(row.id) ?? row.id,
+      title: row.title,
+      summary: row.description ?? row.consequences ?? row.risk_event ?? "No summary recorded.",
+      category: row.category ?? "Uncategorised",
+      type: row.risk_type ?? "Operational",
+      owner: profileNames.get(row.owner_id ?? "") ?? "Unassigned",
+      createdBy: profileNames.get(row.created_by ?? "") ?? "Not recorded",
+      scope: getScopeName(row, associationNames, clubNames, teamNames),
+      status: mapRiskStatus(row.status),
+      inherentRating: normaliseRiskRating(row.inherent_rating),
+      residualRating: normaliseRiskRating(row.residual_rating),
+      targetRating: normaliseRiskRating(row.target_rating),
+      likelihood: likelihoodLabels[(residualLikelihood ?? 1) - 1] ?? "Not recorded",
+      consequence: consequenceLabels[(residualConsequence ?? 1) - 1] ?? "Not recorded",
+      existingControls: row.existing_controls ?? "",
+      treatmentPlan: row.treatment_plan ?? "",
+      lastReview: formatDate(latestReview?.reviewed_at),
+      nextReview: formatDate(row.next_review_date),
+      reviewState: getReviewState(row.next_review_date),
+      linkedActions: links.filter((id) => id.startsWith("A-")),
+      linkedQi: links.filter((id) => id.startsWith("QI-")),
+      evidence: row.evidence ?? latestReview?.evidence ?? "",
+    };
+  });
+
+  const actions = actionRows.map<ActionRecord>((row) => {
+    const links = linkedDisplayIds.get(row.id) ?? [];
+    return {
+      kind: "action",
+      id: displayByDatabaseId.get(row.id) ?? row.id,
+      title: row.title,
+      owner: profileNames.get(row.assigned_to ?? "") ?? "Unassigned",
+      createdBy: profileNames.get(row.created_by ?? "") ?? "Not recorded",
+      status: mapActionStatus(row.status),
+      dueDate: formatDate(row.due_date),
+      dueState: getDueState(row.due_date, row.status === "COMPLETED"),
+      linkedRiskId: links.find((id) => id.startsWith("R-")),
+      linkedQiId: links.find((id) => id.startsWith("QI-")),
+      baseline: row.baseline ?? "",
+      evaluate: row.evaluate ?? "",
+      specific: row.specific ?? row.action_text,
+      measurable: row.measurable ?? "",
+      achievable: row.achievable ?? "",
+      relevant: row.relevant ?? "",
+      timeBound: row.time_bound ?? "",
+    };
+  });
+
+  const qiItems = qiRows.map<QiRecord>((row) => {
+    const links = linkedDisplayIds.get(row.id) ?? [];
+    return {
+      kind: "qi",
+      id: displayByDatabaseId.get(row.id) ?? row.id,
+      title: row.title,
+      source: row.source ?? "Not recorded",
+      area: row.area ?? "Not recorded",
+      owner: profileNames.get(row.owner_id ?? "") ?? "Unassigned",
+      createdBy: profileNames.get(row.created_by ?? "") ?? "Not recorded",
+      priority: mapPriority(row.priority),
+      status: mapQiStatus(row.status),
+      dueDate: formatDate(row.due_date),
+      dueState: getDueState(row.due_date, row.status === "COMPLETED"),
+      issue: row.issue ?? row.description ?? "",
+      requiredAction: row.required_action ?? "",
+      outcome: row.outcome ?? "",
+      linkedRiskId: links.find((id) => id.startsWith("R-")),
+      linkedActionId: links.find((id) => id.startsWith("A-")),
+      linkedIdeaId: links.find((id) => id.startsWith("BI-")),
+    };
+  });
+
+  const brightIdeas = ideaRows.map<BrightIdeaRecord>((row) => {
+    const links = linkedDisplayIds.get(row.id) ?? [];
+    return {
+      kind: "idea",
+      id: displayByDatabaseId.get(row.id) ?? row.id,
+      title: row.title,
+      submittedBy: profileNames.get(row.submitted_by ?? "") ?? "Unknown submitter",
+      submittedDate: formatDate(row.submitted_at),
+      scope: getScopeName(row, associationNames, clubNames, teamNames),
+      status: mapBrightIdeaStatus(row.status),
+      decision: mapBrightIdeaDecision(row.decision),
+      whyNeeded: row.why_needed,
+      suggestedImplementation: row.suggested_implementation ?? "",
+      suggestedEvaluation: row.suggested_evaluation ?? "",
+      couldAssist: row.could_assist ?? "",
+      committeeNotes: row.committee_notes ?? "No committee notes recorded.",
+      linkedRecordId: links[0],
+    };
+  });
+
+  const auditEvents = auditRows
+    .map<AuditRecord | null>((row) => {
+      const recordType = normaliseAuditRecordType(row.record_type);
+      if (!recordType) return null;
+      return {
+        kind: "audit",
+        id: `AU-${row.id.slice(0, 8).toUpperCase()}`,
+        date: formatDateTime(row.changed_at),
+        user: profileNames.get(row.user_id ?? "") ?? "System",
+        record: row.record_reference ?? row.record_id ?? "Unknown record",
+        recordType,
+        scope: getScopeName(row, associationNames, clubNames, teamNames),
+        relatedRecordId: row.related_record_reference ?? row.record_reference ?? undefined,
+        action: mapAuditAction(row.action),
+        fieldChanged: humaniseFieldName(row.field_name),
+        previousValue: formatAuditValue(row.previous_value),
+        newValue: formatAuditValue(row.new_value),
+        reason: row.reason ?? "No reason recorded.",
+      };
+    })
+    .filter((event): event is AuditRecord => event !== null);
+
+  return {
+    risks,
+    actions,
+    qiItems,
+    brightIdeas,
+    auditEvents,
+    riskMatrix: buildRiskMatrix(scope, settingsRows, matrixRows),
+  };
+}
+
+function buildLinkedDisplayIds(
+  links: SafetyLinkRow[],
+  actions: SafetyActionRow[],
+  displayByDatabaseId: Map<string, string>,
+) {
+  const linked = new Map<string, Set<string>>();
+  const connect = (leftId: string | null, rightId: string | null) => {
+    if (!leftId || !rightId) return;
+    const leftDisplay = displayByDatabaseId.get(leftId);
+    const rightDisplay = displayByDatabaseId.get(rightId);
+    if (!leftDisplay || !rightDisplay) return;
+    if (!linked.has(leftId)) linked.set(leftId, new Set());
+    if (!linked.has(rightId)) linked.set(rightId, new Set());
+    linked.get(leftId)?.add(rightDisplay);
+    linked.get(rightId)?.add(leftDisplay);
+  };
+
+  links.forEach((link) => {
+    const ids = [link.risk_id, link.action_id, link.qi_item_id, link.bright_idea_id]
+      .filter((id): id is string => Boolean(id));
+    if (ids.length === 2) connect(ids[0], ids[1]);
+  });
+  actions.forEach((action) => connect(action.id, action.risk_id));
+
+  return new Map(
+    Array.from(linked.entries()).map(([id, values]) => [id, Array.from(values)]),
+  );
+}
+
+function buildRiskMatrix(
+  scope: SafetyScopeSelection,
+  settingsRows: SafetySettingsRow[],
+  matrixRows: SafetyMatrixRow[],
+): RiskRating[][] {
+  const settings = (
+    (scope.clubId
+      ? settingsRows.find((row) => row.scope_level === "CLUB" && row.club_id === scope.clubId)
+      : undefined)
+    ?? (scope.associationId
+      ? settingsRows.find((row) => row.scope_level === "ASSOCIATION" && row.association_id === scope.associationId)
+      : undefined)
+    ?? settingsRows.find((row) => row.scope_level === "GLOBAL")
+  );
+  const matrix = prototypeRiskMatrix.map((row) => [...row]);
+  if (!settings) return matrix;
+
+  matrixRows
+    .filter((row) => row.settings_id === settings.id)
+    .forEach((row) => {
+      const likelihoodIndex = row.likelihood - 1;
+      const consequenceIndex = row.consequence - 1;
+      if (matrix[likelihoodIndex]?.[consequenceIndex]) {
+        matrix[likelihoodIndex][consequenceIndex] = normaliseRiskRating(row.risk_level);
+      }
+    });
+  return matrix;
+}
+
+function formatDisplayId(prefix: "R" | "A" | "QI" | "BI", displayNumber: number) {
+  return `${prefix}-${String(displayNumber).padStart(3, "0")}`;
+}
+
+function formatProfileName(profile: ProfileSummary) {
+  const name = [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
+  return name || "Unnamed user";
+}
+
+function getScopeName(
+  row: { association_id: string | null; club_id: string | null; team_id: string | null },
+  associationNames: Map<string, string>,
+  clubNames: Map<string, string>,
+  teamNames: Map<string, string>,
+) {
+  if (row.team_id) return teamNames.get(row.team_id) ?? "Unknown team";
+  if (row.club_id) return clubNames.get(row.club_id) ?? "Unknown club";
+  if (row.association_id) return associationNames.get(row.association_id) ?? "Unknown association";
+  return "Global";
+}
+
+function normaliseRiskRating(value: string | null | undefined): RiskRating {
+  const normalised = value?.trim().toLowerCase();
+  if (normalised === "low") return "Low";
+  if (normalised === "high") return "High";
+  if (normalised === "very high" || normalised === "critical") return "Very High";
+  return "Medium";
+}
+
+function mapRiskStatus(value: string): RiskStatus {
+  if (value === "IN_PROGRESS") return "In progress";
+  if (value === "CONTROLLED" || value === "RESOLVED" || value === "ACCEPTED") return "Controlled";
+  if (value === "CLOSED") return "Closed";
+  if (value === "ENTERED_IN_ERROR") return "Entered in error";
+  return "Open";
+}
+
+function mapActionStatus(value: string): ActionStatus {
+  if (value === "IN_PROGRESS" || value === "APPROVED") return "In progress";
+  if (value === "BLOCKED") return "Blocked";
+  if (value === "COMPLETED") return "Complete";
+  if (value === "ENTERED_IN_ERROR") return "Entered in error";
+  return "Not started";
+}
+
+function mapQiStatus(value: string): QiStatus {
+  if (value === "AWAITING_DECISION" || value === "PENDING") return "Awaiting decision";
+  if (value === "APPROVED") return "Approved";
+  if (value === "IN_PROGRESS") return "In progress";
+  if (value === "COMPLETED") return "Complete";
+  if (value === "ENTERED_IN_ERROR") return "Entered in error";
+  return "New";
+}
+
+function mapPriority(value: string): QiRecord["priority"] {
+  if (value.toUpperCase() === "HIGH") return "High";
+  if (value.toUpperCase() === "LOW") return "Low";
+  return "Medium";
+}
+
+function mapBrightIdeaStatus(value: string): BrightIdeaStatus {
+  if (value === "UNDER_REVIEW") return "Under review";
+  if (value === "ACCEPTED") return "Accepted";
+  if (value === "DEFERRED") return "Deferred";
+  if (value === "CLOSED") return "Closed";
+  if (value === "ENTERED_IN_ERROR") return "Entered in error";
+  return "Submitted";
+}
+
+function mapBrightIdeaDecision(value: string | null): BrightIdeaRecord["decision"] {
+  if (value === "ACCEPT") return "Accept";
+  if (value === "DEFER") return "Defer";
+  if (value === "REJECT") return "Reject";
+  if (value === "CLOSE") return "Close";
+  return "Pending";
+}
+
+function parseDatabaseDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T00:00:00`)
+    : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatDate(value: string | null | undefined) {
+  const date = parseDatabaseDate(value);
+  if (!date) return "-";
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "Australia/Melbourne",
+  }).format(date);
+}
+
+function formatDateTime(value: string | null | undefined) {
+  const date = parseDatabaseDate(value);
+  if (!date) return "-";
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Australia/Melbourne",
+  }).format(date);
+}
+
+function getDueState(value: string | null, complete: boolean): DueState {
+  if (complete) return "Complete";
+  const dueDate = parseDatabaseDate(value);
+  if (!dueDate) return "Current";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  dueDate.setHours(0, 0, 0, 0);
+  if (dueDate < today) return "Overdue";
+  const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / 86_400_000);
+  return daysUntilDue <= dueSoonDays ? "Due soon" : "Current";
+}
+
+function getReviewState(value: string | null): ReviewState {
+  const state = getDueState(value, false);
+  if (state === "Overdue") return "Overdue";
+  if (state === "Due soon") return "Due soon";
+  return "Current";
+}
+
+function normaliseAuditRecordType(value: string | null): AuditRecord["recordType"] | null {
+  if (
+    value === "Risk"
+    || value === "Action"
+    || value === "QI"
+    || value === "Bright Idea"
+    || value === "Risk Review"
+    || value === "Link"
+    || value === "Settings"
+    || value === "Comment"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function mapAuditAction(value: string) {
+  if (value === "INSERT") return "Created";
+  if (value === "UPDATE") return "Updated";
+  if (value === "DELETE") return "Removed";
+  return value;
+}
+
+function humaniseFieldName(value: string | null) {
+  if (!value) return "Record";
+  if (value === "Record created" || value === "Record removed") return value;
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part, index) => index === 0
+      ? `${part.charAt(0).toUpperCase()}${part.slice(1)}`
+      : part)
+    .join(" ");
+}
+
+function formatAuditValue(value: Json | null) {
+  if (value === null) return "-";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (
+    typeof error === "object"
+    && error !== null
+    && "message" in error
+    && typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+  return "An unknown Supabase error occurred.";
 }
 
 function getPrototypeSaveMessage(mode: SafetyFormMode, context: SafetyFormContext) {
@@ -3610,5 +4319,5 @@ function calculateRiskRating(likelihood: string | undefined, consequence: string
   const consequenceIndex = formConsequenceOptions.indexOf(consequence || "");
 
   if (likelihoodIndex < 0 || consequenceIndex < 0) return "Medium";
-  return riskMatrix[likelihoodIndex][consequenceIndex];
+  return prototypeRiskMatrix[likelihoodIndex][consequenceIndex];
 }
