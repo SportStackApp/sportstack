@@ -4,9 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/check-dev-environment.mjs --frontend-only",
     "dev": "vite",
     "build": "vite build",
+    "prebuild:dev": "node scripts/check-dev-environment.mjs --frontend-only",
     "build:dev": "vite build --mode development",
+    "env:check:dev": "node scripts/check-dev-environment.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
