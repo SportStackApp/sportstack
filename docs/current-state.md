@@ -90,6 +90,63 @@ Date: 2026-07-18
 
 What changed:
 
+- Released the Safety Hub database foundation and read-only frontend connection
+  for `/admin/safety-risk`.
+- Added the approved Safety Hub tables, expanded fields, linked-record model,
+  scoped RLS, audit triggers and organisation settings foundation.
+- Connected dashboard totals, registers, associated-record summaries, matrix
+  settings and audit history to scoped Supabase reads.
+- Kept Risk, Action, QI and Bright Idea forms local-only with `Validate draft`;
+  this release does not enable live form writes.
+- Added Safety Hub navigation for Club Admin.
+- Made Owner optional for Risk, Action and QI drafts. Registers and detail
+  drawers separately show the database `created_by` person as `Added by`.
+- The 25 matrix values remain provisional and are not recorded as approved.
+- Dev contains one clearly labelled `[DEV TEST]` linked Safety Hub chain.
+  Production Safety Hub record, link and review tables remain empty.
+
+Files changed:
+
+- `src/components/layout/AppLayout.tsx`
+- `src/pages/admin/SafetyRiskModule.tsx`
+- `src/integrations/supabase/types.ts`
+- `supabase/migrations/20260718181341_safety_hub_database_integration.sql`
+- `docs/safety-hub-database-integration-plan.md`
+- `docs/current-state.md`
+
+Checks run:
+
+- Focused ESLint passed for the changed frontend files.
+- `npx tsc --noEmit` passed.
+- `npm run build` passed with the existing large-chunk warning.
+- Browser checks passed for scoped dashboard data, linked records, matrix
+  guidance, audit details, optional Owner validation and `Added by`.
+- A clean browser reload produced no new console errors.
+- Full-repository lint remains at the existing 583 unrelated problems.
+
+What Aaron should test next:
+
+- Open Production `/admin/safety-risk` as Super Admin, Association Admin and
+  Club Admin.
+- Confirm Club Admin can see Safety Hub in the sidebar and only records for
+  their club.
+- Confirm the Production registers are empty until real committee records are
+  deliberately added.
+- Confirm forms still show `Validate draft` and do not save records.
+
+Risk level:
+
+- High for the wider package because the approved additive schema and RLS
+  migration was already applied to Production.
+- Low for this release action: no new Production data write or form-write
+  enablement is included.
+
+### Previous handoff entry
+
+Date: 2026-07-18
+
+What changed:
+
 - Added a RevSports placeholder planner that is read-only by default and produces a CSV report for unmatched external players.
 - Added a guarded, manual apply path that requires one RevSports player ID, an explicit confirmation flag, and a separate non-production Supabase project.
 - The apply path refuses the known live SportStack project, re-reads the source before writing, and only accepts a safe `create_placeholder` or `link_existing` result.
