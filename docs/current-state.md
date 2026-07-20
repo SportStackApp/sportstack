@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-07-16
+Last updated: 2026-07-20
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -85,6 +85,45 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
+
+Date: 2026-07-20
+
+What changed:
+
+- Replaced the Umpire Match Voting scope row with searchable multi-select
+  filters for Association, Season, Club, Division, Team and Round.
+- Added OR-within and AND-between filter matching so KPI tiles, round bars,
+  fixture lists, submissions and leaderboard share the same granular scope.
+- Added parent-to-child resets and fixture-driven option narrowing. Team stays
+  disabled until a Division is selected.
+- Added an explicit `Unassigned season` option for fixtures with no
+  `season_id`; no season is inferred for those fixtures.
+- Removed the Senior/Junior division-type filter.
+- Kept Association, Club and Team options inside the signed-in admin's existing
+  scope without changing RLS or permissions.
+- No database, email, Player MVP Voting, Production or `main` change was made.
+
+Files changed:
+
+- `src/components/admin/AdminMultiSelectFilter.tsx`
+- `src/pages/admin/UmpireVotingModule.tsx`
+- `docs/current-state.md`
+
+Checks run:
+
+- Focused ESLint, `npx tsc --noEmit` and `npm run build` passed.
+- Full `npm run lint` continues to report the existing 486 repository-wide
+  errors outside these files.
+- Automated browser interaction could not be completed because the local server
+  was unavailable and the external Dev preview is protected by Vercel sign-in.
+- Vercel confirmed the pushed Dev deployment reached `READY`.
+
+Deployment state:
+
+- Included in Dev commit `6e79779` and pushed to `origin/dev`.
+- Vercel reports the Dev branch deployment as ready at
+  `sportstack-git-dev-sportstackapps-projects.vercel.app`.
+- Not promoted to `main` or Production.
 
 Date: 2026-07-18
 
