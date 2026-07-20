@@ -1,4 +1,5 @@
 export type UmpireVoteSchemeKey = "classic_3_2_1" | "junior_2_1_split";
+export type UmpireDivisionType = "senior" | "junior";
 
 export interface UmpireVoteSchemeLine {
   key: string;
@@ -38,13 +39,22 @@ export const UMPIRE_VOTE_SCHEMES: Record<UmpireVoteSchemeKey, UmpireVoteScheme> 
   },
 };
 
-export const getDefaultUmpireVoteScheme = (divisionName: string): UmpireVoteScheme => {
-  const normalised = divisionName.toLowerCase();
+export const getUmpireDivisionType = (
+  divisionName: string,
+  ageGroup?: string | null,
+): UmpireDivisionType => {
+  const normalised = `${divisionName} ${ageGroup || ""}`.toLowerCase();
   const isJunior =
+    normalised.includes("junior") ||
+    normalised.includes("youth") ||
     normalised.includes("under") ||
-    normalised.includes("u11") ||
-    normalised.includes("u14") ||
-    normalised.includes("u16");
+    /(^|\s)u\d{1,2}(\s|$)/.test(normalised);
 
-  return isJunior ? UMPIRE_VOTE_SCHEMES.junior_2_1_split : UMPIRE_VOTE_SCHEMES.classic_3_2_1;
+  return isJunior ? "junior" : "senior";
+};
+
+export const getDefaultUmpireVoteScheme = (divisionName: string): UmpireVoteScheme => {
+  return getUmpireDivisionType(divisionName) === "junior"
+    ? UMPIRE_VOTE_SCHEMES.junior_2_1_split
+    : UMPIRE_VOTE_SCHEMES.classic_3_2_1;
 };

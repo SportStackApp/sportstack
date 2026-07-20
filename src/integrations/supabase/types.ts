@@ -1853,6 +1853,7 @@ export type Database = {
           id: string
           player_name: string
           player_number: number | null
+          profile_id: string | null
           submission_id: string
           team_id: string | null
           votes: number
@@ -1863,6 +1864,7 @@ export type Database = {
           id?: string
           player_name?: string
           player_number?: number | null
+          profile_id?: string | null
           submission_id: string
           team_id?: string | null
           votes: number
@@ -1873,11 +1875,19 @@ export type Database = {
           id?: string
           player_name?: string
           player_number?: number | null
+          profile_id?: string | null
           submission_id?: string
           team_id?: string | null
           votes?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "player_vote_lines_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "player_vote_lines_submission_id_fkey"
             columns: ["submission_id"]
@@ -5541,6 +5551,10 @@ export type Database = {
       }
       resolve_mvp_result_dispute: {
         Args: { p_closes_at?: string; p_session_id: string }
+        Returns: Json
+      }
+      review_umpire_vote_submission: {
+        Args: { p_action: string; p_lines?: Json; p_submission_id: string }
         Returns: Json
       }
       set_team_mvp_enabled: {

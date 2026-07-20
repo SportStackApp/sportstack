@@ -33,6 +33,11 @@ import {
   UMPIRE_VOTE_SCHEMES,
   UmpireVoteSchemeKey,
 } from "@/lib/umpireVoteSchemes";
+import { UmpireLinkedPlayerPicker } from "@/components/umpire/UmpireLinkedPlayerPicker";
+import {
+  loadUmpireLinkedPlayers,
+  type UmpireLinkedPlayerOption,
+} from "@/lib/umpireLinkedPlayers";
 
 type AppMode = "super_admin" | "association" | "club" | "team" | "player";
 
@@ -40,6 +45,7 @@ interface VoteCard {
   schemeLineKey: string;
   label: string;
   points: number;
+  profileId: string | null;
   playerName: string;
   playerNumber: string;
   teamId: string;
@@ -103,9 +109,10 @@ export default function UmpireVoteSubmit() {
   const [voteCards, setVoteCards] = useState<VoteCard[]>([]);
   const [selectedSchemeKey, setSelectedSchemeKey] = useState<UmpireVoteSchemeKey>("classic_3_2_1");
 
-  // Step 2 - Autocomplete player suggestions
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [focusedCardIndex, setFocusedCardIndex] = useState<number | null>(null);
+  // Step 2 - Linked SportStack player options for the selected fixture.
+  const [linkedPlayers, setLinkedPlayers] = useState<UmpireLinkedPlayerOption[]>([]);
+  const [linkedPlayersLoading, setLinkedPlayersLoading] = useState(false);
+  const [linkedPlayersError, setLinkedPlayersError] = useState<string | null>(null);
 
   // Role Access Protection check
   const isUmpire =
@@ -385,39 +392,49 @@ export default function UmpireVoteSubmit() {
     }
   }, [selectedFixtureId, fixtures, selectedDivisionId, divisions]);
 
-  // Autocomplete player suggestions ILIKE lookup
-  const fetchPlayerSuggestions = async (val: string) => {
-    if (val.length < 2) {
-      setSuggestions([]);
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!selectedFixture) {
+      setLinkedPlayers([]);
+      setLinkedPlayersError(null);
       return;
     }
 
-    try {
-      const { data, error } = await (supabase as any)
-        .from("player_vote_lines")
-        .select("player_name")
-        .ilike("player_name", `%${val}%`)
-        .limit(10);
+    setLinkedPlayersLoading(true);
+    setLinkedPlayersError(null);
 
-      if (error) throw error;
+    loadUmpireLinkedPlayers({
+      fixtureId: selectedFixture.id,
+      homeTeamId: selectedFixture.home_team_id,
+      awayTeamId: selectedFixture.away_team_id,
+      homeTeamLabel: selectedFixture.homeTeamName,
+      awayTeamLabel: selectedFixture.awayTeamName,
+    })
+      .then((players) => {
+        if (!cancelled) setLinkedPlayers(players);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        console.error("Error fetching linked player options:", error);
+        setLinkedPlayers([]);
+        setLinkedPlayersError("Linked players could not be loaded. You can still enter an unlisted player for admin review.");
+      })
+      .finally(() => {
+        if (!cancelled) setLinkedPlayersLoading(false);
+      });
 
-      // Extract unique names
-      const uniq = Array.from(
-        new Set(
-          data?.map((item: any) => item.player_name).filter(Boolean) || []
-        )
-      );
-      setSuggestions(uniq as string[]);
-    } catch (err) {
-      console.error("Error fetching player name suggestions:", err);
-    }
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedFixture]);
 
   const buildVoteCards = (schemeKey: UmpireVoteSchemeKey): VoteCard[] => {
     return UMPIRE_VOTE_SCHEMES[schemeKey].lines.map((line) => ({
       schemeLineKey: line.key,
       label: line.label,
       points: line.points,
+      profileId: null,
       playerName: "",
       playerNumber: "",
       teamId: "",
@@ -520,7 +537,11 @@ export default function UmpireVoteSubmit() {
         .from("player_vote_submissions")
         .insert({
           fixture_id: selectedFixture.id,
+          association_id: selectedAssociationId,
           division_id: selectedFixture.division_id,
+          round_number: selectedFixture.round_number,
+          home_team_id: selectedFixture.home_team_id,
+          away_team_id: selectedFixture.away_team_id,
           umpire_user_id: user.id,
           legacy_umpire_email: null,
           is_approved: false,
@@ -537,9 +558,10 @@ export default function UmpireVoteSubmit() {
       const submissionId = subData.id;
 
       // 2. Insert into public.player_vote_lines
-      const linesToInsert = voteCards.map((card, idx) => ({
+      const linesToInsert = voteCards.map((card) => ({
         submission_id: submissionId,
-        player_name: card.playerName.trim() || null,
+        profile_id: card.profileId,
+        player_name: card.playerName.trim(),
         player_number: card.playerNumber.trim() ? parseInt(card.playerNumber, 10) : null,
         team_id: card.teamId === "__none__" || !card.teamId ? null : card.teamId,
         votes: card.points,
@@ -969,6 +991,13 @@ export default function UmpireVoteSubmit() {
                   </p>
                 </div>
 
+                {linkedPlayersError && (
+                  <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300">
+                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{linkedPlayersError}</span>
+                  </div>
+                )}
+
                 {/* Cards rendering */}
                 <div className="space-y-4">
                   {voteCards.map((card, idx) => {
@@ -1002,55 +1031,41 @@ export default function UmpireVoteSubmit() {
 
                         {/* Card Inputs */}
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                          {/* Player Name input with suggestions */}
+                          {/* Linked player search with an explicit unlisted fallback. */}
                           <div className="md:col-span-6 space-y-1.5 relative">
                             <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
                               Player Name
                             </label>
-                            <Input
-                              placeholder="Type player name..."
+                            <UmpireLinkedPlayerPicker
                               value={card.playerName}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                const updated = [...voteCards];
-                                updated[idx].playerName = val;
-                                setVoteCards(updated);
-                                setFocusedCardIndex(idx);
-                                fetchPlayerSuggestions(val);
+                              profileId={card.profileId}
+                              options={linkedPlayers}
+                              loading={linkedPlayersLoading}
+                              onNameChange={(playerName) => {
+                                setVoteCards((current) =>
+                                  current.map((item, cardIndex) =>
+                                    cardIndex === idx
+                                      ? { ...item, profileId: null, playerName }
+                                      : item,
+                                  ),
+                                );
                               }}
-                              onFocus={() => {
-                                setFocusedCardIndex(idx);
-                                fetchPlayerSuggestions(card.playerName);
-                              }}
-                              onBlur={() => {
-                                // Delay slightly to allow suggestion click to register
-                                setTimeout(() => {
-                                  setFocusedCardIndex(null);
-                                  setSuggestions([]);
-                                }, 200);
+                              onSelect={(player) => {
+                                setVoteCards((current) =>
+                                  current.map((item, cardIndex) =>
+                                    cardIndex === idx
+                                      ? {
+                                          ...item,
+                                          profileId: player.profileId,
+                                          playerName: player.name,
+                                          playerNumber: player.number,
+                                          teamId: player.teamId || "",
+                                        }
+                                      : item,
+                                  ),
+                                );
                               }}
                             />
-
-                            {/* Suggestions Dropdown list */}
-                            {focusedCardIndex === idx && suggestions.length > 0 && (
-                              <div className="absolute top-[100%] left-0 right-0 mt-1 bg-background border border-border rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto py-1 divide-y divide-border">
-                                {suggestions.map((name) => (
-                                  <button
-                                    key={name}
-                                    type="button"
-                                    onClick={() => {
-                                      const updated = [...voteCards];
-                                      updated[idx].playerName = name;
-                                      setVoteCards(updated);
-                                      setSuggestions([]);
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted text-foreground transition-colors font-medium"
-                                  >
-                                    {name}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
                           </div>
 
                           {/* Jersey number */}
@@ -1062,9 +1077,13 @@ export default function UmpireVoteSubmit() {
                               placeholder="#"
                               value={card.playerNumber}
                               onChange={(e) => {
-                                const updated = [...voteCards];
-                                updated[idx].playerNumber = e.target.value;
-                                setVoteCards(updated);
+                                setVoteCards((current) =>
+                                  current.map((item, cardIndex) =>
+                                    cardIndex === idx
+                                      ? { ...item, playerNumber: e.target.value }
+                                      : item,
+                                  ),
+                                );
                               }}
                             />
                           </div>
@@ -1077,9 +1096,11 @@ export default function UmpireVoteSubmit() {
                             <Select
                               value={card.teamId || "__none__"}
                               onValueChange={(val) => {
-                                const updated = [...voteCards];
-                                updated[idx].teamId = val;
-                                setVoteCards(updated);
+                                setVoteCards((current) =>
+                                  current.map((item, cardIndex) =>
+                                    cardIndex === idx ? { ...item, teamId: val } : item,
+                                  ),
+                                );
                               }}
                             >
                               <SelectTrigger className="w-full">

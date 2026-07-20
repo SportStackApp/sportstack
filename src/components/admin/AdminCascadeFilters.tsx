@@ -31,6 +31,7 @@ interface AdminCascadeFiltersProps {
   triggerClassName?: string;
   labelClassName?: string;
   allLabels?: Partial<Record<keyof CascadeValue, string>>;
+  getTeamLabel?: (team: CascadeTeam) => string;
 }
 
 export function AdminCascadeFilters({
@@ -46,6 +47,7 @@ export function AdminCascadeFilters({
   triggerClassName = "w-full min-w-0 overflow-hidden",
   labelClassName = "text-sm font-medium",
   allLabels,
+  getTeamLabel = getTeamNameLabel,
 }: AdminCascadeFiltersProps) {
   const options = getCascadeOptions({ associations, clubs, divisions, teams, value });
   const isClubDisabled = value.associationId === ALL_CASCADE_VALUE;
@@ -190,7 +192,7 @@ export function AdminCascadeFilters({
               <SelectItem value={ALL_CASCADE_VALUE}>{allLabels?.teamId || "All teams"}</SelectItem>
               {options.teams.map((team) => (
                 <SelectItem key={team.id} value={team.id}>
-                  {getTeamNameLabel(team)}
+                  {getTeamLabel(team)}
                 </SelectItem>
               ))}
             </SelectContent>

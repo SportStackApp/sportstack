@@ -1,0 +1,176 @@
+import { useId, useMemo, useState } from "react";
+import { CheckCircle2, Loader2, Search, UserRoundX } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { UmpireLinkedPlayerOption } from "@/lib/umpireLinkedPlayers";
+
+interface UmpireLinkedPlayerPickerProps {
+  value: string;
+  profileId: string | null;
+  options: UmpireLinkedPlayerOption[];
+  loading?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  onNameChange: (value: string) => void;
+  onSelect: (option: UmpireLinkedPlayerOption) => void;
+}
+
+const normaliseSearch = (value: string) => value.trim().toLocaleLowerCase("en-AU");
+
+export function UmpireLinkedPlayerPicker({
+  value,
+  profileId,
+  options,
+  loading = false,
+  disabled = false,
+  placeholder = "Type at least two letters",
+  onNameChange,
+  onSelect,
+}: UmpireLinkedPlayerPickerProps) {
+  const [open, setOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const listId = useId();
+
+  const matches = useMemo(() => {
+    if (showAll) return options;
+
+    const search = normaliseSearch(value);
+    if (search.length < 2) return [];
+
+    return options.filter((option) =>
+      [
+        option.name,
+        option.number,
+        option.teamLabel,
+        option.contextLabel,
+      ]
+        .join(" ")
+        .toLocaleLowerCase("en-AU")
+        .includes(search),
+    );
+  }, [options, showAll, value]);
+
+  const selectedOption = useMemo(
+    () => options.find((option) => option.profileId === profileId),
+    [options, profileId],
+  );
+
+  const handleBlur = () => {
+    window.setTimeout(() => setOpen(false), 150);
+  };
+
+  return (
+    <div className="relative min-w-0">
+      <div className="flex min-w-0 gap-2">
+        <Input
+          value={value}
+          disabled={disabled}
+          placeholder={placeholder}
+          autoComplete="off"
+          aria-label="Linked player name"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={open}
+          aria-controls={open ? listId : undefined}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setOpen(false);
+          }}
+          onFocus={() => {
+            if (value.trim().length >= 2) setOpen(true);
+          }}
+          onBlur={handleBlur}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+            setShowAll(false);
+            setOpen(nextValue.trim().length >= 2);
+            onNameChange(nextValue);
+          }}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-10 w-10 shrink-0"
+          disabled={disabled}
+          aria-label="Search all linked players"
+          title="Search all linked players"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            setShowAll(true);
+            setOpen(true);
+          }}
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+        </Button>
+      </div>
+
+      {profileId ? (
+        <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">
+            Linked to {selectedOption?.name || value}
+            {selectedOption?.number ? ` #${selectedOption.number}` : ""}
+          </span>
+        </div>
+      ) : value.trim() ? (
+        <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+          <UserRoundX className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Unlisted player; an admin must link this line before approval.</span>
+        </div>
+      ) : null}
+
+      {open && !disabled && (
+        <div
+          id={listId}
+          role="listbox"
+          className="absolute z-50 mt-1 max-h-72 w-full min-w-[20rem] overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+        >
+          {loading ? (
+            <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading linked players...
+            </div>
+          ) : matches.length === 0 ? (
+            <p className="px-3 py-3 text-sm text-muted-foreground">
+              {showAll || value.trim().length >= 2
+                ? "No linked player was found."
+                : "Type at least two letters to search."}
+            </p>
+          ) : (
+            matches.map((option) => (
+              <button
+                key={option.profileId}
+                type="button"
+                role="option"
+                aria-selected={option.profileId === profileId}
+                className="flex w-full min-w-0 items-start gap-2 rounded-sm px-3 py-2 text-left hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onSelect(option);
+                  setOpen(false);
+                  setShowAll(false);
+                }}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate text-sm font-medium">{option.name}</span>
+                    {option.number && (
+                      <span className="shrink-0 text-xs text-muted-foreground">#{option.number}</span>
+                    )}
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {option.teamLabel} - {option.contextLabel || "Linked club profile"}
+                  </p>
+                </div>
+                <Badge variant="outline" className="shrink-0 text-[10px]">
+                  {option.source === "roster" ? "Roster" : "Club"}
+                </Badge>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
