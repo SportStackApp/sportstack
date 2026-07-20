@@ -46,9 +46,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase as originalSupabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useToast } from "@/hooks/use-toast";
-import { AdminCascadeFilters } from "@/components/admin/AdminCascadeFilters";
-import type { CascadeValue } from "@/lib/adminCascade";
-import { getUmpireDivisionType, type UmpireDivisionType } from "@/lib/umpireVoteSchemes";
+import {
+  AdminMultiSelectFilter,
+  type AdminMultiSelectOption,
+} from "@/components/admin/AdminMultiSelectFilter";
 import { UmpireLinkedPlayerPicker } from "@/components/umpire/UmpireLinkedPlayerPicker";
 import {
   loadUmpireLinkedPlayers,
@@ -180,6 +181,7 @@ interface FixtureRow {
 interface SeasonRow {
   id: string;
   name: string;
+  association_id: string;
 }
 
 interface ProfileRow {
@@ -195,6 +197,19 @@ interface VotingScopeContext {
   teamIds: string[];
   seasonId: string | null;
   roundNumber: number | null;
+}
+
+interface VotingScopeFilters {
+  isSuperAdmin: boolean;
+  scopedAssociationIds: string[];
+  scopedClubIds: string[];
+  scopedTeamIds: string[];
+  associationIds: string[];
+  clubIds: string[];
+  divisionIds: string[];
+  teamIds: string[];
+  seasonIds: string[];
+  rounds: string[];
 }
 
 interface RoundStatusRow {
@@ -284,7 +299,7 @@ const getEditFieldLabel = (fieldName: string | null | undefined) => {
 };
 
 type SubmissionSource = "self" | "public_proxy" | "admin_proxy";
-type DivisionTypeFilter = "ALL" | Uppercase<UmpireDivisionType>;
+const UNASSIGNED_SEASON_VALUE = "__UNASSIGNED_SEASON__";
 
 const getSubmissionSource = (submission: SubmissionRow): SubmissionSource => {
   if (submission.submitted_by_admin_id || submission.submitted_by_admin_name) return "admin_proxy";
@@ -317,43 +332,49 @@ const formatFixtureDateTime = (value: string) => {
 
 const matchesVotingScope = (
   context: VotingScopeContext,
-  filters: {
-    isSuperAdmin: boolean;
-    scopedAssociationIds: string[];
-    associationId: string;
-    clubId: string;
-    divisionId: string;
-    teamId: string;
-    seasonId: string;
-    round: string;
-    divisionType: DivisionTypeFilter;
-    division?: DivisionRow;
-  },
+  filters: VotingScopeFilters,
 ) => {
-  if (
-    !filters.isSuperAdmin &&
-    filters.scopedAssociationIds.length > 0 &&
-    (!context.associationId || !filters.scopedAssociationIds.includes(context.associationId))
-  ) {
+  if (!filters.isSuperAdmin) {
+    const hasAssociationAccess =
+      Boolean(context.associationId) &&
+      filters.scopedAssociationIds.includes(context.associationId as string);
+    const hasClubAccess = context.clubIds.some((clubId) => filters.scopedClubIds.includes(clubId));
+    const hasTeamAccess = context.teamIds.some((teamId) => filters.scopedTeamIds.includes(teamId));
+    if (!hasAssociationAccess && !hasClubAccess && !hasTeamAccess) return false;
+  }
+
+  if (filters.associationIds.length > 0 && !filters.associationIds.includes(context.associationId || "")) {
     return false;
   }
-  if (filters.associationId !== "ALL" && context.associationId !== filters.associationId) return false;
-  if (filters.clubId !== "ALL" && !context.clubIds.includes(filters.clubId)) return false;
-  if (filters.divisionId !== "ALL" && context.divisionId !== filters.divisionId) return false;
-  if (filters.teamId !== "ALL" && !context.teamIds.includes(filters.teamId)) return false;
-  if (filters.seasonId !== "ALL" && context.seasonId !== filters.seasonId) return false;
-  if (filters.round !== "ALL" && String(context.roundNumber || "") !== filters.round) return false;
-  if (filters.divisionType !== "ALL") {
-    if (!filters.division) return false;
-    const divisionType = getUmpireDivisionType(filters.division.name, filters.division.age_group);
-    if (divisionType.toUpperCase() !== filters.divisionType) return false;
+  if (filters.clubIds.length > 0 && !context.clubIds.some((clubId) => filters.clubIds.includes(clubId))) {
+    return false;
+  }
+  if (filters.divisionIds.length > 0 && !filters.divisionIds.includes(context.divisionId || "")) {
+    return false;
+  }
+  if (filters.teamIds.length > 0 && !context.teamIds.some((teamId) => filters.teamIds.includes(teamId))) {
+    return false;
+  }
+  if (filters.seasonIds.length > 0) {
+    const seasonValue = context.seasonId || UNASSIGNED_SEASON_VALUE;
+    if (!filters.seasonIds.includes(seasonValue)) return false;
+  }
+  if (filters.rounds.length > 0 && !filters.rounds.includes(String(context.roundNumber ?? ""))) {
+    return false;
   }
   return true;
 };
 
 export default function UmpireVotingModule() {
   const { toast } = useToast();
-  const { loading: scopeLoading, isSuperAdmin, highestScopedRole, scopedAssociationIds } = useAdminScope();
+  const {
+    loading: scopeLoading,
+    isSuperAdmin,
+    highestScopedRole,
+    scopedAssociationIds,
+    scopedClubIds,
+    scopedTeamIds,
+  } = useAdminScope();
   const [loading, setLoading] = useState(true);
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
   const [voteLines, setVoteLines] = useState<VoteLineRow[]>([]);
@@ -367,13 +388,12 @@ export default function UmpireVotingModule() {
   const [seasons, setSeasons] = useState<SeasonRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [associationFilter, setAssociationFilter] = useState("ALL");
-  const [clubFilter, setClubFilter] = useState("ALL");
-  const [divisionFilter, setDivisionFilter] = useState("ALL");
-  const [teamFilter, setTeamFilter] = useState("ALL");
-  const [seasonFilter, setSeasonFilter] = useState("ALL");
-  const [roundFilter, setRoundFilter] = useState("ALL");
-  const [divisionTypeFilter, setDivisionTypeFilter] = useState<DivisionTypeFilter>("ALL");
+  const [associationFilters, setAssociationFilters] = useState<string[]>([]);
+  const [seasonFilters, setSeasonFilters] = useState<string[]>([]);
+  const [clubFilters, setClubFilters] = useState<string[]>([]);
+  const [divisionFilters, setDivisionFilters] = useState<string[]>([]);
+  const [teamFilters, setTeamFilters] = useState<string[]>([]);
+  const [roundFilters, setRoundFilters] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<"PENDING" | "APPROVED" | "DELETED" | "ALL">("PENDING");
   const [showDeleted, setShowDeleted] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionRow | null>(null);
@@ -419,7 +439,7 @@ export default function UmpireVotingModule() {
           .select("id, home_team_id, away_team_id, division_id, season_id, fixture_date, status, round_number, round_name")
           .order("fixture_date", { ascending: false })
           .limit(1500),
-        moduleSupabase.from("seasons").select("id, name").order("name", { ascending: false }),
+        moduleSupabase.from("seasons").select("id, name, association_id").order("name", { ascending: false }),
         moduleSupabase.from("profiles").select("id, first_name, last_name").limit(2000),
       ]);
 
@@ -465,33 +485,16 @@ export default function UmpireVotingModule() {
     if (hasAccess) loadData();
   }, [hasAccess, loadData]);
 
-  useEffect(() => {
-    if (!isSuperAdmin && scopedAssociationIds.length === 1) {
-      setAssociationFilter(scopedAssociationIds[0]);
-    }
-  }, [isSuperAdmin, scopedAssociationIds]);
-
-  const cascadeValue: CascadeValue = {
-    associationId: associationFilter,
-    clubId: clubFilter,
-    divisionId: divisionFilter,
-    teamId: teamFilter,
-  };
-
-  const handleCascadeChange = (nextValue: CascadeValue) => {
-    setAssociationFilter(nextValue.associationId);
-    setClubFilter(nextValue.clubId);
-    setDivisionFilter(nextValue.divisionId);
-    setTeamFilter(nextValue.teamId);
-  };
-
   const teamNameMap = useMemo(
     () => new Map(teams.map((team) => [team.id, getUmpireTeamLabel(team, clubs, divisions)])),
     [teams, clubs, divisions],
   );
   const teamById = useMemo(() => new Map(teams.map((team) => [team.id, team])), [teams]);
   const clubById = useMemo(() => new Map(clubs.map((club) => [club.id, club])), [clubs]);
-  const divisionById = useMemo(() => new Map(divisions.map((division) => [division.id, division])), [divisions]);
+  const associationNameMap = useMemo(
+    () => new Map(associations.map((association) => [association.id, association.name])),
+    [associations],
+  );
   const divisionNameMap = useMemo(() => new Map(divisions.map((division) => [division.id, division.name])), [divisions]);
   const fixtureById = useMemo(() => new Map(fixtures.map((fixture) => [fixture.id, fixture])), [fixtures]);
   const profileNameMap = useMemo(
@@ -541,6 +544,287 @@ export default function UmpireVotingModule() {
     return contexts;
   }, [fixtures, teamById, clubById, teamDivisionsByTeam]);
 
+  const matchesContextSelections = useCallback(
+    (
+      context: VotingScopeContext,
+      selections: Partial<
+        Pick<
+          VotingScopeFilters,
+          "associationIds" | "seasonIds" | "clubIds" | "divisionIds" | "teamIds" | "rounds"
+        >
+      > = {},
+    ) =>
+      matchesVotingScope(context, {
+        isSuperAdmin,
+        scopedAssociationIds,
+        scopedClubIds,
+        scopedTeamIds,
+        associationIds: selections.associationIds || [],
+        seasonIds: selections.seasonIds || [],
+        clubIds: selections.clubIds || [],
+        divisionIds: selections.divisionIds || [],
+        teamIds: selections.teamIds || [],
+        rounds: selections.rounds || [],
+      }),
+    [isSuperAdmin, scopedAssociationIds, scopedClubIds, scopedTeamIds],
+  );
+
+  const accessibleFixtureContexts = useMemo(
+    () =>
+      fixtures
+        .map((fixture) => fixtureContextMap.get(fixture.id))
+        .filter((context): context is VotingScopeContext => Boolean(context))
+        .filter((context) => matchesContextSelections(context)),
+    [fixtures, fixtureContextMap, matchesContextSelections],
+  );
+
+  const associationOptions = useMemo<AdminMultiSelectOption[]>(() => {
+    if (isSuperAdmin) {
+      return associations.map((association) => ({ value: association.id, label: association.name }));
+    }
+
+    const accessibleAssociationIds = new Set(scopedAssociationIds);
+    scopedClubIds.forEach((clubId) => {
+      const associationId = clubById.get(clubId)?.association_id;
+      if (associationId) accessibleAssociationIds.add(associationId);
+    });
+    scopedTeamIds.forEach((teamId) => {
+      const clubId = teamById.get(teamId)?.club_id;
+      const associationId = clubId ? clubById.get(clubId)?.association_id : null;
+      if (associationId) accessibleAssociationIds.add(associationId);
+    });
+
+    return associations
+      .filter((association) => accessibleAssociationIds.has(association.id))
+      .map((association) => ({ value: association.id, label: association.name }));
+  }, [
+    associations,
+    isSuperAdmin,
+    scopedAssociationIds,
+    scopedClubIds,
+    scopedTeamIds,
+    clubById,
+    teamById,
+  ]);
+
+  const associationContexts = useMemo(
+    () =>
+      associationFilters.length === 0
+        ? []
+        : accessibleFixtureContexts.filter((context) =>
+            matchesContextSelections(context, { associationIds: associationFilters }),
+          ),
+    [accessibleFixtureContexts, associationFilters, matchesContextSelections],
+  );
+
+  const seasonOptions = useMemo<AdminMultiSelectOption[]>(() => {
+    const availableSeasonIds = new Set(
+      associationContexts
+        .map((context) => context.seasonId)
+        .filter((seasonId): seasonId is string => Boolean(seasonId)),
+    );
+    const prefixAssociation = associationFilters.length > 1;
+    const options = seasons
+      .filter(
+        (season) =>
+          associationFilters.includes(season.association_id) && availableSeasonIds.has(season.id),
+      )
+      .map((season) => ({
+        value: season.id,
+        label: prefixAssociation
+          ? `${associationNameMap.get(season.association_id) || "Association"} - ${season.name}`
+          : season.name,
+      }));
+
+    const unassignedContexts = associationContexts.filter((context) => !context.seasonId);
+    if (unassignedContexts.length > 0) {
+      const unassignedAssociationIds = Array.from(
+        new Set(
+          unassignedContexts
+            .map((context) => context.associationId)
+            .filter((associationId): associationId is string => Boolean(associationId)),
+        ),
+      );
+      const associationPrefix =
+        prefixAssociation && unassignedAssociationIds.length === 1
+          ? `${associationNameMap.get(unassignedAssociationIds[0]) || "Association"} - `
+          : "";
+      options.push({
+        value: UNASSIGNED_SEASON_VALUE,
+        label: `${associationPrefix}Unassigned season`,
+      });
+    }
+
+    return options.sort((a, b) => a.label.localeCompare(b.label));
+  }, [associationContexts, associationFilters, seasons, associationNameMap]);
+
+  const seasonContexts = useMemo(
+    () =>
+      associationContexts.filter((context) =>
+        matchesContextSelections(context, {
+          associationIds: associationFilters,
+          seasonIds: seasonFilters,
+        }),
+      ),
+    [associationContexts, associationFilters, seasonFilters, matchesContextSelections],
+  );
+
+  const clubOptions = useMemo<AdminMultiSelectOption[]>(() => {
+    const availableClubIds = new Set(seasonContexts.flatMap((context) => context.clubIds));
+    return clubs
+      .filter(
+        (club) =>
+          availableClubIds.has(club.id) &&
+          (isSuperAdmin || scopedClubIds.includes(club.id)),
+      )
+      .map((club) => ({ value: club.id, label: club.name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [clubs, seasonContexts, isSuperAdmin, scopedClubIds]);
+
+  const clubContexts = useMemo(
+    () =>
+      seasonContexts.filter((context) =>
+        matchesContextSelections(context, {
+          associationIds: associationFilters,
+          seasonIds: seasonFilters,
+          clubIds: clubFilters,
+        }),
+      ),
+    [seasonContexts, associationFilters, seasonFilters, clubFilters, matchesContextSelections],
+  );
+
+  const divisionOptions = useMemo<AdminMultiSelectOption[]>(() => {
+    const availableDivisionIds = new Set(
+      clubContexts
+        .map((context) => context.divisionId)
+        .filter((divisionId): divisionId is string => Boolean(divisionId)),
+    );
+    const prefixAssociation = associationFilters.length > 1;
+    return divisions
+      .filter((division) => availableDivisionIds.has(division.id))
+      .map((division) => ({
+        value: division.id,
+        label: prefixAssociation
+          ? `${associationNameMap.get(division.association_id) || "Association"} - ${division.name}`
+          : division.name,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [clubContexts, divisions, associationFilters, associationNameMap]);
+
+  const divisionContexts = useMemo(
+    () =>
+      clubContexts.filter((context) =>
+        matchesContextSelections(context, {
+          associationIds: associationFilters,
+          seasonIds: seasonFilters,
+          clubIds: clubFilters,
+          divisionIds: divisionFilters,
+        }),
+      ),
+    [
+      clubContexts,
+      associationFilters,
+      seasonFilters,
+      clubFilters,
+      divisionFilters,
+      matchesContextSelections,
+    ],
+  );
+
+  const teamOptions = useMemo<AdminMultiSelectOption[]>(() => {
+    if (divisionFilters.length === 0) return [];
+
+    const availableTeamIds = new Set(divisionContexts.flatMap((context) => context.teamIds));
+    return teams
+      .filter((team) => {
+        if (!availableTeamIds.has(team.id)) return false;
+        if (!isSuperAdmin && !scopedTeamIds.includes(team.id)) return false;
+        if (clubFilters.length > 0 && !clubFilters.includes(team.club_id)) return false;
+        return true;
+      })
+      .map((team) => ({ value: team.id, label: teamNameMap.get(team.id) || team.name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [
+    teams,
+    divisionContexts,
+    divisionFilters,
+    clubFilters,
+    teamNameMap,
+    isSuperAdmin,
+    scopedTeamIds,
+  ]);
+
+  const teamContexts = useMemo(
+    () =>
+      divisionContexts.filter((context) =>
+        matchesContextSelections(context, {
+          associationIds: associationFilters,
+          seasonIds: seasonFilters,
+          clubIds: clubFilters,
+          divisionIds: divisionFilters,
+          teamIds: teamFilters,
+        }),
+      ),
+    [
+      divisionContexts,
+      associationFilters,
+      seasonFilters,
+      clubFilters,
+      divisionFilters,
+      teamFilters,
+      matchesContextSelections,
+    ],
+  );
+
+  const roundOptions = useMemo<AdminMultiSelectOption[]>(
+    () =>
+      Array.from(
+        new Set(
+          teamContexts
+            .map((context) => context.roundNumber)
+            .filter((round): round is number => typeof round === "number"),
+        ),
+      )
+        .sort((a, b) => a - b)
+        .map((round) => ({ value: String(round), label: `Round ${round}` })),
+    [teamContexts],
+  );
+
+  const handleAssociationChange = (associationIds: string[]) => {
+    setAssociationFilters(associationIds);
+    setSeasonFilters([]);
+    setClubFilters([]);
+    setDivisionFilters([]);
+    setTeamFilters([]);
+    setRoundFilters([]);
+  };
+
+  const handleSeasonChange = (seasonIds: string[]) => {
+    setSeasonFilters(seasonIds);
+    setClubFilters([]);
+    setDivisionFilters([]);
+    setTeamFilters([]);
+    setRoundFilters([]);
+  };
+
+  const handleClubChange = (clubIds: string[]) => {
+    setClubFilters(clubIds);
+    setDivisionFilters([]);
+    setTeamFilters([]);
+    setRoundFilters([]);
+  };
+
+  const handleDivisionChange = (divisionIds: string[]) => {
+    setDivisionFilters(divisionIds);
+    setTeamFilters([]);
+    setRoundFilters([]);
+  };
+
+  const handleTeamChange = (teamIds: string[]) => {
+    setTeamFilters(teamIds);
+    setRoundFilters([]);
+  };
+
   const submissionContextMap = useMemo(() => {
     const contexts = new Map<string, VotingScopeContext>();
     submissions.forEach((submission) => {
@@ -570,34 +854,32 @@ export default function UmpireVotingModule() {
     () => ({
       isSuperAdmin,
       scopedAssociationIds,
-      associationId: associationFilter,
-      clubId: clubFilter,
-      divisionId: divisionFilter,
-      teamId: teamFilter,
-      seasonId: seasonFilter,
-      round: roundFilter,
-      divisionType: divisionTypeFilter,
+      scopedClubIds,
+      scopedTeamIds,
+      associationIds: associationFilters,
+      seasonIds: seasonFilters,
+      clubIds: clubFilters,
+      divisionIds: divisionFilters,
+      teamIds: teamFilters,
+      rounds: roundFilters,
     }),
     [
       isSuperAdmin,
       scopedAssociationIds,
-      associationFilter,
-      clubFilter,
-      divisionFilter,
-      teamFilter,
-      seasonFilter,
-      roundFilter,
-      divisionTypeFilter,
+      scopedClubIds,
+      scopedTeamIds,
+      associationFilters,
+      seasonFilters,
+      clubFilters,
+      divisionFilters,
+      teamFilters,
+      roundFilters,
     ],
   );
 
   const isContextInScope = useCallback(
-    (context: VotingScopeContext) =>
-      matchesVotingScope(context, {
-        ...scopeFilters,
-        division: context.divisionId ? divisionById.get(context.divisionId) : undefined,
-      }),
-    [scopeFilters, divisionById],
+    (context: VotingScopeContext) => matchesVotingScope(context, scopeFilters),
+    [scopeFilters],
   );
 
   const scopedSubmissions = useMemo(
@@ -683,16 +965,6 @@ export default function UmpireVotingModule() {
   const approvedScopedSubmissionIds = useMemo(
     () => new Set(scopedSubmissions.filter((submission) => submission.is_approved && !submission.is_deleted).map((submission) => submission.id)),
     [scopedSubmissions],
-  );
-
-  const roundOptions = useMemo(
-    () =>
-      Array.from(new Set([
-        ...submissions.map((submission) => submission.round_number),
-        ...fixtures.map((fixture) => fixture.round_number),
-      ].filter((round): round is number => typeof round === "number")))
-        .sort((a, b) => a - b),
-    [submissions, fixtures],
   );
 
   const getSubmissionLines = useCallback(
@@ -1116,54 +1388,70 @@ export default function UmpireVotingModule() {
           <CardTitle className="text-base">Voting scope</CardTitle>
           <CardDescription>Filter the dashboard, submissions and leaderboard together.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <AdminCascadeFilters
-            associations={associations}
-            clubs={clubs}
-            divisions={divisions}
-            teams={teams}
-            value={cascadeValue}
-            onChange={handleCascadeChange}
-            disabledAssociation={!isSuperAdmin}
-            getTeamLabel={(team) => teamNameMap.get(team.id) || team.name}
-            className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"
-          />
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Season</label>
-              <Select value={seasonFilter} onValueChange={setSeasonFilter}>
-                <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All seasons</SelectItem>
-                  {seasons.map((season) => (
-                    <SelectItem key={season.id} value={season.id}>{season.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Round</label>
-              <Select value={roundFilter} onValueChange={setRoundFilter}>
-                <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All rounds</SelectItem>
-                  {roundOptions.map((round) => (
-                    <SelectItem key={round} value={String(round)}>Round {round}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Division type</label>
-              <Select value={divisionTypeFilter} onValueChange={(value) => setDivisionTypeFilter(value as DivisionTypeFilter)}>
-                <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Senior and junior</SelectItem>
-                  <SelectItem value="SENIOR">Senior</SelectItem>
-                  <SelectItem value="JUNIOR">Junior</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <AdminMultiSelectFilter
+              label="Association"
+              options={associationOptions}
+              selected={associationFilters}
+              onChange={handleAssociationChange}
+              allLabel="All associations"
+              searchPlaceholder="Search associations..."
+            />
+            <AdminMultiSelectFilter
+              label="Season"
+              options={seasonOptions}
+              selected={seasonFilters}
+              onChange={handleSeasonChange}
+              allLabel="All seasons"
+              searchPlaceholder="Search seasons..."
+              disabled={associationFilters.length === 0}
+              disabledPlaceholder="Select an association first"
+            />
+            <AdminMultiSelectFilter
+              label="Club"
+              options={clubOptions}
+              selected={clubFilters}
+              onChange={handleClubChange}
+              allLabel="All clubs"
+              searchPlaceholder="Search clubs..."
+              disabled={associationFilters.length === 0}
+              disabledPlaceholder="Select an association first"
+            />
+            <AdminMultiSelectFilter
+              label="Division"
+              options={divisionOptions}
+              selected={divisionFilters}
+              onChange={handleDivisionChange}
+              allLabel="All divisions"
+              searchPlaceholder="Search divisions..."
+              disabled={associationFilters.length === 0}
+              disabledPlaceholder="Select an association first"
+            />
+            <AdminMultiSelectFilter
+              label="Team"
+              options={teamOptions}
+              selected={teamFilters}
+              onChange={handleTeamChange}
+              allLabel="All teams"
+              searchPlaceholder="Search teams..."
+              disabled={associationFilters.length === 0 || divisionFilters.length === 0}
+              disabledPlaceholder={
+                associationFilters.length === 0
+                  ? "Select an association first"
+                  : "Select a division first"
+              }
+            />
+            <AdminMultiSelectFilter
+              label="Round"
+              options={roundOptions}
+              selected={roundFilters}
+              onChange={setRoundFilters}
+              allLabel="All rounds"
+              searchPlaceholder="Search rounds..."
+              disabled={associationFilters.length === 0}
+              disabledPlaceholder="Select an association first"
+            />
           </div>
         </CardContent>
       </Card>
