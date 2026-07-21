@@ -9,6 +9,7 @@ const corsHeaders = {
 type ReminderAction =
   | "scheduled"
   | "opened"
+  | "three_day_reminder"
   | "two_day_reminder"
   | "one_day_reminder"
   | "manual_resend";
@@ -33,6 +34,7 @@ type MvpSession = {
 type TeamScope = {
   id: string;
   mvp_enabled: boolean;
+  mvp_notifications_enabled: boolean;
   club_id: string;
   association_id: string | null;
   timezone: string;
@@ -41,6 +43,7 @@ type TeamScope = {
 type TeamScopeRow = {
   id: string;
   mvp_enabled: boolean;
+  mvp_notifications_enabled: boolean;
   club_id: string;
   clubs: { association_id: string | null } | Array<{ association_id: string | null }> | null;
 };
@@ -87,8 +90,9 @@ const SESSION_PAGE_SIZE = 100;
 const MAX_SCHEDULED_RECIPIENTS_PER_RUN = 20;
 const MAX_SCHEDULED_FAILURE_ATTEMPTS = 3;
 const STALE_EVENT_CLAIM_MS = 10 * 60 * 1000;
-const TWO_DAYS_MS = 48 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const TWO_DAYS_MS = 48 * 60 * 60 * 1000;
+const THREE_DAYS_MS = 72 * 60 * 60 * 1000;
 let lastEmailSendStartedAt = 0;
 
 class EmailSendError extends Error {
@@ -124,8 +128,6 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function eventTitle(eventType: ReminderEvent) {
   if (eventType === "opened") return "MVP voting is open";
-  if (eventType === "two_day_reminder") return "MVP voting reminder";
-  if (eventType === "one_day_reminder") return "MVP voting closes soon";
   return "MVP voting reminder";
 }
 
@@ -174,18 +176,24 @@ function shouldSendEvent(session: MvpSession, eventType: ReminderEvent, now: Dat
   if (closesAt <= now) return false;
   if (eventType === "opened") return openedAt <= now;
 
-  const dueAt = new Date(
-    closesAt.getTime() - (eventType === "two_day_reminder" ? TWO_DAYS_MS : ONE_DAY_MS),
-  );
+  const delayMs = eventType === "one_day_reminder"
+    ? ONE_DAY_MS
+    : eventType === "two_day_reminder"
+      ? TWO_DAYS_MS
+      : THREE_DAYS_MS;
+  const dueAt = new Date(openedAt.getTime() + delayMs);
 
-  // A short opening window must not trigger reminder milestones that were already past.
-  return openedAt < dueAt && dueAt <= now;
+  // Do not send a milestone after the next match has started or the round has
+  // otherwise closed. The older two-day action remains accepted only for
+  // compatibility; scheduled runs now use opening, +24 hours and +72 hours.
+  return dueAt < closesAt && dueAt <= now;
 }
 
 function normaliseAction(value: unknown): ReminderAction | null {
   if (
     value === "scheduled" ||
     value === "opened" ||
+    value === "three_day_reminder" ||
     value === "two_day_reminder" ||
     value === "one_day_reminder" ||
     value === "manual_resend"
@@ -295,7 +303,7 @@ async function loadTeamScopes(
 
   const { data, error } = await serviceClient
     .from("teams")
-    .select("id, mvp_enabled, club_id, clubs(association_id)")
+    .select("id, mvp_enabled, mvp_notifications_enabled, club_id, clubs(association_id)")
     .in("id", teamIds);
   if (error) throw error;
 
@@ -322,6 +330,7 @@ async function loadTeamScopes(
     teams.set(row.id, {
       id: row.id,
       mvp_enabled: Boolean(row.mvp_enabled),
+      mvp_notifications_enabled: Boolean(row.mvp_notifications_enabled),
       club_id: row.club_id,
       association_id: club?.association_id || null,
       timezone: club?.association_id
@@ -704,13 +713,19 @@ Deno.serve(async (req) => {
       if (!auth.isCron && !callerCanManageTeam(auth.roles, team)) {
         throw new RequestError("You do not manage this team.", 403);
       }
+      if (!team.mvp_notifications_enabled) {
+        if (!auth.isCron) {
+          throw new RequestError("Player MVP email notifications are turned off for this team.", 409);
+        }
+        continue;
+      }
       if (session.status !== "OPEN" || !session.closes_at || new Date(session.closes_at) <= now) {
         if (!auth.isCron) throw new RequestError("Voting is not open for this team.");
         continue;
       }
 
       const eventTypes: ReminderEvent[] = action === "scheduled"
-        ? ["opened", "two_day_reminder", "one_day_reminder"]
+        ? ["opened", "one_day_reminder", "three_day_reminder"]
         : [action];
       let processedSession = false;
 

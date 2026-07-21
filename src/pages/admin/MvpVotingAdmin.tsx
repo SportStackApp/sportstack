@@ -52,10 +52,7 @@ import {
   type MvpSessionStatus,
 } from "@/lib/mvpVoting";
 
-// The checked-in generated types intentionally remain unchanged until the
-// approved migration is applied and the types can be regenerated from Supabase.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = originalSupabase as any;
+const supabase = originalSupabase;
 
 type SessionStatus = MvpSessionStatus;
 type LifecycleKind = "open" | "close" | "reopen" | "resolve";
@@ -84,6 +81,7 @@ interface TeamOption {
   club_id: string;
   division_id: string | null;
   mvp_enabled: boolean;
+  mvp_notifications_enabled: boolean;
 }
 
 interface VenueOption {
@@ -238,6 +236,7 @@ const isUpgradeMissingError = (error: unknown) => {
     isMvpUpgradeUnavailable(error) ||
     ["42P01", "42703", "42883", "PGRST202", "PGRST204", "PGRST205"].includes(value?.code || "") ||
     message.includes("mvp_enabled") ||
+    message.includes("mvp_notifications_enabled") ||
     message.includes("mvp_result_checks") ||
     message.includes("does not exist") ||
     message.includes("could not find the function")
@@ -471,18 +470,21 @@ export default function MvpVotingAdmin() {
 
       const teamResult = await supabase
         .from("teams")
-        .select("id, name, club_id, division_id, mvp_enabled")
+        .select("id, name, club_id, division_id, mvp_enabled, mvp_notifications_enabled")
         .order("name");
 
       let teamData: TeamOption[];
 
       if (teamResult.error && isUpgradeMissingError(teamResult.error)) {
         markUpgradeMissing();
-        const fallback = await supabase.from("teams").select("id, name, club_id, division_id").order("name");
+        const fallback = await supabase
+          .from("teams")
+          .select("id, name, club_id, division_id, mvp_enabled")
+          .order("name");
         if (fallback.error) throw fallback.error;
-        teamData = ((fallback.data || []) as Omit<TeamOption, "mvp_enabled">[]).map((team) => ({
+        teamData = ((fallback.data || []) as Omit<TeamOption, "mvp_notifications_enabled">[]).map((team) => ({
           ...team,
-          mvp_enabled: false,
+          mvp_notifications_enabled: true,
         }));
       } else if (teamResult.error) {
         throw teamResult.error;
@@ -1092,7 +1094,7 @@ export default function MvpVotingAdmin() {
     if (!lifecycleDialog) return;
     const { kind, session, fixture } = lifecycleDialog;
     let closesAt: string | null = null;
-    if (kind !== "close") {
+    if (kind === "reopen" || kind === "resolve") {
       const closeDate = new Date(lifecycleCloseAt);
       if (!lifecycleCloseAt || Number.isNaN(closeDate.getTime()) || closeDate.getTime() <= Date.now()) {
         toast({
@@ -1169,12 +1171,17 @@ export default function MvpVotingAdmin() {
         description:
           kind === "close"
             ? "The aggregate result can now be published if no concern is unresolved."
-            : "The voting round is open until the selected closing time.",
+            : kind === "open"
+              ? "The voting round closes when this team’s next scheduled match starts."
+              : "The voting round is open until the selected closing time.",
       });
 
       setLifecycleDialog(null);
       await Promise.all([loadSessions(), loadOpenCandidates()]);
-      if (sessionId && kind !== "close") await sendOpeningEmail(sessionId);
+      const notificationTeamId = session?.team_id || selectedTeam?.id;
+      const notificationsEnabled = allTeams.find((team) => team.id === notificationTeamId)
+        ?.mvp_notifications_enabled;
+      if (sessionId && kind !== "close" && notificationsEnabled) await sendOpeningEmail(sessionId);
       if (sessionId && (view === "detail" || kind === "open")) openSessionDetail(sessionId);
       else if (session?.id && view === "detail") await loadSessionDetails(session.id);
     } catch (error) {
@@ -1223,8 +1230,46 @@ export default function MvpVotingAdmin() {
     }
   };
 
+  const handleNotificationToggle = async (enabled: boolean) => {
+    if (!selectedTeam) return;
+    setActionLoading(`notifications-${selectedTeam.id}`);
+    try {
+      const { error } = await supabase.rpc("set_team_mvp_notifications_enabled", {
+        p_team_id: selectedTeam.id,
+        p_enabled: enabled,
+      });
+      if (error) throw error;
+
+      setAllTeams((teams) =>
+        teams.map((team) =>
+          team.id === selectedTeam.id ? { ...team, mvp_notifications_enabled: enabled } : team,
+        ),
+      );
+      toast({
+        title: enabled ? "Player MVP emails turned on" : "Player MVP emails turned off",
+        description: enabled
+          ? "Opening and reminder emails can now be sent for this team."
+          : "Player MVP Voting still works, but opening and reminder emails will not be sent.",
+      });
+    } catch (error) {
+      if (isUpgradeMissingError(error)) markUpgradeMissing();
+      toast({
+        variant: "destructive",
+        title: "Could not change the email setting",
+        description: isUpgradeMissingError(error) ? MVP_UPGRADE_MESSAGE : friendlyMvpError(error),
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleResendToNonVoters = async () => {
     if (!sessionDetails) return;
+    const team = allTeams.find((candidate) => candidate.id === sessionDetails.team_id);
+    if (!team?.mvp_notifications_enabled) {
+      toast({ title: "Player MVP emails are off", description: "Turn on email notifications for this team first." });
+      return;
+    }
     setActionLoading(`remind-${sessionDetails.id}`);
     try {
       const { data, error } = await supabase.functions.invoke("mvp-voting-email-reminders", {
@@ -1248,6 +1293,11 @@ export default function MvpVotingAdmin() {
 
   const handleResendToVoter = async (voter: VoterStatus) => {
     if (!sessionDetails) return;
+    const team = allTeams.find((candidate) => candidate.id === sessionDetails.team_id);
+    if (!team?.mvp_notifications_enabled) {
+      toast({ title: "Player MVP emails are off", description: "Turn on email notifications for this team first." });
+      return;
+    }
     setRowActionLoading(`resend-${voter.id}`);
     try {
       const { data, error } = await supabase.functions.invoke("mvp-voting-email-reminders", {
@@ -1496,27 +1546,47 @@ export default function MvpVotingAdmin() {
             <Card>
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Power className="h-4 w-4" /> {selectedTeam.name} MVP setting
+                  <Power className="h-4 w-4" /> {selectedTeam.name} Player MVP settings
                 </CardTitle>
                 <CardDescription>
-                  Turning this off closes pending and open rounds. Result concerns stay visible for review.
+                  Control voting access and its emails separately for this team.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-semibold">MVP voting is {selectedTeam.mvp_enabled ? "on" : "off"}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedTeam.mvp_enabled
-                      ? "Authorised people can open a completed fixture."
-                      : "No new team voting round can be opened."}
-                  </p>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-semibold">Player MVP Voting is {selectedTeam.mvp_enabled ? "on" : "off"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedTeam.mvp_enabled
+                        ? "Completed fixtures can open for this team."
+                        : "No new team voting round can be opened."}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={selectedTeam.mvp_enabled}
+                    onCheckedChange={setTeamToggleTarget}
+                    disabled={!schemaReady || Boolean(actionLoading)}
+                    aria-label={`Turn Player MVP Voting ${selectedTeam.mvp_enabled ? "off" : "on"} for ${selectedTeam.name}`}
+                  />
                 </div>
-                <Switch
-                  checked={selectedTeam.mvp_enabled}
-                  onCheckedChange={setTeamToggleTarget}
-                  disabled={!schemaReady || Boolean(actionLoading)}
-                  aria-label={`Turn MVP voting ${selectedTeam.mvp_enabled ? "off" : "on"} for ${selectedTeam.name}`}
-                />
+                <div className="flex items-center justify-between gap-4 border-t pt-4">
+                  <div>
+                    <p className="font-semibold">
+                      Email notifications are {selectedTeam.mvp_notifications_enabled ? "on" : "off"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedTeam.mvp_notifications_enabled
+                        ? "Opening and reminder emails will be sent while voting is open."
+                        : "Voting still works, but opening and reminder emails are skipped."}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={selectedTeam.mvp_notifications_enabled}
+                    onCheckedChange={handleNotificationToggle}
+                    disabled={!schemaReady || Boolean(actionLoading)}
+                    aria-label={`Turn Player MVP email notifications ${selectedTeam.mvp_notifications_enabled ? "off" : "on"} for ${selectedTeam.name}`}
+                  />
+                </div>
               </CardContent>
             </Card>
           )}
@@ -1815,7 +1885,16 @@ export default function MvpVotingAdmin() {
                               variant="outline"
                               className="gap-2"
                               onClick={handleResendToNonVoters}
-                              disabled={!isReminderAvailable(sessionDetails) || Boolean(actionLoading)}
+                              disabled={
+                                !isReminderAvailable(sessionDetails) ||
+                                !selectedTeamForDetail?.mvp_notifications_enabled ||
+                                Boolean(actionLoading)
+                              }
+                              title={
+                                selectedTeamForDetail?.mvp_notifications_enabled
+                                  ? "Remind players who have not voted"
+                                  : "Player MVP email notifications are off for this team"
+                              }
                             >
                               <Mail className="h-4 w-4" /> Remind non-voters
                             </Button>
@@ -2001,6 +2080,7 @@ export default function MvpVotingAdmin() {
                                       onClick={() => handleResendToVoter(voter)}
                                       disabled={
                                         !isReminderAvailable(sessionDetails) ||
+                                        !selectedTeamForDetail?.mvp_notifications_enabled ||
                                         Boolean(actionLoading) ||
                                         Boolean(rowActionLoading)
                                       }
@@ -2121,10 +2201,12 @@ export default function MvpVotingAdmin() {
                 ? "Closing publishes aggregate results only when no result concern is unresolved."
                 : lifecycleDialog?.kind === "resolve"
                   ? "Confirm the fixture score has been corrected. This starts a new result-review and reminder cycle while preserving all existing votes and checks."
-                  : "The default window is 72 hours. You may choose an earlier closing time."}
+                  : lifecycleDialog?.kind === "open"
+                    ? "The first round closes when this team’s next scheduled match starts. If no later match is scheduled, it closes after 72 hours."
+                    : "The default reopening window is 72 hours. You may choose an earlier closing time."}
             </DialogDescription>
           </DialogHeader>
-          {lifecycleDialog?.kind !== "close" && (
+          {(lifecycleDialog?.kind === "reopen" || lifecycleDialog?.kind === "resolve") && (
             <div className="space-y-2 py-2">
               <Label htmlFor="mvp-close-time">Voting closes (local time)</Label>
               <Input
@@ -2158,7 +2240,7 @@ export default function MvpVotingAdmin() {
             <DialogTitle>{teamToggleTarget ? "Enable" : "Turn off"} MVP voting?</DialogTitle>
             <DialogDescription>
               {teamToggleTarget
-                ? `This lets authorised people open team voting rounds for ${selectedTeam?.name || "this team"}.`
+                ? `Completed fixtures will automatically open Player MVP Voting for ${selectedTeam?.name || "this team"}.`
                 : "This closes every pending and open round for the team in one audited action. Disputed rounds remain visible."}
             </DialogDescription>
           </DialogHeader>
