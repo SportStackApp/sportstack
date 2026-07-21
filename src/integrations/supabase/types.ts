@@ -4888,6 +4888,7 @@ export type Database = {
           id: string
           logo_url: string | null
           mvp_enabled: boolean
+          mvp_notifications_enabled: boolean
           name: string
           updated_at: string
         }
@@ -4904,6 +4905,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           mvp_enabled?: boolean
+          mvp_notifications_enabled?: boolean
           name: string
           updated_at?: string
         }
@@ -4920,6 +4922,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           mvp_enabled?: boolean
+          mvp_notifications_enabled?: boolean
           name?: string
           updated_at?: string
         }
@@ -5558,6 +5561,10 @@ export type Database = {
         Returns: Json
       }
       set_team_mvp_enabled: {
+        Args: { p_enabled: boolean; p_team_id: string }
+        Returns: Json
+      }
+      set_team_mvp_notifications_enabled: {
         Args: { p_enabled: boolean; p_team_id: string }
         Returns: Json
       }
