@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-07-20
+Last updated: 2026-07-22
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -26,7 +26,7 @@ Update this file after every meaningful Codex task, pull request, schema change,
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md`
 6. `PROJECT_SCOPE_UI_UX_AND_IMPLEMENTATION_PLAN.md`
 7. Latest pull requests and commits
-8. Live Supabase check
+8. Live Supabase checks
 
 ## Current priority
 
@@ -46,11 +46,32 @@ SportStack is a React + TypeScript + Vite single-page app using Tailwind CSS, sh
 
 The backend is Supabase: Postgres, Auth, Storage, Row Level Security, and Edge Functions. RevSports data is scraped by Python scripts and GitHub Actions, staged into `revsports_*` tables, mapped, then imported into live app tables.
 
+## Confirmed deployment environments
+
+| Stage | Git branch | Public address | Supabase project |
+|---|---|---|---|
+| Development | `dev` | `https://dev.sportstackapp.com.au` | SportStack Dev `icqegnpjbizccjebjfhb` |
+| Main/staging | `main` | `https://main.sportstackapp.com.au` | SportStack Dev `icqegnpjbizccjebjfhb` |
+| Production | `prod` | `https://sportstack.grampianshockey.com.au` | SportStack Production `svierarfcolhcfjpmwck` |
+
+- All three addresses are public and returned HTTP 200 on 22 July 2026.
+- `dev` and `main` deliberately share the Dev database. Production is separate.
+- `prod` is the Vercel Production Branch. `main` is a staging/preview branch and does not publish
+  the production domain.
+- Supabase Auth allows the custom Dev/main addresses in the Dev project and the production
+  address in the Production project.
+- `www.sportstackapp.com.au` was not changed and is not part of the current rollout.
+
 ## Confirmed operating rules
 
-- Non-workflow changes should go to `dev` first, then merge to `main` when ready.
-- Pushes to `main` can deploy to Vercel.
-- Treat the live Supabase project as real production data.
+- App changes go to `dev` first, then `main` for staging, then `prod` after explicit production
+  approval.
+- A push to `prod` triggers the public Vercel production deployment.
+- Workflow files are a special case: scheduled GitHub Actions run from the default `main` branch
+  and select Dev or Production using different secret names. Confirm the target before changing
+  them.
+- Treat Production data as real. Dev/main share one non-production database and can affect each
+  other's test data.
 - Do not expose `.env`, `.env.local`, Supabase service-role keys, private Player MVP Voting tokens, or other secrets.
 - Confirm with Aaron before destructive database work, schema migrations, RLS/auth changes, Edge Function changes, role enum changes, secrets work, or deployment-sensitive work.
 - Use Australian English in user-facing text.
@@ -85,6 +106,35 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
+
+Date: 2026-07-22
+
+What changed:
+
+- Added and verified Hostinger DNS for `dev.sportstackapp.com.au` and
+  `main.sportstackapp.com.au`.
+- Connected the Vercel branch aliases: `dev` to the Dev address, `main` to the Main address and
+  `prod` to `sportstack.grampianshockey.com.au` as Production.
+- Confirmed the Vercel Preview environment used by `dev` and `main` points to SportStack Dev
+  Supabase, while Vercel Production points to the separate SportStack Production Supabase.
+- Updated Supabase Auth Site URL and redirect allow lists for the three custom addresses and local
+  development.
+- Disabled Vercel Authentication for previews so Dev and Main are publicly accessible.
+- Left `www.sportstackapp.com.au` unchanged.
+
+Checks run:
+
+- Public HTTP checks returned 200 for all three custom addresses.
+- The deployed Dev and Main bundles reference Supabase project `icqegnpjbizccjebjfhb`.
+- The deployed Production bundle references Supabase project `svierarfcolhcfjpmwck`.
+- Current Dev, Main and Production deployments are `READY` in Vercel.
+
+Risk level:
+
+- Low for this documentation update. The live DNS, Vercel and Supabase Auth configuration was
+  already completed and verified; no database schema or data change is included here.
+
+### Previous handoff entry
 
 Date: 2026-07-20
 

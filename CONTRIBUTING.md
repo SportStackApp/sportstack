@@ -2,8 +2,12 @@
 
 ## Branch rules
 
-- Non-workflow changes must go to `dev` first, then be merged to `main` when ready.
-- Changes under `.github/workflows/*.yml` may target `main`, but only with care because `main` can trigger production deployment behaviour.
+- App changes must go to `dev` first, then be merged to `main` for staging.
+- Production release requires explicit owner approval, then `main` is merged to `prod`.
+- A push to `prod` triggers the Vercel production deployment.
+- Changes under `.github/workflows/*.yml` need separate care: scheduled workflows run from the
+  default `main` branch and may use either Dev or Production Supabase secrets. Confirm the target
+  secrets and get owner approval before merging workflow changes to `main`.
 - Use short, descriptive branch names such as `fix/...`, `feat/...`, or `chore/...`.
 
 ## Commit format

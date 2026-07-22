@@ -83,8 +83,8 @@ Tick these off; ★ = blocks related implementation.
 - [ ] ★ Exact contracts for `admin_save_user_roles` overloads and the `create-player` / `bulk-import` / `bulk-import-players` Edge Functions
 - [ ] Repo access for Codex (confirm it can read/clone; provide a token if it ever becomes private)
 - [ ] Screenshots of key admin screens + both Player MVP Voting and Umpire Match Voting screens (for UI accuracy)
-- [ ] Confirm production URL/domain and DNS provider (Cloudflare vs Hostinger)
-- [ ] Vercel project name + confirmation the `VITE_*` env vars are set there
+- [x] Production URL is `sportstack.grampianshockey.com.au`; current app DNS is managed in Hostinger
+- [x] Vercel project is `sportstack`; Preview Supabase URL/key values use Dev and Production URL/key values use Production (`VITE_SUPABASE_PROJECT_ID` is not required by the current client)
 - [ ] Supabase service key kept secret (and rotated if ever exposed)
 - [ ] A test game (fixture) to run the Player MVP Voting flow end-to-end
 - [ ] A test login (a non-super-admin account per role) for permission testing

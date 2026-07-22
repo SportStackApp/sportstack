@@ -17,6 +17,18 @@ The current app is hockey-focused, but decisions should avoid blocking future mu
 - Supabase for auth, database, storage, migrations, and Edge Functions
 - Vercel for deployment
 
+## Deployment Environments
+
+| Stage | Git branch | Public address | Supabase project |
+|---|---|---|---|
+| Development | `dev` | `https://dev.sportstackapp.com.au` | SportStack Dev `icqegnpjbizccjebjfhb` |
+| Main/staging | `main` | `https://main.sportstackapp.com.au` | SportStack Dev `icqegnpjbizccjebjfhb` |
+| Production | `prod` | `https://sportstack.grampianshockey.com.au` | SportStack Production `svierarfcolhcfjpmwck` |
+
+App changes move through `dev` -> `main` -> `prod`. `prod` is the Vercel Production Branch and
+must not be updated without explicit production approval. `www.sportstackapp.com.au` is outside
+this rollout and remains unchanged.
+
 ## Current Priority
 
 Keep work focused on the existing SportStack app and the next Player MVP Voting work.

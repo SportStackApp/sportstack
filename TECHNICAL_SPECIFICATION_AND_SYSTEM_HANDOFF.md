@@ -3,7 +3,7 @@
 **Project:** SportStack
 **Document purpose:** Complete technical handoff so OpenAI Codex (or any new developer/agent) can take over the project, understand its current state, and make safe changes without re-explanation.
 **Prepared:** 15 June 2026
-**Source of truth for this document:** Live Supabase database (`svierarfcolhcfjpmwck`) + the actual GitHub repo `SportStackApp/sportstack` (default branch cloned and inspected) + the repo's own `docs/project-brief.md` and `notes/` session handoffs.
+**Source of truth for this document:** Live Supabase projects (`icqegnpjbizccjebjfhb` for Dev/Main and `svierarfcolhcfjpmwck` for Production) + the actual GitHub repo `SportStackApp/sportstack` (default branch cloned and inspected) + the repo's own `docs/project-brief.md` and `notes/` session handoffs. Deployment topology refreshed 22 July 2026.
 
 > **Marking convention used throughout:**
 > **UNKNOWN — needs confirmation** = not verifiable from the database or repo.
@@ -21,12 +21,12 @@
 | Main users | Association admins, club admins, team managers/coaches, players, umpires, and a super admin (the owner). |
 | Main goal | Replace manual spreadsheet/RevSports admin work for regional Victorian hockey associations with one clean system; deliver Player MVP Voting and Umpire Match Voting workflows. |
 | Current development stage | Active development / pre-launch. Core data pipeline and admin CRUD exist; both named voting modules and several other modules are at different stages. |
-| Production status | Deployed to Vercel (auto-deploy on push to `main`). Treat production data as **real** — 712 profiles, 9,372 scraped player rows, 517 fixtures already exist. |
+| Production status | Deployed to Vercel from `prod` at `https://sportstack.grampianshockey.com.au`. Treat production data as **real**. |
 | Repository | `https://github.com/SportStackApp/sportstack` (GitHub org **SportStackApp**, repo **sportstack**). Clonable without credentials at time of writing. |
-| Important domains | `sportstackapp.com`, `sportstackapp.com.au`, `sportstackapp.online`, `grampianshockey.com`, `grampianshockey.com.au` (Hostinger). **UNKNOWN — needs confirmation:** which domain currently serves the live app. |
-| Deployment env | Vercel (production = `main`). |
+| Important domains | Development: `dev.sportstackapp.com.au`; Main/staging: `main.sportstackapp.com.au`; Production: `sportstack.grampianshockey.com.au` (Hostinger DNS, Vercel hosting). `www.sportstackapp.com.au` is unchanged and outside the current rollout. |
+| Deployment env | Vercel: `dev` = Development, `main` = Main/staging, `prod` = Production. |
 | Local dev env | Windows. Local path per user notes: `C:\Users\mulla\Projects\SportStackApp\sportstack`. Local dev URL `http://localhost:8081` (Vite `server.port` is set to 8081 in `vite.config.ts`). |
-| Supabase project | `svierarfcolhcfjpmwck` (dashboard: `https://supabase.com/dashboard/project/svierarfcolhcfjpmwck`). This single project is used for both dev and production. An older project `cdwpecmfzcvgyxjpikxb` appears in some notes but is **not in use**. |
+| Supabase projects | SportStack Dev `icqegnpjbizccjebjfhb` is shared by the `dev` and `main` Vercel environments. SportStack Production `svierarfcolhcfjpmwck` is used only by `prod`. An older project `cdwpecmfzcvgyxjpikxb` appears in some notes but is **not in use**. |
 
 **Naming note (ASSUMPTION — confirm before implementation):** The repo, README, and database all say **SportStack**. Some user-side notes and the local folder path say **SportsStack** / **SportsStackApp**. Treat **SportStack** (one "s") as canonical unless told otherwise.
 
@@ -84,6 +84,10 @@ RevSports site → Python scraper (GitHub Actions) → CSV in /data  +  revsport
 - All `/admin/*` routes, the RevSports mapping/unmatched screens, bulk import, Player MVP Voting administration, and Umpire Match Voting administration are role-gated in the UI and by their respective data permissions.
 
 ### Architecture diagram (Mermaid)
+
+This flow applies to both isolated Supabase projects. Dev/Main select `icqegnpjbizccjebjfhb`;
+Production selects `svierarfcolhcfjpmwck`.
+
 ```mermaid
 flowchart TD
     RS[RevSports public pages] -->|scrape| GA[GitHub Actions Python scrapers]
@@ -92,7 +96,7 @@ flowchart TD
     STG --> MAP[(revsports_*_mappings)]
     MAP --> FI[fixture_import.py bridge]
     FI --> LIVE[(Live tables: fixtures, teams, profiles, ...)]
-    subgraph Supabase Project svierarfcolhcfjpmwck
+    subgraph Supabase project selected by environment
         STG
         MAP
         LIVE
@@ -154,7 +158,7 @@ SportStack has **no custom Node/Express server**. The "backend" is Supabase:
 ### Database
 | Concern | Implementation |
 |---|---|
-| Provider | Supabase (project `svierarfcolhcfjpmwck`) |
+| Provider | Supabase: Dev/Main project `icqegnpjbizccjebjfhb`; Production project `svierarfcolhcfjpmwck` |
 | Type | PostgreSQL |
 | Tables | 50+ in `public` schema (full list in §7) |
 | Views | None found. |
@@ -177,7 +181,7 @@ SportStack has **no custom Node/Express server**. The "backend" is Supabase:
 | Output dir | `dist` (Vite default). |
 | Start command | None (static hosting). Local: `npm run dev`. |
 | SPA routing | `vercel.json` rewrites all paths to `/index.html`. |
-| Preview deployments | **ASSUMPTION:** Vercel preview deploys on non-`main` branches (Vercel default). Confirm. |
+| Preview deployments | Confirmed: `dev` and `main` are non-production Vercel deployments with stable custom branch domains. `prod` is the Vercel Production Branch. |
 | Rollback | Vercel dashboard → redeploy previous deployment. |
 | SSL/TLS | Managed by Vercel/Cloudflare. |
 | CDN/caching | Vercel edge CDN. |
@@ -186,13 +190,13 @@ SportStack has **no custom Node/Express server**. The "backend" is Supabase:
 ### Third-party services
 | Service | Used for | Configured where | Env vars / secrets (names only) | Notes / failure points |
 |---|---|---|---|---|
-| **Supabase** | Auth, Postgres DB, Storage, Edge Functions, migrations | Supabase dashboard + repo `supabase/` | Frontend: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`. Server/CI: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (and `SUPABASE_SERVICE_ROLE_KEY` consumed by `fixture_import.py`). | Single project for dev+prod = risky (no isolation). Service key bypasses RLS — never expose. |
-| **Vercel** | Hosting/CD of the SPA | Vercel dashboard, `vercel.json` | Same `VITE_*` vars set in Vercel project settings. | Auto-deploy on `main` means an unstable `main` ships immediately. |
+| **Supabase** | Auth, Postgres DB, Storage, Edge Functions, migrations | Supabase dashboard + repo `supabase/` | Frontend: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`. Server/CI: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (and `SUPABASE_SERVICE_ROLE_KEY` consumed by `fixture_import.py`). | Dev/Main share `icqegnpjbizccjebjfhb`; Production uses isolated project `svierarfcolhcfjpmwck`. Service keys bypass RLS — never expose. |
+| **Vercel** | Hosting/CD of the SPA | Vercel dashboard, `vercel.json` | Preview `VITE_*` vars point to Dev Supabase; Production `VITE_*` vars point to Production Supabase. | `prod` is the Production Branch; a push to `prod` publishes Production. |
 | **GitHub** | Source control + Actions (scrapers/CI) | `.github/workflows/` | Actions secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` | Concurrent workflow runs need rebase-before-push (already handled). |
 | **GitHub Actions** | Scheduled scrapers + fixture import | 5 workflow YAMLs | as above | Node 24 deprecation handled via `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`. |
 | **RevSports (revolutioniseSPORT)** | Upstream data source (scraped) | `PORTAL_URL` env in workflows | none (public pages); WHA player match cards are login-protected | Site HTML changes break scrapers; WHA player data needs credentials. |
-| **Hostinger** | Domain registration (sportstackapp.*, grampianshockey.*) | Hostinger panel | none in repo | DNS records **UNKNOWN**. |
-| **Cloudflare** | DNS / CDN for some domains | Cloudflare dashboard | none in repo | **UNKNOWN** which domains route through it for the app. |
+| **Hostinger** | Domain registration and DNS for the three current SportStack custom addresses | Hostinger panel | none in repo | `dev.sportstackapp.com.au`, `main.sportstackapp.com.au` and `sportstack.grampianshockey.com.au` point to Vercel. |
+| **Cloudflare** | DNS / CDN for some unrelated domains | Cloudflare dashboard | none in repo | Not used for the three confirmed SportStack deployment addresses. |
 | **Google OAuth** | Google SSO login | Supabase Auth providers + Google Cloud console | configured in Supabase, not repo | Redirect URLs must include production URL (README note). |
 | **Email/SMS provider (e.g. Resend)** | Player MVP Voting trigger + reminder emails | **Not implemented yet** | **UNKNOWN** | `mvp_vote_tokens` has `email_sent_at` / `reminder_*` columns but no sending code found. PLANNED. |
 | **Activepieces** (`activepieces.barbi.beer`) | Automation (connected as an MCP/connector for the owner) | external | n/a | Not referenced in repo. Role TBD. |
@@ -614,16 +618,16 @@ There is **no bespoke HTTP API**. Data access is:
 
 | Aspect | Detail |
 |---|---|
-| App deployment | Vercel auto-deploys on push to `main`. Build `vite build` → `dist`. SPA rewrite in `vercel.json`. |
-| Branch strategy (owner convention) | **`.github/workflows/*.yml` → commit directly to `main`.** All other changes (code/scraper/frontend) → `dev` first, then merge to `main` to deploy. |
+| App deployment | Vercel deploys each branch. Build `vite build` → `dist`; SPA rewrite in `vercel.json`. `prod` is the Production Branch and publishes `sportstack.grampianshockey.com.au`. |
+| Branch strategy (owner convention) | App changes: `dev` first, then `main` for staging, then `prod` after explicit production approval. Workflow YAML is special because schedules run from default branch `main`; review its Dev/Production secret targets and obtain approval before merging. |
 | GitHub Actions | 5 scraper workflows. Pattern per workflow: checkout → setup Python 3.11 → `pip install requests beautifulsoup4 supabase` → run scraper (writes CSV + optional Supabase upsert) → commit CSV back to `/data` (`git pull --rebase -X theirs` then push) → run `fixture_import.py` when uploading. |
 | Schedules | HB & Sunraysia: daily 2am AEST + hourly 8am–8pm Sat/Sun (HB on :00, Sunraysia on :30). player-registry / player-history: **UNKNOWN — confirm their cron** (separate workflows). |
 | Node 24 fix | `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true` env (June 2026 deprecation). |
 | Required CI secrets | `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`. |
 | Build/test/lint/type checks in CI | **None for the app.** No CI step runs `npm run build`, `lint`, or `tsc`. (Risk — see §13.) |
-| Preview deploys | Vercel default (ASSUMPTION). |
+| Preview deploys | Stable custom branch domains: `dev.sportstackapp.com.au` and `main.sportstackapp.com.au`. Both use the Dev Supabase project. |
 | Release/rollback | Vercel dashboard redeploy. |
-| Current risks | Unstable `main` ships instantly; scrapers write to production with the service key; no build gate. |
+| Current risks | `dev` and `main` share test data; scheduled workflows on default branch `main` can still write through production service credentials; `prod` has no build gate beyond the release checks. |
 
 ---
 
@@ -707,8 +711,9 @@ Plus the relevant manual smoke test from Doc 2 §12.
 - Never read, print, or expose `.env` / `.env.local`.
 
 **Branches & commits (owner convention)**
-- Workflow YAML changes → branch off and PR to `main` (or commit to `main` per owner's stated rule for workflow files).
-- All other changes → `dev` first, then merge to `main` to deploy.
+- App changes → `dev` first, then merge to `main` for staging.
+- After explicit production approval, merge `main` to `prod`; do not push app changes directly from `dev` to `prod`.
+- Workflow YAML changes require separate review because schedules run from default branch `main` and can target either Dev or Production Supabase secrets.
 - Branch names: `fix/<area>-<short>`, `feat/<area>-<short>`, `chore/<...>`.
 - Commit style: `type(scope): summary` (e.g. `fix(fixtures): populate division_id on import`).
 

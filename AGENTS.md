@@ -7,12 +7,26 @@ Fuller context lives in `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` and
 
 ## Project overview
 SportStack is a private React + TypeScript + Vite SPA (Tailwind + shadcn/ui) with a Supabase
-backend (Postgres, Auth, Storage, Edge Functions), deployed on Vercel (auto-deploys on push to
-`main`). It aggregates hockey data scraped from RevSports (Python scripts in GitHub Actions),
-stages it in `revsports_*` tables, maps it via `revsports_*_mappings`, and imports it to live
-tables (`fixtures`, `teams`, `profiles`, ...). Supabase project: `svierarfcolhcfjpmwck`
-(**one project for dev AND prod — treat all data as real**). The **live DB schema is the source
-of truth**; migration files may have drifted.
+backend (Postgres, Auth, Storage, Edge Functions), deployed on Vercel. It aggregates hockey data
+scraped from RevSports (Python scripts in GitHub Actions), stages it in `revsports_*` tables,
+maps it via `revsports_*_mappings`, and imports it to live tables (`fixtures`, `teams`,
+`profiles`, ...). The **live DB schema is the source of truth**; migration files may have
+drifted.
+
+## Environments and release path
+
+| Stage | Git branch | Public address | Supabase project |
+|---|---|---|---|
+| Development | `dev` | `https://dev.sportstackapp.com.au` | SportStack Dev `icqegnpjbizccjebjfhb` |
+| Main/staging | `main` | `https://main.sportstackapp.com.au` | SportStack Dev `icqegnpjbizccjebjfhb` |
+| Production | `prod` | `https://sportstack.grampianshockey.com.au` | SportStack Production `svierarfcolhcfjpmwck` |
+
+- `dev` and `main` deliberately share the Dev database.
+- `prod` is the Vercel Production Branch and uses a separate production database.
+- `www.sportstackapp.com.au` is not part of this rollout and must remain untouched unless Aaron
+  explicitly approves a later change.
+- The release path for app changes is `dev` -> `main` -> `prod`. Promotion to `prod` requires
+  separate owner approval because it changes the public production deployment.
 
 ## Source of truth order
 1. `AGENTS.md`
@@ -22,7 +36,7 @@ of truth**; migration files may have drifted.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md`
 6. `PROJECT_SCOPE_UI_UX_AND_IMPLEMENTATION_PLAN.md`
 7. Latest pull requests and commits
-8. Live Supabase check
+8. Live Supabase checks
 
 If this order conflicts with older documentation, use the newer/current source and mark anything uncertain as `UNKNOWN — needs confirmation`.
 
@@ -61,7 +75,8 @@ There is no automated test suite yet. Do the relevant manual smoke test and say 
 ## Safety rules
 - **Confirm with the owner before:** any destructive DB op (DELETE/DROP/TRUNCATE), any schema
   migration, any change to RLS/auth/Edge Functions/the role enum, anything touching secrets, and
-  anything that auto-deploys to `main`.
+  any merge or push to `prod`. Workflow changes merged to the default `main` branch can also alter
+  scheduled live automation and require confirmation.
 - Never read, print, or expose `.env` / `.env.local` or the Supabase **service** key.
 - The frontend may only use the **anon/publishable** key. The service key is server/CI-only.
 - If a fact isn't in the handoff docs, latest repo history, or the live DB, mark it `UNKNOWN — needs confirmation` and ask.
@@ -90,8 +105,11 @@ There is no automated test suite yet. Do the relevant manual smoke test and say 
   (switching a level resets all levels below). Keep it mobile-friendly.
 
 ## Branch & commit conventions
-- `.github/workflows/*.yml` → may commit to `main`. **All other changes → `dev` first, then merge
-  to `main`** (which triggers the Vercel deploy).
+- App changes go to `dev` first, then `main` for staging. After explicit release approval, merge
+  `main` to `prod`; a `prod` push triggers the Vercel production deployment.
+- `.github/workflows/*.yml` are a special case because scheduled workflows run from GitHub's
+  default branch (`main`) and select Dev or Production through different secret names. Review the
+  target secrets and get owner confirmation before merging workflow changes to `main`.
 - Branches: `fix/…`, `feat/…`, `chore/…`. Commits: `type(scope): summary`.
 
 ## How to report completed work

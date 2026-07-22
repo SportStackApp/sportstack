@@ -3,7 +3,7 @@
 **Project:** SportStack
 **Companion to:** `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md`
 **Prepared:** 15 June 2026
-**Grounding:** Live Supabase DB (`svierarfcolhcfjpmwck`), the real repo `SportStackApp/sportstack`, `docs/project-brief.md`, and `notes/` session handoffs.
+**Grounding:** Live Supabase projects (`icqegnpjbizccjebjfhb` for Dev/Main and `svierarfcolhcfjpmwck` for Production), the real repo `SportStackApp/sportstack`, `docs/project-brief.md`, and `notes/` session handoffs. Deployment topology refreshed 22 July 2026.
 
 > Marking convention: **UNKNOWN — needs confirmation** and **ASSUMPTION — confirm before implementation** as in Doc 1.
 
@@ -391,10 +391,14 @@ Future fields (ASSUMPTION): player DOB / Hockey Vic number (needs association ex
 ```
 PROJECT CONTEXT
 - SportStack: React 18 + TypeScript + Vite + Tailwind + shadcn/ui SPA, Supabase backend
-  (Postgres + Auth + Storage + Edge Functions), deployed on Vercel (auto-deploy on main).
+  (Postgres + Auth + Storage + Edge Functions), deployed on Vercel.
 - Data comes from RevSports via Python scrapers in GitHub Actions, staged in revsports_*
   tables, mapped via revsports_*_mappings, imported to live tables by fixture_import.py.
-- Supabase project: svierarfcolhcfjpmwck (single project = dev AND prod — treat data as real).
+- Environments: dev -> dev.sportstackapp.com.au -> Dev Supabase icqegnpjbizccjebjfhb;
+  main -> main.sportstackapp.com.au -> the same Dev Supabase project;
+  prod -> sportstack.grampianshockey.com.au -> Production Supabase svierarfcolhcfjpmwck.
+- Release app changes dev -> main -> prod. The prod branch is Vercel Production and requires
+  explicit owner approval.
 - The live DB schema is the source of truth; migrations may have drifted.
 
 CODING STYLE

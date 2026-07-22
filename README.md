@@ -47,11 +47,22 @@ VITE_SUPABASE_PROJECT_ID=your_project_id
 
 Do not commit `.env.local` or any real environment values.
 
+## Deployment environments
+
+| Stage | Branch | Address | Database |
+|---|---|---|---|
+| Development | `dev` | `https://dev.sportstackapp.com.au` | SportStack Dev |
+| Main/staging | `main` | `https://main.sportstackapp.com.au` | SportStack Dev |
+| Production | `prod` | `https://sportstack.grampianshockey.com.au` | SportStack Production |
+
+App releases move from `dev` to `main`, then to `prod` after explicit production approval.
+
 ## Safety warnings
 
 - Never expose Supabase service keys or any other server-only secrets.
-- The live Supabase database is shared for dev and prod, so treat all data as real.
-- Do not touch database schema/data, RLS, auth, Edge Functions, or anything that deploys to `main` without owner confirmation.
+- `dev` and `main` share the Dev Supabase project. `prod` uses a separate Production project.
+- Treat Production data as real, and still handle Dev data carefully because it is shared by two stages.
+- Do not touch database schema/data, RLS, auth, Edge Functions, or merge/push to `prod` without owner confirmation.
 
 ## Quality commands
 
