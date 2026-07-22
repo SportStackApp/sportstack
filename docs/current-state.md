@@ -111,6 +111,46 @@ Date: 2026-07-22
 
 What changed:
 
+- Completed a full health check of Git, SportStack Dev Supabase, and the Dev/Main Vercel
+  deployments.
+- Committed the remaining source and handoff files from completed July work.
+- Merged the independent `main` history into `dev`, then fast-forwarded `main` so both branches
+  point to the same commit.
+- Left `prod`, Production Supabase, and the production website untouched.
+- Kept `supabase/pending-migrations/lock_down_mvp_voting_access.sql` parked; it was not moved into
+  the active migration sequence or applied.
+
+Checks run:
+
+- `npx tsc --noEmit` passed.
+- `npm run build` passed.
+- All 28 placeholder-planner unit tests passed and its Python files compiled.
+- `npm run lint` still reports the known repository-wide backlog: 486 errors and 95 warnings,
+  mainly in older code and bundled modules.
+- Both Dev and Main public addresses returned HTTP 200 and their Vercel deployments reached
+  `READY`.
+- SportStack Dev Supabase is `ACTIVE_HEALTHY`; the expected July migrations, functions, and
+  Player MVP/Umpire identity fields are present.
+
+Remaining follow-up:
+
+- Local migration filenames and the Dev migration-history timestamps differ for several July
+  migrations. Do not run a blind `supabase db push`; reconcile the history only after Aaron
+  approves database administration work.
+- Supabase advisors still report an existing security and performance backlog. Permission/RLS
+  fixes need their own reviewed task and Aaron's approval before any schema change is applied.
+
+Risk level:
+
+- Low for Git and staging deployment alignment. No database migration, RLS/auth change, Edge
+  Function deployment, Production database action, or `prod` push was performed.
+
+### Previous handoff entries
+
+Date: 2026-07-22
+
+What changed:
+
 - Added and verified Hostinger DNS for `dev.sportstackapp.com.au` and
   `main.sportstackapp.com.au`.
 - Connected the Vercel branch aliases: `dev` to the Dev address, `main` to the Main address and
@@ -133,8 +173,6 @@ Risk level:
 
 - Low for this documentation update. The live DNS, Vercel and Supabase Auth configuration was
   already completed and verified; no database schema or data change is included here.
-
-### Previous handoff entry
 
 Date: 2026-07-20
 
@@ -175,24 +213,210 @@ Deployment state:
   `sportstack-git-dev-sportstackapps-projects.vercel.app`.
 - Not promoted to `main` or Production.
 
+Date: 2026-07-20
+
+What changed:
+
+- Corrected the Umpire Match Voting dashboard so its primary KPI tiles count
+  eligible past fixtures rather than submission records.
+- Added four mutually exclusive fixture measures: 451 past fixtures, 376
+  missing votes, 73 pending approval and 2 approved in the current all-scope
+  SportStack Dev snapshot.
+- Added a scrollable fixture list from each primary tile and a round-filtered
+  missing-fixture list from every round row.
+- Kept the four active historical submissions without a fixture visible as a
+  separate `Unlinked submissions` KPI instead of including them in the pending
+  fixture total.
+- Defined eligible past fixtures as non-bye fixtures whose scheduled start has
+  passed, excluding cancelled and postponed fixtures. Each fixture is counted
+  once.
+- No database row, schema, migration, Player MVP Voting, email function or
+  Production change was made.
+
+Files changed:
+
+- `src/pages/admin/UmpireVotingModule.tsx`
+- `docs/current-state.md`
+
+Checks run:
+
+- Read-only Dev SQL confirmed the all-scope fixture split is exactly
+  451 = 376 missing + 73 pending + 2 approved.
+- `npx tsc --noEmit`, focused ESLint and `npm run build` passed.
+- Desktop and mobile browser checks passed for the KPI totals, all-missing list,
+  round-filtered missing list, dialog scrolling and page width. No browser
+  console errors were recorded.
+- Full `npm run lint -- --quiet` still reports the same 486 existing
+  repository-wide errors outside this change.
+
+Deployment state:
+
+- Included in Dev commit `5893cce` and pushed to `origin/dev`.
+- Vercel reports the Dev deployment as ready at
+  `sportstack-git-dev-sportstackapps-projects.vercel.app`.
+- Not promoted to `main` or Production.
+
+Date: 2026-07-19
+
+What changed:
+
+- Added nullable Umpire Match Voting identity links from
+  `player_vote_lines.profile_id` to `profiles.id` in SportStack Dev.
+- Added one guarded admin review function that saves player, number and fixture
+  team corrections with signed-in admin audit records. Approval is blocked
+  while any active vote line is missing a linked profile or fixture team.
+- Backfilled Dev with 250 profile links across 143 profiles and corrected 242
+  historical names across 78 submissions. The import created 492 audit entries.
+- Left 15 intentional skips and 6 manual-review lines unchanged.
+- Added roster-first linked-player search and editable player, number and team
+  fields to the Umpire Match Voting submission and admin review flows.
+- Changed the Umpire Match Voting leaderboard to group by `profile_id`, with
+  the legacy name/team/number key retained only as a fallback.
+- Production, Player MVP Voting, email functions, vote points and existing
+  submission statuses were not changed.
+
+Files changed:
+
+- `src/components/umpire/UmpireLinkedPlayerPicker.tsx`
+- `src/lib/umpireLinkedPlayers.ts`
+- `src/pages/umpire/UmpireVoteSubmit.tsx`
+- `src/pages/admin/UmpireVotingModule.tsx`
+- `src/integrations/supabase/types.ts`
+- `supabase/migrations/20260719091405_add_umpire_vote_player_identity.sql`
+- `supabase/migrations/20260719091412_backfill_umpire_vote_player_identity.sql`
+- `supabase/migrations/20260719093832_fix_umpire_vote_review_search_path.sql`
+- `docs/current-state.md`
+
+Checks run:
+
+- Dev backfill counts and duplicate-name identities were verified directly.
+- Guarded save, approval, invalid-team and admin-scope database tests passed
+  inside rolled-back transactions.
+- Browser checks passed for linked search, full search, prefill, approval
+  blocking, audit history, all-linked approval readiness and narrow-screen
+  scrolling. No browser console errors were recorded.
+- `npx tsc --noEmit` and `npm run build` passed.
+- Focused lint passed for the new picker, linked-player helper and admin module.
+  Full `npm run lint` still reports pre-existing repository-wide issues.
+
+Deployment state:
+
+- The three migrations are applied only to SportStack Dev.
+- Local source changes are not committed, pushed or promoted to Production.
+
 Date: 2026-07-18
 
 What changed:
 
-- Released the Safety Hub database foundation and read-only frontend connection
-  for `/admin/safety-risk`.
-- Added the approved Safety Hub tables, expanded fields, linked-record model,
-  scoped RLS, audit triggers and organisation settings foundation.
-- Connected dashboard totals, registers, associated-record summaries, matrix
-  settings and audit history to scoped Supabase reads.
-- Kept Risk, Action, QI and Bright Idea forms local-only with `Validate draft`;
-  this release does not enable live form writes.
-- Added Safety Hub navigation for Club Admin.
-- Made Owner optional for Risk, Action and QI drafts. Registers and detail
-  drawers separately show the database `created_by` person as `Added by`.
-- The 25 matrix values remain provisional and are not recorded as approved.
-- Dev contains one clearly labelled `[DEV TEST]` linked Safety Hub chain.
-  Production Safety Hub record, link and review tables remain empty.
+- Repaired the production placeholder-claim path so an approved email match can
+  never be copied into `profiles.revsports_player_id`.
+- Added row locks, conflicting-ID protection, one-active-claim safeguards and
+  transfer support for all current Player MVP Voting profile references.
+- Corrected the transfer order so the active-membership trigger cannot create a
+  duplicate scoped Player role during a merge.
+- Applied `fix_placeholder_claim_id_transfer` and
+  `fix_placeholder_claim_role_transfer_order` to Dev and Production.
+- Safely merged David Jochinke's approved placeholder into his existing Auth
+  profile in Production. His RevSports ID `WQrnNSO`, active primary Pumas
+  membership, Voter role, scoped Player role, RevSports link and existing
+  Player MVP email event now belong to the real profile.
+- Preserved the old placeholder as an empty archived record and retained the
+  claim review and audit history. No email was sent by this repair.
+- The local source changes, migrations and handoff update are not committed or
+  pushed.
+
+Files changed:
+
+- `supabase/functions/send-profile-access-link/index.ts`
+- `supabase/migrations/20260718081517_fix_placeholder_claim_flow.sql`
+- `supabase/migrations/20260718082102_qualify_placeholder_claim_review_columns.sql`
+- `supabase/migrations/20260718092223_fix_placeholder_claim_id_transfer.sql`
+- `supabase/migrations/20260718092932_fix_placeholder_claim_role_transfer_order.sql`
+- `docs/current-state.md`
+
+Checks run:
+
+- The first new migration passed a transaction-only syntax check before it was
+  applied.
+- The transfer-order follow-up migration passed its guarded replacement check
+  before it was applied.
+- A comprehensive Dev transaction tested email match values, ID transfer,
+  team/role trigger behaviour, Player MVP references, duplicate email events,
+  audit history, repeated calls and conflicting IDs; all synthetic records were
+  rolled back.
+- An exact Production simulation using David's two real profile IDs passed and
+  was rolled back before the permanent merge.
+- The permanent merge ran inside one guarded transaction and committed only
+  after every expected transfer passed.
+- A complete foreign-key scan confirmed the old placeholder is referenced only
+  by the retained claim review and audit history.
+- A repeated claim was safely rejected as `no_match` in a rolled-back
+  transaction and did not alter David's real profile.
+- The merge function has a fixed search path and can be executed by
+  `service_role` only; Public, anonymous and authenticated roles cannot execute
+  it.
+- Both active-claim unique indexes and both Production migration-history rows
+  were confirmed.
+- Supabase security and performance advisers found no new blocking issue for
+  the merge function. The service-only claim tables retain informational RLS and
+  unindexed-foreign-key notices.
+- A fresh Production browser reload showed one visible David Jochinke row with
+  the active Pumas membership and Player and Voter roles. A second controlled
+  reload produced no new console errors.
+- Recent Edge Function activity showed successful responses. The older failed
+  placeholder-claim responses remain in the 24-hour log and browser history.
+
+What Aaron should test next:
+
+- Refresh Production `/admin/users`.
+- Confirm David Jochinke now shows RevSports ID `WQrnNSO`, Pumas, Player and
+  Voter on the single visible real-account row.
+- Select that row and send the access link. Because it is now an existing real
+  account, the production flow should send a password-reset email.
+
+Risk level:
+
+- High because two schema migrations and one approved live profile merge were
+  completed in Production.
+- No profile, vote, email-history or audit record was deleted.
+- No frontend deployment, commit or push was included.
+
+### Previous handoff entry
+
+Date: 2026-07-18
+
+What changed:
+
+- Applied the Safety Hub database integration migration to SportStack Dev and
+  Production after both preflight checks passed.
+- Added `rg_risk_settings`, `rg_bright_ideas` and `rg_record_links`.
+- Expanded the existing Risk, BE SMART Action, QI, review, comment, matrix,
+  guidance, dropdown and audit tables for the approved prototype workflows.
+- Attached all 25 existing matrix cells to one provisional global settings
+  profile. The matrix values remain provisional and are not recorded as
+  approved.
+- Replaced broad signed-in-user Safety Hub access with scoped RLS for Super
+  Admin, Association Admin and Club Admin.
+- Added immutable audit, review and comment controls and field-level audit
+  triggers. Signed-in users have no hard-delete access to Safety Hub records and
+  cannot insert directly into the audit table.
+- Refreshed the generated Supabase TypeScript types from the Dev schema.
+- Added one clearly labelled `[DEV TEST]` Bright Idea to QI to Risk to Action
+  chain in Dev only, with four links, one overdue review and one audited control
+  update.
+- Connected the local Safety Hub dashboard, registers, associated-record
+  summaries, matrix and audit history to scoped, read-only Supabase queries.
+- Prototype forms remain local-only, use `Validate draft`, and do not write to
+  Supabase.
+- Added the missing Safety Hub navigation entry for Club Admin mode.
+- Made Owner optional in Risk, Action and QI prototype validation. Registers,
+  associated-record summaries and detail drawers now show the record owner and
+  the separate database `created_by` person as `Added by`.
+- Production remains empty across the Safety Hub Risk, Action, QI, Bright Idea,
+  link and review tables.
+- Dev recorded migration `20260718085105 safety_hub_database_integration`.
+- Production recorded migration
+  `20260718085414 safety_hub_database_integration`.
 
 Files changed:
 
@@ -205,30 +429,95 @@ Files changed:
 
 Checks run:
 
-- Focused ESLint passed for the changed frontend files.
-- `npx tsc --noEmit` passed.
-- `npm run build` passed with the existing large-chunk warning.
-- Browser checks passed for scoped dashboard data, linked records, matrix
-  guidance, audit details, optional Owner validation and `Added by`.
-- A clean browser reload produced no new console errors.
-- Full-repository lint remains at the existing 583 unrelated problems.
+- Dev and Production preflight checks both confirmed zero unscoped Safety Hub
+  records and zero unexpected Safety Hub policies.
+- Post-migration checks passed in both environments: three new tables, all
+  expected expanded columns, one global settings profile, 25 scoped matrix
+  cells, RLS on all 12 Safety Hub tables and 32 scoped policies.
+- Authenticated users cannot hard-delete Risks or Bright Ideas and cannot write
+  directly to the audit table.
+- The Dev seed was verified directly: one Risk, Action, QI item and Bright Idea,
+  four links, one review and six seed-related audit rows.
+- Browser checks passed for the Dev dashboard, linked Risk summaries, Bright
+  Idea draft form, matrix colours and guidance, and the audit detail drawer.
+- A new Risk draft validated successfully with no Owner, while `Added by`
+  remained visible as the current signed-in user. The live Risk register and
+  drawer showed `Added by Admin Sportstack`.
+- A clean browser reload produced no new Safety Hub errors. The existing React
+  Router future-flag warnings remain.
+- Supabase security advisers reported no Safety Hub findings in either
+  environment.
+- Performance advisers reported non-blocking Safety Hub items: 22 unindexed
+  foreign keys, 42 unused indexes on the empty schema and two duplicate indexes.
+  No index was dropped because that requires separate approval.
+- The migration SQL parsed successfully with `pglast`.
+- Focused Safety Hub ESLint, `npx tsc --noEmit` and `npm run build` passed. The
+  build retained the existing large-chunk warning.
+- `npm run lint` still reports the existing repository total of 583 problems
+  (488 errors and 95 warnings).
 
 What Aaron should test next:
 
-- Open Production `/admin/safety-risk` as Super Admin, Association Admin and
-  Club Admin.
-- Confirm Club Admin can see Safety Hub in the sidebar and only records for
-  their club.
-- Confirm the Production registers are empty until real committee records are
-  deliberately added.
-- Confirm forms still show `Validate draft` and do not save records.
+- Open `/admin/safety-risk` as Super Admin and confirm the `[DEV TEST]` records
+  are visible when the scope is All accessible organisations or Grampians
+  Hockey Club.
+- Expand `R-001` and confirm the linked Action, QI item and Bright Idea appear.
+- Confirm `Submit a Bright Idea` opens a form with `Validate draft`, not a save
+  action.
+- Switch to Club Admin mode and confirm Safety Hub now appears in the sidebar
+  under Safety, then open it and confirm only that club's records are visible.
+- Before form writes are enabled, complete the same read-only checks with a real
+  Club Admin account so Supabase RLS is tested rather than only the local role
+  switcher.
 
 Risk level:
 
-- High for the wider package because the approved additive schema and RLS
-  migration was already applied to Production.
-- Low for this release action: no new Production data write or form-write
-  enablement is included.
+- Medium for this continuation. It adds Dev-only test records and a local
+  read-only frontend connection.
+- The previously approved Production schema and RLS migration remains the
+  high-risk part of the wider package.
+- No Production record data, frontend deployment, commit or push was included.
+
+### Previous handoff entry
+
+Date: 2026-07-18
+
+What changed:
+
+- Fixed the production placeholder access-link flow for existing accounts and newly invited accounts.
+- The access-link Edge Function no longer copies a placeholder's unique RevSports ID before the approved claim merge.
+- Replaced unsupported `min(uuid)` calls in `claim_placeholder_profile(uuid)` and qualified claim-review columns that conflicted with the function's output names.
+- Applied `fix_placeholder_claim_flow` and `qualify_placeholder_claim_review_columns` to production.
+- Deployed production `send-profile-access-link` version 5 with JWT verification still enabled.
+- Kept direct RPC execution restricted to `service_role`; `anon` and `authenticated` cannot execute it.
+- No production email was sent during verification.
+
+Files changed:
+
+- `supabase/functions/send-profile-access-link/index.ts`
+- `supabase/migrations/20260718081517_fix_placeholder_claim_flow.sql`
+- `supabase/migrations/20260718082102_qualify_placeholder_claim_review_columns.sql`
+- `docs/current-state.md`
+
+Checks run:
+
+- `npx tsc --noEmit` passed.
+- `npm run build` passed.
+- Focused Edge Function ESLint passed.
+- A full synthetic production claim passed inside a transaction and was rolled back, leaving no test user or data.
+- Post-deployment verification confirmed both migrations, Edge Function version 5, corrected SQL, and unchanged execution restrictions.
+- Supabase advisors reported no errors. Existing informational and warning notices remain outside this fix.
+- Full-repository lint still reports 583 pre-existing unrelated problems.
+
+What Aaron should test next:
+
+- Refresh production `/admin/users` and resend the claim link that previously failed.
+- Confirm the email arrives, then use the link and sign in to complete the placeholder merge.
+
+Risk level:
+
+- Medium. Two production database migrations and one production Edge Function deployment are included.
+- No Vercel deployment or frontend change is included.
 
 ### Previous handoff entry
 
@@ -437,7 +726,7 @@ Files changed for this package:
 
 - `supabase/migrations/20260713133335_add_mvp_result_disputed_status.sql`
 - `supabase/migrations/20260713133341_expand_team_mvp_voting.sql`
-- `supabase/migrations/20260713133346_lock_down_mvp_voting_access.sql`
+- `supabase/pending-migrations/lock_down_mvp_voting_access.sql`
 - `supabase/functions/mvp-voting-email-reminders/index.ts`
 - `src/lib/mvpVoting.ts`
 - `src/pages/MvpVoteCast.tsx`
@@ -1457,6 +1746,101 @@ What Aaron should test next:
 Risk level:
 
 - Medium. App-code only. No database migration, no generated Supabase type edits, and no real Library delete operation added.
+
+## 20 July 2026 - Player MVP automatic opening and reminder timing
+
+What changed:
+
+- Added local migration `20260720100536_auto_open_team_mvp_voting.sql`.
+- When a scraper write first changes a fixture to `COMPLETED` with both final scores, Player MVP Voting now opens automatically for each enabled team side.
+- A first-cycle round closes at that team's next future `SCHEDULED` fixture start. If no later fixture is scheduled, it falls back to 72 hours after opening.
+- Added partial home-team/date and away-team/date fixture indexes for the next-match lookup, and consistent team lock ordering for concurrent scraper writes.
+- Repeated updates to an already completed fixture do not reopen an existing round or bulk-open older pending rounds.
+- Manual first opening uses the same database-calculated close time. Reopen and corrected-result resolution remain capped at 72 hours.
+- The existing reminder scheduler is changed from every 15 minutes to every minute without creating a second job.
+- Scheduled email reminders now run at opening, 24 hours after opening and 72 hours after opening. A reminder is skipped if the voting round has already closed.
+- Deployed `mvp-voting-email-reminders` version 5 to live Supabase with `verify_jwt = false`; its existing code continues to enforce cron-secret and scoped-admin authentication.
+- The Player MVP admin dialog no longer asks for a first-opening close time. Reopen and corrected-result dialogs still allow an earlier close within 72 hours.
+
+Files changed:
+
+- `supabase/migrations/20260720100536_auto_open_team_mvp_voting.sql`
+- `supabase/functions/mvp-voting-email-reminders/index.ts`
+- `src/pages/admin/MvpVotingAdmin.tsx`
+- `docs/current-state.md`
+
+Checks run:
+
+- Focused ESLint passed.
+- `npx tsc --noEmit` passed.
+- `npm run build` passed.
+- `npm run lint` still fails on known unrelated legacy errors elsewhere in the repository.
+- Static PostgreSQL parsing passed for the new migration.
+- Local browser smoke check passed: the first-open dialog explains the next-match rule and has no close-time input; the reopen dialog still defaults to 72 hours and allows an earlier close.
+- Live Edge Function verification passed: version 5 is `ACTIVE`, the deployed source contains the new timing, and an unauthorised scheduler request was rejected with HTTP `401` without sending email.
+- A temporary local Supabase start was attempted, but Windows blocked configured port `54322` before any migration ran. Database execution remains unverified until the approved Supabase rollout.
+
+What Aaron should test next:
+
+- After the separately approved migration, finalise one test fixture for an enabled team.
+- Confirm the team-owned round opens automatically and closes at that team's next scheduled fixture start.
+- Confirm an opening email is sent, followed by the 24-hour reminder when the round remains open.
+- Use a round whose next fixture is more than 72 hours away to confirm the 72-hour reminder.
+- Reopen a closed round and confirm its default close is 72 hours later.
+
+Risk level:
+
+- High until database and email behaviour are tested against Supabase. Includes one additive migration and an Edge Function change.
+- Edge Function version 5 is live. No migration was applied, generated Supabase types were not edited, and nothing was pushed.
+
+## 21 July 2026 - Separate Player MVP email setting
+
+What changed:
+
+- Added a separate `teams.mvp_notifications_enabled` setting with a default of on, preserving the existing email behaviour.
+- Player MVP Voting can stay enabled while opening and reminder emails are disabled for that team.
+- Added a scoped, audited database command for changing the email setting. Direct team-table changes remain guarded.
+- The Player MVP admin page now shows separate switches for voting access and email notifications.
+- Automatic opening, scheduled reminders, bulk reminders and per-person resends all respect the email setting.
+- Turning emails off does not close a voting round, block a ballot or change stored votes.
+
+Files changed:
+
+- `supabase/migrations/20260721085522_add_team_mvp_notification_setting.sql`
+- `supabase/functions/mvp-voting-email-reminders/index.ts`
+- `src/pages/admin/MvpVotingAdmin.tsx`
+- `docs/current-state.md`
+
+Checks run:
+
+- Read-only preflight checks confirmed Dev and Production had `mvp_enabled` but not the new email setting.
+- Focused ESLint, `npx tsc --noEmit` and `npm run build` passed.
+- Static PostgreSQL parsing passed for the new migration.
+- Full `npm run lint -- --quiet` still reports the same 486 unrelated repository-wide errors.
+- The in-app browser was blocked from reopening the localhost page, so the new settings still need the planned Dev browser smoke test.
+- Dev transaction tests confirmed direct writes are blocked, the scoped command can turn emails off and on, and the test rolls back without changing session counts.
+- Dev Edge Function version 2 is active, contains the notification and three-day checks, and rejects an unauthorised scheduled request with HTTP `401`.
+- Supabase advisers reported no blocking issue from this change. The expected scoped `SECURITY DEFINER` warning and newly unused-index notices remain informational for this staged rollout.
+
+Deployment state:
+
+- Both migrations are applied to SportStack Dev only.
+- `mvp-voting-email-reminders` version 2 is deployed to SportStack Dev only with its existing custom authentication.
+- The Dev project has no Player MVP cron job, so automatic timed emails are not scheduled there. Manual opening and reminder calls remain available for testing.
+- Production and `main` remain unchanged.
+- Included in Dev commit `d318548` and pushed to `origin/dev`.
+- Vercel reports the Dev deployment as `READY` at `sportstack-git-dev-sportstackapps-projects.vercel.app`; a protected-page fetch returned HTTP `200` with the SportStack app shell.
+
+What Aaron should test next:
+
+- Keep Player MVP Voting on, turn email notifications off and confirm players can still vote.
+- Confirm opening, scheduled, bulk and per-person reminder emails are skipped while emails are off.
+- Turn emails back on and confirm a manual reminder can be sent.
+- Confirm turning Player MVP Voting off still closes pending and open rounds as before.
+
+Risk level:
+
+- Medium. Additive schema and Edge Function changes are included, but no destructive database work is required.
 
 ## How to update this file
 
