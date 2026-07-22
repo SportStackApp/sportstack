@@ -303,7 +303,7 @@ Deno.serve(async (req) => {
 
       const { data: realProfile, error: realProfileLookupError } = await serviceClient
         .from("profiles")
-        .select("id, first_name, last_name, is_placeholder, revsports_player_id")
+        .select("id, first_name, last_name, is_placeholder")
         .eq("id", realProfileId)
         .maybeSingle();
 
@@ -321,7 +321,8 @@ Deno.serve(async (req) => {
         first_name: realProfile?.first_name?.trim() || profile.first_name,
         last_name: realProfile?.last_name?.trim() || profile.last_name,
         is_placeholder: false,
-        revsports_player_id: realProfile?.revsports_player_id?.trim() || profile.revsports_player_id,
+        // The placeholder still owns its unique RevSports ID. The approved
+        // claim transfers it atomically after the placeholder is archived.
       });
 
       if (realProfileError) {
@@ -394,7 +395,8 @@ Deno.serve(async (req) => {
       first_name: profile.first_name,
       last_name: profile.last_name,
       is_placeholder: false,
-      revsports_player_id: profile.revsports_player_id,
+      // Do not copy the placeholder's unique RevSports ID before the claim.
+      // claim_placeholder_profile transfers it during the merge.
     });
 
     if (realProfileError) {
