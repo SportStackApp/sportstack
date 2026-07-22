@@ -40,6 +40,12 @@ data/*.csv
 data/*.json
 data/*_quality_report.txt
 
+# Local RevSports placeholder planner reports
+/data/revsports-placeholder-plan/
+
+# Syncthing folder marker
+/.stfolder/
+
 # Throwaway debug/investigation scripts
 scratch/
 
