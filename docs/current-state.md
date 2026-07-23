@@ -128,6 +128,9 @@ What changed:
 - Backfilled `team_memberships.activated_at` for 1,235 active Dev memberships. No fixture or
   player data was repaired, merged or deleted.
 - Regenerated the Supabase TypeScript types from SportStack Dev.
+- Cleared Aaron Mullane's stale Dev-only `banned_until = infinity` Auth flag, which was blocking
+  Auth user loading, and successfully sent the requested password-reset email. His account still
+  has only the PLAYER role, with Pumas primary and Lucas HC secondary.
 - Left `main`, `prod`, Production Auth and Production data untouched.
 
 Checks run:
@@ -139,8 +142,12 @@ Checks run:
 - A second reminder claim returned no work, confirming duplicate prevention for the test state.
 - Supabase security and performance advisers were run. New missing-index and duplicate-policy
   findings were cleared; the remaining adviser items are the existing wider-project backlog.
-- Focused ESLint and `npx tsc --noEmit` passed. Final build and browser results are recorded when
-  the Dev deployment is complete.
+- Focused ESLint, `npx tsc --noEmit` and `npm run build` passed. Full `npm run lint` still reports
+  the known wider backlog of 472 errors and 95 warnings outside this change.
+- Vercel deployed Dev commit `670211b` successfully. The public Dev address returned HTTP 200,
+  had no browser console errors, fit the mobile viewport without horizontal overflow and loaded
+  a bundle that references the Dev Supabase project, not Production.
+- The password-recovery endpoint returned HTTP 200 after the Dev Auth correction.
 
 Risk level:
 
