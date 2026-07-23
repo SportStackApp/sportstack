@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,6 +8,9 @@ interface Association {
   name: string;
   abbreviation: string | null;
   logo_url: string | null;
+  banner_url?: string | null;
+  primary_colour?: string | null;
+  secondary_colour?: string | null;
 }
 
 interface Club {
@@ -25,6 +29,10 @@ interface Team {
   id: string;
   club_id: string;
   name: string;
+  logo_url?: string | null;
+  banner_url?: string | null;
+  primary_colour?: string | null;
+  secondary_colour?: string | null;
   age_group: string | null;
   gender: string | null;
   division: string | null;
@@ -69,6 +77,29 @@ const TeamContext = createContext<TeamContextType | undefined>(undefined);
 
 const selectionKey = (userId: string, key: "association" | "club" | "division" | "team") =>
   `team_context:${userId}:${key}`;
+
+const hexToHsl = (hex?: string | null) => {
+  if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) return null;
+  const red = parseInt(hex.slice(1, 3), 16) / 255;
+  const green = parseInt(hex.slice(3, 5), 16) / 255;
+  const blue = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  let hue = 0;
+  let saturation = 0;
+  const lightness = (max + min) / 2;
+
+  if (max !== min) {
+    const delta = max - min;
+    saturation = lightness > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+    if (max === red) hue = (green - blue) / delta + (green < blue ? 6 : 0);
+    if (max === green) hue = (blue - red) / delta + 2;
+    if (max === blue) hue = (red - green) / delta + 4;
+    hue /= 6;
+  }
+
+  return `${Math.round(hue * 360)} ${Math.round(saturation * 100)}% ${Math.round(lightness * 100)}%`;
+};
 
 export function TeamProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -259,6 +290,62 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const selectedAssociation = associations.find(a => a.id === selectedAssociationId);
   const selectedClub = clubs.find(c => c.id === selectedClubId);
   const selectedTeam = teams.find(t => t.id === selectedTeamId);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const primary = hexToHsl(
+      selectedTeam?.primary_colour || selectedClub?.primary_colour || selectedAssociation?.primary_colour,
+    );
+    const secondary = hexToHsl(
+      selectedTeam?.secondary_colour || selectedClub?.secondary_colour || selectedAssociation?.secondary_colour,
+    );
+    const properties = [
+      "--primary",
+      "--primary-foreground",
+      "--accent",
+      "--accent-foreground",
+      "--secondary",
+      "--secondary-foreground",
+      "--ring",
+      "--sidebar",
+      "--sidebar-background",
+      "--sidebar-foreground",
+      "--sidebar-primary",
+      "--sidebar-primary-foreground",
+      "--sidebar-accent-foreground",
+      "--sidebar-ring",
+      "--gradient-hero",
+      "--gradient-accent",
+    ];
+
+    properties.forEach((property) => root.style.removeProperty(property));
+    if (!primary) return;
+
+    const foreground = secondary || "0 0% 100%";
+    root.style.setProperty("--primary", primary);
+    root.style.setProperty("--primary-foreground", foreground);
+    root.style.setProperty("--accent", primary);
+    root.style.setProperty("--accent-foreground", foreground);
+    root.style.setProperty("--ring", primary);
+    root.style.setProperty("--sidebar", primary);
+    root.style.setProperty("--sidebar-background", primary);
+    root.style.setProperty("--sidebar-foreground", foreground);
+    root.style.setProperty("--sidebar-primary", primary);
+    root.style.setProperty("--sidebar-primary-foreground", foreground);
+    root.style.setProperty("--sidebar-accent-foreground", foreground);
+    root.style.setProperty("--sidebar-ring", foreground);
+    root.style.setProperty("--gradient-hero", `linear-gradient(135deg, hsl(${primary}) 0%, hsl(${primary} / .82) 100%)`);
+    root.style.setProperty("--gradient-accent", `linear-gradient(135deg, hsl(${primary}) 0%, hsl(${primary} / .78) 100%)`);
+
+    if (secondary) {
+      root.style.setProperty("--secondary", secondary);
+      root.style.setProperty("--secondary-foreground", primary);
+    }
+
+    return () => {
+      properties.forEach((property) => root.style.removeProperty(property));
+    };
+  }, [selectedAssociation, selectedClub, selectedTeam]);
 
   return (
     <TeamContext.Provider

@@ -564,17 +564,31 @@ const Dashboard = () => {
   const teamName = selectedTeam ? getTeamDisplayName(selectedTeam) : "Team";
   const isBrandNewUser = !accountLoading && roleCount === 0 && activeMembershipCount === 0;
 
-  // Club branding
-  const clubPrimary = selectedClub?.primary_colour || undefined;
-  const clubSecondary = selectedClub?.secondary_colour || undefined;
-  const clubBannerUrl = selectedClub?.banner_url || undefined;
-  const clubLogoUrl = selectedClub?.logo_url || undefined;
+  // A team can override its club, and a club can override the association.
+  // Blank override fields deliberately inherit the next level up.
+  const themePrimary = selectedTeam?.primary_colour
+    || selectedClub?.primary_colour
+    || selectedAssociation?.primary_colour
+    || undefined;
+  const themeSecondary = selectedTeam?.secondary_colour
+    || selectedClub?.secondary_colour
+    || selectedAssociation?.secondary_colour
+    || undefined;
+  const bannerUrl = selectedTeam?.banner_url
+    || selectedClub?.banner_url
+    || selectedAssociation?.banner_url
+    || undefined;
+  const logoUrl = selectedTeam?.logo_url
+    || selectedClub?.logo_url
+    || selectedAssociation?.logo_url
+    || undefined;
 
-  const brandStyle = clubPrimary
-    ? { backgroundColor: clubPrimary, color: clubSecondary || "#fff" }
+  const brandStyle = themePrimary
+    ? { backgroundColor: themePrimary, color: themeSecondary || "#fff" }
     : undefined;
   const canEditCurrentClub = selectedClubId ? canManageClub(selectedClubId) : false;
-  const canOpenFixtureDetail = selectedTeamId ? canManageTeam(selectedTeamId) : false;
+  const canManageCurrentTeam = selectedTeamId ? canManageTeam(selectedTeamId) : false;
+  const canOpenFixtureDetail = Boolean(selectedTeamId);
   const unansweredAvailabilityCount = games.filter(
     (game) => !availability[game.id] || availability[game.id] === "MAYBE" || availability[game.id] === "NO_RESPONSE",
   ).length;
@@ -695,21 +709,21 @@ const Dashboard = () => {
     <div className="space-y-4 animate-fade-in">
       {/* Combined player and club banner */}
       <Card
-        style={clubBannerUrl
-          ? { backgroundImage: `linear-gradient(90deg, rgba(10,20,45,.9), rgba(10,20,45,.45)), url(${clubBannerUrl})` }
+        style={bannerUrl
+          ? { backgroundImage: `linear-gradient(90deg, rgba(10,20,45,.9), rgba(10,20,45,.45)), url(${bannerUrl})` }
           : brandStyle}
         className={cn(
           "relative overflow-hidden bg-cover bg-center",
-          !clubBannerUrl && !brandStyle && "bg-primary text-primary-foreground",
-          clubBannerUrl && "text-white",
+          !bannerUrl && !brandStyle && "bg-primary text-primary-foreground",
+          bannerUrl && "text-white",
         )}
       >
-        <CardContent className="relative flex min-h-28 items-center gap-4 px-5 py-4 sm:px-6">
-          {clubLogoUrl && (
+        <CardContent className="relative flex min-h-44 items-end gap-4 px-5 py-5 sm:min-h-56 sm:px-7 sm:py-7">
+          {logoUrl && (
             <img
-              src={clubLogoUrl}
-              alt={`${selectedClub?.name || "Club"} logo`}
-              className="h-16 w-16 shrink-0 rounded-lg bg-white/90 object-contain p-1"
+              src={logoUrl}
+              alt={`${selectedTeam?.name || selectedClub?.name || "Club"} logo`}
+              className="h-16 w-16 shrink-0 rounded-xl bg-white/90 object-contain p-1 sm:h-20 sm:w-20"
             />
           )}
           <div className="min-w-0 flex-1">
@@ -725,8 +739,8 @@ const Dashboard = () => {
               <p className="mt-1 text-sm">Select an association, club and team to open its dashboard.</p>
             )}
           </div>
-          {canEditCurrentClub && (
-            <Link to="/admin/clubs" className="hidden sm:block">
+          {(canEditCurrentClub || canManageCurrentTeam) && (
+            <Link to={canManageCurrentTeam ? "/admin/teams" : "/admin/clubs"} className="hidden sm:block">
               <Button size="sm" variant="secondary" className="gap-2">
                 <Pencil className="h-4 w-4" /> Edit branding
               </Button>

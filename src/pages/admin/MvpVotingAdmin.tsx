@@ -582,7 +582,7 @@ export default function MvpVotingAdmin() {
       const sessionIds = sessionRows.map((session) => session.id);
       const fixtureIds = Array.from(new Set(sessionRows.map((session) => session.fixture_id).filter(Boolean)));
 
-      const [fixtureResult, submissionResult, playerResult] = await Promise.all([
+      const [fixtureResult, submissionResult, playerResult, fillInResult] = await Promise.all([
         fixtureIds.length
           ? supabase
               .from("fixtures")
@@ -602,11 +602,19 @@ export default function MvpVotingAdmin() {
               .eq("attended", true)
               .not("profile_id", "is", null)
           : Promise.resolve({ data: [], error: null }),
+        fixtureIds.length
+          ? supabase
+              .from("fixture_fill_ins")
+              .select("fixture_id, team_id, player_id")
+              .in("fixture_id", fixtureIds)
+              .eq("status", "SELECTED")
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (fixtureResult.error) throw fixtureResult.error;
       if (submissionResult.error) throw submissionResult.error;
       if (playerResult.error) throw playerResult.error;
+      if (fillInResult.error) throw fillInResult.error;
 
       const fixturesById = new Map<string, FixtureSummary>(
         (fixtureResult.data || []).map((fixture: FixtureSummary) => [fixture.id, fixture]),
@@ -629,6 +637,25 @@ export default function MvpVotingAdmin() {
           );
         }
         playerProfiles.get(player.fixture_id)?.get(player.team_side)?.add(player.profile_id);
+      });
+      ((fillInResult.data || []) as Array<{ fixture_id: string; team_id: string; player_id: string }>).forEach((fillIn) => {
+        const fixture = fixturesById.get(fillIn.fixture_id);
+        const side = fixture?.home_team_id === fillIn.team_id
+          ? "home"
+          : fixture?.away_team_id === fillIn.team_id
+            ? "away"
+            : null;
+        if (!side) return;
+        if (!playerProfiles.has(fillIn.fixture_id)) {
+          playerProfiles.set(
+            fillIn.fixture_id,
+            new Map([
+              ["home", new Set<string>()],
+              ["away", new Set<string>()],
+            ]),
+          );
+        }
+        playerProfiles.get(fillIn.fixture_id)?.get(side)?.add(fillIn.player_id);
       });
 
       setSessions(
@@ -817,15 +844,33 @@ export default function MvpVotingAdmin() {
                 : null;
           if (!expectedSide) throw new Error("The voting team does not belong to this fixture.");
 
-          const { data: attendedData, error: attendedError } = await supabase
-            .from("revsports_players")
-            .select("id, player_name, profile_id, team_side")
-            .eq("fixture_id", detailSession.fixture_id)
-            .eq("team_side", expectedSide)
-            .eq("attended", true)
-            .not("profile_id", "is", null);
-          if (attendedError) throw attendedError;
-          attendedRows = (attendedData || []) as AttendedPlayerRow[];
+          const [attendedResult, fillInResult] = await Promise.all([
+            supabase
+              .from("revsports_players")
+              .select("id, player_name, profile_id, team_side")
+              .eq("fixture_id", detailSession.fixture_id)
+              .eq("team_side", expectedSide)
+              .eq("attended", true)
+              .not("profile_id", "is", null),
+            supabase
+              .from("fixture_fill_ins")
+              .select("id, player_id")
+              .eq("fixture_id", detailSession.fixture_id)
+              .eq("team_id", detailSession.team_id)
+              .eq("status", "SELECTED"),
+          ]);
+          if (attendedResult.error) throw attendedResult.error;
+          if (fillInResult.error) throw fillInResult.error;
+          attendedRows = [
+            ...((attendedResult.data || []) as AttendedPlayerRow[]),
+            ...((fillInResult.data || []) as Array<{ id: string; player_id: string }>).map((fillIn) => ({
+              id: `fill-in-${fillIn.id}`,
+              fixture_id: detailSession.fixture_id,
+              player_name: null,
+              profile_id: fillIn.player_id,
+              team_side: expectedSide,
+            })),
+          ];
         }
 
         const profileIds = Array.from(

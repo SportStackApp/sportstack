@@ -346,7 +346,7 @@ export default function MvpVoteCast() {
         }
 
         // Attendance and the fixture side are the authoritative eligibility checks.
-        const { data: voterRow, error: voterErr } = await supabase
+        const { data: attendedVoterRow, error: voterErr } = await supabase
           .from("revsports_players")
           .select("id, team, team_side, team_label")
           .eq("fixture_id", typedSession.fixture_id)
@@ -355,13 +355,49 @@ export default function MvpVoteCast() {
           .maybeSingle();
 
         if (voterErr) throw voterErr;
-        if (!voterRow) {
-          setErrorState("We couldn't find your player record in the lineup for this game. You can only vote if you were in the lineup.");
+
+        if (!fixtureRowForEligibility) {
+          setErrorState("Your attended home or away team could not be confirmed for this match.");
           setLoading(false);
           return;
         }
 
-        if (!fixtureRowForEligibility || !voterRow.team_side) {
+        let voterRow = attendedVoterRow;
+        if (!voterRow) {
+          const { data: fillInRow, error: fillInErr } = await supabase
+            .from("fixture_fill_ins")
+            .select("id, team_id")
+            .eq("fixture_id", typedSession.fixture_id)
+            .eq("team_id", typedSession.team_id)
+            .eq("player_id", user.id)
+            .eq("status", "SELECTED")
+            .maybeSingle();
+          if (fillInErr) throw fillInErr;
+
+          const fillInSide = fillInRow
+            ? fixtureRowForEligibility.home_team_id === fillInRow.team_id
+              ? "home"
+              : fixtureRowForEligibility.away_team_id === fillInRow.team_id
+                ? "away"
+                : null
+            : null;
+          if (fillInRow && fillInSide) {
+            voterRow = {
+              id: `fill-in-${fillInRow.id}`,
+              team: null,
+              team_side: fillInSide,
+              team_label: null,
+            };
+          }
+        }
+
+        if (!voterRow) {
+          setErrorState("We couldn't confirm that you played in this game. You can vote when attendance is recorded or you were selected as a fill-in.");
+          setLoading(false);
+          return;
+        }
+
+        if (!voterRow.team_side) {
           setErrorState("Your attended home or away team could not be confirmed for this match.");
           setLoading(false);
           return;

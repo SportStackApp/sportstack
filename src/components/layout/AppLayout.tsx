@@ -319,7 +319,8 @@ interface NotificationRow {
 interface VoterTeamMembership {
   teamId: string;
   teamName: string;
-  membershipType: "PRIMARY" | "SECONDARY";
+  membershipType: "PRIMARY" | "SECONDARY" | "FILL_IN";
+  isDefaultTeam: boolean;
   divisionId: string | null;
   clubId: string;
   clubName: string;
@@ -352,7 +353,12 @@ interface VoterTeamRow {
 }
 
 interface VoterMembershipRow {
-  membership_type: "PRIMARY" | "SECONDARY";
+  membership_type: "PRIMARY" | "SECONDARY" | "PERMANENT";
+  teams: VoterTeamRow | VoterTeamRow[] | null;
+}
+
+interface FillInMembershipRow {
+  access_expires_at: string;
   teams: VoterTeamRow | VoterTeamRow[] | null;
 }
 
@@ -442,6 +448,7 @@ const AppLayout = () => {
   const [playerTeamName, setPlayerTeamName] = useState("");
   const [playerLogoUrl, setPlayerLogoUrl] = useState<string | null>(null);
   const [voterTeamMemberships, setVoterTeamMemberships] = useState<VoterTeamMembership[]>([]);
+  const [fillInRefreshTick, setFillInRefreshTick] = useState(0);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackScreenshots, setFeedbackScreenshots] = useState<File[]>([]);
@@ -608,8 +615,9 @@ const AppLayout = () => {
     fetchProfile();
   }, [user]);
 
-  // Fetch player header context from active primary/secondary team memberships.
+  // Fetch regular teams plus fixture-scoped fill-in teams whose access has not expired.
   useEffect(() => {
+    let expiryTimer: number | undefined;
     const clearPlayerHeaderContext = () => {
       setPlayerAssociationName("");
       setPlayerAssociationAbbr("");
@@ -625,15 +633,37 @@ const AppLayout = () => {
     }
 
     const fetchPlayerHeaderContext = async () => {
-      const { data } = await supabase
-        .from("team_memberships")
-        .select("team_id, membership_type, teams(id, name, division_id, clubs(id, name, logo_url, associations(id, name, abbreviation, logo_url)))")
-        .eq("user_id", user.id)
-        .eq("status", "ACTIVE")
-        .in("membership_type", ["PRIMARY", "SECONDARY"]);
+      const now = new Date().toISOString();
+      const [regularResult, fillInResult, profileResult] = await Promise.all([
+        supabase
+          .from("team_memberships")
+          .select("team_id, membership_type, teams(id, name, division_id, clubs(id, name, logo_url, associations(id, name, abbreviation, logo_url)))")
+          .eq("user_id", user.id)
+          .eq("status", "ACTIVE")
+          .in("membership_type", ["PRIMARY", "SECONDARY", "PERMANENT"]),
+        // New additive table is used before generated types are refreshed from Dev.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("fixture_fill_ins")
+          .select("access_expires_at, teams(id, name, division_id, clubs(id, name, logo_url, associations(id, name, abbreviation, logo_url)))")
+          .eq("player_id", user.id)
+          .eq("status", "SELECTED")
+          .lte("access_starts_at", now)
+          .gte("access_expires_at", now),
+        // The registered-club field is added by the same migration.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("profiles")
+          .select("registered_club_id")
+          .eq("id", user.id)
+          .maybeSingle(),
+      ]);
 
-      const memberships = ((data || []) as unknown as VoterMembershipRow[])
-        .map((row) => {
+      const toMembership = (
+        row: VoterMembershipRow | FillInMembershipRow,
+        membershipType: VoterTeamMembership["membershipType"],
+        isDefaultTeam: boolean,
+      ) => {
           const team = Array.isArray(row.teams) ? row.teams[0] : row.teams;
           const club = Array.isArray(team?.clubs) ? team.clubs[0] : team?.clubs;
           const association = Array.isArray(club?.associations) ? club.associations[0] : club?.associations;
@@ -643,7 +673,8 @@ const AppLayout = () => {
           return {
             teamId: team.id,
             teamName: team.name || "Team",
-            membershipType: row.membership_type,
+            membershipType,
+            isDefaultTeam,
             divisionId: team.division_id || null,
             clubId: club.id,
             clubName: club.name || "Club",
@@ -653,19 +684,54 @@ const AppLayout = () => {
             associationAbbr: association.abbreviation || null,
             associationLogoUrl: association.logo_url || null,
           } satisfies VoterTeamMembership;
-        })
+      };
+
+      const registeredClubId = (profileResult.data as { registered_club_id?: string | null } | null)?.registered_club_id;
+      const regularMemberships = ((regularResult.data || []) as unknown as VoterMembershipRow[])
+        .map((row) => {
+          const initial = toMembership(row, "SECONDARY", row.membership_type === "PRIMARY");
+          if (!initial) return null;
+          return {
+            ...initial,
+            membershipType: registeredClubId
+              ? initial.clubId === registeredClubId ? "PRIMARY" : "SECONDARY"
+              : row.membership_type === "PRIMARY" ? "PRIMARY" : "SECONDARY",
+          } satisfies VoterTeamMembership;
+        });
+      const fillInRows = ((fillInResult.data || []) as unknown as FillInMembershipRow[]);
+      const fillInMemberships = fillInRows.map((row) => toMembership(row, "FILL_IN", false));
+      const memberships = [...regularMemberships, ...fillInMemberships]
         .filter((membership): membership is VoterTeamMembership => Boolean(membership))
-        .sort((a, b) => (a.membershipType === "PRIMARY" ? -1 : 1));
+        .filter((membership, index, all) => all.findIndex((item) => item.teamId === membership.teamId) === index)
+        .sort((a, b) => {
+          const order = { PRIMARY: 0, SECONDARY: 1, FILL_IN: 2 } as const;
+          if (a.isDefaultTeam !== b.isDefaultTeam) return a.isDefaultTeam ? -1 : 1;
+          return order[a.membershipType] - order[b.membershipType];
+        });
+
+      const nextExpiry = fillInRows
+        .map((row) => new Date(row.access_expires_at).getTime())
+        .filter((value) => Number.isFinite(value) && value > Date.now())
+        .sort((a, b) => a - b)[0];
+      if (nextExpiry) {
+        expiryTimer = window.setTimeout(
+          () => setFillInRefreshTick((current) => current + 1),
+          Math.min(nextExpiry - Date.now() + 1000, 2_147_000_000),
+        );
+      }
 
       setVoterTeamMemberships(memberships);
 
       const contextSessionKey = `player-primary-context:${user.id}`;
       const primaryMembership =
-        memberships.find((membership) => membership.membershipType === "PRIMARY") || memberships[0];
+        memberships.find((membership) => membership.isDefaultTeam)
+        || memberships.find((membership) => membership.membershipType === "PRIMARY")
+        || memberships[0];
       const needsPrimaryContext = !sessionStorage.getItem(contextSessionKey);
+      const selectedMembership = memberships.find((membership) => membership.teamId === selectedTeamId);
       const currentMembership = needsPrimaryContext
         ? primaryMembership
-        : memberships.find((membership) => membership.teamId === selectedTeamId) || primaryMembership;
+        : selectedMembership || primaryMembership;
 
       if (!currentMembership) {
         clearPlayerHeaderContext();
@@ -678,7 +744,7 @@ const AppLayout = () => {
       setPlayerTeamName(currentMembership.teamName);
       setPlayerLogoUrl(currentMembership.associationLogoUrl || currentMembership.clubLogoUrl);
 
-      if (needsPrimaryContext) {
+      if (needsPrimaryContext || !selectedMembership) {
         sessionStorage.setItem(contextSessionKey, currentMembership.teamId);
         setSelectedAssociationId(currentMembership.associationId);
         setSelectedClubId(currentMembership.clubId);
@@ -687,8 +753,12 @@ const AppLayout = () => {
       }
     };
 
-    fetchPlayerHeaderContext();
+    void fetchPlayerHeaderContext();
+    return () => {
+      if (expiryTimer) window.clearTimeout(expiryTimer);
+    };
   }, [
+    fillInRefreshTick,
     mode,
     user,
     selectedTeamId,
@@ -1351,7 +1421,7 @@ const AppLayout = () => {
                     </AvatarFallback>
                   </Avatar>
                 </div>
-                {mode === "player" && isVoterOnly && voterTeamMemberships.length > 1 ? (
+                {mode === "player" && voterTeamMemberships.length > 1 ? (
                   <Select value={selectedTeamId || voterTeamMemberships[0]?.teamId} onValueChange={handleVoterTeamChange}>
                     <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[190px]")}>
                       <SelectValue placeholder="Select team" />
@@ -1359,7 +1429,7 @@ const AppLayout = () => {
                     <SelectContent className="bg-background border-border">
                       {voterTeamMemberships.map((membership) => (
                         <SelectItem key={membership.teamId} value={membership.teamId}>
-                          {membership.teamName} ({membership.membershipType === "PRIMARY" ? "Primary" : "Secondary"})
+                          {membership.teamName} ({membership.membershipType === "PRIMARY" ? "Primary" : membership.membershipType === "FILL_IN" ? "Fill-in" : "Secondary"})
                         </SelectItem>
                       ))}
                     </SelectContent>

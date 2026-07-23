@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Users } from "lucide-react";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface RosterMember {
   user_id: string;
@@ -15,6 +16,7 @@ interface RosterMember {
   position: string | null;
   jersey_number: number | null;
   membership_type: string;
+  registered_club_id: string | null;
 }
 
 const positionGroups: Record<string, string[]> = {
@@ -26,6 +28,7 @@ const positionGroups: Record<string, string[]> = {
 
 const Roster = () => {
   const { selectedTeamId, selectedTeam, selectedClub } = useTeamContext();
+  const { toast } = useToast();
   const [members, setMembers] = useState<RosterMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,28 +43,55 @@ const Roster = () => {
       }
       setLoading(true);
 
-      const { data: membershipData } = await supabase
+      const { data: membershipData, error: membershipError } = await supabase
         .from("team_memberships")
         .select("user_id, position, jersey_number, membership_type")
         .eq("team_id", selectedTeamId)
         .eq("status", "ACTIVE");
 
+      if (membershipError) {
+        toast({
+          title: "Roster could not be loaded",
+          description: membershipError.message,
+          variant: "destructive",
+        });
+        setMembers([]);
+        setLoading(false);
+        return;
+      }
+
       if (membershipData && membershipData.length > 0) {
         const userIds = membershipData.map((m) => m.user_id);
-        const { data: profiles } = await supabase
-          .from("teammate_profiles")
-          .select("id, first_name, last_name")
+        const { data: profiles, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, registered_club_id")
           .in("id", userIds);
+
+        if (profileError) {
+          toast({
+            title: "Player names could not be loaded",
+            description: profileError.message,
+            variant: "destructive",
+          });
+        }
 
         const merged: RosterMember[] = membershipData.map((m) => {
           const profile = profiles?.find((p) => p.id === m.user_id);
+          const membershipType = profile?.registered_club_id
+            ? profile.registered_club_id === selectedTeam?.club_id
+              ? "PRIMARY"
+              : "SECONDARY"
+            : m.membership_type === "PRIMARY"
+              ? "PRIMARY"
+              : "SECONDARY";
           return {
             user_id: m.user_id,
             first_name: profile?.first_name || null,
             last_name: profile?.last_name || null,
             position: m.position,
             jersey_number: m.jersey_number,
-            membership_type: m.membership_type,
+            membership_type: membershipType,
+            registered_club_id: profile?.registered_club_id || null,
           };
         });
         setMembers(merged);
@@ -71,7 +101,7 @@ const Roster = () => {
       setLoading(false);
     };
     fetchRoster();
-  }, [selectedTeamId]);
+  }, [selectedTeam?.club_id, selectedTeamId, toast]);
 
   const filteredMembers = members.filter((m) => {
     const name = [m.first_name, m.last_name].filter(Boolean).join(" ");

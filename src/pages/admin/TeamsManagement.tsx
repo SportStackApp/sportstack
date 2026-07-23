@@ -24,7 +24,13 @@ import { getTeamDisplayName } from "@/lib/utils";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import type { Database } from "@/integrations/supabase/types";
 
-type Team = Database["public"]["Tables"]["teams"]["Row"] & { division_id?: string | null; logo_url?: string | null };
+type Team = Database["public"]["Tables"]["teams"]["Row"] & {
+  division_id?: string | null;
+  logo_url?: string | null;
+  banner_url?: string | null;
+  primary_colour?: string | null;
+  secondary_colour?: string | null;
+};
 type Club = Database["public"]["Tables"]["clubs"]["Row"];
 type Association = Database["public"]["Tables"]["associations"]["Row"];
 type Venue = Database["public"]["Tables"]["venues"]["Row"];
@@ -83,7 +89,10 @@ const TeamsManagement = () => {
     division_id: "__none__",
     gender: "",
     home_venue_id: "__none__",
-    logo_url: ""
+    logo_url: "",
+    banner_url: "",
+    primary_colour: "",
+    secondary_colour: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -217,7 +226,10 @@ const TeamsManagement = () => {
         division_id: team.division_id || "__none__",
         gender: team.gender || "",
         home_venue_id: team.home_venue_id || "__none__",
-        logo_url: team.logo_url || ""
+        logo_url: team.logo_url || "",
+        banner_url: team.banner_url || "",
+        primary_colour: team.primary_colour || "",
+        secondary_colour: team.secondary_colour || "",
       });
     } else {
       setEditingTeam(null);
@@ -231,7 +243,10 @@ const TeamsManagement = () => {
         division_id: "__none__",
         gender: "",
         home_venue_id: "__none__",
-        logo_url: ""
+        logo_url: "",
+        banner_url: "",
+        primary_colour: "",
+        secondary_colour: "",
       });
     }
     setDialogOpen(true);
@@ -254,6 +269,19 @@ const TeamsManagement = () => {
       return;
     }
 
+    const hexColour = /^#[0-9a-fA-F]{6}$/;
+    if (
+      (formData.primary_colour && !hexColour.test(formData.primary_colour))
+      || (formData.secondary_colour && !hexColour.test(formData.secondary_colour))
+    ) {
+      toast({
+        title: "Check the theme colours",
+        description: "Use a six-digit colour such as #2563EB, or leave the field blank to inherit.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     const teamData = {
       name: teamName,
@@ -263,7 +291,10 @@ const TeamsManagement = () => {
       division_id: formData.division_id,
       gender: formData.gender || null,
       home_venue_id: formData.home_venue_id === "__none__" ? null : formData.home_venue_id,
-      logo_url: formData.logo_url.trim() || null
+      logo_url: formData.logo_url.trim() || null,
+      banner_url: formData.banner_url.trim() || null,
+      primary_colour: formData.primary_colour.trim() || null,
+      secondary_colour: formData.secondary_colour.trim() || null,
     };
 
     if (editingTeam) {
@@ -318,7 +349,7 @@ const TeamsManagement = () => {
             <DialogTrigger asChild>
               <Button onClick={() => handleOpenDialog()}><Plus className="mr-2 h-4 w-4" />Add Team</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingTeam ? "Edit Team" : "Add Team"}</DialogTitle>
                 <DialogDescription>{editingTeam ? "Update details" : "Create a new team"}</DialogDescription>
@@ -353,6 +384,51 @@ const TeamsManagement = () => {
                       </p>
                     </div>
                   )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Team banner URL</Label>
+                  <Input
+                    value={formData.banner_url}
+                    onChange={(e) => setFormData({ ...formData, banner_url: e.target.value })}
+                    placeholder="Leave blank to inherit from the club"
+                  />
+                  <p className="text-xs text-muted-foreground">A blank value uses the club banner, then the association banner.</p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Primary colour override</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={formData.primary_colour || "#2563EB"}
+                        onChange={(e) => setFormData({ ...formData, primary_colour: e.target.value })}
+                        className="w-14 p-1"
+                        aria-label="Choose team primary colour"
+                      />
+                      <Input
+                        value={formData.primary_colour}
+                        onChange={(e) => setFormData({ ...formData, primary_colour: e.target.value })}
+                        placeholder="Inherited"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Secondary colour override</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={formData.secondary_colour || "#FFFFFF"}
+                        onChange={(e) => setFormData({ ...formData, secondary_colour: e.target.value })}
+                        className="w-14 p-1"
+                        aria-label="Choose team secondary colour"
+                      />
+                      <Input
+                        value={formData.secondary_colour}
+                        onChange={(e) => setFormData({ ...formData, secondary_colour: e.target.value })}
+                        placeholder="Inherited"
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Age Group</Label>

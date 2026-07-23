@@ -506,7 +506,7 @@ const ClubsManagement = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="banner">Club banner</Label>
+                  <Label htmlFor="banner">Club banner override</Label>
                   <input
                     id="banner"
                     type="file"
@@ -547,6 +547,7 @@ const ClubsManagement = () => {
                     </Button>
                   </div>
                 )}
+                <p className="text-xs text-muted-foreground">Leave the banner and colours blank to inherit the association theme.</p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Primary colour</Label>

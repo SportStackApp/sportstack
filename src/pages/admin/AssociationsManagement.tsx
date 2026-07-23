@@ -40,7 +40,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import type { Database } from "@/integrations/supabase/types";
 
-type Association = Database["public"]["Tables"]["associations"]["Row"];
+type Association = Database["public"]["Tables"]["associations"]["Row"] & {
+  banner_url?: string | null;
+  primary_colour?: string | null;
+  secondary_colour?: string | null;
+};
 
 type ValidationState = {
   status: "success" | "error";
@@ -115,7 +119,15 @@ const AssociationsManagement = () => {
   const [editingAssociation, setEditingAssociation] = useState<Association | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAssociation, setDeletingAssociation] = useState<Association | null>(null);
-  const [formData, setFormData] = useState({ name: "", abbreviation: "", website_url: "", logo_url: "" });
+  const [formData, setFormData] = useState({
+    name: "",
+    abbreviation: "",
+    website_url: "",
+    logo_url: "",
+    banner_url: "",
+    primary_colour: "",
+    secondary_colour: "",
+  });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
   const [logoValidation, setLogoValidation] = useState<{ status: "success" | "error"; message: string } | null>(null);
@@ -182,11 +194,22 @@ const AssociationsManagement = () => {
         abbreviation: association.abbreviation || "",
         website_url: association.website_url || "",
         logo_url: association.logo_url || "",
+        banner_url: association.banner_url || "",
+        primary_colour: association.primary_colour || "",
+        secondary_colour: association.secondary_colour || "",
       });
       setLogoPreviewUrl(association.logo_url || "");
     } else {
       setEditingAssociation(null);
-      setFormData({ name: "", abbreviation: "", website_url: "", logo_url: "" });
+      setFormData({
+        name: "",
+        abbreviation: "",
+        website_url: "",
+        logo_url: "",
+        banner_url: "",
+        primary_colour: "",
+        secondary_colour: "",
+      });
       setLogoPreviewUrl("");
     }
     setLogoFile(null);
@@ -203,6 +226,19 @@ const AssociationsManagement = () => {
 
     const abbreviation = formData.abbreviation.trim();
     setFormErrors({});
+
+    const hexColour = /^#[0-9a-fA-F]{6}$/;
+    if (
+      (formData.primary_colour && !hexColour.test(formData.primary_colour))
+      || (formData.secondary_colour && !hexColour.test(formData.secondary_colour))
+    ) {
+      toast({
+        title: "Check the theme colours",
+        description: "Use a six-digit colour such as #2563EB.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (abbreviation) {
       let query = supabase.from("associations").select("id").eq("abbreviation", abbreviation);
@@ -264,6 +300,9 @@ const AssociationsManagement = () => {
       abbreviation: abbreviation || null,
       website_url: formData.website_url.trim() || null,
       logo_url: logoUrl.trim() || null,
+      banner_url: formData.banner_url.trim() || null,
+      primary_colour: formData.primary_colour.trim() || null,
+      secondary_colour: formData.secondary_colour.trim() || null,
     };
 
     if (editingAssociation) {
@@ -344,7 +383,7 @@ const AssociationsManagement = () => {
                 Add Association
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingAssociation ? "Edit Association" : "Add Association"}</DialogTitle>
                 <DialogDescription>
@@ -490,6 +529,54 @@ const AssociationsManagement = () => {
                     </Button>
                   </div>
                 )}
+                <div className="space-y-2">
+                  <Label htmlFor="banner_url">Default dashboard banner URL</Label>
+                  <Input
+                    id="banner_url"
+                    value={formData.banner_url}
+                    onChange={(e) => setFormData({ ...formData, banner_url: e.target.value })}
+                    placeholder="https://example.com/banner.jpg"
+                  />
+                  <p className="text-xs text-muted-foreground">Clubs and teams inherit this banner unless they set an override.</p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="primary_colour">Default primary colour</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={formData.primary_colour || "#2563EB"}
+                        onChange={(e) => setFormData({ ...formData, primary_colour: e.target.value })}
+                        className="w-14 p-1"
+                        aria-label="Choose primary colour"
+                      />
+                      <Input
+                        id="primary_colour"
+                        value={formData.primary_colour}
+                        onChange={(e) => setFormData({ ...formData, primary_colour: e.target.value })}
+                        placeholder="#2563EB"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="secondary_colour">Default secondary colour</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={formData.secondary_colour || "#FFFFFF"}
+                        onChange={(e) => setFormData({ ...formData, secondary_colour: e.target.value })}
+                        className="w-14 p-1"
+                        aria-label="Choose secondary colour"
+                      />
+                      <Input
+                        id="secondary_colour"
+                        value={formData.secondary_colour}
+                        onChange={(e) => setFormData({ ...formData, secondary_colour: e.target.value })}
+                        placeholder="#FFFFFF"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

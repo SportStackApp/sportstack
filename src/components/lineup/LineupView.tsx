@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HockeyPitch } from "./HockeyPitch";
+import { FillInFinderDialog } from "./FillInFinderDialog";
 import {
   type FormationIconRow,
   type FormationPositionRow,
@@ -17,7 +18,7 @@ import {
   preferenceScore,
 } from "@/lib/formationPlanner";
 import { cn } from "@/lib/utils";
-import { Lightbulb, Save, Search, UserMinus, Users } from "lucide-react";
+import { Lightbulb, Save, Search, UserMinus, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 
 const supabase = typedSupabase as any;
@@ -95,6 +96,7 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
   const [search, setSearch] = useState("");
   const [fixtureLineupId, setFixtureLineupId] = useState<string | null>(null);
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
+  const [fillInFinderOpen, setFillInFinderOpen] = useState(false);
 
   useEffect(() => {
     if (!teamId || !gameId) return;
@@ -163,7 +165,7 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
   const loadLineupData = async () => {
     setLoading(true);
     const formationsPromise = loadFormationRows();
-    const [formationsRes, iconsRes, rosterRes, availabilityRes, prefsRes, lineupRes] = await Promise.all([
+    const [formationsRes, iconsRes, rosterRes, fillInsRes, availabilityRes, prefsRes, lineupRes] = await Promise.all([
       formationsPromise,
       supabase.from("formation_icons").select("*").order("name"),
       supabase
@@ -171,6 +173,12 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
         .select("user_id, jersey_number, membership_type, position")
         .eq("team_id", teamId)
         .eq("status", "ACTIVE"),
+      supabase
+        .from("fixture_fill_ins")
+        .select("player_id")
+        .eq("fixture_id", gameId)
+        .eq("team_id", teamId)
+        .eq("status", "SELECTED"),
       supabase.from("fixture_availability").select("user_id, status").eq("fixture_id", gameId),
       supabase.from("player_position_preferences").select("player_id, position_code, preference"),
       supabase
@@ -184,11 +192,20 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
     if (formationsRes.error) toast.error(formationsRes.error.message);
     if (iconsRes.error) toast.error(iconsRes.error.message);
     if (rosterRes.error) toast.error(rosterRes.error.message);
+    if (fillInsRes.error) toast.error(fillInsRes.error.message);
     if (availabilityRes.error) toast.error(availabilityRes.error.message);
     if (prefsRes.error) toast.error(prefsRes.error.message);
     if (lineupRes.error) toast.error(lineupRes.error.message);
 
-    const memberships = rosterRes.data || [];
+    const memberships = [
+      ...(rosterRes.data || []),
+      ...(fillInsRes.data || []).map((row: any) => ({
+        user_id: row.player_id,
+        jersey_number: null,
+        membership_type: "FILL_IN",
+        position: null,
+      })),
+    ];
     const userIds = memberships.map((member: any) => member.user_id);
     const profilesRes = userIds.length
       ? await supabase.from("profiles").select("id, first_name, last_name").in("id", userIds)
@@ -500,6 +517,12 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
               </SelectContent>
             </Select>
             {isCoach && (
+              <Button variant="outline" onClick={() => setFillInFinderOpen(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Find a fill-in
+              </Button>
+            )}
+            {isCoach && (
               <Button variant="outline" onClick={suggestLineup} disabled={positions.length === 0 || roster.length === 0}>
                 <Lightbulb className="h-4 w-4 mr-2" />
                 Suggest
@@ -608,6 +631,14 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
           </CardContent>
         </Card>
       )}
+      <FillInFinderDialog
+        open={fillInFinderOpen}
+        onOpenChange={setFillInFinderOpen}
+        fixtureId={gameId}
+        teamId={teamId}
+        rosterPlayerIds={roster.map((player) => player.id)}
+        onChanged={loadLineupData}
+      />
     </div>
   );
 };

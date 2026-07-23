@@ -372,7 +372,7 @@ async function loadNonVoters(
       : null;
   if (!teamSide) throw new RequestError("The voting team is not part of this fixture.");
 
-  const [playersRes, submissionsRes, incorrectChecksRes] = await Promise.all([
+  const [playersRes, fillInsRes, submissionsRes, incorrectChecksRes] = await Promise.all([
     serviceClient
       .from("revsports_players")
       .select("id, player_name, profile_id, team_side")
@@ -380,6 +380,12 @@ async function loadNonVoters(
       .eq("attended", true)
       .eq("team_side", teamSide)
       .not("profile_id", "is", null),
+    serviceClient
+      .from("fixture_fill_ins")
+      .select("id, player_id")
+      .eq("fixture_id", session.fixture_id)
+      .eq("team_id", session.team_id)
+      .eq("status", "SELECTED"),
     serviceClient
       .from("mvp_vote_submissions")
       .select("voter_profile_id")
@@ -393,6 +399,7 @@ async function loadNonVoters(
   ]);
 
   if (playersRes.error) throw playersRes.error;
+  if (fillInsRes.error) throw fillInsRes.error;
   if (submissionsRes.error) throw submissionsRes.error;
   if (incorrectChecksRes.error) throw incorrectChecksRes.error;
 
@@ -408,7 +415,17 @@ async function loadNonVoters(
   );
   const seen = new Set<string>();
 
-  return ((playersRes.data || []) as EligiblePlayer[])
+  const attendedPlayers = (playersRes.data || []) as EligiblePlayer[];
+  const selectedFillIns = ((fillInsRes.data || []) as Array<{ id: string; player_id: string | null }>).map(
+    (fillIn): EligiblePlayer => ({
+      id: `fill-in-${fillIn.id}`,
+      player_name: null,
+      profile_id: fillIn.player_id,
+      team_side: teamSide,
+    }),
+  );
+
+  return [...attendedPlayers, ...selectedFillIns]
     .filter((player) => player.profile_id && !submittedProfileIds.has(player.profile_id))
     .filter((player) => player.profile_id && !blockedProfileIds.has(player.profile_id))
     .filter((player) => !targetProfileId || player.profile_id === targetProfileId)

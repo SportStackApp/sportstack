@@ -69,6 +69,11 @@ interface FixtureTeamRow {
   away_team_id: string | null;
 }
 
+interface FixtureFillInRow {
+  fixture_id: string;
+  team_id: string;
+}
+
 interface TeamTimezoneRow {
   id: string;
   clubs: {
@@ -165,12 +170,17 @@ export default function MvpVotes() {
       try {
         // Attendance and the recorded home/away side determine player access.
         // A global VOTER role is deliberately not used as an eligibility shortcut.
-        const [voterRowsRes, submissionsRes] = await Promise.all([
+        const [voterRowsRes, fillInRowsRes, submissionsRes] = await Promise.all([
           supabase
             .from("revsports_players")
             .select("id, fixture_id, player_name, team, team_side, team_label, jersey, profile_id")
             .eq("profile_id", user.id)
             .eq("attended", true),
+          supabase
+            .from("fixture_fill_ins")
+            .select("fixture_id, team_id")
+            .eq("player_id", user.id)
+            .eq("status", "SELECTED"),
           supabase
             .from("mvp_vote_submissions")
             .select("session_id")
@@ -178,10 +188,15 @@ export default function MvpVotes() {
         ]);
 
         if (voterRowsRes.error) throw voterRowsRes.error;
+        if (fillInRowsRes.error) throw fillInRowsRes.error;
         if (submissionsRes.error) throw submissionsRes.error;
 
         const voterRows = (voterRowsRes.data as RevsportsPlayerRow[] | null) || [];
-        const fixtureIds = Array.from(new Set(voterRows.map((player) => player.fixture_id).filter(Boolean)));
+        const fillInRows = (fillInRowsRes.data as FixtureFillInRow[] | null) || [];
+        const fixtureIds = Array.from(new Set([
+          ...voterRows.map((player) => player.fixture_id),
+          ...fillInRows.map((fillIn) => fillIn.fixture_id),
+        ].filter(Boolean)));
         const submittedSessionIds = new Set(
           ((submissionsRes.data as SubmissionRow[] | null) || []).map((submission) => submission.session_id),
         );
@@ -255,7 +270,29 @@ export default function MvpVotes() {
         const fixturesById = new Map(
           ((fixturesRes.data as FixtureTeamRow[] | null) || []).map((fixture) => [fixture.id, fixture]),
         );
-        const voterByFixtureId = new Map(voterRows.map((player) => [player.fixture_id, player]));
+        const fillInTeamByFixtureId = new Map(fillInRows.map((row) => [row.fixture_id, row.team_id]));
+        const syntheticFillInRows: RevsportsPlayerRow[] = fillInRows.flatMap((fillIn) => {
+          const fixture = fixturesById.get(fillIn.fixture_id);
+          const teamSide = fixture?.home_team_id === fillIn.team_id
+            ? "home"
+            : fixture?.away_team_id === fillIn.team_id
+              ? "away"
+              : null;
+          if (!teamSide) return [];
+          return [{
+            id: `fill-in-${fillIn.fixture_id}-${user.id}`,
+            fixture_id: fillIn.fixture_id,
+            player_name: "Fill-in voter",
+            team: null,
+            team_side: teamSide,
+            team_label: null,
+            jersey: null,
+            profile_id: user.id,
+          }];
+        });
+        const voterByFixtureId = new Map(
+          [...voterRows, ...syntheticFillInRows].map((player) => [player.fixture_id, player]),
+        );
         const timezoneByTeamId = new Map<string, string>(
           ((teamTimezonesRes.data as TeamTimezoneRow[] | null) || []).map((team): [string, string] => [
             team.id,
@@ -281,7 +318,8 @@ export default function MvpVotes() {
             const attendedTeamId = voterRow.team_side === "home"
               ? fixture.home_team_id
               : fixture.away_team_id;
-            return attendedTeamId === session.team_id;
+            return attendedTeamId === session.team_id
+              || fillInTeamByFixtureId.get(session.fixture_id) === session.team_id;
           })
           .map((session): SessionTile => {
             const hasSubmitted = submittedSessionIds.has(session.id);
@@ -297,7 +335,10 @@ export default function MvpVotes() {
           });
 
         setSessions(visibleSessions);
-        setPlayers((allPlayersRes.data as RevsportsPlayerRow[] | null) || []);
+        setPlayers([
+          ...((allPlayersRes.data as RevsportsPlayerRow[] | null) || []),
+          ...syntheticFillInRows,
+        ]);
         setVotes((votesRes.data as VoteRow[] | null) || []);
       } catch (error) {
         console.error("Error loading MVP votes data:", error);
@@ -419,7 +460,7 @@ export default function MvpVotes() {
           <CardDescription className="mt-1 text-sm text-muted-foreground max-w-md">
             {hasAttendedMatches
               ? "Your team's open voting rounds and submitted history will appear here."
-              : "Rounds will appear after you are linked as an attended player in a match lineup."}
+              : "Rounds will appear after you are linked as an attended player or selected as a fill-in."}
           </CardDescription>
         </Card>
       ) : (
