@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-07-23
+Last updated: 2026-07-24
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -110,6 +110,57 @@ After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
 
+Date: 2026-07-24
+
+What changed:
+
+- Added a durable registered-club field so PRIMARY means the player's registered club,
+  SECONDARY means an ongoing team at another club, and FILL_IN remains fixture-specific.
+- Added fixture-scoped fill-ins with team dashboard, Team Chat and published line-up access from
+  selection until one hour after the calculated match end. Player MVP eligibility remains until
+  that fixture's Player MVP Voting session closes.
+- Added a separate **Find a fill-in** line-up action. It shows current selections, previous
+  fill-ins and their games first, then lets an authorised coach or manager search real players.
+- Fixed the team roster profile query so linked players show their names instead of
+  `UNKNOWN PLAYER`, and badges now follow the registered-club meaning.
+- Added a larger team dashboard banner and full app theme inheritance: Association default,
+  Club override, then Team override.
+- Applied the additive fill-in/theme migration to SportStack Dev, deployed version 3 of
+  `mvp-voting-email-reminders`, regenerated Supabase types, and deployed Dev commit `1ff0785`.
+- Left `main`, `prod`, Production Auth and Production data untouched.
+
+Checks run:
+
+- The migration and SQL assertions passed in a disposable local Supabase Postgres database.
+- Live rollback-only RLS checks proved a current fill-in can read the correct Team Chat and
+  line-up, an unrelated player cannot, expired access is removed, and Player MVP eligibility
+  remains. Dev returned to zero fill-in rows and the real fixture was unchanged.
+- The migration registered 684 unambiguous profiles. Three profiles with active PRIMARY teams
+  across more than one club and 46 profiles without an active PRIMARY team were left unchanged.
+- Supabase advisers found no new fill-in/theme security warning. Two new empty-table indexes are
+  reported as unused, which is expected before the first fill-in is recorded; the wider adviser
+  backlog remains separate.
+- Focused ESLint passed with zero errors and nine existing warnings. `npx tsc --noEmit` and
+  `npm run build` passed. Full lint still reports the known wider backlog of 467 errors and
+  95 warnings.
+- Vercel marked Dev commit `1ff0785` READY. Signed-out desktop and 390-pixel mobile checks had no
+  console errors or horizontal overflow. The live bundle contains the fill-in and theme build,
+  points to SportStack Dev Supabase and does not reference Production Supabase.
+
+Risk level:
+
+- Medium. This includes additive Dev schema, RLS and Edge Function changes. Production was not
+  touched, and the live security checks left no test data behind.
+
+Remaining follow-up:
+
+- Aaron should complete the authenticated owner test on `dev.sportstackapp.com.au`, especially
+  the Pumas default, roster names, fill-in finder, expiry behaviour and theme cascade.
+- The data-quality clean-up items in `docs/data-quality-audit-2026-07-23.md` remain reporting
+  only and need separate approval before repair.
+
+### Previous handoff entries
+
 Date: 2026-07-23
 
 What changed:
@@ -160,8 +211,6 @@ Remaining follow-up:
   existing feedback tool.
 - The data-quality clean-up items in `docs/data-quality-audit-2026-07-23.md` remain reporting
   only and need separate approval before repair.
-
-### Previous handoff entries
 
 Date: 2026-07-22
 

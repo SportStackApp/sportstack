@@ -79,6 +79,11 @@ Adding `team_memberships.activated_at` will backfill **1,235 ACTIVE memberships*
 existing membership creation time. Inactive memberships remain unset. The migration does not
 delete, merge or silently repair any fixture/player record.
 
+The later registered-club dry run found **684 profiles with one unambiguous active PRIMARY
+club**, **3 profiles with active PRIMARY teams across more than one club**, and **46 profiles
+without an active PRIMARY team**. Only the 684 unambiguous profiles were populated; the other
+49 were deliberately left unchanged for later review.
+
 ## Build validation
 
 - The approved Dev migration backfilled all **1,235 ACTIVE memberships** with an activation
@@ -89,6 +94,11 @@ delete, merge or silently repair any fixture/player record.
 - Team reminder schedules start disabled; no reminder was sent during the deployment smoke test.
 - The reminder Edge Function returned HTTP 200 with zero claimed, sent or failed items in the
   disabled-team test state.
+- The approved Dev fill-in/theme migration populated `registered_club_id` for the 684
+  unambiguous profiles and left the 49 ambiguous or missing-primary profiles unchanged.
+- Live rollback-only tests confirmed fixture fill-ins can read their temporary Team Chat and
+  line-up, unrelated users cannot, resource access expires after the grace period, and Player
+  MVP eligibility is retained until the voting session closes. All test rows were rolled back.
 - No fixture or player quality finding in this report was automatically repaired.
 
 ## Recommended later clean-up order
