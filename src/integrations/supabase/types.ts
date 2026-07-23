@@ -56,10 +56,15 @@ export type Database = {
       associations: {
         Row: {
           abbreviation: string | null
+          banner_url: string | null
           created_at: string
+          default_match_duration_minutes: number
+          fill_in_access_grace_minutes: number
           id: string
           logo_url: string | null
           name: string
+          primary_colour: string | null
+          secondary_colour: string | null
           sport_type: string
           state: string | null
           timezone: string
@@ -68,10 +73,15 @@ export type Database = {
         }
         Insert: {
           abbreviation?: string | null
+          banner_url?: string | null
           created_at?: string
+          default_match_duration_minutes?: number
+          fill_in_access_grace_minutes?: number
           id?: string
           logo_url?: string | null
           name: string
+          primary_colour?: string | null
+          secondary_colour?: string | null
           sport_type?: string
           state?: string | null
           timezone?: string
@@ -80,10 +90,15 @@ export type Database = {
         }
         Update: {
           abbreviation?: string | null
+          banner_url?: string | null
           created_at?: string
+          default_match_duration_minutes?: number
+          fill_in_access_grace_minutes?: number
           id?: string
           logo_url?: string | null
           name?: string
+          primary_colour?: string | null
+          secondary_colour?: string | null
           sport_type?: string
           state?: string | null
           timezone?: string
@@ -240,30 +255,39 @@ export type Database = {
         Row: {
           abbreviation: string | null
           association_id: string
+          banner_url: string | null
           created_at: string
           id: string
           logo_url: string | null
           name: string
+          primary_colour: string | null
+          secondary_colour: string | null
           updated_at: string
           website_url: string | null
         }
         Insert: {
           abbreviation?: string | null
           association_id: string
+          banner_url?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
           name: string
+          primary_colour?: string | null
+          secondary_colour?: string | null
           updated_at?: string
           website_url?: string | null
         }
         Update: {
           abbreviation?: string | null
           association_id?: string
+          banner_url?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
           name?: string
+          primary_colour?: string | null
+          secondary_colour?: string | null
           updated_at?: string
           website_url?: string | null
         }
@@ -1047,6 +1071,90 @@ export type Database = {
           },
         ]
       }
+      fixture_fill_ins: {
+        Row: {
+          access_expires_at: string
+          access_starts_at: string
+          added_by: string | null
+          created_at: string
+          fixture_id: string
+          id: string
+          player_id: string
+          removal_reason: string | null
+          removed_at: string | null
+          removed_by: string | null
+          status: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_expires_at: string
+          access_starts_at?: string
+          added_by?: string | null
+          created_at?: string
+          fixture_id: string
+          id?: string
+          player_id: string
+          removal_reason?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          status?: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_expires_at?: string
+          access_starts_at?: string
+          added_by?: string | null
+          created_at?: string
+          fixture_id?: string
+          id?: string
+          player_id?: string
+          removal_reason?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          status?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixture_fill_ins_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixture_fill_ins_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixture_fill_ins_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixture_fill_ins_removed_by_fkey"
+            columns: ["removed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixture_fill_ins_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fixture_lineup_assignments: {
         Row: {
           created_at: string
@@ -1179,6 +1287,7 @@ export type Database = {
           revsports_match_url: string | null
           round_name: string | null
           round_number: number | null
+          scheduled_end_at: string | null
           season_id: string | null
           status: Database["public"]["Enums"]["fixture_status_enum"]
           updated_at: string
@@ -1198,6 +1307,7 @@ export type Database = {
           revsports_match_url?: string | null
           round_name?: string | null
           round_number?: number | null
+          scheduled_end_at?: string | null
           season_id?: string | null
           status?: Database["public"]["Enums"]["fixture_status_enum"]
           updated_at?: string
@@ -1217,6 +1327,7 @@ export type Database = {
           revsports_match_url?: string | null
           round_name?: string | null
           round_number?: number | null
+          scheduled_end_at?: string | null
           season_id?: string | null
           status?: Database["public"]["Enums"]["fixture_status_enum"]
           updated_at?: string
@@ -2853,6 +2964,7 @@ export type Database = {
           is_umpire: boolean
           last_name: string | null
           phone: string | null
+          registered_club_id: string | null
           revsports_player_id: string | null
           street_address: string | null
           suburb: string | null
@@ -2873,6 +2985,7 @@ export type Database = {
           is_umpire?: boolean
           last_name?: string | null
           phone?: string | null
+          registered_club_id?: string | null
           revsports_player_id?: string | null
           street_address?: string | null
           suburb?: string | null
@@ -2893,12 +3006,21 @@ export type Database = {
           is_umpire?: boolean
           last_name?: string | null
           phone?: string | null
+          registered_club_id?: string | null
           revsports_player_id?: string | null
           street_address?: string | null
           suburb?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_registered_club_id_fkey"
+            columns: ["registered_club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       requests: {
         Row: {
@@ -5542,6 +5664,8 @@ export type Database = {
           mvp_enabled: boolean
           mvp_notifications_enabled: boolean
           name: string
+          primary_colour: string | null
+          secondary_colour: string | null
           updated_at: string
         }
         Insert: {
@@ -5559,6 +5683,8 @@ export type Database = {
           mvp_enabled?: boolean
           mvp_notifications_enabled?: boolean
           name: string
+          primary_colour?: string | null
+          secondary_colour?: string | null
           updated_at?: string
         }
         Update: {
@@ -5576,6 +5702,8 @@ export type Database = {
           mvp_enabled?: boolean
           mvp_notifications_enabled?: boolean
           name?: string
+          primary_colour?: string | null
+          secondary_colour?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -6507,3 +6635,4 @@ export const Constants = {
     },
   },
 } as const
+
