@@ -135,7 +135,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       items: [
         { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
         { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
-        { path: "/chat", label: "Chat", icon: MessageCircle },
+        { path: "/chat", label: "Communications", icon: MessageCircle },
       ],
     },
     {
@@ -253,7 +253,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { path: "/mvp-votes", label: "MVP Votes", icon: Vote },
         { path: "/games", label: "Fixtures", icon: Calendar },
-        { path: "/chat", label: "Chat", icon: MessageCircle },
+        { path: "/chat", label: "Communications", icon: MessageCircle },
       ],
     },
     {
@@ -280,7 +280,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/mvp-votes", label: "MVP Votes", icon: Vote },
         { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/roster", label: "Statistics", icon: BarChart3 },
-        { path: "/chat", label: "Chat", icon: MessageCircle },
+        { path: "/chat", label: "Communications", icon: MessageCircle },
       ],
     },
   ],
@@ -432,6 +432,7 @@ const AppLayout = () => {
   const [isCascadePopoverOpen, setIsCascadePopoverOpen] = useState(false);
   const [isModeSwitcherOpen, setIsModeSwitcherOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [communicationUnreadCount, setCommunicationUnreadCount] = useState(0);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState("U");
@@ -503,6 +504,68 @@ const AppLayout = () => {
       void supabase.removeChannel(channel);
     };
   }, [user]);
+
+  // Ordinary team messages use a navigation badge, not an individual alert.
+  useEffect(() => {
+    if (!user) {
+      setCommunicationUnreadCount(0);
+      return;
+    }
+    let active = true;
+    const refreshCommunicationUnread = async () => {
+      // Regenerated Supabase types will replace this after the approved migration.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const communicationClient = supabase as any;
+      const scopeRequests = [
+        selectedTeamId
+          ? communicationClient.from("communication_channels").select("id").eq("team_id", selectedTeamId).maybeSingle()
+          : Promise.resolve({ data: null }),
+        selectedClubId
+          ? communicationClient.from("communication_channels").select("id").eq("club_id", selectedClubId).maybeSingle()
+          : Promise.resolve({ data: null }),
+        selectedAssociationId
+          ? communicationClient.from("communication_channels").select("id").eq("association_id", selectedAssociationId).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ];
+      const results = await Promise.all(scopeRequests);
+      const channelIds = results.map((result) => result.data?.id).filter(Boolean) as string[];
+      if (channelIds.length === 0) {
+        if (active) setCommunicationUnreadCount(0);
+        return;
+      }
+      const { data: states } = await communicationClient
+        .from("communication_read_state")
+        .select("channel_id, last_read_at")
+        .eq("user_id", user.id)
+        .in("channel_id", channelIds);
+      const counts = await Promise.all(channelIds.map((channelId) => {
+        const readState = ((states || []) as Array<{ channel_id: string; last_read_at: string | null }>)
+          .find((state) => state.channel_id === channelId);
+        let query = communicationClient
+          .from("communication_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("channel_id", channelId)
+          .is("removed_at", null);
+        if (readState?.last_read_at) query = query.gt("created_at", readState.last_read_at);
+        return query;
+      }));
+      if (active) setCommunicationUnreadCount(counts.reduce((sum, result) => sum + (result.count || 0), 0));
+    };
+    void refreshCommunicationUnread();
+    const channel = supabase
+      .channel(`communication-unread:${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "communication_messages" }, () => {
+        void refreshCommunicationUnread();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "communication_read_state", filter: `user_id=eq.${user.id}` }, () => {
+        void refreshCommunicationUnread();
+      })
+      .subscribe();
+    return () => {
+      active = false;
+      void supabase.removeChannel(channel);
+    };
+  }, [selectedAssociationId, selectedClubId, selectedTeamId, user]);
 
   // Fetch pending request count for admin badge
   useEffect(() => {
@@ -598,9 +661,13 @@ const AppLayout = () => {
 
       setVoterTeamMemberships(memberships);
 
-      const currentMembership =
-        memberships.find((membership) => membership.teamId === selectedTeamId) ||
-        memberships[0];
+      const contextSessionKey = `player-primary-context:${user.id}`;
+      const primaryMembership =
+        memberships.find((membership) => membership.membershipType === "PRIMARY") || memberships[0];
+      const needsPrimaryContext = !sessionStorage.getItem(contextSessionKey);
+      const currentMembership = needsPrimaryContext
+        ? primaryMembership
+        : memberships.find((membership) => membership.teamId === selectedTeamId) || primaryMembership;
 
       if (!currentMembership) {
         clearPlayerHeaderContext();
@@ -610,10 +677,11 @@ const AppLayout = () => {
       setPlayerAssociationName(currentMembership.associationName);
       setPlayerAssociationAbbr(currentMembership.associationAbbr || "");
       setPlayerClubName(currentMembership.clubName);
-      setPlayerTeamName(selectedTeamId === currentMembership.teamId ? currentMembership.teamName : "");
+      setPlayerTeamName(currentMembership.teamName);
       setPlayerLogoUrl(currentMembership.associationLogoUrl || currentMembership.clubLogoUrl);
 
-      if (isVoterOnly && selectedTeamId !== currentMembership.teamId) {
+      if (needsPrimaryContext) {
+        sessionStorage.setItem(contextSessionKey, currentMembership.teamId);
         setSelectedAssociationId(currentMembership.associationId);
         setSelectedClubId(currentMembership.clubId);
         setSelectedDivision(currentMembership.divisionId || "");
@@ -626,7 +694,6 @@ const AppLayout = () => {
     mode,
     user,
     selectedTeamId,
-    isVoterOnly,
     setSelectedAssociationId,
     setSelectedClubId,
     setSelectedDivision,
@@ -796,6 +863,7 @@ const AppLayout = () => {
   ]);
 
   const handleLogout = async () => {
+    if (user?.id) sessionStorage.removeItem(`player-primary-context:${user.id}`);
     await supabase.auth.signOut();
     navigate("/");
   };
@@ -972,6 +1040,7 @@ const AppLayout = () => {
                 ));
               const Icon = item.icon;
               const isRequestsItem = item.path === "/admin/requests";
+              const isCommunicationsItem = item.path === "/chat";
               return (
                 <Link
                   key={item.path + item.label}
@@ -991,6 +1060,11 @@ const AppLayout = () => {
                     {isRequestsItem && pendingRequestCount > 0 && (
                       <Badge className="ml-auto h-5 min-w-[20px] px-1.5 text-xs bg-destructive text-destructive-foreground">
                         {pendingRequestCount}
+                      </Badge>
+                    )}
+                    {isCommunicationsItem && communicationUnreadCount > 0 && (
+                      <Badge className="ml-auto h-5 min-w-[20px] bg-destructive px-1.5 text-xs text-destructive-foreground">
+                        {communicationUnreadCount}
                       </Badge>
                     )}
                   </div>

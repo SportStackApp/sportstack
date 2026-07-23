@@ -13,6 +13,9 @@ import {
   X,
   HelpCircle,
   AlertCircle,
+  BellRing,
+  Megaphone,
+  MessagesSquare,
   UserPlus,
   Pencil,
 } from "lucide-react";
@@ -32,7 +35,8 @@ import { useTeamContext } from "@/contexts/TeamContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { getTeamDisplayName } from "@/lib/utils";
+import type { Database } from "@/integrations/supabase/types";
+import { cn, getTeamDisplayName } from "@/lib/utils";
 import { useAdminScope } from "@/hooks/useAdminScope";
 
 type AvailabilityStatus = "AVAILABLE" | "UNAVAILABLE" | "UNSURE" | "PENDING";
@@ -61,6 +65,19 @@ interface TeamRequest {
   created_at: string;
 }
 
+interface DashboardFeedMessage {
+  id: string;
+  channel_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  is_important: boolean;
+  author_name?: string;
+  scope_tab?: "team" | "club" | "association";
+}
+
+type MembershipType = Database["public"]["Enums"]["membership_type_enum"];
+
 const FIXTURE_SELECT =
   "id, fixture_date, status, home_team_id, away_team_id, division_id, venue_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name), divisions:divisions!fixtures_division_id_fkey(id, name)";
 
@@ -73,6 +90,7 @@ const Dashboard = () => {
     selectedDivision,
     selectedTeam,
     selectedClub,
+    selectedAssociation,
     setSelectedAssociationId,
     setSelectedClubId,
     setSelectedDivision,
@@ -98,6 +116,11 @@ const Dashboard = () => {
   const [activeMembershipCount, setActiveMembershipCount] = useState(0);
   const [submittingJoinRequest, setSubmittingJoinRequest] = useState(false);
   const [joinRequestSent, setJoinRequestSent] = useState(false);
+  const [publishedLineupFixtureIds, setPublishedLineupFixtureIds] = useState<Set<string>>(new Set());
+  const [officialUpdates, setOfficialUpdates] = useState<DashboardFeedMessage[]>([]);
+  const [teamActivity, setTeamActivity] = useState<DashboardFeedMessage[]>([]);
+  const [importantUnreadCount, setImportantUnreadCount] = useState(0);
+  const [mentionCount, setMentionCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -124,7 +147,7 @@ const Dashboard = () => {
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id)
           .eq("status", "ACTIVE"),
-        (supabase as any)
+        supabase
           .from("requests")
           .select("id", { count: "exact", head: true })
           .eq("target_user_id", user.id)
@@ -146,18 +169,18 @@ const Dashboard = () => {
     const fetchTeamRequests = async () => {
       setLoadingRequests(true);
       try {
-        const { data, error } = (await supabase
-          .from("requests" as any)
+        const { data, error } = await supabase
+          .from("requests")
           .select("*")
           .eq("target_user_id", user.id)
           .eq("status", "PENDING")
-          .order("created_at", { ascending: false })) as any;
+          .order("created_at", { ascending: false });
 
         if (error) throw error;
 
         // Fetch team and club info
         const requestsWithTeamInfo = await Promise.all(
-          (data || []).map(async (req: any) => {
+          (data || []).filter((request) => Boolean(request.team_id)).map(async (req) => {
             const { data: teamData } = await supabase
               .from("teams")
               .select("name, club_id, clubs(name)")
@@ -170,12 +193,13 @@ const Dashboard = () => {
               .eq("id", req.requester_id)
               .single();
 
+            const clubData = Array.isArray(teamData?.clubs) ? teamData.clubs[0] : teamData?.clubs;
             return {
               id: req.id,
               request_type: req.request_type,
               team_id: req.team_id,
               team_name: teamData?.name || "Unknown Team",
-              club_name: (teamData?.clubs as any)?.name || "Unknown Club",
+              club_name: clubData?.name || "Unknown Club",
               membership_type: req.membership_type,
               requester_name: `${profileData?.first_name || ""} ${profileData?.last_name || ""}`.trim() || "Unknown",
               created_at: req.created_at,
@@ -184,7 +208,7 @@ const Dashboard = () => {
         );
 
         setTeamRequests(requestsWithTeamInfo);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(err);
       } finally {
         setLoadingRequests(false);
@@ -218,17 +242,26 @@ const Dashboard = () => {
       // Fetch availability for these games
       if (user && gamesList.length > 0) {
         const gameIds = gamesList.map((g) => g.id);
-        const { data: availData } = await supabase
-          .from("fixture_availability")
-          .select("fixture_id, status")
-          .eq("user_id", user.id)
-          .in("fixture_id", gameIds);
+        const [availabilityResult, lineupsResult] = await Promise.all([
+          supabase
+            .from("fixture_availability")
+            .select("fixture_id, status")
+            .eq("user_id", user.id)
+            .in("fixture_id", gameIds),
+          supabase
+            .from("fixture_lineups")
+            .select("fixture_id, published_at")
+            .eq("team_id", selectedTeamId)
+            .in("fixture_id", gameIds)
+            .not("published_at", "is", null),
+        ]);
 
         const availMap: Record<string, AvailabilityStatus> = {};
-        availData?.forEach((a) => {
+        availabilityResult.data?.forEach((a) => {
           availMap[a.fixture_id] = a.status as AvailabilityStatus;
         });
         setAvailability(availMap);
+        setPublishedLineupFixtureIds(new Set((lineupsResult.data || []).map((lineup) => lineup.fixture_id)));
       }
 
       setLoading(false);
@@ -236,13 +269,124 @@ const Dashboard = () => {
     fetchGames();
   }, [selectedTeamId, user]);
 
+  useEffect(() => {
+    if (!user) return;
+      // Regenerated Supabase types will replace this after the approved migration.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const communicationsClient = supabase as any;
+    let active = true;
+    const loadDashboardCommunications = async () => {
+      const channelRequests = [
+        selectedTeamId
+          ? communicationsClient.from("communication_channels").select("id").eq("team_id", selectedTeamId).maybeSingle()
+          : Promise.resolve({ data: null }),
+        selectedClubId
+          ? communicationsClient.from("communication_channels").select("id").eq("club_id", selectedClubId).maybeSingle()
+          : Promise.resolve({ data: null }),
+        selectedAssociationId
+          ? communicationsClient.from("communication_channels").select("id").eq("association_id", selectedAssociationId).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ];
+      const [teamChannel, clubChannel, associationChannel] = await Promise.all(channelRequests);
+      const officialChannelIds = [clubChannel.data?.id, associationChannel.data?.id].filter(Boolean) as string[];
+      const teamChannelId = teamChannel.data?.id as string | undefined;
+      const messageSelect = "id, channel_id, author_id, content, created_at, is_important";
+      const [officialResult, activityResult, notificationResult, readStateResult] = await Promise.all([
+        officialChannelIds.length > 0
+          ? communicationsClient
+              .from("communication_messages")
+              .select(messageSelect)
+              .in("channel_id", officialChannelIds)
+              .is("removed_at", null)
+              .order("created_at", { ascending: false })
+              .limit(6)
+          : Promise.resolve({ data: [] }),
+        teamChannelId
+          ? communicationsClient
+              .from("communication_messages")
+              .select(messageSelect)
+              .eq("channel_id", teamChannelId)
+              .is("removed_at", null)
+              .order("created_at", { ascending: false })
+              .limit(6)
+          : Promise.resolve({ data: [] }),
+        supabase
+          .from("notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("read", false)
+          .eq("type", "COMMUNICATION_MENTION"),
+        officialChannelIds.length > 0
+          ? communicationsClient
+              .from("communication_read_state")
+              .select("channel_id, last_read_at")
+              .eq("user_id", user.id)
+              .in("channel_id", officialChannelIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+      const allMessages = [...(officialResult.data || []), ...(activityResult.data || [])] as DashboardFeedMessage[];
+      const authorIds = [...new Set(allMessages.map((message) => message.author_id))];
+      const { data: authors } = authorIds.length > 0
+        ? await supabase.from("profiles").select("id, first_name, last_name").in("id", authorIds)
+        : { data: [] };
+      const authorNames = Object.fromEntries((authors || []).map((profile) => [
+        profile.id,
+        [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Member",
+      ]));
+      const enrich = (items: DashboardFeedMessage[]) => items.map((message) => ({
+        ...message,
+        author_name: authorNames[message.author_id] || "Member",
+        scope_tab: message.channel_id === associationChannel.data?.id
+          ? "association" as const
+          : message.channel_id === clubChannel.data?.id
+            ? "club" as const
+            : "team" as const,
+      }));
+      if (!active) return;
+      setOfficialUpdates(enrich((officialResult.data || []) as DashboardFeedMessage[]));
+      setTeamActivity(enrich((activityResult.data || []) as DashboardFeedMessage[]));
+      setMentionCount(notificationResult.count || 0);
+      const readStates = readStateResult.data || [];
+      setImportantUnreadCount(((officialResult.data || []) as DashboardFeedMessage[]).filter((message) => {
+        if (!message.is_important) return false;
+        const state = (readStates as Array<{ channel_id: string; last_read_at: string | null }>)
+          .find((item) => item.channel_id === message.channel_id);
+        return !state?.last_read_at || new Date(message.created_at) > new Date(state.last_read_at);
+      }).length);
+    };
+    void loadDashboardCommunications();
+    const channel = supabase
+      .channel(`dashboard-communications:${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "communication_messages" }, () => {
+        void loadDashboardCommunications();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => {
+        void loadDashboardCommunications();
+      })
+      .subscribe();
+    return () => {
+      active = false;
+      void supabase.removeChannel(channel);
+    };
+  }, [selectedAssociationId, selectedClubId, selectedTeamId, user]);
+
   const handleAvailabilityChange = async (gameId: string, status: AvailabilityStatus) => {
     if (!user) return;
+    const previous = availability[gameId];
     setAvailability((prev) => ({ ...prev, [gameId]: status }));
 
-    await supabase
+    const { error } = await supabase
       .from("fixture_availability")
       .upsert({ fixture_id: gameId, user_id: user.id, status }, { onConflict: "fixture_id,user_id" });
+    if (error) {
+      setAvailability((current) => {
+        const next = { ...current };
+        if (previous) next[gameId] = previous;
+        else delete next[gameId];
+        return next;
+      });
+      toast({ title: "Availability not saved", description: "Please try again.", variant: "destructive" });
+    }
   };
 
   const handleAcceptRequest = async (request: TeamRequest, joinAsSecondary?: boolean) => {
@@ -289,13 +433,13 @@ const Dashboard = () => {
       await supabase.from("team_memberships").insert({
         user_id: user.id,
         team_id: request.team_id,
-        membership_type: finalMembershipType as any,
+        membership_type: finalMembershipType as MembershipType,
         status: "ACTIVE",
       });
 
       // Update request status
       await supabase
-        .from("requests" as any)
+        .from("requests")
         .update({ status: "APPROVED", responded_by: user.id })
         .eq("id", request.id);
 
@@ -307,10 +451,11 @@ const Dashboard = () => {
       setShowConflictModal(false);
       setConflictRequest(null);
       setTeamRequests(teamRequests.filter((r) => r.id !== request.id));
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "The request could not be accepted.";
       toast({
         title: "Error",
-        description: err.message,
+        description: message,
         variant: "destructive",
       });
     }
@@ -321,7 +466,7 @@ const Dashboard = () => {
 
     try {
       await supabase
-        .from("requests" as any)
+        .from("requests")
         .update({ status: "DECLINED", responded_by: user.id })
         .eq("id", requestId);
 
@@ -331,10 +476,11 @@ const Dashboard = () => {
       });
 
       setTeamRequests(teamRequests.filter((r) => r.id !== requestId));
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "The request could not be declined.";
       toast({
         title: "Error",
-        description: err.message,
+        description: message,
         variant: "destructive",
       });
     }
@@ -344,7 +490,7 @@ const Dashboard = () => {
     if (!user || !selectedAssociationId || submittingJoinRequest) return;
 
     setSubmittingJoinRequest(true);
-    const { error } = await (supabase as any).from("requests").insert({
+    const { error } = await supabase.from("requests").insert({
       request_type: "PLAYER_REQUEST",
       requester_id: user.id,
       target_user_id: user.id,
@@ -423,7 +569,7 @@ const Dashboard = () => {
   // Club branding
   const clubPrimary = selectedClub?.primary_colour || undefined;
   const clubSecondary = selectedClub?.secondary_colour || undefined;
-  const clubBannerUrl = (selectedClub as any)?.banner_url || undefined;
+  const clubBannerUrl = selectedClub?.banner_url || undefined;
   const clubLogoUrl = selectedClub?.logo_url || undefined;
 
   const brandStyle = clubPrimary
@@ -431,6 +577,9 @@ const Dashboard = () => {
     : undefined;
   const canEditCurrentClub = selectedClubId ? canManageClub(selectedClubId) : false;
   const canOpenFixtureDetail = selectedTeamId ? canManageTeam(selectedTeamId) : false;
+  const unansweredAvailabilityCount = games.filter(
+    (game) => !availability[game.id] || availability[game.id] === "UNSURE",
+  ).length;
 
   if (isBrandNewUser) {
     return (
@@ -546,54 +695,76 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Welcome Banner */}
-      <Card style={brandStyle} className={!brandStyle ? "bg-primary text-primary-foreground" : ""}>
-        <CardContent className="py-4 px-6">
-          <p className="text-lg font-medium">
-            Welcome back{profileName ? `, ${profileName}` : ""}!
-          </p>
-          <p className="text-sm opacity-70 mt-1">
-            {selectedClub?.name || "Select a club"} • {teamName}
-          </p>
+      {/* Combined player and club banner */}
+      <Card
+        style={clubBannerUrl
+          ? { backgroundImage: `linear-gradient(90deg, rgba(10,20,45,.9), rgba(10,20,45,.45)), url(${clubBannerUrl})` }
+          : brandStyle}
+        className={cn(
+          "relative overflow-hidden bg-cover bg-center",
+          !clubBannerUrl && !brandStyle && "bg-primary text-primary-foreground",
+          clubBannerUrl && "text-white",
+        )}
+      >
+        <CardContent className="relative flex min-h-28 items-center gap-4 px-5 py-4 sm:px-6">
+          {clubLogoUrl && (
+            <img
+              src={clubLogoUrl}
+              alt={`${selectedClub?.name || "Club"} logo`}
+              className="h-16 w-16 shrink-0 rounded-lg bg-white/90 object-contain p-1"
+            />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm opacity-80">Welcome back{profileName ? `, ${profileName}` : ""}</p>
+            {selectedTeamId ? (
+              <>
+                <h1 className="truncate text-xl font-semibold sm:text-2xl">{teamName}</h1>
+                <p className="truncate text-sm opacity-80">
+                  {[selectedClub?.name, selectedAssociation?.name].filter(Boolean).join(" • ")}
+                </p>
+              </>
+            ) : (
+              <p className="mt-1 text-sm">Select an association, club and team to open its dashboard.</p>
+            )}
+          </div>
+          {canEditCurrentClub && (
+            <Link to="/admin/clubs" className="hidden sm:block">
+              <Button size="sm" variant="secondary" className="gap-2">
+                <Pencil className="h-4 w-4" /> Edit branding
+              </Button>
+            </Link>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Needs attention */}
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-2 px-4 py-3">
+          <div className="mr-2 flex items-center gap-2 text-sm font-semibold">
+            <BellRing className="h-4 w-4" /> Needs attention
+          </div>
+          {unansweredAvailabilityCount === 0 && importantUnreadCount === 0 && mentionCount === 0 && teamRequests.length === 0 ? (
+            <span className="text-sm text-muted-foreground">You’re up to date.</span>
+          ) : (
+            <>
+              {unansweredAvailabilityCount > 0 && (
+                <Badge variant="secondary">{unansweredAvailabilityCount} availability response{unansweredAvailabilityCount === 1 ? "" : "s"}</Badge>
+              )}
+              {importantUnreadCount > 0 && (
+                <Link to="/chat?tab=club"><Badge variant="destructive">{importantUnreadCount} important update{importantUnreadCount === 1 ? "" : "s"}</Badge></Link>
+              )}
+              {mentionCount > 0 && (
+                <Link to="/chat?tab=team"><Badge variant="secondary">{mentionCount} mention{mentionCount === 1 ? "" : "s"}</Badge></Link>
+              )}
+              {teamRequests.length > 0 && <Badge variant="secondary">{teamRequests.length} team request{teamRequests.length === 1 ? "" : "s"}</Badge>}
+            </>
+          )}
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-4">
         {/* Left Column */}
         <div className="space-y-4">
-          {/* Club Banner */}
-          <Card
-            className={`h-[260px] overflow-hidden ${!clubBannerUrl && !brandStyle ? "bg-primary text-primary-foreground" : ""}`}
-            style={!clubBannerUrl ? brandStyle : undefined}
-          >
-            <CardContent className="flex items-center justify-center h-full py-8 relative">
-              {canEditCurrentClub && (
-                <Link to="/admin/clubs" className="absolute right-3 top-3 z-20">
-                  <Button size="sm" variant="secondary" className="gap-2">
-                    <Pencil className="h-4 w-4" />
-                    Edit branding
-                  </Button>
-                </Link>
-              )}
-              {clubBannerUrl ? (
-                <img
-                  src={clubBannerUrl}
-                  alt={`${selectedClub?.name} banner`}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-              ) : null}
-              <div className={`text-center relative z-10 ${clubBannerUrl ? "bg-background/80 backdrop-blur-sm rounded-xl px-6 py-4" : ""}`}>
-                {clubLogoUrl && (
-                  <img src={clubLogoUrl} alt={selectedClub?.name} className="h-16 w-16 mx-auto mb-3 object-contain" />
-                )}
-                <h2 className="text-xl font-bold mb-2">{selectedClub?.name || "Select a club"}</h2>
-                <p className="opacity-80">
-                  {selectedClub?.home_ground || "Club banner"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Upcoming Fixtures */}
           <Card style={brandStyle} className={!brandStyle ? "bg-primary text-primary-foreground" : ""}>
             <CardHeader className="pb-2">
@@ -618,7 +789,7 @@ const Dashboard = () => {
               ) : games.length === 0 ? (
                 <p className="text-primary-foreground/70 text-sm">No upcoming fixtures</p>
               ) : (
-                games.slice(0, 4).map((game) => {
+                games.slice(0, 5).map((game) => {
                   const gameDate = new Date(game.fixture_date);
                   const homeTeam = game.home_team?.name ?? "Unknown";
                   const awayTeam = game.away_team?.name ?? "Unknown";
@@ -649,6 +820,10 @@ const Dashboard = () => {
                           {venueName}
                         </span>
                       </div>
+
+                      {publishedLineupFixtureIds.has(game.id) && (
+                        <Badge className="mb-2 border-0 bg-sky-500/25 text-sky-100">Line-up published</Badge>
+                      )}
 
                       {/* Availability buttons */}
                       <div className="flex gap-2" onClick={(e) => e.preventDefault()}>
@@ -751,6 +926,60 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Megaphone className="h-4 w-4" /> Official updates
+              </CardTitle>
+              <Link to="/chat?tab=club" className="text-xs text-primary hover:underline">Open updates</Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {officialUpdates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No club or association updates yet.</p>
+            ) : officialUpdates.slice(0, 4).map((message) => (
+              <Link key={message.id} to={`/chat?tab=${message.scope_tab || "club"}&message=${message.id}`} className="block rounded-lg border p-3 hover:bg-muted/40">
+                <div className="mb-1 flex items-center justify-between gap-3">
+                  <span className="truncate text-xs font-medium">{message.author_name}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {new Date(message.created_at).toLocaleDateString("en-AU", { day: "2-digit", month: "short" })}
+                  </span>
+                </div>
+                <p className="line-clamp-2 text-sm">{message.content}</p>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <MessagesSquare className="h-4 w-4" /> Team activity
+              </CardTitle>
+              <Link to="/chat?tab=team" className="text-xs text-primary hover:underline">Open Team Chat</Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {teamActivity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No recent team conversation.</p>
+            ) : teamActivity.slice(0, 4).map((message) => (
+              <Link key={message.id} to={`/chat?tab=team&message=${message.id}`} className="block rounded-lg border p-3 hover:bg-muted/40">
+                <div className="mb-1 flex items-center justify-between gap-3">
+                  <span className="truncate text-xs font-medium">{message.author_name}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {new Date(message.created_at).toLocaleDateString("en-AU", { day: "2-digit", month: "short" })}
+                  </span>
+                </div>
+                <p className="line-clamp-2 text-sm">{message.content}</p>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Team Requests Section */}

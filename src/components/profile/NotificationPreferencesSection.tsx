@@ -1,133 +1,156 @@
-import { useState, useEffect } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { Bell } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bell } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+type Category = "AVAILABILITY_REMINDERS" | "BROADCASTS" | "MENTIONS";
+type Channel = "in_app_enabled" | "email_enabled";
 
 interface Preference {
-  channel: string;
-  category: string;
-  enabled: boolean;
+  category: Category;
+  in_app_enabled: boolean;
+  email_enabled: boolean;
 }
 
-const CATEGORIES = [
-  { key: "game_reminders", label: "Game Reminders" },
-  { key: "availability", label: "Availability Requests" },
-  { key: "lineup", label: "Lineup Published" },
-  { key: "team_updates", label: "Team Updates" },
-  { key: "chat", label: "Chat Messages" },
+const CATEGORIES: Array<{
+  key: Category;
+  label: string;
+  description: string;
+  channels: Channel[];
+}> = [
+  {
+    key: "AVAILABILITY_REMINDERS",
+    label: "Availability reminders",
+    description: "Reminders when you have not answered, or you are still unsure.",
+    channels: ["in_app_enabled", "email_enabled"],
+  },
+  {
+    key: "BROADCASTS",
+    label: "Official updates",
+    description: "Email copies of club and association broadcasts. In-app alerts always remain on.",
+    channels: ["email_enabled"],
+  },
+  {
+    key: "MENTIONS",
+    label: "Team mentions",
+    description: "An in-app alert when someone mentions you in Team Chat.",
+    channels: ["in_app_enabled"],
+  },
 ];
 
-const CHANNELS = [
-  { key: "in_app", label: "In-App" },
-  { key: "email", label: "Email" },
-];
+const defaultPreference = (category: Category): Preference => ({
+  category,
+  in_app_enabled: true,
+  email_enabled: true,
+});
 
 export function NotificationPreferencesSection() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [prefs, setPrefs] = useState<Preference[]>([]);
+  const [preferences, setPreferences] = useState<Preference[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    const fetchPrefs = async () => {
-      const { data } = await supabase
-        .from("notification_preferences")
-        .select("channel, category, enabled")
+    const fetchPreferences = async () => {
+      setLoading(true);
+      // Regenerated Supabase types will replace this after the approved migration.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from("notification_category_preferences")
+        .select("category, in_app_enabled, email_enabled")
         .eq("user_id", user.id);
 
-      if (data && data.length > 0) {
-        setPrefs(data);
-      } else {
-        // Initialize defaults
-        const defaults: Preference[] = [];
-        for (const cat of CATEGORIES) {
-          for (const ch of CHANNELS) {
-            defaults.push({ channel: ch.key, category: cat.key, enabled: true });
-          }
-        }
-        setPrefs(defaults);
+      if (error) {
+        console.error("Unable to load notification preferences", error);
       }
+      const saved = (data || []) as Preference[];
+      setPreferences(
+        CATEGORIES.map(
+          ({ key }) => saved.find((preference) => preference.category === key) || defaultPreference(key),
+        ),
+      );
       setLoading(false);
     };
-    fetchPrefs();
+    void fetchPreferences();
   }, [user]);
 
-  const togglePref = async (channel: string, category: string) => {
+  const togglePreference = async (category: Category, channel: Channel) => {
     if (!user) return;
+    const current = preferences.find((preference) => preference.category === category) || defaultPreference(category);
+    const next = { ...current, [channel]: !current[channel] };
 
-    const current = prefs.find((p) => p.channel === channel && p.category === category);
-    const newEnabled = !(current?.enabled ?? true);
-
-    setPrefs((prev) =>
-      prev.map((p) =>
-        p.channel === channel && p.category === category ? { ...p, enabled: newEnabled } : p
-      )
-    );
-
-    const { error } = await supabase
-      .from("notification_preferences")
+    setPreferences((items) => items.map((item) => (item.category === category ? next : item)));
+    // Regenerated Supabase types will replace this after the approved migration.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from("notification_category_preferences")
       .upsert(
-        { user_id: user.id, channel, category, enabled: newEnabled },
-        { onConflict: "user_id,channel,category" }
+        {
+          user_id: user.id,
+          category,
+          in_app_enabled: next.in_app_enabled,
+          email_enabled: next.email_enabled,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,category" },
       );
 
     if (error) {
-      toast({ title: "Error", description: "Failed to update preference", variant: "destructive" });
-      // revert
-      setPrefs((prev) =>
-        prev.map((p) =>
-          p.channel === channel && p.category === category ? { ...p, enabled: !newEnabled } : p
-        )
-      );
+      setPreferences((items) => items.map((item) => (item.category === category ? current : item)));
+      toast({
+        title: "Preference not saved",
+        description: "Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const isEnabled = (channel: string, category: string) =>
-    prefs.find((p) => p.channel === channel && p.category === category)?.enabled ?? true;
-
-  if (loading) {
-    return <Skeleton className="h-48 w-full" />;
-  }
+  if (loading) return <Skeleton className="h-48 w-full" />;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Bell className="h-5 w-5" />
-          Notification Preferences
+          Notification preferences
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <div className="grid grid-cols-[1fr_auto_auto] gap-x-6 gap-y-3 items-center">
-            <div />
-            {CHANNELS.map((ch) => (
-              <Label key={ch.key} className="text-xs text-muted-foreground text-center">
-                {ch.label}
-              </Label>
-            ))}
-            {CATEGORIES.map((cat) => (
-              <>
-                <Label key={cat.key} className="text-sm font-medium">
-                  {cat.label}
-                </Label>
-                {CHANNELS.map((ch) => (
-                  <div key={`${cat.key}-${ch.key}`} className="flex justify-center">
-                    <Switch
-                      checked={isEnabled(ch.key, cat.key)}
-                      onCheckedChange={() => togglePref(ch.key, cat.key)}
-                    />
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-5 gap-y-4">
+          <div />
+          <Label className="text-center text-xs text-muted-foreground">In-app</Label>
+          <Label className="text-center text-xs text-muted-foreground">Email</Label>
+          {CATEGORIES.map((category) => {
+            const preference =
+              preferences.find((item) => item.category === category.key) || defaultPreference(category.key);
+            return (
+              <Fragment key={category.key}>
+                <div className="min-w-0">
+                  <Label className="text-sm font-medium">{category.label}</Label>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{category.description}</p>
+                </div>
+                {(["in_app_enabled", "email_enabled"] as Channel[]).map((channel) => (
+                  <div key={channel} className="flex justify-center">
+                    {category.channels.includes(channel) ? (
+                      <Switch
+                        checked={preference[channel]}
+                        aria-label={`${category.label} ${channel === "in_app_enabled" ? "in-app" : "email"}`}
+                        onCheckedChange={() => void togglePreference(category.key, channel)}
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </div>
                 ))}
-              </>
-            ))}
-          </div>
+              </Fragment>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
