@@ -39,7 +39,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { cn, getTeamDisplayName } from "@/lib/utils";
 import { useAdminScope } from "@/hooks/useAdminScope";
 
-type AvailabilityStatus = "AVAILABLE" | "UNAVAILABLE" | "UNSURE" | "PENDING";
+type AvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
 
 interface GameRow {
   id: string;
@@ -271,9 +271,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!user) return;
-      // Regenerated Supabase types will replace this after the approved migration.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const communicationsClient = supabase as any;
+    const communicationsClient = supabase;
     let active = true;
     const loadDashboardCommunications = async () => {
       const channelRequests = [
@@ -578,7 +576,7 @@ const Dashboard = () => {
   const canEditCurrentClub = selectedClubId ? canManageClub(selectedClubId) : false;
   const canOpenFixtureDetail = selectedTeamId ? canManageTeam(selectedTeamId) : false;
   const unansweredAvailabilityCount = games.filter(
-    (game) => !availability[game.id] || availability[game.id] === "UNSURE",
+    (game) => !availability[game.id] || availability[game.id] === "MAYBE" || availability[game.id] === "NO_RESPONSE",
   ).length;
 
   if (isBrandNewUser) {
@@ -827,11 +825,11 @@ const Dashboard = () => {
 
                       {/* Availability buttons */}
                       <div className="flex gap-2" onClick={(e) => e.preventDefault()}>
-                        {(["AVAILABLE", "UNAVAILABLE", "UNSURE"] as const).map((status) => {
+                        {(["AVAILABLE", "UNAVAILABLE", "MAYBE"] as const).map((status) => {
                           const config = {
                             AVAILABLE: { icon: Check, label: "Available", active: "bg-green-500 text-white", inactive: "bg-green-500/20 text-green-200" },
                             UNAVAILABLE: { icon: X, label: "Not Available", active: "bg-red-500 text-white", inactive: "bg-red-500/20 text-red-200" },
-                            UNSURE: { icon: HelpCircle, label: "Unsure", active: "bg-yellow-500 text-white", inactive: "bg-yellow-500/20 text-yellow-200" },
+                            MAYBE: { icon: HelpCircle, label: "Unsure", active: "bg-yellow-500 text-white", inactive: "bg-yellow-500/20 text-yellow-200" },
                           };
                           const c = config[status];
                           const Icon = c.icon;

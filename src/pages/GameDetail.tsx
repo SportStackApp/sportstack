@@ -19,9 +19,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { getLineupAccess, type LineupAccess } from "@/lib/lineupAccess";
 
-type AvailabilityStatus = "AVAILABLE" | "UNAVAILABLE" | "UNSURE" | "PENDING";
+type AvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
 
 interface GameRow {
   id: string;
@@ -254,7 +255,7 @@ const GameDetail = () => {
             <div className="grid grid-cols-3 gap-3">
               <AvailabilityButton status="AVAILABLE" current={availability} onClick={() => handleAvailability("AVAILABLE")} icon={<Check className="h-5 w-5" />} label="Available" />
               <AvailabilityButton status="UNAVAILABLE" current={availability} onClick={() => handleAvailability("UNAVAILABLE")} icon={<X className="h-5 w-5" />} label="Unavailable" />
-              <AvailabilityButton status="UNSURE" current={availability} onClick={() => handleAvailability("UNSURE")} icon={<HelpCircle className="h-5 w-5" />} label="Unsure" />
+              <AvailabilityButton status="MAYBE" current={availability} onClick={() => handleAvailability("MAYBE")} icon={<HelpCircle className="h-5 w-5" />} label="Unsure" />
             </div>
           </CardContent>
         </Card>
@@ -285,7 +286,7 @@ const GameDetail = () => {
                     variant={
                       member.availability_status === "AVAILABLE" ? "available" :
                       member.availability_status === "UNAVAILABLE" ? "destructive" :
-                      member.availability_status === "UNSURE" ? "secondary" : "outline"
+                      member.availability_status === "MAYBE" ? "secondary" : "outline"
                     }
                     className="text-xs"
                   >

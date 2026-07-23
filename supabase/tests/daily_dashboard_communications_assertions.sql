@@ -122,4 +122,31 @@ begin
 end;
 $$;
 
+do $$
+begin
+  if not exists (
+    select 1 from pg_indexes
+    where schemaname = 'public'
+      and indexname = 'availability_reminder_dispatches_user_idx'
+  ) then
+    raise exception 'Expected reminder user index is missing';
+  end if;
+
+  if exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename in (
+        'club_availability_reminder_settings',
+        'team_availability_reminder_settings'
+      )
+      and policyname in (
+        'club_availability_reminder_settings_write',
+        'team_availability_reminder_settings_write'
+      )
+  ) then
+    raise exception 'Broad reminder write policy still exists';
+  end if;
+end;
+$$;
+
 select 'daily dashboard communications assertions passed' as result;

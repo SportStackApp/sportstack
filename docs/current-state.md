@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-07-22
+Last updated: 2026-07-23
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -30,10 +30,13 @@ Update this file after every meaningful Codex task, pull request, schema change,
 
 ## Current priority
 
-Keep work focused on the existing SportStack web app and the next Player MVP Voting/data-quality work.
+Keep work focused on the existing SportStack web app and the daily dashboard,
+availability and communications owner-test cycle.
 
 Near-term priority areas:
 
+- Primary-team player dashboard and availability reliability
+- Team lobby plus club and association broadcasts
 - Player MVP Voting flow reliability
 - Admin data quality and import flows
 - RevSports scraper/import alignment
@@ -107,6 +110,52 @@ After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
 
+Date: 2026-07-23
+
+What changed:
+
+- Built the primary-team daily dashboard with a compact combined team banner, attention strip,
+  upcoming fixtures, inline availability, calendar, official updates and team activity.
+- Rebuilt `/chat` as Communications with separate Team Chat, Club Updates and Association
+  Updates, including replies, mentions, reactions, unread state, delegated publishing,
+  moderation and soft-delete history.
+- Added player-controlled availability/broadcast notification preferences and club/team
+  reminder settings. Teams remain disabled until deliberately enabled.
+- Added and applied four additive Dev migrations for communications, reminder processing,
+  live availability-enum alignment, fixture association scope and adviser hardening.
+- Deployed the `sportstack-notification-dispatch` Edge Function to SportStack Dev and scheduled
+  it every 15 minutes. The manual endpoint check returned HTTP 200.
+- Backfilled `team_memberships.activated_at` for 1,235 active Dev memberships. No fixture or
+  player data was repaired, merged or deleted.
+- Regenerated the Supabase TypeScript types from SportStack Dev.
+- Left `main`, `prod`, Production Auth and Production data untouched.
+
+Checks run:
+
+- The complete migration set and SQL assertions passed in a disposable local Supabase Postgres
+  database; the disposable container was removed afterwards.
+- Live Dev RLS checks proved an active member can use their own team lobby and cannot read or
+  insert into an unrelated team's lobby. The allowed insert test was rolled back.
+- A second reminder claim returned no work, confirming duplicate prevention for the test state.
+- Supabase security and performance advisers were run. New missing-index and duplicate-policy
+  findings were cleared; the remaining adviser items are the existing wider-project backlog.
+- Focused ESLint and `npx tsc --noEmit` passed. Final build and browser results are recorded when
+  the Dev deployment is complete.
+
+Risk level:
+
+- Medium. This includes additive Dev schema, RLS, cron and Edge Function changes. All new tables
+  have RLS and direct cross-team checks passed. Production was not touched.
+
+Remaining follow-up:
+
+- Complete the owner test on `dev.sportstackapp.com.au`, then record any faults through the
+  existing feedback tool.
+- The data-quality clean-up items in `docs/data-quality-audit-2026-07-23.md` remain reporting
+  only and need separate approval before repair.
+
+### Previous handoff entries
+
 Date: 2026-07-22
 
 What changed:
@@ -144,8 +193,6 @@ Risk level:
 
 - Low for Git and staging deployment alignment. No database migration, RLS/auth change, Edge
   Function deployment, Production database action, or `prod` push was performed.
-
-### Previous handoff entries
 
 Date: 2026-07-22
 

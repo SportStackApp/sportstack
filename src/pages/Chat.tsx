@@ -45,9 +45,7 @@ import { useAdminScope } from "@/hooks/useAdminScope";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-// Regenerated Supabase types will replace this schema-loose client after the approved migration.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const database = supabase as any;
+const database = supabase;
 const REACTIONS = ["👍", "❤️", "😊", "🎉"] as const;
 
 interface CommunicationMessage {

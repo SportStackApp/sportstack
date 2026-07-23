@@ -59,9 +59,7 @@ export function NotificationPreferencesSection() {
     if (!user) return;
     const fetchPreferences = async () => {
       setLoading(true);
-      // Regenerated Supabase types will replace this after the approved migration.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("notification_category_preferences")
         .select("category, in_app_enabled, email_enabled")
         .eq("user_id", user.id);
@@ -86,9 +84,7 @@ export function NotificationPreferencesSection() {
     const next = { ...current, [channel]: !current[channel] };
 
     setPreferences((items) => items.map((item) => (item.category === category ? next : item)));
-    // Regenerated Supabase types will replace this after the approved migration.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("notification_category_preferences")
       .upsert(
         {

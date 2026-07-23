@@ -55,9 +55,7 @@ interface ProfileRow {
   last_name: string | null;
 }
 
-// Regenerated Supabase types will replace this schema-loose client after the approved migration.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const database = supabase as any;
+const database = supabase;
 
 export function CommunicationSettingsDialog({
   open,

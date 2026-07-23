@@ -79,6 +79,18 @@ Adding `team_memberships.activated_at` will backfill **1,235 ACTIVE memberships*
 existing membership creation time. Inactive memberships remain unset. The migration does not
 delete, merge or silently repair any fixture/player record.
 
+## Build validation
+
+- The approved Dev migration backfilled all **1,235 ACTIVE memberships** with an activation
+  date; the before-and-after counts matched.
+- All 13 new persisted communications/reminder tables have RLS enabled.
+- Live rollback-only checks confirmed unrelated teams cannot read or insert into each other's
+  communications.
+- Team reminder schedules start disabled; no reminder was sent during the deployment smoke test.
+- The reminder Edge Function returned HTTP 200 with zero claimed, sent or failed items in the
+  disabled-team test state.
+- No fixture or player quality finding in this report was automatically repaired.
+
 ## Recommended later clean-up order
 
 1. Reconcile the 68 past scheduled fixtures and the three suspicious fixture groups with

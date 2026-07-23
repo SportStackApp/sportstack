@@ -26,6 +26,9 @@ as $$ select jsonb_build_object('role', current_setting('request.jwt.claim.role'
 create type public.user_role_enum as enum (
   'SUPER_ADMIN', 'ASSOCIATION_ADMIN', 'CLUB_ADMIN', 'TEAM_MANAGER', 'COACH', 'PLAYER', 'UMPIRE', 'VOTER', 'UMPIRE_ADMIN'
 );
+create type public.availability_status_enum as enum (
+  'AVAILABLE', 'UNAVAILABLE', 'MAYBE', 'NO_RESPONSE'
+);
 
 create table auth.users (
   id uuid primary key,
@@ -78,7 +81,6 @@ create table public.fixtures (
   id uuid primary key,
   home_team_id uuid not null references public.teams(id),
   away_team_id uuid references public.teams(id),
-  association_id uuid references public.associations(id),
   fixture_date timestamptz not null,
   status text not null default 'SCHEDULED'
 );
@@ -87,7 +89,7 @@ create table public.fixture_availability (
   id uuid primary key default gen_random_uuid(),
   fixture_id uuid not null references public.fixtures(id),
   user_id uuid not null references public.profiles(id),
-  status text not null default 'UNSURE'
+  status public.availability_status_enum not null default 'NO_RESPONSE'
 );
 
 create table public.notifications (
@@ -147,5 +149,5 @@ insert into public.team_memberships(user_id, team_id, membership_type) values
   ('40000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000002', 'PRIMARY');
 insert into public.user_roles(user_id, role, club_id) values
   ('40000000-0000-0000-0000-000000000003', 'CLUB_ADMIN', '20000000-0000-0000-0000-000000000001');
-insert into public.fixtures(id, home_team_id, away_team_id, association_id, fixture_date) values
-  ('50000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', now() + interval '6 days');
+insert into public.fixtures(id, home_team_id, away_team_id, fixture_date) values
+  ('50000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000002', now() + interval '6 days');

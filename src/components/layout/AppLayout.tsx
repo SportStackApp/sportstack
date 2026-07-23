@@ -513,9 +513,7 @@ const AppLayout = () => {
     }
     let active = true;
     const refreshCommunicationUnread = async () => {
-      // Regenerated Supabase types will replace this after the approved migration.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const communicationClient = supabase as any;
+      const communicationClient = supabase;
       const scopeRequests = [
         selectedTeamId
           ? communicationClient.from("communication_channels").select("id").eq("team_id", selectedTeamId).maybeSingle()

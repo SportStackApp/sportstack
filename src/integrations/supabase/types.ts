@@ -92,6 +92,150 @@ export type Database = {
         }
         Relationships: []
       }
+      availability_reminder_delivery_log: {
+        Row: {
+          attempt_number: number
+          created_at: string
+          detail: string | null
+          dispatch_id: string
+          event_type: string
+          id: string
+        }
+        Insert: {
+          attempt_number: number
+          created_at?: string
+          detail?: string | null
+          dispatch_id: string
+          event_type: string
+          id?: string
+        }
+        Update: {
+          attempt_number?: number
+          created_at?: string
+          detail?: string | null
+          dispatch_id?: string
+          event_type?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_reminder_delivery_log_dispatch_id_fkey"
+            columns: ["dispatch_id"]
+            isOneToOne: false
+            referencedRelation: "availability_reminder_dispatches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_reminder_dispatches: {
+        Row: {
+          attempts: number
+          channel: string
+          completed_at: string | null
+          created_at: string
+          due_at: string
+          fixture_id: string
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          reminder_days: number
+          status: string
+          team_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          channel: string
+          completed_at?: string | null
+          created_at?: string
+          due_at: string
+          fixture_id: string
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          reminder_days: number
+          status?: string
+          team_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          channel?: string
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string
+          fixture_id?: string
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          reminder_days?: number
+          status?: string
+          team_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_reminder_dispatches_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_reminder_dispatches_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_reminder_dispatches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_availability_reminder_settings: {
+        Row: {
+          club_id: string
+          reminder_days: number[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          club_id: string
+          reminder_days?: number[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          club_id?: string
+          reminder_days?: number[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_availability_reminder_settings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_availability_reminder_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clubs: {
         Row: {
           abbreviation: string | null
@@ -187,6 +331,420 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_channels: {
+        Row: {
+          association_id: string | null
+          club_id: string | null
+          created_at: string
+          id: string
+          scope_type: string
+          team_id: string | null
+        }
+        Insert: {
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          id?: string
+          scope_type: string
+          team_id?: string | null
+        }
+        Update: {
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          id?: string
+          scope_type?: string
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_channels_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_channels_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_channels_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_email_deliveries: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          message_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          message_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          message_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_email_deliveries_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "communication_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_email_deliveries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_mentions: {
+        Row: {
+          created_at: string
+          id: string
+          mentioned_user_id: string
+          message_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mentioned_user_id: string
+          message_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mentioned_user_id?: string
+          message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_mentions_mentioned_user_id_fkey"
+            columns: ["mentioned_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_mentions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "communication_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_messages: {
+        Row: {
+          author_id: string
+          channel_id: string
+          content: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          is_important: boolean
+          message_type: string
+          moderation_reason: string | null
+          removed_at: string | null
+          removed_by: string | null
+          reply_to_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          channel_id: string
+          content: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          is_important?: boolean
+          message_type: string
+          moderation_reason?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          reply_to_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          channel_id?: string
+          content?: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          is_important?: boolean
+          message_type?: string
+          moderation_reason?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          reply_to_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_messages_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "communication_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_messages_removed_by_fkey"
+            columns: ["removed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "communication_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_moderation_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          channel_id: string
+          created_at: string
+          id: string
+          message_id: string
+          previous_content: string
+          reason: string | null
+          replacement_content: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          channel_id: string
+          created_at?: string
+          id?: string
+          message_id: string
+          previous_content: string
+          reason?: string | null
+          replacement_content?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          channel_id?: string
+          created_at?: string
+          id?: string
+          message_id?: string
+          previous_content?: string
+          reason?: string | null
+          replacement_content?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_moderation_audit_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_moderation_audit_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "communication_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_moderation_audit_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "communication_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_permissions: {
+        Row: {
+          can_moderate: boolean
+          can_publish: boolean
+          channel_id: string
+          created_at: string
+          granted_by: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_moderate?: boolean
+          can_publish?: boolean
+          channel_id: string
+          created_at?: string
+          granted_by: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_moderate?: boolean
+          can_publish?: boolean
+          channel_id?: string
+          created_at?: string
+          granted_by?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_permissions_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "communication_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_permissions_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "communication_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_read_state: {
+        Row: {
+          channel_id: string
+          last_read_at: string
+          last_read_message_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          last_read_at?: string
+          last_read_message_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          last_read_at?: string
+          last_read_message_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_read_state_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "communication_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_read_state_last_read_message_id_fkey"
+            columns: ["last_read_message_id"]
+            isOneToOne: false
+            referencedRelation: "communication_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_read_state_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1592,6 +2150,38 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_category_preferences: {
+        Row: {
+          category: string
+          email_enabled: boolean
+          in_app_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          email_enabled?: boolean
+          in_app_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          email_enabled?: boolean
+          in_app_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_category_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           email_enabled: boolean
@@ -1625,7 +2215,10 @@ export type Database = {
         Row: {
           action_url: string | null
           body: string | null
+          communication_message_id: string | null
           created_at: string
+          dedupe_key: string | null
+          fixture_id: string | null
           game_id: string | null
           id: string
           message: string
@@ -1638,7 +2231,10 @@ export type Database = {
         Insert: {
           action_url?: string | null
           body?: string | null
+          communication_message_id?: string | null
           created_at?: string
+          dedupe_key?: string | null
+          fixture_id?: string | null
           game_id?: string | null
           id?: string
           message?: string
@@ -1651,7 +2247,10 @@ export type Database = {
         Update: {
           action_url?: string | null
           body?: string | null
+          communication_message_id?: string | null
           created_at?: string
+          dedupe_key?: string | null
+          fixture_id?: string | null
           game_id?: string | null
           id?: string
           message?: string
@@ -1662,6 +2261,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_communication_message_id_fkey"
+            columns: ["communication_message_id"]
+            isOneToOne: false
+            referencedRelation: "communication_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_game_id_fkey"
             columns: ["game_id"]
@@ -4731,6 +5344,42 @@ export type Database = {
           },
         ]
       }
+      team_availability_reminder_settings: {
+        Row: {
+          enabled: boolean
+          team_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          team_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          team_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_availability_reminder_settings_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_availability_reminder_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_divisions: {
         Row: {
           division_id: string
@@ -4776,6 +5425,7 @@ export type Database = {
       }
       team_memberships: {
         Row: {
+          activated_at: string | null
           created_at: string
           id: string
           invited_by: string | null
@@ -4788,6 +5438,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activated_at?: string | null
           created_at?: string
           id?: string
           invited_by?: string | null
@@ -4800,6 +5451,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activated_at?: string | null
           created_at?: string
           id?: string
           invited_by?: string | null
@@ -5513,6 +6165,18 @@ export type Database = {
           status: string
         }[]
       }
+      claim_sportstack_notification_work: {
+        Args: { p_limit?: number }
+        Returns: {
+          action_url: string
+          body_text: string
+          delivery_id: string
+          recipient_email: string
+          recipient_name: string
+          subject: string
+          work_type: string
+        }[]
+      }
       close_legacy_mvp_sessions_for_cutover: {
         Args: { p_reason: string }
         Returns: Json
@@ -5520,6 +6184,19 @@ export type Database = {
       close_mvp_voting_session: {
         Args: { p_session_id: string }
         Returns: Json
+      }
+      complete_sportstack_notification_work: {
+        Args: {
+          p_delivery_id: string
+          p_error?: string
+          p_success: boolean
+          p_work_type: string
+        }
+        Returns: undefined
+      }
+      configure_sportstack_notification_cron: {
+        Args: { p_project_url: string }
+        Returns: undefined
       }
       get_mvp_result_check_state: {
         Args: { p_session_id: string }
@@ -5577,6 +6254,10 @@ export type Database = {
           p_two_point_player_id: string
         }
         Returns: Json
+      }
+      verify_sportstack_notification_cron: {
+        Args: { p_secret: string }
+        Returns: boolean
       }
       withdraw_mvp_submission: {
         Args: {
