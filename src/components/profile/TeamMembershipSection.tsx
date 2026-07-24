@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, RefreshCw, Calendar, Shirt, Plus, X } from "lucide-react";
+import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
 
 interface TeamMembership {
   teamId: string;
@@ -106,7 +107,7 @@ export const TeamMembershipSection = ({
                   )}
                 </div>
               </div>
-              <Badge variant="default">Primary</Badge>
+              <MembershipTypeBadge membershipType="PRIMARY" />
             </div>
           ) : (
             <div className="text-center py-6">
@@ -228,12 +229,7 @@ export const TeamMembershipSection = ({
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <Badge
-                      variant={team.type === "FILL_IN" ? "outline" : "secondary"}
-                      className="text-xs"
-                    >
-                      {team.type === "FILL_IN" ? "Fill-in" : "Secondary"}
-                    </Badge>
+                    <MembershipTypeBadge membershipType={team.type} />
                     {team.type === "FILL_IN" && team.gameDate && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />

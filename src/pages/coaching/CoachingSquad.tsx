@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
 
 import { useTeamContext } from "@/contexts/TeamContext";
 
@@ -212,7 +213,6 @@ export default function CoachingSquad() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {players.map(player => {
-            const isPrimary = player.membership_type === "PRIMARY";
             const initials = `${player.first_name?.[0] || ""}${player.last_name?.[0] || ""}`;
 
             return (
@@ -228,9 +228,7 @@ export default function CoachingSquad() {
                         <h3 className="font-bold text-lg leading-tight">
                           {player.first_name} {player.last_name}
                         </h3>
-                        <Badge variant="outline" className={cn("mt-1", isPrimary ? "border-green-200 text-green-700 bg-green-50" : "border-slate-200 text-slate-600 bg-slate-50")}>
-                          {isPrimary ? "Primary" : "Secondary"}
-                        </Badge>
+                        <MembershipTypeBadge membershipType={player.membership_type} className="mt-1" />
                       </div>
                     </div>
                     {player.jersey_number && (

@@ -93,8 +93,8 @@ export const StatsDetailDialog = ({
                       <div className="text-right shrink-0">
                         <p className="text-xs font-medium text-foreground">
                           {new Date(game.date).toLocaleDateString("en-AU", {
-                            day: "numeric",
-                            month: "short",
+                            day: "2-digit",
+                            month: "2-digit",
                             year: "numeric",
                           })}
                         </p>
@@ -149,8 +149,8 @@ export const StatsDetailDialog = ({
                       <div className="text-right shrink-0">
                         <p className="text-xs font-medium text-foreground">
                           {new Date(goal.date).toLocaleDateString("en-AU", {
-                            day: "numeric",
-                            month: "short",
+                            day: "2-digit",
+                            month: "2-digit",
                             year: "numeric",
                           })}
                         </p>

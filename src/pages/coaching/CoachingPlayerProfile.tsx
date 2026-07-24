@@ -12,10 +12,10 @@ import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useTeamContext } from "@/contexts/TeamContext";
+import { HOCKEY_POSITION_OPTIONS } from "@/components/profile/PlayerPositionPreferences";
+import { loadPlayerHistory, type PlayerHistoryRecord } from "@/lib/playerHistory";
 
-const POSITIONS = [
-  "GK", "FB-L", "FB-R", "FB-C", "HB-L", "HB-C", "HB-R", "IF-L", "IF-R", "CF", "FF-L", "FF-R", "FF-C"
-];
+const POSITIONS = HOCKEY_POSITION_OPTIONS.map((position) => position.code);
 
 interface Profile {
   first_name: string;
@@ -29,16 +29,6 @@ interface Assessment {
   notes: string;
 }
 
-interface MatchCard {
-  id: string;
-  fixture_date: string;
-  opponent_name: string;
-  position: string;
-  is_starting: boolean;
-  score: string;
-  season_id?: string;
-}
-
 export default function CoachingPlayerProfile() {
   const { playerId } = useParams<{ playerId: string }>();
   const navigate = useNavigate();
@@ -50,9 +40,9 @@ export default function CoachingPlayerProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [assessments, setAssessments] = useState<Record<string, Assessment>>({});
   const [preferences, setPreferences] = useState<Record<string, number>>({});
-  const [matchHistory, setMatchHistory] = useState<MatchCard[]>([]);
+  const [matchHistory, setMatchHistory] = useState<PlayerHistoryRecord[]>([]);
   const [seasonFilter, setSeasonFilter] = useState<"This Season" | "All Time">("This Season");
-  const [activeSeasonId, setActiveSeasonId] = useState<string | null>(null);
+  const [activeSeason, setActiveSeason] = useState<{ startDate: string | null; endDate: string | null; year: number | null } | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -96,14 +86,24 @@ export default function CoachingPlayerProfile() {
 
         setTeamId(tId);
 
-        // 2. Load active season
-        const { data: seasonData } = await supabase
-          .from("seasons")
-          .select("id")
-          .eq("is_active", true)
-          .maybeSingle() as any;
-          
-        if (seasonData) setActiveSeasonId(seasonData.id);
+        const { data: teamData } = await supabase
+          .from("teams")
+          .select("revsports_team_id, clubs(association_id)")
+          .eq("id", tId)
+          .maybeSingle();
+        const club = Array.isArray(teamData?.clubs) ? teamData.clubs[0] : teamData?.clubs;
+        const associationId = club?.association_id;
+        if (associationId) {
+          const { data: seasonData } = await supabase
+            .from("seasons")
+            .select("start_date, end_date, year")
+            .eq("association_id", associationId)
+            .eq("is_active", true)
+            .maybeSingle();
+          if (seasonData) {
+            setActiveSeason({ startDate: seasonData.start_date, endDate: seasonData.end_date, year: seasonData.year });
+          }
+        }
 
         // 3. Load profile
         const { data: profileData } = await supabase
@@ -119,7 +119,8 @@ export default function CoachingPlayerProfile() {
           .from("coach_position_assessments" as any)
           .select("position_code, assessment, notes")
           .eq("coach_id", user.id)
-          .eq("player_id", playerId) as any;
+          .eq("player_id", playerId)
+          .eq("team_id", tId) as any;
 
         const assMap: Record<string, Assessment> = {};
         if (assessmentsData) {
@@ -133,7 +134,8 @@ export default function CoachingPlayerProfile() {
         const { data: prefsData } = await supabase
           .from("player_position_preferences" as any)
           .select("position_code, preference")
-          .eq("player_id", playerId) as any;
+          .eq("player_id", playerId)
+          .eq("team_id", tId) as any;
 
         const prefsMap: Record<string, number> = {};
         if (prefsData) {
@@ -143,45 +145,7 @@ export default function CoachingPlayerProfile() {
         }
         setPreferences(prefsMap);
 
-        // 6. Load match history (lineups joined with fixtures)
-        // Note: we fetch teams manually for mapping opponent names safely
-        const { data: teamsData } = await supabase.from("teams").select("id, name");
-        const teamsMap = new Map((teamsData || []).map(t => [t.id, t.name]));
-
-        const { data: lineupsData } = await (supabase
-          .from("lineups" as any)
-          .select(`
-            id, position, is_starting,
-            fixtures ( id, fixture_date, home_team_id, away_team_id, home_score, away_score, season_id )
-          `) as any)
-          .eq("player_id", playerId)
-          .eq("team_id", tId);
-
-        if (lineupsData) {
-          const matches: MatchCard[] = lineupsData.map((row: any) => {
-            const f = Array.isArray(row.fixtures) ? row.fixtures[0] : row.fixtures;
-            if (!f) return null;
-            
-            const isHome = f.home_team_id === tId;
-            const oppId = isHome ? f.away_team_id : f.home_team_id;
-            const oppName = teamsMap.get(oppId) || "Unknown Team";
-            const hScore = f.home_score !== null ? f.home_score : "-";
-            const aScore = f.away_score !== null ? f.away_score : "-";
-            
-            return {
-              id: row.id,
-              fixture_date: f.fixture_date,
-              opponent_name: oppName,
-              position: row.position,
-              is_starting: !!row.is_starting,
-              score: `${hScore} - ${aScore}`,
-              season_id: f.season_id
-            };
-          }).filter(Boolean);
-
-          matches.sort((a, b) => new Date(b.fixture_date).getTime() - new Date(a.fixture_date).getTime());
-          setMatchHistory(matches as MatchCard[]);
-        }
+        setMatchHistory(await loadPlayerHistory(playerId, teamData?.revsports_team_id));
 
       } catch (err: any) {
         console.error("Error loading profile:", err);
@@ -207,7 +171,7 @@ export default function CoachingPlayerProfile() {
         team_id: teamId,
         position_code: position,
         assessment: val
-      }, { onConflict: "coach_id,player_id,position_code" }) as any);
+      }, { onConflict: "coach_id,player_id,team_id,position_code" }) as any);
       toast.success("Assessment saved");
     } catch (err) {
       console.error(err);
@@ -225,8 +189,8 @@ export default function CoachingPlayerProfile() {
         team_id: teamId,
         position_code: position,
         notes: notes,
-        ...(assessments[position]?.assessment ? { assessment: assessments[position].assessment } : {})
-      }, { onConflict: "coach_id,player_id,position_code" }) as any);
+        assessment: assessments[position]?.assessment || 2,
+      }, { onConflict: "coach_id,player_id,team_id,position_code" }) as any);
       toast.success("Notes saved");
     } catch (err) {
       console.error(err);
@@ -271,17 +235,23 @@ export default function CoachingPlayerProfile() {
     );
   }
 
-  const filteredMatches = matchHistory.filter(m => 
-    seasonFilter === "All Time" || (activeSeasonId && m.season_id === activeSeasonId)
-  );
+  const filteredMatches = matchHistory.filter((match) => {
+    if (seasonFilter === "All Time") return true;
+    const time = new Date(match.date).getTime();
+    if (activeSeason?.startDate && time < new Date(activeSeason.startDate).getTime()) return false;
+    if (activeSeason?.endDate && time > new Date(activeSeason.endDate).getTime()) return false;
+    if (!activeSeason?.startDate && !activeSeason?.endDate && activeSeason?.year) {
+      return new Date(match.date).getFullYear() === activeSeason.year;
+    }
+    return activeSeason ? true : new Date(match.date).getFullYear() === new Date().getFullYear();
+  });
 
   const gamesPlayed = filteredMatches.length;
-  const gamesStarted = filteredMatches.filter(m => m.is_starting).length;
-  const positionsPlayed = filteredMatches.map(m => m.position).filter(Boolean);
-  const mostPlayedPos = positionsPlayed.length > 0 
-    ? Object.entries(positionsPlayed.reduce((acc: any, val) => { acc[val] = (acc[val] || 0) + 1; return acc; }, {}))
-        .sort((a: any, b: any) => b[1] - a[1])[0][0]
-    : "-";
+  const goalsScored = filteredMatches.reduce((sum, match) => sum + match.goals, 0);
+  const cardsRecorded = filteredMatches.reduce(
+    (sum, match) => sum + match.greenCards + match.yellowCards + match.redCards,
+    0,
+  );
 
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-6">
@@ -302,7 +272,7 @@ export default function CoachingPlayerProfile() {
             {profile.first_name} {profile.last_name}
           </h1>
           <div className="flex gap-3 mt-2 text-muted-foreground font-medium">
-            {profile.date_of_birth && <span>DOB: {new Date(profile.date_of_birth).toLocaleDateString()}</span>}
+            {profile.date_of_birth && <span>DOB: {new Date(profile.date_of_birth).toLocaleDateString("en-AU")}</span>}
           </div>
         </div>
       </div>
@@ -385,14 +355,14 @@ export default function CoachingPlayerProfile() {
             </Card>
             <Card>
               <CardContent className="p-4 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold font-display">{gamesStarted}</span>
-                <span className="text-xs text-muted-foreground text-center">Started</span>
+                <span className="text-3xl font-bold font-display">{goalsScored}</span>
+                <span className="text-xs text-muted-foreground text-center">Goals</span>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold font-display leading-tight flex-1 flex items-center">{mostPlayedPos}</span>
-                <span className="text-xs text-muted-foreground text-center w-full">Top Pos</span>
+                <span className="text-3xl font-bold font-display leading-tight flex-1 flex items-center">{cardsRecorded}</span>
+                <span className="text-xs text-muted-foreground text-center w-full">Cards</span>
               </CardContent>
             </Card>
           </div>
@@ -400,7 +370,7 @@ export default function CoachingPlayerProfile() {
           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
             {filteredMatches.length === 0 ? (
               <Card className="p-8 text-center border-dashed">
-                <p className="text-muted-foreground text-sm">No match history yet. History builds automatically as lineups are published.</p>
+                <p className="text-muted-foreground text-sm">No linked RevSports match history was found for this team.</p>
               </Card>
             ) : (
               filteredMatches.map(m => (
@@ -408,20 +378,25 @@ export default function CoachingPlayerProfile() {
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start mb-2">
                       <div className="font-medium text-sm">
-                        {new Date(m.fixture_date).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
-                      </div>
-                      <Badge variant="outline" className={m.is_starting ? "bg-primary/10 text-primary border-primary/20" : "bg-muted text-muted-foreground"}>
-                        {m.is_starting ? "Started" : "Sub"}
+                          {new Date(m.date).toLocaleDateString("en-AU")}
+                        </div>
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                        {m.result}
                       </Badge>
                     </div>
                     <div className="flex justify-between items-end">
                       <div>
                         <div className="text-xs text-muted-foreground">vs</div>
-                        <div className="font-bold">{m.opponent_name}</div>
+                        <div className="font-bold">{m.opponent}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs text-muted-foreground">Pos: {m.position || "-"}</div>
-                        <div className="font-bold font-mono">{m.score}</div>
+                        <div className="text-xs text-muted-foreground">{m.teamName}</div>
+                        <div className="font-bold font-mono">{m.goals} goal{m.goals === 1 ? "" : "s"}</div>
+                        {(m.greenCards + m.yellowCards + m.redCards) > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            Cards: {m.greenCards}G {m.yellowCards}Y {m.redCards}R
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>

@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Mail, Calendar, Clock, User, Check, X } from "lucide-react";
 import type { TeamInvite } from "@/lib/mockData";
+import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
 
 interface PendingInvitesSectionProps {
   invites: TeamInvite[];
@@ -56,12 +57,7 @@ export const PendingInvitesSection = ({
                     <p className="font-medium text-foreground text-sm truncate">
                       {invite.teamName}
                     </p>
-                    <Badge
-                      variant={invite.type === "FILL_IN" ? "outline" : "secondary"}
-                      className="text-xs shrink-0"
-                    >
-                      {invite.type === "FILL_IN" ? "Fill-in" : "Secondary"}
-                    </Badge>
+                    <MembershipTypeBadge membershipType={invite.type} className="shrink-0" />
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">
                     <span>{invite.clubName}</span>

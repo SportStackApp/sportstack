@@ -1,11 +1,57 @@
+import { useEffect } from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const isDark = resolvedTheme === "dark";
+
+  useEffect(() => {
+    if (!user) return;
+
+    const loadAccountTheme = async () => {
+      // The generated client gains this additive column after the Dev migration is applied.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from("profiles")
+        .select("theme_preference")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!error && (data?.theme_preference === "light" || data?.theme_preference === "dark")) {
+        setTheme(data.theme_preference);
+      }
+    };
+
+    void loadAccountTheme();
+  }, [setTheme, user]);
+
+  const handleThemeChange = async (checked: boolean) => {
+    const preference = checked ? "dark" : "light";
+    setTheme(preference);
+    if (!user) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from("profiles")
+      .update({ theme_preference: preference })
+      .eq("id", user.id);
+
+    if (error) {
+      toast({
+        title: "Theme saved on this device only",
+        description: "Your account preference could not be updated yet.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="flex items-center justify-between">
@@ -18,7 +64,7 @@ export function ThemeToggle() {
       <Switch
         id="theme-toggle"
         checked={isDark}
-        onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+        onCheckedChange={(checked) => void handleThemeChange(checked)}
       />
     </div>
   );

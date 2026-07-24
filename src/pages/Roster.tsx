@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +7,7 @@ import { Search, Users } from "lucide-react";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
 
 interface RosterMember {
   user_id: string;
@@ -177,16 +177,14 @@ const Roster = () => {
                     {member.jersey_number || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground truncate">
+                    <h3 className="truncate font-sans text-base font-medium normal-case tracking-normal text-foreground">
                       {[member.first_name, member.last_name].filter(Boolean).join(" ") || "Unknown Player"}
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       {member.position || "No position"}
                     </p>
                     <div className="flex gap-2 mt-2">
-                      <Badge variant="player" className="text-xs">
-                        {member.membership_type}
-                      </Badge>
+                      <MembershipTypeBadge membershipType={member.membership_type} />
                     </div>
                   </div>
                 </div>

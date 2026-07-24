@@ -23,12 +23,14 @@ import { RequestAdditionalTeamDialog } from "@/components/profile/RequestAdditio
 import { ProfilePhotoCropper } from "@/components/profile/ProfilePhotoCropper";
 import { StatsDetailDialog } from "@/components/profile/StatsDetailDialog";
 import { SetPrimaryTeamDialog } from "@/components/profile/SetPrimaryTeamDialog";
+import { PlayerPositionPreferences } from "@/components/profile/PlayerPositionPreferences";
 import { uploadAvatar, deleteAvatar } from "@/lib/uploadAvatar";
 import { useTestRole } from "@/contexts/TestRoleContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { isProfileReviewRequired } from "@/lib/profileCompletion";
 import type { Database } from "@/integrations/supabase/types";
+import { loadPlayerHistory, type PlayerHistoryRecord } from "@/lib/playerHistory";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 type MembershipType = Database["public"]["Enums"]["membership_type"];
@@ -133,6 +135,8 @@ const Profile = () => {
   const [setPrimaryDialogOpen, setSetPrimaryDialogOpen] = useState(false);
   const [requestAdditionalDialogOpen, setRequestAdditionalDialogOpen] = useState(false);
   const [latestRevSportsMatchUrl, setLatestRevSportsMatchUrl] = useState<string | null>(null);
+  const [playerHistory, setPlayerHistory] = useState<PlayerHistoryRecord[]>([]);
+  const [mvpBallotCount, setMvpBallotCount] = useState(0);
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -299,6 +303,22 @@ const Profile = () => {
       .limit(1)
       .maybeSingle();
     setLatestRevSportsMatchUrl(latestRevSportsRow?.match_url || null);
+
+    try {
+      const [history, ballotResult] = await Promise.all([
+        loadPlayerHistory(user.id),
+        supabase
+          .from("mvp_vote_submissions")
+          .select("id", { count: "exact", head: true })
+          .eq("voter_profile_id", user.id),
+      ]);
+      setPlayerHistory(history);
+      setMvpBallotCount(ballotResult.count || 0);
+    } catch (historyError) {
+      console.error("Error fetching player history:", historyError);
+      setPlayerHistory([]);
+      setMvpBallotCount(0);
+    }
 
     // Fetch all available teams with club and association info
     const [{ data: assocData }, { data: clubData }, { data: teamData }] = await Promise.all([
@@ -784,6 +804,38 @@ const Profile = () => {
   const displayName = [formData.firstName, formData.lastName].filter(Boolean).join(" ") || user?.email || "User";
   const initials = (formData.firstName?.charAt(0) || user?.email?.charAt(0) || "U").toUpperCase();
   const showDeveloperTools = import.meta.env.DEV && import.meta.env.VITE_BYPASS_AUTH === "true";
+  const gamesPlayed = playerHistory.length;
+  const goalsScored = playerHistory.reduce((sum, game) => sum + game.goals, 0);
+  const teamsRepresented = new Set(playerHistory.map((game) => `${game.clubName}:${game.teamName}`)).size;
+  const regularPositionTeams = approvedMemberships
+    .filter((membership) => membership.membership_type !== "FILL_IN")
+    .map((membership) => ({
+      teamId: membership.team_id,
+      teamName: membership.team.name,
+      clubName: membership.team.club.name,
+      membershipType: membership.membership_type,
+    }));
+  const gameRecords = playerHistory.map((game) => ({
+    id: game.id,
+    date: game.date,
+    teamName: game.teamName,
+    clubName: game.clubName,
+    associationName: game.associationName,
+    opponent: game.opponent,
+    location: game.location,
+    result: game.result,
+  }));
+  const goalRecords = playerHistory.flatMap((game) =>
+    Array.from({ length: game.goals }, (_, index) => ({
+      id: `${game.id}-goal-${index + 1}`,
+      date: game.date,
+      gameId: game.fixtureId || game.id,
+      teamName: game.teamName,
+      clubName: game.clubName,
+      associationName: game.associationName,
+      opponent: game.opponent,
+    })),
+  );
 
   if (loading) {
     return (
@@ -856,13 +908,13 @@ const Profile = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card
           className="text-center cursor-pointer hover:bg-muted/50 transition-colors"
           onClick={() => openStatsDialog("games")}
         >
           <CardContent className="pt-5">
-            <p className="font-display text-3xl text-accent">0</p>
+            <p className="font-display text-3xl text-accent">{gamesPlayed}</p>
             <p className="text-xs text-muted-foreground">Games Played</p>
           </CardContent>
         </Card>
@@ -871,14 +923,20 @@ const Profile = () => {
           onClick={() => openStatsDialog("goals")}
         >
           <CardContent className="pt-5">
-            <p className="font-display text-3xl text-accent">0</p>
+            <p className="font-display text-3xl text-accent">{goalsScored}</p>
             <p className="text-xs text-muted-foreground">Goals</p>
           </CardContent>
         </Card>
         <Card className="text-center">
           <CardContent className="pt-5">
-            <p className="font-display text-3xl text-accent">2024</p>
-            <p className="text-xs text-muted-foreground">Member Since</p>
+            <p className="font-display text-3xl text-accent">{teamsRepresented}</p>
+            <p className="text-xs text-muted-foreground">Teams Represented</p>
+          </CardContent>
+        </Card>
+        <Card className="text-center">
+          <CardContent className="pt-5">
+            <p className="font-display text-3xl text-accent">{mvpBallotCount}</p>
+            <p className="text-xs text-muted-foreground">MVP Ballots</p>
           </CardContent>
         </Card>
       </div>
@@ -920,6 +978,8 @@ const Profile = () => {
           }
         }}
       />
+
+      <PlayerPositionPreferences teams={regularPositionTeams} />
 
       {/* Personal Details with Edit */}
       <PersonalDetailsSection
@@ -1041,8 +1101,8 @@ const Profile = () => {
         open={statsDialogOpen}
         onOpenChange={setStatsDialogOpen}
         type={statsDialogType}
-        games={[]}
-        goals={[]}
+        games={gameRecords}
+        goals={goalRecords}
       />
 
       {/* Set Primary Team Dialog */}
