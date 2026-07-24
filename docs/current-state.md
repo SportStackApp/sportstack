@@ -158,8 +158,22 @@ Checks run:
 Deployment state:
 
 - SportStack Dev schema has the three approved migrations and regenerated local types.
-- The app branch is awaiting the final `dev` push. `main`, `prod`, Production Auth and Production
-  data remain untouched.
+- App commit `eb904e5` was pushed to `origin/dev`, and GitHub reported the Vercel deployment as
+  successful.
+- `https://dev.sportstackapp.com.au` returns HTTP 200 and its current bundle contains the new
+  Needs attention, Player MVP My history and preferred-position features.
+- `main`, `prod`, Production Auth and Production data remain untouched.
+
+What Aaron should test next:
+
+- Sign into Dev, switch to Player mode and confirm Pumas opens as the primary team.
+- Check the combined dashboard banner, all-team calendar markers and the next two availability
+  prompts; click the selected availability choice again and confirm it clears.
+- Save different preferred positions for Pumas and Lucas HC, refresh and confirm both persist.
+- Open Team, Club and Association dashboards and check the inherited banner and colours.
+- Check Player MVP `Current` and `My history`, save the light/dark theme, then refresh.
+- As an administrator, check the first and second 50-person Users pages and submit feedback with
+  more than one photo.
 
 Risk level:
 
