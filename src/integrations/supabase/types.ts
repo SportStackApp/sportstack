@@ -53,6 +53,47 @@ export type Database = {
         }
         Relationships: []
       }
+      app_feedback_attachments: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          feedback_id: string
+          file_name: string | null
+          file_size: number | null
+          id: string
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          feedback_id: string
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          feedback_id?: string
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_feedback_attachments_feedback_id_fkey"
+            columns: ["feedback_id"]
+            isOneToOne: false
+            referencedRelation: "app_feedback"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       associations: {
         Row: {
           abbreviation: string | null
@@ -2497,6 +2538,7 @@ export type Database = {
           player_id: string
           position_code: string
           preference: number
+          team_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2505,6 +2547,7 @@ export type Database = {
           player_id: string
           position_code: string
           preference: number
+          team_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2513,6 +2556,7 @@ export type Database = {
           player_id?: string
           position_code?: string
           preference?: number
+          team_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2521,6 +2565,13 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_position_preferences_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -2968,6 +3019,7 @@ export type Database = {
           revsports_player_id: string | null
           street_address: string | null
           suburb: string | null
+          theme_preference: string | null
           updated_at: string
         }
         Insert: {
@@ -2989,6 +3041,7 @@ export type Database = {
           revsports_player_id?: string | null
           street_address?: string | null
           suburb?: string | null
+          theme_preference?: string | null
           updated_at?: string
         }
         Update: {
@@ -3010,6 +3063,7 @@ export type Database = {
           revsports_player_id?: string | null
           street_address?: string | null
           suburb?: string | null
+          theme_preference?: string | null
           updated_at?: string
         }
         Relationships: [

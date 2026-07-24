@@ -47,9 +47,7 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
     }
 
     const loadPreferences = async () => {
-      // The team_id field is generated after the additive Dev migration is applied.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("player_position_preferences")
         .select("team_id, position_code")
         .eq("player_id", user.id)
@@ -84,8 +82,7 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
         : [...(current[teamId] || []), positionCode],
     }));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const table = (supabase as any).from("player_position_preferences");
+    const table = supabase.from("player_position_preferences");
     const result = wasSelected
       ? await table
           .delete()

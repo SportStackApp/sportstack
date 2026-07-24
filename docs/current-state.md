@@ -112,7 +112,7 @@ After each Codex task, update this section or append a dated entry below.
 
 Date: 2026-07-24
 
-What changed locally:
+What changed:
 
 - Consolidated the 16 open owner-feedback items into one feature branch covering the daily
   dashboard, calendar availability, profile and coaching history, Player MVP history, entity
@@ -130,26 +130,41 @@ What changed locally:
 - Added profile-completion attention and bell prompts, cross-team calendar markers, availability
   deselection, clearer chat composition, consistent Primary/Secondary/Fill-in badges and a visible
   Dev/Main/Production build label.
-- Prepared but did not apply
-  `supabase/migrations/20260724221410_consolidate_feedback_profile_preferences.sql`. It adds the
-  saved account theme, team-scoped position preference security and the missing feedback-photo
-  table without deleting or rewriting existing data.
+- Applied three additive migrations to SportStack Dev only. They add the saved account theme,
+  team-scoped player position preferences, the missing feedback-photo table, private membership
+  scope checks, tighter access policies and supporting indexes. No data was deleted or rewritten.
+- Regenerated the Supabase TypeScript types from the confirmed Dev schema and removed the
+  temporary migration-era type casts.
 
-Checks run so far:
+Checks run:
 
 - Read-only Dev dry-run: 0 player position preferences need backfill; the one coach assessment is
   already team-scoped; three legacy feedback photos would be linked into the attachment table.
-- Static PostgreSQL parsing passed for the additive migration.
-- Focused ESLint passed for the new shared code and daily-flow screens.
-- `npx tsc --noEmit` and `npm run build` passed.
-- Dev Supabase has not been changed. Generated types, adviser checks, live RLS tests and the
-  authenticated browser test remain pending until the required migration approval.
+- Static PostgreSQL parsing passed for all three additive migrations.
+- Dev rollback-only access tests passed for player position preferences, coach assessments,
+  account theme changes and feedback attachments. Unrelated users and teams were denied, and all
+  test rows rolled back successfully.
+- The three existing feedback photos were preserved and linked. No player-position rows required
+  backfill, and the existing coach assessment remained unchanged.
+- Supabase security and performance advisers reported no relevant warning after the policy and
+  index hardening. Four informational unused-index notices remain on new or lightly used tables.
+- Focused ESLint, `npx tsc --noEmit` and `npm run build` passed.
+- Full `npm run lint -- --quiet` still reports 451 known repository-wide legacy errors outside
+  this change; the focused changed-file lint is clean.
+- Signed-out desktop and 390-pixel mobile browser checks passed with no error overlay or horizontal
+  overflow. Only the two existing React Router future-version warnings appeared.
+- Live Dev currently gives Aaron the `PLAYER` and Pumas-scoped `COACH` roles. No role was changed.
+
+Deployment state:
+
+- SportStack Dev schema has the three approved migrations and regenerated local types.
+- The app branch is awaiting the final `dev` push. `main`, `prod`, Production Auth and Production
+  data remain untouched.
 
 Risk level:
 
-- Medium while local. One additive migration includes RLS changes and therefore needs Aaron's
-  separate approval immediately before it is applied to SportStack Dev. Main, prod and Production
-  remain untouched.
+- Medium. This includes additive Dev schema and RLS changes. No destructive database work was
+  performed, and no test data was left behind.
 
 ### Previous handoff entries
 
