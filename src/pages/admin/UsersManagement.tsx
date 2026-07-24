@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,9 +35,13 @@ import type { Database } from "@/integrations/supabase/types";
 import { EditUserDetailsDialog, type AccessLinkReviewDetails } from "@/components/admin/EditUserDetailsDialog";
 import { ensurePlayerRoleForTeam } from "@/lib/playerRoles";
 import { MergeProfilesDialog } from "@/components/admin/MergeProfilesDialog";
+import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 type MembershipType = Database["public"]["Enums"]["membership_type"];
+type TeamOption = Pick<Database["public"]["Tables"]["teams"]["Row"], "id" | "name" | "club_id" | "division" | "division_id">;
+type ClubOption = Pick<Database["public"]["Tables"]["clubs"]["Row"], "id" | "name" | "association_id">;
+type MembershipRow = Pick<Database["public"]["Tables"]["team_memberships"]["Row"], "id" | "user_id" | "team_id" | "status" | "membership_type">;
 type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
   is_placeholder?: boolean | null;
   revsports_player_id?: string | null;
@@ -116,8 +120,8 @@ const UsersManagement = () => {
   const { loading: scopeLoading, isSuperAdmin, isAnyAdmin, scopedTeamIds, scopedClubIds, scopedAssociationIds } = useAdminScope();
 
   const [users, setUsers] = useState<UserWithRoles[]>([]);
-  const [teams, setTeams] = useState<{ id: string; name: string; club_id: string; division?: string | null; division_id?: string | null }[]>([]);
-  const [clubs, setClubs] = useState<{ id: string; name: string; association_id: string }[]>([]);
+  const [teams, setTeams] = useState<TeamOption[]>([]);
+  const [clubs, setClubs] = useState<ClubOption[]>([]);
   const [associations, setAssociations] = useState<{ id: string; name: string }[]>([]);
   const [divisions, setDivisions] = useState<{ id: string; name: string }[]>([]);
 
@@ -130,9 +134,11 @@ const UsersManagement = () => {
   const [divisionFilter, setDivisionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [totalUserCount, setTotalUserCount] = useState(0);
 
   const [hidePlaceholders, setHidePlaceholders] = useState(true);
+  const scopedTeamKey = scopedTeamIds.join(",");
 
   useEffect(() => {
     setCurrentPage(1);
@@ -269,55 +275,135 @@ const UsersManagement = () => {
     }
   }, [scopeLoading, isAnyAdmin, navigate]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
+    try {
+      const [teamsRes, clubsRes, assocRes, divsRes] = await Promise.all([
+        supabase.from("teams").select("id, name, club_id, division, division_id"),
+        supabase.from("clubs").select("id, name, association_id"),
+        supabase.from("associations").select("id, name"),
+        supabase.from("divisions").select("id, name"),
+      ]);
+      const teamsList = teamsRes.data || [];
+      const clubsList = clubsRes.data || [];
+      setTeams(teamsList);
+      setClubs(clubsList);
+      setAssociations(assocRes.data || []);
+      setDivisions(divsRes.data || []);
 
-    const [teamsRes, clubsRes, assocRes, divsRes] = await Promise.all([
-      supabase.from("teams" as any).select("id, name, club_id, division, division_id"),
-      supabase.from("clubs").select("id, name, association_id"),
-      supabase.from("associations").select("id, name"),
-      supabase.from("divisions" as any).select("id, name"),
-    ]);
-    setTeams((teamsRes.data as any) || []);
-    setClubs((clubsRes.data as any) || []);
-    setAssociations((assocRes.data as any) || []);
-    setDivisions((divsRes.data as any) || []);
+      const scopedIds = isSuperAdmin ? teamsList.map((team) => team.id) : scopedTeamKey.split(",").filter(Boolean);
+      let filteredTeamIds = scopedIds;
+      if (associationFilter !== "all") {
+        const clubIds = new Set(clubsList.filter((club) => club.association_id === associationFilter).map((club) => club.id));
+        filteredTeamIds = filteredTeamIds.filter((id) => clubIds.has(teamsList.find((team) => team.id === id)?.club_id || ""));
+      }
+      if (clubFilter !== "all") filteredTeamIds = filteredTeamIds.filter((id) => teamsList.find((team) => team.id === id)?.club_id === clubFilter);
+      if (divisionFilter !== "all") filteredTeamIds = filteredTeamIds.filter((id) => teamsList.find((team) => team.id === id)?.division_id === divisionFilter);
+      if (teamFilter !== "all") filteredTeamIds = filteredTeamIds.filter((id) => id === teamFilter);
 
-    const teamsList = (teamsRes.data as any) || [];
-    const teamsToShow = isSuperAdmin ? teamsList.map((t) => t.id) : scopedTeamIds;
+      const constrainByMembership = !isSuperAdmin
+        || associationFilter !== "all"
+        || clubFilter !== "all"
+        || divisionFilter !== "all"
+        || teamFilter !== "all"
+        || ["ACTIVE", "PENDING", "DECLINED"].includes(statusFilter);
 
-    let membershipsData: any[] = [];
-    if (isSuperAdmin) {
-      const { data } = await supabase.from("team_memberships").select("id, user_id, team_id, status, membership_type");
-      membershipsData = data || [];
-    } else if (teamsToShow.length > 0) {
-      const { data } = await supabase.from("team_memberships").select("id, user_id, team_id, status, membership_type").in("team_id", teamsToShow);
-      membershipsData = data || [];
-    }
+      let candidateUserIds: string[] | null = null;
+      if (constrainByMembership) {
+        if (filteredTeamIds.length === 0) {
+          candidateUserIds = [];
+        } else {
+          let candidateQuery = supabase.from("team_memberships").select("user_id").in("team_id", filteredTeamIds);
+          if (["ACTIVE", "PENDING", "DECLINED"].includes(statusFilter)) {
+            candidateQuery = candidateQuery.eq("status", statusFilter as "ACTIVE" | "PENDING" | "DECLINED");
+          }
+          const { data, error } = await candidateQuery;
+          if (error) throw error;
+          candidateUserIds = [...new Set((data || []).map((membership) => membership.user_id))];
+        }
+      }
 
-    const { data: pendingInvitesData } = await supabase
-      .from("requests" as never)
-      .select("id, target_user_id, team_id, membership_type")
-      .eq("request_type", "TEAM_INVITE")
-      .eq("status", "PENDING");
+      if (statusFilter === "unassigned" || statusFilter === "duplicates") {
+        const existingCandidateIds = candidateUserIds ? new Set(candidateUserIds) : null;
+        const [{ data: compactProfiles, error: compactError }, { data: assignedMemberships, error: membershipError }] = await Promise.all([
+          supabase.from("profiles").select("id, first_name, last_name"),
+          statusFilter === "unassigned" ? supabase.from("team_memberships").select("user_id") : Promise.resolve({ data: [], error: null }),
+        ]);
+        if (compactError) throw compactError;
+        if (membershipError) throw membershipError;
 
-    const memberUserIds = [...new Set(membershipsData.map((m) => m.user_id))];
+        if (statusFilter === "unassigned") {
+          const assignedIds = new Set((assignedMemberships || []).map((membership) => membership.user_id));
+          candidateUserIds = (compactProfiles || []).filter((profile) => !assignedIds.has(profile.id)).map((profile) => profile.id);
+        } else {
+          const idsByName = new Map<string, string[]>();
+          (compactProfiles || []).forEach((profile) => {
+            const name = `${profile.first_name || ""}|${profile.last_name || ""}`.trim().toLocaleLowerCase();
+            if (name === "|") return;
+            idsByName.set(name, [...(idsByName.get(name) || []), profile.id]);
+          });
+          candidateUserIds = [...idsByName.values()].filter((ids) => ids.length > 1).flat();
+        }
+        if (existingCandidateIds) {
+          candidateUserIds = candidateUserIds.filter((profileId) => existingCandidateIds.has(profileId));
+        }
+      }
 
-    let profiles: Profile[] = [];
-    if (isSuperAdmin) {
-      const { data } = await supabase.from("profiles").select("*").order("first_name");
-      profiles = data || [];
-    } else if (memberUserIds.length > 0) {
-      const { data } = await supabase.from("profiles").select("*").in("id", memberUserIds).order("first_name");
-      profiles = data || [];
-    }
+      if (candidateUserIds?.length === 0) {
+        setUsers([]);
+        setTotalUserCount(0);
+        return [];
+      }
 
-    const { data: userRoles } = await supabase
-      .from("user_roles")
-      .select("user_id, role, association_id, club_id, team_id");
+      let profilesQuery = supabase.from("profiles").select("*", { count: "exact" });
+      if (candidateUserIds) profilesQuery = profilesQuery.in("id", candidateUserIds);
+      if (hidePlaceholders) profilesQuery = profilesQuery.eq("is_placeholder", false);
+      const cleanSearch = searchQuery.trim().replace(/[,%()]/g, " ");
+      if (cleanSearch) {
+        profilesQuery = profilesQuery.or(`first_name.ilike.%${cleanSearch}%,last_name.ilike.%${cleanSearch}%,revsports_player_id.ilike.%${cleanSearch}%`);
+      }
+      const pageStart = (currentPage - 1) * rowsPerPage;
+      const { data: profilesData, count, error: profilesError } = await profilesQuery
+        .order("first_name")
+        .order("last_name")
+        .range(pageStart, pageStart + rowsPerPage - 1);
+      if (profilesError) throw profilesError;
+      const profiles = (profilesData || []) as Profile[];
+      const pageUserIds = profiles.map((profile) => profile.id);
+      setTotalUserCount(count || 0);
 
-    const usersWithRoles: UserWithRoles[] = profiles.map((profile) => {
-      const profileRoles = ((userRoles || []) as RoleWithScope[] & { user_id: string }[])
+      let membershipsData: MembershipRow[] = [];
+      let pendingInvitesData: PendingInviteRow[] = [];
+      let userRoles: ({ user_id: string } & RoleWithScope)[] = [];
+      if (pageUserIds.length > 0) {
+        let membershipQuery = supabase
+          .from("team_memberships")
+          .select("id, user_id, team_id, status, membership_type")
+          .in("user_id", pageUserIds);
+        if (!isSuperAdmin) membershipQuery = membershipQuery.in("team_id", scopedIds);
+        const [membershipsRes, invitesRes, rolesRes] = await Promise.all([
+          membershipQuery,
+          supabase
+            .from("requests" as never)
+            .select("id, target_user_id, team_id, membership_type")
+            .eq("request_type", "TEAM_INVITE")
+            .eq("status", "PENDING")
+            .in("target_user_id", pageUserIds),
+          supabase
+            .from("user_roles")
+            .select("user_id, role, association_id, club_id, team_id")
+            .in("user_id", pageUserIds),
+        ]);
+        if (membershipsRes.error) throw membershipsRes.error;
+        if (invitesRes.error) throw invitesRes.error;
+        if (rolesRes.error) throw rolesRes.error;
+        membershipsData = membershipsRes.data || [];
+        pendingInvitesData = (invitesRes.data || []) as unknown as PendingInviteRow[];
+        userRoles = (rolesRes.data || []) as ({ user_id: string } & RoleWithScope)[];
+      }
+
+      const usersWithRoles: UserWithRoles[] = profiles.map((profile) => {
+      const profileRoles = userRoles
         .filter((r) => r.user_id === profile.id);
 
       const membershipRows = membershipsData
@@ -354,7 +440,7 @@ const UsersManagement = () => {
         roles: Array.from(new Set(profileRoles.map((r) => r.role))),
         roleScopes: profileRoles,
         memberships: [...membershipRows, ...roleOnlyMembershipRows],
-        pendingInvites: ((pendingInvitesData as unknown as PendingInviteRow[]) || [])
+        pendingInvites: pendingInvitesData
         .filter((r) => r.target_user_id === profile.id)
         .map((r) => {
           const team = teamsList.find((t) => t.id === r.team_id);
@@ -367,9 +453,9 @@ const UsersManagement = () => {
           };
         }),
       };
-    });
+      });
 
-    if (isSuperAdmin && usersWithRoles.length > 0) {
+      if (isSuperAdmin && usersWithRoles.length > 0) {
       const { data: emailData, error: emailError } = await supabase.functions.invoke("get-user-emails", {
         body: { profileIds: usersWithRoles.map((item) => item.id) },
       });
@@ -380,12 +466,20 @@ const UsersManagement = () => {
           item.email = emailMap[item.id] || null;
         });
       }
-    }
+      }
 
-    setUsers(usersWithRoles);
-    setLoading(false);
-    return usersWithRoles;
-  };
+      setUsers(usersWithRoles);
+      return usersWithRoles;
+    } catch (error) {
+      console.error("Failed to load users:", error);
+      setUsers([]);
+      setTotalUserCount(0);
+      toast({ title: "Could not load users", description: "Please try again.", variant: "destructive" });
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, [associationFilter, clubFilter, currentPage, divisionFilter, hidePlaceholders, isSuperAdmin, rowsPerPage, scopedTeamKey, searchQuery, statusFilter, teamFilter, toast]);
 
   const fetchPrimaryRequests = async () => {
     const { data } = await supabase
@@ -418,11 +512,14 @@ const UsersManagement = () => {
   };
 
   useEffect(() => {
-    if (!scopeLoading && isAnyAdmin) {
-      fetchUsers();
-      fetchPrimaryRequests();
-    }
-  }, [scopeLoading, isAnyAdmin, isSuperAdmin, scopedTeamIds]);
+    if (!scopeLoading && isAnyAdmin) void fetchPrimaryRequests();
+  }, [scopeLoading, isAnyAdmin]);
+
+  useEffect(() => {
+    if (scopeLoading || !isAnyAdmin) return;
+    const timer = window.setTimeout(() => void fetchUsers(), 300);
+    return () => window.clearTimeout(timer);
+  }, [fetchUsers, scopeLoading, isAnyAdmin]);
 
   // Duplicate detection
   const duplicateUserIds = useMemo(() => {
@@ -494,54 +591,8 @@ const UsersManagement = () => {
     );
   }, [clubFilter, divisionFilter, scopedAvailableTeams]);
 
-  const getUserTeamIds = (item: UserWithRoles) => [
-    ...item.memberships.map((membership) => membership.team_id),
-    ...item.pendingInvites.map((invite) => invite.team_id),
-  ];
-
-  const filteredUsers = users.filter((user) => {
-    const fullName = `${user.first_name || ""} ${user.last_name || ""}`.toLowerCase();
-    const email = user.email?.toLowerCase() || "";
-    const query = searchQuery.trim().toLowerCase();
-    if (query && !fullName.includes(query) && !email.includes(query)) return false;
-    if (statusFilter === "duplicates") {
-      return duplicateUserIds.has(user.id);
-    }
-    if (statusFilter !== "all") {
-      if (statusFilter === "unassigned") {
-        if (user.memberships.length > 0) return false;
-      } else {
-        if (!user.memberships.some((m) => m.status === statusFilter)) return false;
-      }
-    }
-    if (associationFilter !== "all") {
-      const assocTeamIds = teams
-        .filter((t) => {
-          const club = clubs.find((c) => c.id === t.club_id);
-          return club?.association_id === associationFilter;
-        })
-        .map((t) => t.id);
-      if (!getUserTeamIds(user).some((teamId) => assocTeamIds.includes(teamId))) return false;
-    }
-    if (clubFilter !== "all") {
-      const clubTeamIds = teams.filter((t) => t.club_id === clubFilter).map((t) => t.id);
-      if (!getUserTeamIds(user).some((teamId) => clubTeamIds.includes(teamId))) return false;
-    }
-    if (divisionFilter !== "all") {
-      const divisionTeamIds = teams.filter((t) => t.division_id === divisionFilter).map((t) => t.id);
-      if (!getUserTeamIds(user).some((teamId) => divisionTeamIds.includes(teamId))) return false;
-    }
-    if (teamFilter !== "all") {
-      if (!getUserTeamIds(user).includes(teamFilter)) return false;
-    }
-    if (hidePlaceholders && (user as any).is_placeholder === true) return false;
-    return true;
-  });
-
-  const paginatedUsers = useMemo(() => {
-    const startIdx = (currentPage - 1) * rowsPerPage;
-    return filteredUsers.slice(startIdx, startIdx + rowsPerPage);
-  }, [filteredUsers, currentPage, rowsPerPage]);
+  const filteredUsers = users;
+  const paginatedUsers = users;
 
   const handleExport = () => {
     if (filteredUsers.length === 0) return;
@@ -1346,16 +1397,7 @@ const UsersManagement = () => {
                 <Badge variant="outline" className="text-xs shrink-0">
                   {m.team_name || "Unknown"}
                 </Badge>
-                <Badge
-                  className={`text-xs shrink-0 ${
-                    m.membership_type === "PRIMARY"
-                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                  variant="secondary"
-                >
-                  {m.membership_type}
-                </Badge>
+                <MembershipTypeBadge membershipType={m.membership_type} />
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {m.membership_type !== "PRIMARY" && (
@@ -1376,9 +1418,7 @@ const UsersManagement = () => {
                 <Badge variant="outline" className="text-xs shrink-0">
                   {invite.team_name || "Unknown"}
                 </Badge>
-                <Badge className="text-xs shrink-0 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300" variant="secondary">
-                  {invite.membership_type}
-                </Badge>
+                <MembershipTypeBadge membershipType={invite.membership_type} />
                 <Badge className="text-xs shrink-0" variant="outline">
                   Pending
                 </Badge>
@@ -1534,7 +1574,7 @@ const UsersManagement = () => {
             </Button>
             <Button variant="outline" onClick={handleExport} disabled={filteredUsers.length === 0}>
               <Download className="h-4 w-4 mr-2" />
-              Export
+              Export page
             </Button>
             <Button onClick={() => navigate("/admin/add-player")}>
               <UserPlus className="h-4 w-4 mr-2" />
@@ -1558,7 +1598,7 @@ const UsersManagement = () => {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name or email..."
+              placeholder="Search by name or registration ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -1707,7 +1747,7 @@ const UsersManagement = () => {
                 <Users className="h-5 w-5" />
                 Users
               </CardTitle>
-              <CardDescription>{filteredUsers.length} user(s)</CardDescription>
+              <CardDescription>{totalUserCount} user(s)</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground whitespace-nowrap">Rows per page:</span>
@@ -1834,9 +1874,7 @@ const UsersManagement = () => {
                                         return (
                                           <div key={m.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                             <span>{displayText}</span>
-                                            <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded uppercase font-semibold">
-                                              {m.membership_type}
-                                            </span>
+                                            <MembershipTypeBadge membershipType={m.membership_type} />
                                           </div>
                                         );
                                       })}
@@ -1898,7 +1936,7 @@ const UsersManagement = () => {
                 </TableBody>
               </Table>
               {(() => {
-                const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
+                const totalPages = Math.ceil(totalUserCount / rowsPerPage);
                 if (totalPages <= 1) return null;
                 return (
                   <div className="flex items-center justify-between mt-4 py-4 border-t px-6">
@@ -2118,7 +2156,7 @@ const UsersManagement = () => {
                           />
                           <span className="flex flex-wrap items-center gap-2">
                             <Badge variant="outline">{pending ? "PENDING INVITE" : (item as Membership).status}</Badge>
-                            <Badge variant="secondary">{item.membership_type}</Badge>
+                            <MembershipTypeBadge membershipType={item.membership_type} />
                             <span className="text-muted-foreground">{getTeamSummary(item)}</span>
                           </span>
                         </label>
@@ -2257,16 +2295,7 @@ const UsersManagement = () => {
                         <Badge variant="outline" className="text-xs shrink-0">
                           {m.team_name || "Unknown"}
                         </Badge>
-                        <Badge
-                          className={`text-xs shrink-0 ${
-                            m.membership_type === "PRIMARY"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                              : "bg-muted text-muted-foreground"
-                          }`}
-                          variant="secondary"
-                        >
-                          {m.membership_type}
-                        </Badge>
+                        <MembershipTypeBadge membershipType={m.membership_type} />
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         {m.membership_type !== "PRIMARY" && (
@@ -2299,9 +2328,7 @@ const UsersManagement = () => {
                             <Badge variant="outline" className="text-xs shrink-0">
                               {invite.team_name || "Unknown"}
                             </Badge>
-                            <Badge className="text-xs shrink-0 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300" variant="secondary">
-                              {invite.membership_type}
-                            </Badge>
+                            <MembershipTypeBadge membershipType={invite.membership_type} />
                             <Badge className="text-xs shrink-0" variant="outline">
                               Pending
                             </Badge>

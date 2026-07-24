@@ -112,6 +112,49 @@ After each Codex task, update this section or append a dated entry below.
 
 Date: 2026-07-24
 
+What changed locally:
+
+- Consolidated the 16 open owner-feedback items into one feature branch covering the daily
+  dashboard, calendar availability, profile and coaching history, Player MVP history, entity
+  dashboards, membership labels, theme persistence, chat clarity, feedback photos, build labels
+  and Users-page performance.
+- Changed the Users page to load a maximum of 50 profiles per server request, then fetch roles,
+  memberships, invites and Auth email addresses only for the visible page.
+- Added player navigation to their Team, Club and Association dashboards. Fill-ins can open only
+  the fixture-scoped Team dashboard; parent entity dashboards remain unavailable to them.
+- Added a larger themed entity banner, useful KPIs and official updates to Association, Club and
+  Team dashboards using Association -> Club -> Team colour and image inheritance.
+- Added team-specific player position preferences and team-specific coach assessments, plus
+  linked RevSports match history on player and coaching profiles.
+- Added a Player MVP `My history` view and excluded old sessions that have no team ownership.
+- Added profile-completion attention and bell prompts, cross-team calendar markers, availability
+  deselection, clearer chat composition, consistent Primary/Secondary/Fill-in badges and a visible
+  Dev/Main/Production build label.
+- Prepared but did not apply
+  `supabase/migrations/20260724221410_consolidate_feedback_profile_preferences.sql`. It adds the
+  saved account theme, team-scoped position preference security and the missing feedback-photo
+  table without deleting or rewriting existing data.
+
+Checks run so far:
+
+- Read-only Dev dry-run: 0 player position preferences need backfill; the one coach assessment is
+  already team-scoped; three legacy feedback photos would be linked into the attachment table.
+- Static PostgreSQL parsing passed for the additive migration.
+- Focused ESLint passed for the new shared code and daily-flow screens.
+- `npx tsc --noEmit` and `npm run build` passed.
+- Dev Supabase has not been changed. Generated types, adviser checks, live RLS tests and the
+  authenticated browser test remain pending until the required migration approval.
+
+Risk level:
+
+- Medium while local. One additive migration includes RLS changes and therefore needs Aaron's
+  separate approval immediately before it is applied to SportStack Dev. Main, prod and Production
+  remain untouched.
+
+### Previous handoff entries
+
+Date: 2026-07-24
+
 What changed:
 
 - Added a durable registered-club field so PRIMARY means the player's registered club,
@@ -158,8 +201,6 @@ Remaining follow-up:
   the Pumas default, roster names, fill-in finder, expiry behaviour and theme cascade.
 - The data-quality clean-up items in `docs/data-quality-audit-2026-07-23.md` remain reporting
   only and need separate approval before repair.
-
-### Previous handoff entries
 
 Date: 2026-07-23
 
