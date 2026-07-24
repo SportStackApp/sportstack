@@ -34,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   CommunicationSettingsDialog,
   type CommunicationTab,
@@ -614,7 +615,11 @@ const Chat = () => {
                   ))}
                 </div>
               )}
+              <Label htmlFor="communication-message" className="text-sm font-semibold">
+                {editing ? "Edit message" : tab === "team" ? "Write a team message" : "Write an official update"}
+              </Label>
               <Textarea
+                id="communication-message"
                 value={composer}
                 onChange={(event) => setComposer(event.target.value)}
                 onKeyDown={(event) => {
@@ -625,7 +630,7 @@ const Chat = () => {
                 }}
                 maxLength={4000}
                 placeholder={tab === "team" ? "Message the team… Use @ to mention someone" : "Write an official update…"}
-                className="min-h-20 resize-none"
+                className="min-h-24 resize-none border-2 border-primary/35 bg-card shadow-sm placeholder:text-muted-foreground/80 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
               />
               <div className="flex items-center justify-between gap-3">
                 {tab !== "team" && !editing ? (

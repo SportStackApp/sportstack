@@ -68,7 +68,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAppMode, MODE_LABELS, type AppMode } from "@/contexts/AppModeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { APP_VERSION } from "@/lib/appVersion";
+import { APP_ENVIRONMENT, APP_ENVIRONMENT_CLASS, APP_VERSION } from "@/lib/appVersion";
+import { isProfileReviewRequired } from "@/lib/profileCompletion";
 
 interface NavItem {
   path: string;
@@ -467,17 +468,23 @@ const AppLayout = () => {
 
     let active = true;
     const fetchNotifications = async () => {
-      const result = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
+      const [result, profileResult] = await Promise.all([
+        supabase
+          .from("notifications")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(20),
+        supabase
+          .from("profiles")
+          .select("first_name, last_name, phone, date_of_birth, gender, updated_at")
+          .eq("id", user.id)
+          .maybeSingle(),
+      ]);
 
       if (active && !result.error) {
         const rows = (result.data || []) as unknown as NotificationRow[];
-        setNotifications(
-          rows.map((row) => ({
+        const storedNotifications = rows.map((row) => ({
             id: row.id,
             type: row.type || null,
             title: row.title,
@@ -486,8 +493,20 @@ const AppLayout = () => {
             action_url: row.action_url || null,
             read: row.read,
             created_at: row.created_at,
-          })),
-        );
+          }));
+        const completionNotification: Notification | null = isProfileReviewRequired(profileResult.data)
+          ? {
+              id: "profile-completion",
+              type: "PROFILE_COMPLETION",
+              title: "Complete your profile",
+              message: "Add your missing personal details so your SportStack profile is ready.",
+              body: null,
+              action_url: "/profile",
+              read: false,
+              created_at: profileResult.data?.updated_at || new Date().toISOString(),
+            }
+          : null;
+        setNotifications(completionNotification ? [completionNotification, ...storedNotifications] : storedNotifications);
       }
     };
 
@@ -812,7 +831,7 @@ const AppLayout = () => {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleNotificationClick = async (notification: Notification) => {
-    if (user && !notification.read) {
+    if (user && !notification.read && notification.id !== "profile-completion") {
       setNotifications((current) =>
         current.map((item) =>
           item.id === notification.id ? { ...item, read: true } : item,
@@ -879,6 +898,10 @@ const AppLayout = () => {
     selectedTeam ? getTeamDisplayName(selectedTeam) : mode === "player" ? playerTeamName : "",
   ].filter(Boolean);
   const cascadeSummary = cascadeSummaryParts.length > 0 ? cascadeSummaryParts.join(" > ") : "Select scope";
+  const selectedPlayerMembership = mode === "player"
+    ? voterTeamMemberships.find((membership) => membership.teamId === selectedTeamId) || voterTeamMemberships[0]
+    : undefined;
+  const playerCanBrowseParentEntities = selectedPlayerMembership?.membershipType !== "FILL_IN";
 
   useEffect(() => {
     const associationMatch = location.pathname.match(/^\/associations\/([^/]+)/);
@@ -1407,7 +1430,13 @@ const AppLayout = () => {
             ) : (
               // Static association logo for non-super_admin modes
               <>
-                <div className="w-10 h-10 shrink-0 rounded-lg overflow-hidden border-2 border-primary-foreground/20" title={(mode === "player" ? playerAssociationName || playerClubName : selectedAssociation?.name) || "SportStack"}>
+                <button
+                  type="button"
+                  className="w-10 h-10 shrink-0 rounded-lg overflow-hidden border-2 border-primary-foreground/20 disabled:cursor-default"
+                  title={(mode === "player" ? playerAssociationName || playerClubName : selectedAssociation?.name) || "SportStack"}
+                  disabled={mode !== "player" || !playerCanBrowseParentEntities || !selectedPlayerMembership}
+                  onClick={() => selectedPlayerMembership && navigate(`/associations/${selectedPlayerMembership.associationId}`)}
+                >
                   <Avatar className="w-full h-full rounded-none">
                     <AvatarImage
                       src={(mode === "player" ? playerLogoUrl : selectedAssociation?.logo_url) || "/favicon.ico"}
@@ -1420,36 +1449,60 @@ const AppLayout = () => {
                         : selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "SS"}
                     </AvatarFallback>
                   </Avatar>
-                </div>
+                </button>
+                {mode === "player" && playerCanBrowseParentEntities && selectedPlayerMembership && (
+                  <button
+                    type="button"
+                    className={staticCascadeClass}
+                    title={`Open ${selectedPlayerMembership.clubName} dashboard`}
+                    onClick={() => navigate(`/clubs/${selectedPlayerMembership.clubId}`)}
+                  >
+                    {selectedPlayerMembership.clubName}
+                  </button>
+                )}
                 {mode === "player" && voterTeamMemberships.length > 1 ? (
-                  <Select value={selectedTeamId || voterTeamMemberships[0]?.teamId} onValueChange={handleVoterTeamChange}>
-                    <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[190px]")}>
-                      <SelectValue placeholder="Select team" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border-border">
-                      {voterTeamMemberships.map((membership) => (
-                        <SelectItem key={membership.teamId} value={membership.teamId}>
-                          {membership.teamName} ({membership.membershipType === "PRIMARY" ? "Primary" : membership.membershipType === "FILL_IN" ? "Fill-in" : "Secondary"})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex min-w-0 items-center gap-1">
+                    <Select value={selectedTeamId || voterTeamMemberships[0]?.teamId} onValueChange={handleVoterTeamChange}>
+                      <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[190px]")}>
+                        <SelectValue placeholder="Select team" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border-border">
+                        {voterTeamMemberships.map((membership) => (
+                          <SelectItem key={membership.teamId} value={membership.teamId}>
+                            {membership.teamName} ({membership.membershipType === "PRIMARY" ? "Primary" : membership.membershipType === "FILL_IN" ? "Fill-in" : "Secondary"})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedPlayerMembership && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                        title={`Open ${selectedPlayerMembership.teamName} dashboard`}
+                        onClick={() => navigate(`/teams/${selectedPlayerMembership.teamId}`)}
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 ) : (
                   <>
-                    {mode === "player" && (selectedClub || playerClubName) && (
-                      <div className={staticCascadeClass} title={selectedClub?.name || playerClubName}>
-                        {selectedClub?.name || playerClubName}
-                      </div>
-                    )}
                     {mode === "player" && selectedDivisionObj && (
                       <div className={staticCascadeClass} title={selectedDivisionObj.name}>
                         {selectedDivisionObj.name}
                       </div>
                     )}
-                    {mode === "player" && (selectedTeam || (!selectedClubId && playerTeamName)) && (
-                      <div className={staticCascadeClass} title={selectedTeam ? getTeamDisplayName(selectedTeam) : playerTeamName}>
+                    {mode === "player" && selectedPlayerMembership && (
+                      <button
+                        type="button"
+                        className={staticCascadeClass}
+                        title={`Open ${selectedPlayerMembership.teamName} dashboard`}
+                        onClick={() => navigate(`/teams/${selectedPlayerMembership.teamId}`)}
+                      >
                         {selectedTeam ? getTeamDisplayName(selectedTeam) : playerTeamName}
-                      </div>
+                      </button>
                     )}
                   </>
                 )}
@@ -1569,9 +1622,14 @@ const AppLayout = () => {
 
           {/* Right: Notifications & User Avatar */}
           <div className="flex items-center gap-1">
-            <span className="hidden sm:inline-flex rounded-md border border-primary-foreground/20 px-2 py-1 text-xs font-medium text-primary-foreground/75">
-              {APP_VERSION}
-            </span>
+            <div className="flex items-center gap-1">
+              <Badge variant="outline" className={cn("px-1.5 py-0.5 text-[10px] font-semibold", APP_ENVIRONMENT_CLASS[APP_ENVIRONMENT])}>
+                {APP_ENVIRONMENT}
+              </Badge>
+              <span className="inline-flex rounded-md border border-primary-foreground/20 px-1.5 py-1 text-[10px] font-medium text-primary-foreground/75 sm:px-2 sm:text-xs">
+                {APP_VERSION}
+              </span>
+            </div>
 
             {showAdminDropdown && (
               <DropdownMenu>

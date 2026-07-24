@@ -5,28 +5,37 @@ import EntityDashboard from "@/components/entity/EntityDashboard";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { calculateLadder, type LadderRow } from "@/lib/ladder";
+import { useAuth } from "@/contexts/AuthContext";
+import { canViewEntityDashboard, loadOfficialEntityUpdates, type EntityUpdate } from "@/lib/entityDashboard";
 
 const AssociationDashboard = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [entity, setEntity] = useState<{ name: string; logo_url: string | null; abbreviation: string | null } | null>(null);
-  const [stats, setStats] = useState({ gamesPlayed: 0, goalsFor: 0, goalsAgainst: 0, ladderPosition: null });
+  const [entity, setEntity] = useState<{ name: string; logo_url: string | null; abbreviation: string | null; banner_url: string | null; primary_colour: string | null; secondary_colour: string | null } | null>(null);
+  const [stats, setStats] = useState({ gamesPlayed: 0, goalsFor: 0, goalsAgainst: 0, upcomingFixtures: 0, activePlayers: 0, ladderPosition: null });
   const [upcomingGames, setUpcomingGames] = useState<any[]>([]);
   const [ladderSections, setLadderSections] = useState<{ title: string; rows: LadderRow[] }[]>([]);
+  const [updates, setUpdates] = useState<EntityUpdate[]>([]);
 
   const fixtureSelect =
     "id, fixture_date, status, home_score, away_score, division_id, venue_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name), divisions:divisions!fixtures_division_id_fkey(id, name)";
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !user) return;
     const load = async () => {
       setLoading(true);
+
+      if (!(await canViewEntityDashboard(user.id, "association", id))) {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
 
       // Fetch association
       const { data: assoc } = await supabase
         .from("associations")
-        .select("name, logo_url, abbreviation")
+        .select("name, logo_url, abbreviation, banner_url, primary_colour, secondary_colour")
         .eq("id", id)
         .single();
 
@@ -38,7 +47,7 @@ const AssociationDashboard = () => {
       const clubIds = clubs?.map((c) => c.id) || [];
 
       if (clubIds.length === 0) {
-        setStats({ gamesPlayed: 0, goalsFor: 0, goalsAgainst: 0, ladderPosition: null });
+        setStats({ gamesPlayed: 0, goalsFor: 0, goalsAgainst: 0, upcomingFixtures: 0, activePlayers: 0, ladderPosition: null });
         setUpcomingGames([]);
         setLadderSections([]);
         setLoading(false);
@@ -52,7 +61,7 @@ const AssociationDashboard = () => {
       const teamIds = teams?.map((t) => t.id) || [];
 
       if (teamIds.length === 0) {
-        setStats({ gamesPlayed: 0, goalsFor: 0, goalsAgainst: 0, ladderPosition: null });
+        setStats({ gamesPlayed: 0, goalsFor: 0, goalsAgainst: 0, upcomingFixtures: 0, activePlayers: 0, ladderPosition: null });
         setUpcomingGames([]);
         setLadderSections([]);
         setLoading(false);
@@ -78,7 +87,7 @@ const AssociationDashboard = () => {
         const awayAgainst = teamIdSet.has(g.away_team_id) ? (g.home_score || 0) : 0;
         return sum + homeAgainst + awayAgainst;
       }, 0);
-      setStats({ gamesPlayed, goalsFor, goalsAgainst, ladderPosition: null });
+      setStats({ gamesPlayed, goalsFor, goalsAgainst, upcomingFixtures: 0, activePlayers: 0, ladderPosition: null });
 
       const { data: ladderFixtures } = await supabase
         .from("fixtures")
@@ -109,10 +118,24 @@ const AssociationDashboard = () => {
         .limit(12);
 
       setUpcomingGames(upcoming || []);
+      const [{ data: activeMemberships }, entityUpdates] = await Promise.all([
+        supabase
+          .from("team_memberships")
+          .select("user_id")
+          .in("team_id", teamIds)
+          .eq("status", "ACTIVE"),
+        loadOfficialEntityUpdates({ associationId: id }),
+      ]);
+      setStats((current) => ({
+        ...current,
+        upcomingFixtures: upcoming?.length || 0,
+        activePlayers: new Set((activeMemberships || []).map((membership) => membership.user_id)).size,
+      }));
+      setUpdates(entityUpdates);
       setLoading(false);
     };
     load();
-  }, [id, navigate]);
+  }, [id, navigate, user]);
 
   return (
     <div className="space-y-4">
@@ -123,10 +146,14 @@ const AssociationDashboard = () => {
         entityName={entity?.name || ""}
         entityType="association"
         logoUrl={entity?.logo_url}
+        bannerUrl={entity?.banner_url}
+        primaryColour={entity?.primary_colour}
+        secondaryColour={entity?.secondary_colour}
         abbreviation={entity?.abbreviation}
         stats={stats}
         upcomingGames={upcomingGames}
         ladderSections={ladderSections}
+        updates={updates}
         loading={loading}
       />
     </div>

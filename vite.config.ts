@@ -2,6 +2,10 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
+const buildCommit = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
+const buildDate = new Date().toISOString().slice(0, 10).replaceAll("-", ".");
+const appVersion = buildCommit ? `v${buildDate}+${buildCommit}` : "vlocal";
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -17,6 +21,9 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

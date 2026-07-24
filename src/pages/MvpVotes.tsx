@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -160,6 +161,7 @@ export default function MvpVotes() {
   const [selectedSession, setSelectedSession] = useState<SessionTile | null>(null);
   const [requestingSessionId, setRequestingSessionId] = useState<string | null>(null);
   const [requestedSessionIds, setRequestedSessionIds] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<"current" | "history">("current");
 
   useEffect(() => {
     const loadVotingData = async () => {
@@ -302,6 +304,7 @@ export default function MvpVotes() {
 
         const visibleSessions = sessionRows
           .filter((session) => session.status !== "PENDING")
+          .filter((session) => Boolean(session.team_id))
           .filter((session) => {
             const hasSubmitted = submittedSessionIds.has(session.id);
 
@@ -393,6 +396,12 @@ export default function MvpVotes() {
     return player?.player_name || "Unknown player";
   };
 
+  const currentSessions = sessions.filter(
+    (session) => session.displayState === "open" || session.displayState === "disputed",
+  );
+  const historySessions = sessions.filter((session) => session.hasSubmitted);
+  const displayedSessions = activeTab === "current" ? currentSessions : historySessions;
+
   const requestReopen = async (session: SessionTile) => {
     if (!user || requestingSessionId || !session.team_id) return;
 
@@ -435,8 +444,8 @@ export default function MvpVotes() {
   return (
     <div className="space-y-6 container py-6 mx-auto max-w-7xl animate-fade-in">
       <div>
-        <h1 className="text-3xl font-display text-foreground font-semibold">MVP Votes</h1>
-        <p className="text-muted-foreground mt-1">Vote for your team and review your previous ballots</p>
+        <h1 className="text-3xl font-display text-foreground font-semibold">Player MVP</h1>
+        <p className="text-muted-foreground mt-1">Vote for your team and review your own submitted ballots</p>
       </div>
 
       {schemaUnavailable ? (
@@ -451,7 +460,7 @@ export default function MvpVotes() {
             </CardDescription>
           </CardHeader>
         </Card>
-      ) : sessions.length === 0 ? (
+      ) : currentSessions.length === 0 && historySessions.length === 0 ? (
         <Card className="border-dashed py-16 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-primary/5 flex items-center justify-center mb-4">
             <Award className="h-6 w-6 text-primary opacity-60" />
@@ -464,8 +473,28 @@ export default function MvpVotes() {
           </CardDescription>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sessions.map((session) => {
+        <>
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "current" | "history")}>
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="current">Current voting ({currentSessions.length})</TabsTrigger>
+              <TabsTrigger value="history">My history ({historySessions.length})</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {displayedSessions.length === 0 ? (
+            <Card className="border-dashed py-12 text-center">
+              <CardTitle className="text-lg font-medium">
+                {activeTab === "current" ? "No current voting rounds" : "No submitted ballots yet"}
+              </CardTitle>
+              <CardDescription className="mt-2">
+                {activeTab === "current"
+                  ? "Your next eligible Player MVP round will appear here when it opens."
+                  : "Your submitted Player MVP ballots will appear here."}
+              </CardDescription>
+            </Card>
+          ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {displayedSessions.map((session) => {
             const statusBadge = getStatusBadge(session);
             const countdown = session.displayState === "open" ? formatDuration(session.closes_at) : null;
             const requestSent = requestedSessionIds.has(session.id);
@@ -546,7 +575,9 @@ export default function MvpVotes() {
               </Card>
             );
           })}
-        </div>
+          </div>
+          )}
+        </>
       )}
 
       <Dialog open={!!selectedSession} onOpenChange={(open) => !open && setSelectedSession(null)}>

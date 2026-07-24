@@ -2,9 +2,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Trophy, Target, Megaphone, MapPin } from "lucide-react";
+import { Calendar, Trophy, Target, Megaphone, MapPin, Users } from "lucide-react";
 import { format } from "date-fns";
 import type { LadderRow } from "@/lib/ladder";
+import type { EntityUpdate } from "@/lib/entityDashboard";
+import { cn } from "@/lib/utils";
 
 interface GameSummary {
   id: string;
@@ -22,16 +24,22 @@ interface EntityDashboardProps {
   entityName: string;
   entityType: "association" | "club" | "team";
   logoUrl?: string | null;
+  bannerUrl?: string | null;
+  primaryColour?: string | null;
+  secondaryColour?: string | null;
   abbreviation?: string | null;
   parentName?: string;
   stats: {
     gamesPlayed: number;
     goalsFor: number;
     goalsAgainst: number;
+    upcomingFixtures: number;
+    activePlayers: number;
     ladderPosition?: number | null;
   };
   upcomingGames: GameSummary[];
   ladderSections?: { title: string; rows: LadderRow[]; highlightTeamIds?: string[] }[];
+  updates?: EntityUpdate[];
   loading: boolean;
 }
 
@@ -45,18 +53,22 @@ const EntityDashboard = ({
   entityName,
   entityType,
   logoUrl,
+  bannerUrl,
+  primaryColour,
+  secondaryColour,
   abbreviation,
   parentName,
   stats,
   upcomingGames,
   ladderSections = [],
+  updates = [],
   loading,
 }: EntityDashboardProps) => {
   if (loading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-24 w-full" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Skeleton className="h-28" />
           <Skeleton className="h-28" />
           <Skeleton className="h-28" />
@@ -69,7 +81,18 @@ const EntityDashboard = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div
+        className={cn(
+          "relative flex min-h-52 items-end gap-4 overflow-hidden rounded-xl border bg-cover bg-center p-5 shadow-sm sm:min-h-64 sm:p-7",
+          !bannerUrl && !primaryColour && "bg-primary text-primary-foreground",
+          bannerUrl && "text-white",
+        )}
+        style={bannerUrl
+          ? { backgroundImage: `linear-gradient(90deg, rgba(8,15,35,.9), rgba(8,15,35,.35)), url(${bannerUrl})` }
+          : primaryColour
+            ? { backgroundColor: primaryColour, color: secondaryColour || "#fff" }
+            : undefined}
+      >
         <Avatar className="h-16 w-16 rounded-lg">
           <AvatarImage src={logoUrl || undefined} alt={entityName} className="object-cover" />
           <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-lg font-bold">
@@ -78,17 +101,17 @@ const EntityDashboard = ({
         </Avatar>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold tracking-tight">{entityName}</h1>
-            <Badge variant="secondary">{TYPE_LABELS[entityType]}</Badge>
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{entityName}</h1>
+            <Badge variant="secondary" className="bg-white/90 text-slate-900">{TYPE_LABELS[entityType]}</Badge>
           </div>
           {parentName && <p className="text-muted-foreground">{parentName}</p>}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Games Played</CardTitle>
+            <CardTitle className="text-sm font-medium">Completed Fixtures</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -98,7 +121,7 @@ const EntityDashboard = ({
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Goals For</CardTitle>
+            <CardTitle className="text-sm font-medium">Goals Scored</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -108,12 +131,22 @@ const EntityDashboard = ({
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Goals Against</CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Upcoming Fixtures</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.goalsAgainst}</div>
-            <p className="text-xs text-muted-foreground">Goals conceded</p>
+            <div className="text-2xl font-bold">{stats.upcomingFixtures}</div>
+            <p className="text-xs text-muted-foreground">Currently scheduled</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Active Players</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.activePlayers}</div>
+            <p className="text-xs text-muted-foreground">Distinct current members</p>
           </CardContent>
         </Card>
       </div>
@@ -186,10 +219,24 @@ const EntityDashboard = ({
             <Megaphone className="h-5 w-5" />
             Announcements
           </CardTitle>
-          <CardDescription>Latest news and updates</CardDescription>
+          <CardDescription>Official club and association updates</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">No announcements yet.</div>
+          {updates.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No official updates yet.</div>
+          ) : (
+            <div className="divide-y rounded-lg border">
+              {updates.map((update) => (
+                <div key={update.id} className="p-3">
+                  <div className="mb-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                    <span>{update.scopeLabel}</span>
+                    <span>{new Date(update.createdAt).toLocaleDateString("en-AU")}</span>
+                  </div>
+                  <p className="text-sm">{update.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

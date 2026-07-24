@@ -38,6 +38,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { cn, getTeamDisplayName } from "@/lib/utils";
 import { useAdminScope } from "@/hooks/useAdminScope";
+import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
+import { isProfileReviewRequired } from "@/lib/profileCompletion";
 
 type AvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
 
@@ -52,6 +54,11 @@ interface GameRow {
   away_team: { id: string; name: string } | null;
   venue: { id: string; name: string } | null;
   divisions?: { id: string; name: string } | null;
+}
+
+interface CalendarGameRow extends GameRow {
+  membershipType: "PRIMARY" | "SECONDARY" | "FILL_IN";
+  contextTeamId: string;
 }
 
 interface TeamRequest {
@@ -103,6 +110,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { canManageClub, canManageTeam } = useAdminScope();
   const [games, setGames] = useState<GameRow[]>([]);
+  const [calendarGames, setCalendarGames] = useState<CalendarGameRow[]>([]);
   const [availability, setAvailability] = useState<Record<string, AvailabilityStatus>>({});
   const [loading, setLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -121,16 +129,21 @@ const Dashboard = () => {
   const [teamActivity, setTeamActivity] = useState<DashboardFeedMessage[]>([]);
   const [importantUnreadCount, setImportantUnreadCount] = useState(0);
   const [mentionCount, setMentionCount] = useState(0);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+  const [needsProfileReview, setNeedsProfileReview] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     const fetchProfile = async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("first_name")
+        .select("first_name, last_name, phone, date_of_birth, gender")
         .eq("id", user.id)
         .single();
-      if (data?.first_name) setProfileName(data.first_name);
+      if (data) {
+        if (data.first_name) setProfileName(data.first_name);
+        setNeedsProfileReview(isProfileReviewRequired(data));
+      }
     };
     fetchProfile();
   }, [user]);
@@ -239,28 +252,15 @@ const Dashboard = () => {
       const gamesList = (gamesData as GameRow[]) || [];
       setGames(gamesList);
 
-      // Fetch availability for these games
+      // Published line-ups belong to the selected team fixture cards.
       if (user && gamesList.length > 0) {
         const gameIds = gamesList.map((g) => g.id);
-        const [availabilityResult, lineupsResult] = await Promise.all([
-          supabase
-            .from("fixture_availability")
-            .select("fixture_id, status")
-            .eq("user_id", user.id)
-            .in("fixture_id", gameIds),
-          supabase
+        const lineupsResult = await supabase
             .from("fixture_lineups")
             .select("fixture_id, published_at")
             .eq("team_id", selectedTeamId)
             .in("fixture_id", gameIds)
-            .not("published_at", "is", null),
-        ]);
-
-        const availMap: Record<string, AvailabilityStatus> = {};
-        availabilityResult.data?.forEach((a) => {
-          availMap[a.fixture_id] = a.status as AvailabilityStatus;
-        });
-        setAvailability(availMap);
+            .not("published_at", "is", null);
         setPublishedLineupFixtureIds(new Set((lineupsResult.data || []).map((lineup) => lineup.fixture_id)));
       }
 
@@ -268,6 +268,118 @@ const Dashboard = () => {
     };
     fetchGames();
   }, [selectedTeamId, user]);
+
+  useEffect(() => {
+    if (!user) {
+      setCalendarGames([]);
+      setAvailability({});
+      return;
+    }
+
+    let active = true;
+    const loadPlayerCalendar = async () => {
+      const now = new Date().toISOString();
+      const [regularResult, fillInResult] = await Promise.all([
+        supabase
+          .from("team_memberships")
+          .select("team_id, membership_type")
+          .eq("user_id", user.id)
+          .eq("status", "ACTIVE")
+          .in("membership_type", ["PRIMARY", "SECONDARY", "PERMANENT"]),
+        supabase
+          .from("fixture_fill_ins")
+          .select("fixture_id, team_id")
+          .eq("player_id", user.id)
+          .eq("status", "SELECTED")
+          .gte("access_expires_at", now),
+      ]);
+
+      const regularMemberships = (regularResult.data || []).map((row) => ({
+        teamId: row.team_id,
+        membershipType: row.membership_type === "PRIMARY" ? "PRIMARY" as const : "SECONDARY" as const,
+      }));
+      const fillIns = (fillInResult.data || []).map((row) => ({
+        fixtureId: row.fixture_id,
+        teamId: row.team_id,
+      }));
+      const regularTeamIds = [...new Set(regularMemberships.map((row) => row.teamId))];
+      const fillInFixtureIds = [...new Set(fillIns.map((row) => row.fixtureId))];
+
+      const regularFixturesPromise = regularTeamIds.length > 0
+        ? supabase
+            .from("fixtures")
+            .select(FIXTURE_SELECT)
+            .or(`home_team_id.in.(${regularTeamIds.join(",")}),away_team_id.in.(${regularTeamIds.join(",")})`)
+            .gte("fixture_date", now)
+            .eq("status", "SCHEDULED")
+            .order("fixture_date", { ascending: true })
+            .limit(60)
+        : Promise.resolve({ data: [] });
+      const fillInFixturesPromise = fillInFixtureIds.length > 0
+        ? supabase
+            .from("fixtures")
+            .select(FIXTURE_SELECT)
+            .in("id", fillInFixtureIds)
+            .gte("fixture_date", now)
+            .eq("status", "SCHEDULED")
+            .order("fixture_date", { ascending: true })
+        : Promise.resolve({ data: [] });
+
+      const [regularFixturesResult, fillInFixturesResult] = await Promise.all([
+        regularFixturesPromise,
+        fillInFixturesPromise,
+      ]);
+
+      const membershipOrder = { PRIMARY: 0, SECONDARY: 1, FILL_IN: 2 } as const;
+      const merged = new Map<string, CalendarGameRow>();
+      for (const fixture of ((regularFixturesResult.data || []) as GameRow[])) {
+        const membership = regularMemberships
+          .filter((row) => row.teamId === fixture.home_team_id || row.teamId === fixture.away_team_id)
+          .sort((a, b) => membershipOrder[a.membershipType] - membershipOrder[b.membershipType])[0];
+        if (!membership) continue;
+        merged.set(fixture.id, {
+          ...fixture,
+          membershipType: membership.membershipType,
+          contextTeamId: membership.teamId,
+        });
+      }
+      for (const fixture of ((fillInFixturesResult.data || []) as GameRow[])) {
+        const fillIn = fillIns.find((row) => row.fixtureId === fixture.id);
+        if (!fillIn || merged.has(fixture.id)) continue;
+        merged.set(fixture.id, {
+          ...fixture,
+          membershipType: "FILL_IN",
+          contextTeamId: fillIn.teamId,
+        });
+      }
+
+      const nextGames = [...merged.values()].sort(
+        (a, b) => new Date(a.fixture_date).getTime() - new Date(b.fixture_date).getTime(),
+      );
+      const fixtureIds = nextGames.map((fixture) => fixture.id);
+      const availabilityResult = fixtureIds.length > 0
+        ? await supabase
+            .from("fixture_availability")
+            .select("fixture_id, status")
+            .eq("user_id", user.id)
+            .in("fixture_id", fixtureIds)
+        : { data: [] };
+      const nextAvailability: Record<string, AvailabilityStatus> = {};
+      for (const row of availabilityResult.data || []) {
+        if (row.status !== "NO_RESPONSE") nextAvailability[row.fixture_id] = row.status as AvailabilityStatus;
+      }
+
+      if (active) {
+        setCalendarGames(nextGames);
+        setAvailability(nextAvailability);
+      }
+    };
+
+    void loadPlayerCalendar();
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -371,11 +483,23 @@ const Dashboard = () => {
   const handleAvailabilityChange = async (gameId: string, status: AvailabilityStatus) => {
     if (!user) return;
     const previous = availability[gameId];
-    setAvailability((prev) => ({ ...prev, [gameId]: status }));
+    const isClearing = previous === status;
+    setAvailability((current) => {
+      const next = { ...current };
+      if (isClearing) delete next[gameId];
+      else next[gameId] = status;
+      return next;
+    });
 
-    const { error } = await supabase
-      .from("fixture_availability")
-      .upsert({ fixture_id: gameId, user_id: user.id, status }, { onConflict: "fixture_id,user_id" });
+    const { error } = isClearing
+      ? await supabase
+          .from("fixture_availability")
+          .delete()
+          .eq("fixture_id", gameId)
+          .eq("user_id", user.id)
+      : await supabase
+          .from("fixture_availability")
+          .upsert({ fixture_id: gameId, user_id: user.id, status }, { onConflict: "fixture_id,user_id" });
     if (error) {
       setAvailability((current) => {
         const next = { ...current };
@@ -384,6 +508,8 @@ const Dashboard = () => {
         return next;
       });
       toast({ title: "Availability not saved", description: "Please try again.", variant: "destructive" });
+    } else if (isClearing) {
+      toast({ title: "Availability cleared", description: "No response is selected for this fixture." });
     }
   };
 
@@ -529,34 +655,27 @@ const Dashboard = () => {
     const year = calendarMonth.getFullYear();
     const month = calendarMonth.getMonth();
     const firstDayOfMonth = new Date(year, month, 1);
-    const lastDayOfMonth = new Date(year, month + 1, 0);
     let startOffset = firstDayOfMonth.getDay() - 1;
     if (startOffset < 0) startOffset = 6;
-    const daysInMonth = lastDayOfMonth.getDate();
-    const days: { date: number; isCurrentMonth: boolean; isToday: boolean; hasGame: boolean }[] = [];
-
-    const prevMonthLastDay = new Date(year, month, 0).getDate();
-    for (let i = startOffset - 1; i >= 0; i--) {
-      days.push({ date: prevMonthLastDay - i, isCurrentMonth: false, isToday: false, hasGame: false });
-    }
-
-    const gameDays = games
-      .filter((g) => {
-        const d = new Date(g.fixture_date);
-        return d.getMonth() === month && d.getFullYear() === year;
-      })
-      .map((g) => new Date(g.fixture_date).getDate());
-
-    for (let i = 1; i <= daysInMonth; i++) {
-      const isToday = i === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-      days.push({ date: i, isCurrentMonth: true, isToday, hasGame: gameDays.includes(i) });
-    }
-
-    const remaining = 42 - days.length;
-    for (let i = 1; i <= remaining; i++) {
-      days.push({ date: i, isCurrentMonth: false, isToday: false, hasGame: false });
-    }
-    return days;
+    const startDate = new Date(year, month, 1 - startOffset);
+    return Array.from({ length: 42 }, (_, index) => {
+      const value = new Date(startDate);
+      value.setDate(startDate.getDate() + index);
+      const dateKey = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+      const fixtures = calendarGames.filter((fixture) => {
+        const fixtureDate = new Date(fixture.fixture_date);
+        return fixtureDate.getFullYear() === value.getFullYear()
+          && fixtureDate.getMonth() === value.getMonth()
+          && fixtureDate.getDate() === value.getDate();
+      });
+      return {
+        date: value.getDate(),
+        dateKey,
+        isCurrentMonth: value.getMonth() === month,
+        isToday: value.toDateString() === today.toDateString(),
+        fixtures,
+      };
+    });
   };
 
   const calendarDays = generateCalendarDays();
@@ -589,9 +708,28 @@ const Dashboard = () => {
   const canEditCurrentClub = selectedClubId ? canManageClub(selectedClubId) : false;
   const canManageCurrentTeam = selectedTeamId ? canManageTeam(selectedTeamId) : false;
   const canOpenFixtureDetail = Boolean(selectedTeamId);
-  const unansweredAvailabilityCount = games.filter(
+  const attentionFixtures = calendarGames.slice(0, 2);
+  const unansweredAvailabilityCount = attentionFixtures.filter(
     (game) => !availability[game.id] || availability[game.id] === "MAYBE" || availability[game.id] === "NO_RESPONSE",
   ).length;
+  const selectedDayFixtures = selectedCalendarDate
+    ? calendarGames.filter((fixture) => {
+        const fixtureDate = new Date(fixture.fixture_date);
+        const key = `${fixtureDate.getFullYear()}-${String(fixtureDate.getMonth() + 1).padStart(2, "0")}-${String(fixtureDate.getDate()).padStart(2, "0")}`;
+        return key === selectedCalendarDate;
+      })
+    : [];
+  const membershipDotClass = {
+    PRIMARY: "bg-blue-400",
+    SECONDARY: "bg-violet-400",
+    FILL_IN: "bg-amber-400",
+  } as const;
+  const availabilityRingClass = (status?: AvailabilityStatus) => {
+    if (status === "AVAILABLE") return "ring-2 ring-green-300";
+    if (status === "UNAVAILABLE") return "ring-2 ring-red-300";
+    if (status === "MAYBE") return "ring-2 ring-yellow-200";
+    return "ring-1 ring-white/70";
+  };
 
   if (isBrandNewUser) {
     return (
@@ -755,7 +893,7 @@ const Dashboard = () => {
           <div className="mr-2 flex items-center gap-2 text-sm font-semibold">
             <BellRing className="h-4 w-4" /> Needs attention
           </div>
-          {unansweredAvailabilityCount === 0 && importantUnreadCount === 0 && mentionCount === 0 && teamRequests.length === 0 ? (
+          {unansweredAvailabilityCount === 0 && importantUnreadCount === 0 && mentionCount === 0 && teamRequests.length === 0 && !needsProfileReview ? (
             <span className="text-sm text-muted-foreground">You’re up to date.</span>
           ) : (
             <>
@@ -769,6 +907,9 @@ const Dashboard = () => {
                 <Link to="/chat?tab=team"><Badge variant="secondary">{mentionCount} mention{mentionCount === 1 ? "" : "s"}</Badge></Link>
               )}
               {teamRequests.length > 0 && <Badge variant="secondary">{teamRequests.length} team request{teamRequests.length === 1 ? "" : "s"}</Badge>}
+              {needsProfileReview && (
+                <Link to="/profile"><Badge variant="secondary">Complete your profile</Badge></Link>
+              )}
             </>
           )}
         </CardContent>
@@ -888,7 +1029,7 @@ const Dashboard = () => {
 
         {/* Right Column - Calendar */}
         <div className="space-y-4">
-          <Card style={brandStyle} className={`h-[260px] ${!brandStyle ? "bg-primary text-primary-foreground" : ""}`}>
+          <Card style={brandStyle} className={`min-h-[300px] ${!brandStyle ? "bg-primary text-primary-foreground" : ""}`}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <Button
@@ -918,23 +1059,83 @@ const Dashboard = () => {
                 {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => (
                   <div key={i} className="py-0.5 text-primary-foreground/70 font-medium">{day}</div>
                 ))}
-                {calendarDays.map((day, i) => (
-                  <div
-                    key={i}
-                    className={`py-1 rounded-full text-xs ${
+                {calendarDays.map((day) => (
+                  <button
+                    type="button"
+                    key={day.dateKey}
+                    onClick={() => day.fixtures.length > 0 && setSelectedCalendarDate(day.dateKey)}
+                    className={`relative min-h-8 rounded-md py-1 text-xs ${
                       day.isToday
                         ? "bg-primary-foreground text-primary font-bold"
-                        : day.hasGame && day.isCurrentMonth
-                        ? "bg-green-500 text-white font-medium"
                         : day.isCurrentMonth
                         ? "text-primary-foreground font-medium"
                         : "text-primary-foreground/40"
-                    }`}
+                    } ${day.fixtures.length > 0 ? "cursor-pointer hover:bg-primary-foreground/10" : "cursor-default"}`}
                   >
-                    {day.date}
-                  </div>
+                    <span>{day.date}</span>
+                    {day.fixtures.length > 0 && (
+                      <span className="absolute inset-x-0 bottom-0.5 flex justify-center gap-0.5" aria-label={`${day.fixtures.length} fixture${day.fixtures.length === 1 ? "" : "s"}`}>
+                        {day.fixtures.slice(0, 3).map((fixture) => (
+                          <span
+                            key={fixture.id}
+                            title={`${fixture.membershipType} fixture - ${availability[fixture.id] || "No response"}`}
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full",
+                              membershipDotClass[fixture.membershipType],
+                              availabilityRingClass(availability[fixture.id]),
+                            )}
+                          />
+                        ))}
+                      </span>
+                    )}
+                  </button>
                 ))}
               </div>
+
+              <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-primary-foreground/80">
+                {(["PRIMARY", "SECONDARY", "FILL_IN"] as const).map((type) => (
+                  <span key={type} className="flex items-center gap-1">
+                    <span className={cn("h-2 w-2 rounded-full", membershipDotClass[type])} />
+                    {type === "FILL_IN" ? "Fill-in" : type.charAt(0) + type.slice(1).toLowerCase()}
+                  </span>
+                ))}
+              </div>
+
+              {selectedDayFixtures.length > 0 && (
+                <div className="mt-3 space-y-2 border-t border-primary-foreground/20 pt-3">
+                  {selectedDayFixtures.map((fixture) => (
+                    <div key={fixture.id} className="rounded-md bg-primary-foreground/10 p-2 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate font-medium">
+                          {fixture.home_team?.name || "Unknown"} vs {fixture.away_team?.name || "Unknown"}
+                        </span>
+                        <MembershipTypeBadge membershipType={fixture.membershipType} compact />
+                      </div>
+                      <p className="mt-1 text-primary-foreground/75">
+                        {new Date(fixture.fixture_date).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
+                        {` • ${availability[fixture.id] === "AVAILABLE" ? "Available" : availability[fixture.id] === "UNAVAILABLE" ? "Not available" : availability[fixture.id] === "MAYBE" ? "Unsure" : "No response"}`}
+                      </p>
+                      <div className="mt-2 flex gap-1">
+                        {(["AVAILABLE", "UNAVAILABLE", "MAYBE"] as const).map((status) => (
+                          <button
+                            type="button"
+                            key={status}
+                            onClick={() => void handleAvailabilityChange(fixture.id, status)}
+                            className={cn(
+                              "rounded px-1.5 py-1 text-[10px] transition-colors",
+                              availability[fixture.id] === status
+                                ? "bg-white font-semibold text-slate-900"
+                                : "bg-white/15 text-white hover:bg-white/25",
+                            )}
+                          >
+                            {status === "AVAILABLE" ? "Available" : status === "UNAVAILABLE" ? "Not available" : "Unsure"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
