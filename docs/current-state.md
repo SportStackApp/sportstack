@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-07-24
+Last updated: 2026-07-25
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -76,7 +76,7 @@ The backend is Supabase: Postgres, Auth, Storage, Row Level Security, and Edge F
 - Treat Production data as real. Dev/main share one non-production database and can affect each
   other's test data.
 - Do not expose `.env`, `.env.local`, Supabase service-role keys, private Player MVP Voting tokens, or other secrets.
-- Confirm with Aaron before destructive database work, schema migrations, RLS/auth changes, Edge Function changes, role enum changes, secrets work, or deployment-sensitive work.
+- Non-destructive work on Development is pre-approved. Still confirm before destructive database work, secrets work, any `main` or `prod` promotion, and any Production change.
 - Use Australian English in user-facing text.
 - Use `DD/MM/YYYY` dates and respect the association timezone where relevant.
 
@@ -109,6 +109,67 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
+
+Date: 2026-07-25
+
+What changed:
+
+- Removed the dashboard `Needs attention` strip because the notification bell is the single
+  attention surface. Removed Player `Statistics` navigation and the duplicate Team dashboard
+  shortcut that made the personal and entity dashboards look like two versions of the same page.
+- Replaced sequential scope updates with one atomic Association -> Club -> Division -> Team
+  update. Stale player-header requests are ignored, Lucas HC now remains selected, and parent
+  entity routes no longer fight the active player team context.
+- Added the player Division cascade button and `/divisions/:id`. The Division dashboard now shows
+  full-division KPIs, ladder, upcoming fixtures and association updates using both direct team
+  division links and the `team_divisions` mapping table.
+- Made preferred-position panels smaller and sourced their choices from starting positions in
+  team-owned formations. The coaching profile uses the same source. Primary, Secondary and
+  Fill-in badges now use clearly different emerald, violet and amber colours.
+- Added read-only RLS support for active Primary, Secondary and Permanent members to see their
+  own team's formation position definitions. Existing administration and coaching write access
+  is unchanged.
+
+Checks run:
+
+- Dev rollback-only RLS probes passed: Aaron could read temporary Lucas HC team positions, an
+  unrelated Pumas player saw zero rows, and the temporary formation and position were rolled
+  back. No test rows remain.
+- Supabase security and performance advisers found no new member-policy warning after the read
+  rule was consolidated into the existing scoped policy. The older wider adviser backlog remains
+  separate.
+- Focused ESLint passed with zero errors and one existing Fast Refresh warning.
+- `npx tsc --noEmit` and `npm run build` passed. Full `npm run lint` still reports the known wider
+  repository backlog of 433 errors and 89 warnings outside this change.
+- Live Dev browser checks passed at desktop and 375-pixel mobile widths. Pumas remained the
+  primary landing team, Lucas HC remained selected after switching, the Association header did
+  not flicker, Division 1 showed its KPI/ladder data, there was no horizontal mobile overflow,
+  and the browser console was clean.
+
+Deployment state:
+
+- Commit `c379329` was pushed to `origin/dev`, and Vercel reported the Dev deployment successful.
+- The two additive RLS migrations are registered in SportStack Dev. No row data was changed or
+  deleted. Generated TypeScript types did not change because these migrations contain policies
+  only.
+- `main`, `prod`, Production Auth and Production data remain untouched.
+
+What Aaron should test next:
+
+- In Dev Player mode, switch Pumas -> Lucas HC -> Pumas and confirm each selection remains stable.
+- Open each team's Division button and check its KPIs, complete ladder and upcoming fixtures.
+- Open Profile and check that the position sections are compact and the Primary/Secondary badges
+  are easy to tell apart in light mode.
+- Pumas and Lucas HC currently have no team-owned formation positions, so the empty messages are
+  expected. Configure a team formation position when ready, then confirm only that team's options
+  appear on the player and coaching profiles.
+
+Risk level:
+
+- Medium. This includes additive Dev RLS changes. No destructive database action or Production
+  change was performed.
+
+### Previous handoff entries
 
 Date: 2026-07-24
 
@@ -179,8 +240,6 @@ Risk level:
 
 - Medium. This includes additive Dev schema and RLS changes. No destructive database work was
   performed, and no test data was left behind.
-
-### Previous handoff entries
 
 Date: 2026-07-24
 
