@@ -12,7 +12,8 @@ Future agents should start by reading these files in order:
 
 ## Current release state
 
-- `dev` and `origin/dev` are clean and aligned at `b036940`.
+- The functional release is commit `b036940`; later commits in `dev` may contain handoff
+  documentation only. Confirm `dev` and `origin/dev` are aligned before starting new work.
 - Vercel reports the Dev deployment successful at `https://dev.sportstackapp.com.au`.
 - SportStack Dev includes the two additive team-position RLS migrations recorded in
   `docs/current-state.md`. No test rows or destructive data changes remain.
