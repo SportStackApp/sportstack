@@ -13,7 +13,6 @@ import {
   X,
   HelpCircle,
   AlertCircle,
-  BellRing,
   Megaphone,
   MessagesSquare,
   UserPlus,
@@ -39,7 +38,6 @@ import type { Database } from "@/integrations/supabase/types";
 import { cn, getTeamDisplayName } from "@/lib/utils";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
-import { isProfileReviewRequired } from "@/lib/profileCompletion";
 
 type AvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
 
@@ -127,22 +125,18 @@ const Dashboard = () => {
   const [publishedLineupFixtureIds, setPublishedLineupFixtureIds] = useState<Set<string>>(new Set());
   const [officialUpdates, setOfficialUpdates] = useState<DashboardFeedMessage[]>([]);
   const [teamActivity, setTeamActivity] = useState<DashboardFeedMessage[]>([]);
-  const [importantUnreadCount, setImportantUnreadCount] = useState(0);
-  const [mentionCount, setMentionCount] = useState(0);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
-  const [needsProfileReview, setNeedsProfileReview] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     const fetchProfile = async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("first_name, last_name, phone, date_of_birth, gender")
+        .select("first_name")
         .eq("id", user.id)
         .single();
       if (data) {
         if (data.first_name) setProfileName(data.first_name);
-        setNeedsProfileReview(isProfileReviewRequired(data));
       }
     };
     fetchProfile();
@@ -401,7 +395,7 @@ const Dashboard = () => {
       const officialChannelIds = [clubChannel.data?.id, associationChannel.data?.id].filter(Boolean) as string[];
       const teamChannelId = teamChannel.data?.id as string | undefined;
       const messageSelect = "id, channel_id, author_id, content, created_at, is_important";
-      const [officialResult, activityResult, notificationResult, readStateResult] = await Promise.all([
+      const [officialResult, activityResult] = await Promise.all([
         officialChannelIds.length > 0
           ? communicationsClient
               .from("communication_messages")
@@ -419,19 +413,6 @@ const Dashboard = () => {
               .is("removed_at", null)
               .order("created_at", { ascending: false })
               .limit(6)
-          : Promise.resolve({ data: [] }),
-        supabase
-          .from("notifications")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("read", false)
-          .eq("type", "COMMUNICATION_MENTION"),
-        officialChannelIds.length > 0
-          ? communicationsClient
-              .from("communication_read_state")
-              .select("channel_id, last_read_at")
-              .eq("user_id", user.id)
-              .in("channel_id", officialChannelIds)
           : Promise.resolve({ data: [] }),
       ]);
       const allMessages = [...(officialResult.data || []), ...(activityResult.data || [])] as DashboardFeedMessage[];
@@ -455,14 +436,6 @@ const Dashboard = () => {
       if (!active) return;
       setOfficialUpdates(enrich((officialResult.data || []) as DashboardFeedMessage[]));
       setTeamActivity(enrich((activityResult.data || []) as DashboardFeedMessage[]));
-      setMentionCount(notificationResult.count || 0);
-      const readStates = readStateResult.data || [];
-      setImportantUnreadCount(((officialResult.data || []) as DashboardFeedMessage[]).filter((message) => {
-        if (!message.is_important) return false;
-        const state = (readStates as Array<{ channel_id: string; last_read_at: string | null }>)
-          .find((item) => item.channel_id === message.channel_id);
-        return !state?.last_read_at || new Date(message.created_at) > new Date(state.last_read_at);
-      }).length);
     };
     void loadDashboardCommunications();
     const channel = supabase
@@ -708,10 +681,6 @@ const Dashboard = () => {
   const canEditCurrentClub = selectedClubId ? canManageClub(selectedClubId) : false;
   const canManageCurrentTeam = selectedTeamId ? canManageTeam(selectedTeamId) : false;
   const canOpenFixtureDetail = Boolean(selectedTeamId);
-  const attentionFixtures = calendarGames.slice(0, 2);
-  const unansweredAvailabilityCount = attentionFixtures.filter(
-    (game) => !availability[game.id] || availability[game.id] === "MAYBE" || availability[game.id] === "NO_RESPONSE",
-  ).length;
   const selectedDayFixtures = selectedCalendarDate
     ? calendarGames.filter((fixture) => {
         const fixtureDate = new Date(fixture.fixture_date);
@@ -883,34 +852,6 @@ const Dashboard = () => {
                 <Pencil className="h-4 w-4" /> Edit branding
               </Button>
             </Link>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Needs attention */}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 px-4 py-3">
-          <div className="mr-2 flex items-center gap-2 text-sm font-semibold">
-            <BellRing className="h-4 w-4" /> Needs attention
-          </div>
-          {unansweredAvailabilityCount === 0 && importantUnreadCount === 0 && mentionCount === 0 && teamRequests.length === 0 && !needsProfileReview ? (
-            <span className="text-sm text-muted-foreground">You’re up to date.</span>
-          ) : (
-            <>
-              {unansweredAvailabilityCount > 0 && (
-                <Badge variant="secondary">{unansweredAvailabilityCount} availability response{unansweredAvailabilityCount === 1 ? "" : "s"}</Badge>
-              )}
-              {importantUnreadCount > 0 && (
-                <Link to="/chat?tab=club"><Badge variant="destructive">{importantUnreadCount} important update{importantUnreadCount === 1 ? "" : "s"}</Badge></Link>
-              )}
-              {mentionCount > 0 && (
-                <Link to="/chat?tab=team"><Badge variant="secondary">{mentionCount} mention{mentionCount === 1 ? "" : "s"}</Badge></Link>
-              )}
-              {teamRequests.length > 0 && <Badge variant="secondary">{teamRequests.length} team request{teamRequests.length === 1 ? "" : "s"}</Badge>}
-              {needsProfileReview && (
-                <Link to="/profile"><Badge variant="secondary">Complete your profile</Badge></Link>
-              )}
-            </>
           )}
         </CardContent>
       </Card>

@@ -1,193 +1,206 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import EntityDashboard from "@/components/entity/EntityDashboard";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Trophy, Users } from "lucide-react";
-import { calculateLadder, type LadderRow } from "@/lib/ladder";
+import { canViewEntityDashboard, loadOfficialEntityUpdates, type EntityUpdate } from "@/lib/entityDashboard";
+import { calculateLadder, type LadderRow, type LadderTeam } from "@/lib/ladder";
+
+interface DivisionDetails {
+  id: string;
+  name: string;
+  association_id: string;
+}
+
+interface AssociationBranding {
+  name: string;
+  abbreviation: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  primary_colour: string | null;
+  secondary_colour: string | null;
+}
+
+interface FixtureSummary {
+  id: string;
+  fixture_date: string;
+  status: string;
+  home_team_id: string | null;
+  away_team_id: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  home_team: { id: string; name: string } | null;
+  away_team: { id: string; name: string } | null;
+  venue: { id: string; name: string } | null;
+}
+
+const EMPTY_STATS = {
+  gamesPlayed: 0,
+  goalsFor: 0,
+  goalsAgainst: 0,
+  upcomingFixtures: 0,
+  activePlayers: 0,
+  ladderPosition: null,
+};
 
 const DivisionDashboard = () => {
-  const {
-    selectedDivision,
-    selectedAssociation,
-    selectedClub,
-    divisions,
-    filteredTeams,
-  } = useTeamContext();
-
-  const [fixtures, setFixtures] = useState<any[]>([]);
-  const [ladder, setLadder] = useState<LadderRow[]>([]);
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { selectedDivision } = useTeamContext();
+  const divisionId = id || selectedDivision;
   const [loading, setLoading] = useState(true);
+  const [division, setDivision] = useState<DivisionDetails | null>(null);
+  const [association, setAssociation] = useState<AssociationBranding | null>(null);
+  const [stats, setStats] = useState(EMPTY_STATS);
+  const [upcomingGames, setUpcomingGames] = useState<Array<FixtureSummary & { divisions: { id: string; name: string } }>>([]);
+  const [ladder, setLadder] = useState<LadderRow[]>([]);
+  const [updates, setUpdates] = useState<EntityUpdate[]>([]);
 
   useEffect(() => {
-    if (!selectedDivision) return;
+    if (!divisionId || !user) {
+      setLoading(false);
+      return;
+    }
 
-    const fetchFixtures = async () => {
+    let active = true;
+    const load = async () => {
       setLoading(true);
+      const canView = await canViewEntityDashboard(user.id, "division", divisionId);
+      if (!active) return;
+      if (!canView) {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
 
-      // Get team IDs for this division
-      const teamIds = filteredTeams.map((t) => t.id);
+      const { data: divisionData } = await supabase
+        .from("divisions")
+        .select("id, name, association_id")
+        .eq("id", divisionId)
+        .maybeSingle();
+      if (!divisionData || !active) {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      const [{ data: associationData }, { data: directTeams }, { data: teamDivisionRows }] = await Promise.all([
+        supabase
+          .from("associations")
+          .select("name, abbreviation, logo_url, banner_url, primary_colour, secondary_colour")
+          .eq("id", divisionData.association_id)
+          .maybeSingle(),
+        supabase.from("teams").select("id, name, club_id").eq("division_id", divisionId),
+        supabase.from("team_divisions").select("team_id").eq("division_id", divisionId),
+      ]);
+
+      const mappedTeamIds = (teamDivisionRows || []).map((row) => row.team_id);
+      const { data: mappedTeams } = mappedTeamIds.length > 0
+        ? await supabase.from("teams").select("id, name, club_id").in("id", mappedTeamIds)
+        : { data: [] };
+      const teams = [...(directTeams || []), ...(mappedTeams || [])]
+        .filter((team, index, all) => all.findIndex((item) => item.id === team.id) === index) as LadderTeam[];
+      const teamIds = teams.map((team) => team.id);
+
+      if (!active) return;
+      setDivision(divisionData);
+      setAssociation(associationData);
 
       if (teamIds.length === 0) {
-        setFixtures([]);
+        const entityUpdates = await loadOfficialEntityUpdates({ associationId: divisionData.association_id });
+        if (!active) return;
+        setStats(EMPTY_STATS);
+        setUpcomingGames([]);
         setLadder([]);
+        setUpdates(entityUpdates);
         setLoading(false);
         return;
       }
 
-      const [{ data }, { data: completed }] = await Promise.all([
-        (supabase
-        .from("fixtures" as any)
-        .select("id, round_number, round_name, fixture_date, status, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name)")
-        .or(`home_team_id.in.(${teamIds.join(",")}),away_team_id.in.(${teamIds.join(",")})`)
-        .eq("status", "SCHEDULED")
-        .order("fixture_date", { ascending: true })
-        .limit(20) as any),
-        (supabase
-          .from("fixtures" as any)
-          .select("id, home_team_id, away_team_id, home_score, away_score, status, fixture_date")
-          .or(`home_team_id.in.(${teamIds.join(",")}),away_team_id.in.(${teamIds.join(",")})`)
-          .eq("status", "COMPLETED") as any),
+      const fixtureSelect = "id, fixture_date, status, home_team_id, away_team_id, home_score, away_score, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
+      const teamFilter = `home_team_id.in.(${teamIds.join(",")}),away_team_id.in.(${teamIds.join(",")})`;
+      const [completedResult, upcomingResult, membershipsResult, entityUpdates] = await Promise.all([
+        supabase
+          .from("fixtures")
+          .select("id, fixture_date, status, home_team_id, away_team_id, home_score, away_score")
+          .or(teamFilter)
+          .eq("status", "COMPLETED"),
+        supabase
+          .from("fixtures")
+          .select(fixtureSelect, { count: "exact" })
+          .or(teamFilter)
+          .eq("status", "SCHEDULED")
+          .gte("fixture_date", new Date().toISOString())
+          .order("fixture_date", { ascending: true })
+          .limit(12),
+        supabase
+          .from("team_memberships")
+          .select("user_id")
+          .in("team_id", teamIds)
+          .eq("status", "ACTIVE"),
+        loadOfficialEntityUpdates({ associationId: divisionData.association_id }),
       ]);
 
-      setFixtures(data || []);
-      setLadder(calculateLadder(divisionTeams, completed || []));
+      if (!active) return;
+      const completed = completedResult.data || [];
+      const teamIdSet = new Set(teamIds);
+      const goalsFor = completed.reduce((sum, fixture) => {
+        const home = teamIdSet.has(fixture.home_team_id || "") ? fixture.home_score || 0 : 0;
+        const away = teamIdSet.has(fixture.away_team_id || "") ? fixture.away_score || 0 : 0;
+        return sum + home + away;
+      }, 0);
+      const goalsAgainst = completed.reduce((sum, fixture) => {
+        const home = teamIdSet.has(fixture.home_team_id || "") ? fixture.away_score || 0 : 0;
+        const away = teamIdSet.has(fixture.away_team_id || "") ? fixture.home_score || 0 : 0;
+        return sum + home + away;
+      }, 0);
+      const upcoming = ((upcomingResult.data || []) as FixtureSummary[]).map((fixture) => ({
+        ...fixture,
+        divisions: { id: divisionData.id, name: divisionData.name },
+      }));
+
+      setStats({
+        gamesPlayed: completed.length,
+        goalsFor,
+        goalsAgainst,
+        upcomingFixtures: upcomingResult.count || 0,
+        activePlayers: new Set((membershipsResult.data || []).map((membership) => membership.user_id)).size,
+        ladderPosition: null,
+      });
+      setUpcomingGames(upcoming);
+      setLadder(calculateLadder(teams, completed));
+      setUpdates(entityUpdates);
       setLoading(false);
     };
 
-    fetchFixtures();
-  }, [selectedDivision, filteredTeams]);
-
-  const divisionTeams = filteredTeams;
-  const divisionName = divisions.find((division) => division.id === selectedDivision)?.name || "Division";
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [divisionId, navigate, user]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          {divisionName}
-        </h1>
-        <p className="text-muted-foreground">
-          {selectedAssociation?.name}
-          {selectedClub ? ` · ${selectedClub.name}` : ""}
-        </p>
-      </div>
-
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{divisionTeams.length}</div>
-            <p className="text-xs text-muted-foreground">Teams in division</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{fixtures.length}</div>
-            <p className="text-xs text-muted-foreground">Upcoming fixtures</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Teams */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="h-4 w-4" />
-            Teams
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {divisionTeams.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No teams in this division.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {divisionTeams.map((t) => (
-                <Badge key={t.id} variant="outline">{t.name}</Badge>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Trophy className="h-4 w-4" />
-            Ladder
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {ladder.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No completed games yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-xs text-muted-foreground">
-                  <tr className="border-b">
-                    <th className="py-2 pr-2 text-left">#</th>
-                    <th className="py-2 pr-2 text-left">Team</th>
-                    <th className="py-2 pr-2 text-right">P</th>
-                    <th className="py-2 pr-2 text-right">W</th>
-                    <th className="py-2 pr-2 text-right">D</th>
-                    <th className="py-2 pr-2 text-right">L</th>
-                    <th className="py-2 pr-2 text-right">GD</th>
-                    <th className="py-2 text-right">Pts</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ladder.map((row) => (
-                    <tr key={row.teamId}>
-                      <td className="py-2 pr-2">{row.position}</td>
-                      <td className="py-2 pr-2">{row.teamName}</td>
-                      <td className="py-2 pr-2 text-right">{row.played}</td>
-                      <td className="py-2 pr-2 text-right">{row.wins}</td>
-                      <td className="py-2 pr-2 text-right">{row.draws}</td>
-                      <td className="py-2 pr-2 text-right">{row.losses}</td>
-                      <td className="py-2 pr-2 text-right">{row.goalDifference}</td>
-                      <td className="py-2 text-right">{row.points}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Fixtures */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Calendar className="h-4 w-4" />
-            Fixtures
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : fixtures.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No fixtures scheduled.</p>
-          ) : (
-            <div className="space-y-2">
-              {fixtures.map((f) => (
-                <div key={f.id} className="flex items-center justify-between text-sm py-2 border-b border-border/40 last:border-0">
-                  <div>
-                    <span className="font-medium">{f.round_name || `Round ${f.round_number}`}</span>
-                    <span className="text-muted-foreground ml-2">
-                      {f.home_team?.name || "TBC"} vs {f.away_team?.name || "Bye"}
-                    </span>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {f.fixture_date ? new Date(f.fixture_date).toLocaleDateString("en-AU") : "Date TBC"}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-1">
+        <ArrowLeft className="h-4 w-4" /> Back
+      </Button>
+      <EntityDashboard
+        entityName={division?.name || "Division"}
+        entityType="division"
+        logoUrl={association?.logo_url}
+        bannerUrl={association?.banner_url}
+        primaryColour={association?.primary_colour}
+        secondaryColour={association?.secondary_colour}
+        abbreviation={association?.abbreviation}
+        parentName={association?.name}
+        stats={stats}
+        upcomingGames={upcomingGames}
+        ladderSections={ladder.length > 0 ? [{ title: division?.name || "Division", rows: ladder }] : []}
+        updates={updates}
+        loading={loading}
+      />
     </div>
   );
 };

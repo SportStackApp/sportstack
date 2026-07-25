@@ -22,7 +22,7 @@ interface GameSummary {
 
 interface EntityDashboardProps {
   entityName: string;
-  entityType: "association" | "club" | "team";
+  entityType: "association" | "club" | "division" | "team";
   logoUrl?: string | null;
   bannerUrl?: string | null;
   primaryColour?: string | null;
@@ -46,6 +46,7 @@ interface EntityDashboardProps {
 const TYPE_LABELS = {
   association: "Association",
   club: "Club",
+  division: "Division",
   team: "Team",
 };
 

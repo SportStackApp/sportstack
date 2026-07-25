@@ -12,10 +12,8 @@ import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useTeamContext } from "@/contexts/TeamContext";
-import { HOCKEY_POSITION_OPTIONS } from "@/components/profile/PlayerPositionPreferences";
 import { loadPlayerHistory, type PlayerHistoryRecord } from "@/lib/playerHistory";
-
-const POSITIONS = HOCKEY_POSITION_OPTIONS.map((position) => position.code);
+import { loadTeamPositionOptions, type TeamPositionOption } from "@/lib/teamPositions";
 
 interface Profile {
   first_name: string;
@@ -40,11 +38,14 @@ export default function CoachingPlayerProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [assessments, setAssessments] = useState<Record<string, Assessment>>({});
   const [preferences, setPreferences] = useState<Record<string, number>>({});
+  const [positionOptions, setPositionOptions] = useState<TeamPositionOption[]>([]);
   const [matchHistory, setMatchHistory] = useState<PlayerHistoryRecord[]>([]);
   const [seasonFilter, setSeasonFilter] = useState<"This Season" | "All Time">("This Season");
   const [activeSeason, setActiveSeason] = useState<{ startDate: string | null; endDate: string | null; year: number | null } | null>(null);
 
   useEffect(() => {
+    let active = true;
+
     async function loadData() {
       if (!user || !playerId) return;
       try {
@@ -54,10 +55,10 @@ export default function CoachingPlayerProfile() {
           .select("id")
           .eq("user_id", user.id)
           .eq("role", "SUPER_ADMIN")
-          .maybeSingle() as any;
+          .maybeSingle();
 
         const isSuperAdmin = !!superAdminCheck;
-        let tId = null;
+        let tId: string | null = null;
 
         if (isSuperAdmin) {
           tId = selectedTeamId;
@@ -73,7 +74,7 @@ export default function CoachingPlayerProfile() {
             .select("team_id")
             .eq("user_id", user.id)
             .eq("role", "COACH")
-            .maybeSingle() as any;
+            .maybeSingle();
 
           if (!roleData?.team_id) {
             toast.error("You are not assigned as a coach for any team.");
@@ -84,7 +85,16 @@ export default function CoachingPlayerProfile() {
           tId = roleData.team_id;
         }
 
+        if (!active || !tId) return;
         setTeamId(tId);
+        setPositionOptions([]);
+        try {
+          const teamPositions = await loadTeamPositionOptions([tId]);
+          if (active) setPositionOptions(teamPositions[tId] || []);
+        } catch (positionError) {
+          console.error("Error loading team positions:", positionError);
+          if (active) toast.error("Team positions could not be loaded.");
+        }
 
         const { data: teamData } = await supabase
           .from("teams")
@@ -101,7 +111,7 @@ export default function CoachingPlayerProfile() {
             .eq("is_active", true)
             .maybeSingle();
           if (seasonData) {
-            setActiveSeason({ startDate: seasonData.start_date, endDate: seasonData.end_date, year: seasonData.year });
+            if (active) setActiveSeason({ startDate: seasonData.start_date, endDate: seasonData.end_date, year: seasonData.year });
           }
         }
 
@@ -112,50 +122,54 @@ export default function CoachingPlayerProfile() {
           .eq("id", playerId)
           .single();
           
-        if (profileData) setProfile(profileData as Profile);
+        if (profileData && active) setProfile(profileData as Profile);
 
         // 4. Load coach assessments
         const { data: assessmentsData } = await supabase
-          .from("coach_position_assessments" as any)
+          .from("coach_position_assessments")
           .select("position_code, assessment, notes")
           .eq("coach_id", user.id)
           .eq("player_id", playerId)
-          .eq("team_id", tId) as any;
+          .eq("team_id", tId);
 
         const assMap: Record<string, Assessment> = {};
         if (assessmentsData) {
-          assessmentsData.forEach((row: any) => {
+          assessmentsData.forEach((row) => {
             assMap[row.position_code] = { assessment: row.assessment, notes: row.notes || "" };
           });
         }
-        setAssessments(assMap);
+        if (active) setAssessments(assMap);
 
         // 5. Load player preferences
         const { data: prefsData } = await supabase
-          .from("player_position_preferences" as any)
+          .from("player_position_preferences")
           .select("position_code, preference")
           .eq("player_id", playerId)
-          .eq("team_id", tId) as any;
+          .eq("team_id", tId);
 
         const prefsMap: Record<string, number> = {};
         if (prefsData) {
-          prefsData.forEach((row: any) => {
+          prefsData.forEach((row) => {
             prefsMap[row.position_code] = row.preference;
           });
         }
-        setPreferences(prefsMap);
+        if (active) setPreferences(prefsMap);
 
-        setMatchHistory(await loadPlayerHistory(playerId, teamData?.revsports_team_id));
+        const history = await loadPlayerHistory(playerId, teamData?.revsports_team_id);
+        if (active) setMatchHistory(history);
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error loading profile:", err);
-        toast.error("Failed to load player profile.");
+        if (active) toast.error("Failed to load player profile.");
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
-    loadData();
+    void loadData();
+    return () => {
+      active = false;
+    };
   }, [user, playerId, navigate, selectedTeamId]);
 
   const handleAssessmentChange = async (position: string, val: number) => {
@@ -165,13 +179,14 @@ export default function CoachingPlayerProfile() {
     setAssessments(prev => ({ ...prev, [position]: { ...prev[position], assessment: val } }));
     
     try {
-      await (supabase.from("coach_position_assessments" as any).upsert({
+      const { error } = await supabase.from("coach_position_assessments").upsert({
         coach_id: user.id,
         player_id: playerId,
         team_id: teamId,
         position_code: position,
         assessment: val
-      }, { onConflict: "coach_id,player_id,team_id,position_code" }) as any);
+      }, { onConflict: "coach_id,player_id,team_id,position_code" });
+      if (error) throw error;
       toast.success("Assessment saved");
     } catch (err) {
       console.error(err);
@@ -183,14 +198,15 @@ export default function CoachingPlayerProfile() {
     if (!user || !playerId || !teamId) return;
     try {
       // Upsert note (assessment might be null if only notes are added first)
-      await (supabase.from("coach_position_assessments" as any).upsert({
+      const { error } = await supabase.from("coach_position_assessments").upsert({
         coach_id: user.id,
         player_id: playerId,
         team_id: teamId,
         position_code: position,
         notes: notes,
         assessment: assessments[position]?.assessment || 2,
-      }, { onConflict: "coach_id,player_id,team_id,position_code" }) as any);
+      }, { onConflict: "coach_id,player_id,team_id,position_code" });
+      if (error) throw error;
       toast.success("Notes saved");
     } catch (err) {
       console.error(err);
@@ -294,11 +310,21 @@ export default function CoachingPlayerProfile() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {POSITIONS.map(pos => {
+                  {positionOptions.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-6 text-center text-sm text-muted-foreground">
+                        No positions have been configured for this team yet.
+                      </td>
+                    </tr>
+                  ) : positionOptions.map((position) => {
+                    const pos = position.code;
                     const currentAss = assessments[pos]?.assessment;
                     return (
                       <tr key={pos} className="hover:bg-muted/30">
-                        <td className="px-4 py-3 font-bold">{pos}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium">{position.label}</div>
+                          <div className="text-xs text-muted-foreground">{pos}</div>
+                        </td>
                         <td className="px-4 py-3">{getPrefLabel(preferences[pos])}</td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1">

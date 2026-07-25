@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type EntityDashboardType = "association" | "club" | "team";
+export type EntityDashboardType = "association" | "club" | "division" | "team";
 
 interface RoleScopeRow {
   role: string;
@@ -13,6 +13,7 @@ interface MembershipScopeRow {
   team_id: string;
   teams: {
     club_id: string;
+    division_id: string | null;
     clubs: { association_id: string } | null;
   } | null;
 }
@@ -20,12 +21,13 @@ interface MembershipScopeRow {
 interface EntityScope {
   associationId: string;
   clubId: string | null;
+  divisionId: string | null;
   teamId: string | null;
 }
 
 async function loadEntityScope(entityType: EntityDashboardType, entityId: string): Promise<EntityScope | null> {
   if (entityType === "association") {
-    return { associationId: entityId, clubId: null, teamId: null };
+    return { associationId: entityId, clubId: null, divisionId: null, teamId: null };
   }
   if (entityType === "club") {
     const { data } = await supabase
@@ -33,17 +35,25 @@ async function loadEntityScope(entityType: EntityDashboardType, entityId: string
       .select("id, association_id")
       .eq("id", entityId)
       .maybeSingle();
-    return data ? { associationId: data.association_id, clubId: data.id, teamId: null } : null;
+    return data ? { associationId: data.association_id, clubId: data.id, divisionId: null, teamId: null } : null;
+  }
+  if (entityType === "division") {
+    const { data } = await supabase
+      .from("divisions")
+      .select("id, association_id")
+      .eq("id", entityId)
+      .maybeSingle();
+    return data ? { associationId: data.association_id, clubId: null, divisionId: data.id, teamId: null } : null;
   }
 
   const { data } = await supabase
     .from("teams")
-    .select("id, club_id, clubs(association_id)")
+    .select("id, club_id, division_id, clubs(association_id)")
     .eq("id", entityId)
     .maybeSingle();
   const club = Array.isArray(data?.clubs) ? data.clubs[0] : data?.clubs;
   return data && club
-    ? { associationId: club.association_id, clubId: data.club_id, teamId: data.id }
+    ? { associationId: club.association_id, clubId: data.club_id, divisionId: data.division_id, teamId: data.id }
     : null;
 }
 
@@ -66,7 +76,7 @@ export async function canViewEntityDashboard(
       .eq("user_id", userId),
     supabase
       .from("team_memberships")
-      .select("team_id, teams(club_id, clubs(association_id))")
+      .select("team_id, teams(club_id, division_id, clubs(association_id))")
       .eq("user_id", userId)
       .eq("status", "ACTIVE")
       .in("membership_type", ["PRIMARY", "SECONDARY", "PERMANENT"]),
@@ -76,11 +86,23 @@ export async function canViewEntityDashboard(
   if (roles.some((role) => role.role === "SUPER_ADMIN")) return true;
 
   const memberships = (membershipsResult.data || []) as unknown as MembershipScopeRow[];
+  const membershipTeamIds = memberships.map((membership) => membership.team_id);
+  const divisionMembershipResult = entityType === "division" && membershipTeamIds.length > 0
+    ? await supabase
+        .from("team_divisions")
+        .select("team_id")
+        .eq("division_id", entityId)
+        .in("team_id", membershipTeamIds)
+    : { data: [] };
+  const divisionMembershipTeamIds = new Set((divisionMembershipResult.data || []).map((row) => row.team_id));
   const membershipAllows = memberships.some((membership) => {
     const team = Array.isArray(membership.teams) ? membership.teams[0] : membership.teams;
     const club = Array.isArray(team?.clubs) ? team.clubs[0] : team?.clubs;
     if (entityType === "team") return membership.team_id === entityId;
     if (entityType === "club") return team?.club_id === entityId;
+    if (entityType === "division") {
+      return team?.division_id === entityId || divisionMembershipTeamIds.has(membership.team_id);
+    }
     return club?.association_id === entityId;
   });
   if (membershipAllows) return true;

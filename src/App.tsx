@@ -177,6 +177,7 @@ const App = () => (
                       {/* Entity Dashboards */}
                       <Route path="/associations/:id" element={<AssociationDashboard />} />
                       <Route path="/clubs/:id" element={<ClubDashboard />} />
+                      <Route path="/divisions/:id" element={<DivisionDashboard />} />
                       <Route path="/admin/division" element={<DivisionDashboard />} />
                       <Route path="/teams/:id" element={<TeamDashboard />} />
                     </Route>

@@ -5,22 +5,7 @@ import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
-export const HOCKEY_POSITION_OPTIONS = [
-  { code: "GK", label: "Goalkeeper" },
-  { code: "FB-L", label: "Left fullback" },
-  { code: "FB-C", label: "Centre fullback" },
-  { code: "FB-R", label: "Right fullback" },
-  { code: "HB-L", label: "Left half" },
-  { code: "HB-C", label: "Centre half" },
-  { code: "HB-R", label: "Right half" },
-  { code: "IF-L", label: "Left inside" },
-  { code: "IF-R", label: "Right inside" },
-  { code: "CF", label: "Centre forward" },
-  { code: "FF-L", label: "Left forward" },
-  { code: "FF-C", label: "Centre forward line" },
-  { code: "FF-R", label: "Right forward" },
-] as const;
+import { loadTeamPositionOptions, type TeamPositionOption } from "@/lib/teamPositions";
 
 interface PositionTeam {
   teamId: string;
@@ -37,25 +22,39 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedByTeam, setSelectedByTeam] = useState<Record<string, string[]>>({});
+  const [optionsByTeam, setOptionsByTeam] = useState<Record<string, TeamPositionOption[]>>({});
+  const [loadingOptions, setLoadingOptions] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const teamIds = useMemo(() => teams.map((team) => team.teamId), [teams]);
 
   useEffect(() => {
+    let active = true;
     if (!user || teamIds.length === 0) {
       setSelectedByTeam({});
-      return;
+      setOptionsByTeam({});
+      setLoadingOptions(false);
+      return () => {
+        active = false;
+      };
     }
 
     const loadPreferences = async () => {
-      const { data, error } = await supabase
-        .from("player_position_preferences")
-        .select("team_id, position_code")
-        .eq("player_id", user.id)
-        .in("team_id", teamIds)
-        .order("position_code");
+      setLoadingOptions(true);
+      const [{ data, error }, teamOptions] = await Promise.all([
+        supabase
+          .from("player_position_preferences")
+          .select("team_id, position_code")
+          .eq("player_id", user.id)
+          .in("team_id", teamIds)
+          .order("position_code"),
+        loadTeamPositionOptions(teamIds),
+      ]);
 
       if (error) {
-        toast({ title: "Positions could not be loaded", description: error.message, variant: "destructive" });
+        if (active) {
+          toast({ title: "Positions could not be loaded", description: error.message, variant: "destructive" });
+          setLoadingOptions(false);
+        }
         return;
       }
 
@@ -64,10 +63,22 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
         if (!row.team_id) continue;
         next[row.team_id] = [...(next[row.team_id] || []), row.position_code];
       }
-      setSelectedByTeam(next);
+      if (active) {
+        setSelectedByTeam(next);
+        setOptionsByTeam(teamOptions);
+        setLoadingOptions(false);
+      }
     };
 
-    void loadPreferences();
+    void loadPreferences().catch((error: Error) => {
+      if (active) {
+        setLoadingOptions(false);
+        toast({ title: "Team positions could not be loaded", description: error.message, variant: "destructive" });
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [teamIds, toast, user]);
 
   const togglePosition = async (teamId: string, positionCode: string) => {
@@ -112,22 +123,26 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Preferred playing positions</CardTitle>
-        <CardDescription>Select every position you are happy to play for each regular team.</CardDescription>
+      <CardHeader className="space-y-1 p-4 pb-2">
+        <CardTitle className="text-base">Preferred playing positions</CardTitle>
+        <CardDescription className="text-xs">Choose from the positions configured by each team.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-2 px-4 pb-4 pt-0">
         {teams.map((team) => (
-          <section key={team.teamId} className="space-y-3 rounded-lg border p-3">
+          <section key={team.teamId} className="space-y-2 rounded-lg border p-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 className="font-medium">{team.teamName}</h3>
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-medium">{team.teamName}</h3>
                 <p className="text-xs text-muted-foreground">{team.clubName}</p>
               </div>
-              <MembershipTypeBadge membershipType={team.membershipType} />
+              <MembershipTypeBadge membershipType={team.membershipType} compact />
             </div>
-            <div className="flex flex-wrap gap-2">
-              {HOCKEY_POSITION_OPTIONS.map((position) => {
+            <div className="flex flex-wrap gap-1.5">
+              {loadingOptions ? (
+                <span className="text-xs text-muted-foreground">Loading team positions…</span>
+              ) : (optionsByTeam[team.teamId] || []).length === 0 ? (
+                <span className="text-xs text-muted-foreground">No team positions configured yet.</span>
+              ) : optionsByTeam[team.teamId].map((position) => {
                 const selected = selectedByTeam[team.teamId]?.includes(position.code) || false;
                 return (
                   <Button
@@ -135,6 +150,7 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
                     key={position.code}
                     variant={selected ? "default" : "outline"}
                     size="sm"
+                    className="h-7 rounded-full px-2.5 text-xs"
                     disabled={savingKey === `${team.teamId}:${position.code}`}
                     aria-pressed={selected}
                     onClick={() => void togglePosition(team.teamId, position.code)}

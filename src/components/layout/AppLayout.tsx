@@ -280,7 +280,6 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { path: "/mvp-votes", label: "MVP Votes", icon: Vote },
         { path: "/games", label: "Fixtures", icon: Calendar },
-        { path: "/roster", label: "Statistics", icon: BarChart3 },
         { path: "/chat", label: "Communications", icon: MessageCircle },
       ],
     },
@@ -423,6 +422,7 @@ const AppLayout = () => {
     setSelectedClubId,
     setSelectedTeamId,
     setSelectedDivision,
+    setSelectedScope,
     clubs,
     teams,
     teamDivisions,
@@ -637,6 +637,7 @@ const AppLayout = () => {
   // Fetch regular teams plus fixture-scoped fill-in teams whose access has not expired.
   useEffect(() => {
     let expiryTimer: number | undefined;
+    let active = true;
     const clearPlayerHeaderContext = () => {
       setPlayerAssociationName("");
       setPlayerAssociationAbbr("");
@@ -694,7 +695,7 @@ const AppLayout = () => {
             teamName: team.name || "Team",
             membershipType,
             isDefaultTeam,
-            divisionId: team.division_id || null,
+            divisionId: team.division_id || teamDivisions.find((item) => item.team_id === team.id)?.division_id || null,
             clubId: club.id,
             clubName: club.name || "Club",
             clubLogoUrl: club.logo_url || null,
@@ -727,6 +728,8 @@ const AppLayout = () => {
           if (a.isDefaultTeam !== b.isDefaultTeam) return a.isDefaultTeam ? -1 : 1;
           return order[a.membershipType] - order[b.membershipType];
         });
+
+      if (!active) return;
 
       const nextExpiry = fillInRows
         .map((row) => new Date(row.access_expires_at).getTime())
@@ -765,15 +768,18 @@ const AppLayout = () => {
 
       if (needsPrimaryContext || !selectedMembership) {
         sessionStorage.setItem(contextSessionKey, currentMembership.teamId);
-        setSelectedAssociationId(currentMembership.associationId);
-        setSelectedClubId(currentMembership.clubId);
-        setSelectedDivision(currentMembership.divisionId || "");
-        setSelectedTeamId(currentMembership.teamId);
+        setSelectedScope({
+          associationId: currentMembership.associationId,
+          clubId: currentMembership.clubId,
+          divisionId: currentMembership.divisionId || "",
+          teamId: currentMembership.teamId,
+        });
       }
     };
 
     void fetchPlayerHeaderContext();
     return () => {
+      active = false;
       if (expiryTimer) window.clearTimeout(expiryTimer);
     };
   }, [
@@ -781,10 +787,8 @@ const AppLayout = () => {
     mode,
     user,
     selectedTeamId,
-    setSelectedAssociationId,
-    setSelectedClubId,
-    setSelectedDivision,
-    setSelectedTeamId,
+    setSelectedScope,
+    teamDivisions,
   ]);
 
   // Auto-switch viewingAs based on cascade selection (only if not manually overridden)
@@ -904,6 +908,11 @@ const AppLayout = () => {
   const playerCanBrowseParentEntities = selectedPlayerMembership?.membershipType !== "FILL_IN";
 
   useEffect(() => {
+    // Player entity dashboards use their route ID and must not clear the
+    // active membership context shown in the header. Clearing it here made
+    // the player-primary effect immediately restore Pumas, creating a loop.
+    if (mode === "player") return;
+
     const associationMatch = location.pathname.match(/^\/associations\/([^/]+)/);
     const clubMatch = location.pathname.match(/^\/clubs\/([^/]+)/);
     const teamMatch = location.pathname.match(/^\/teams\/([^/]+)/);
@@ -940,6 +949,7 @@ const AppLayout = () => {
     }
   }, [
     location.pathname,
+    mode,
     clubs,
     teams,
     teamDivisions,
@@ -970,10 +980,12 @@ const AppLayout = () => {
     const membership = voterTeamMemberships.find((item) => item.teamId === teamId);
     if (!membership) return;
 
-    setSelectedAssociationId(membership.associationId);
-    setSelectedClubId(membership.clubId);
-    setSelectedDivision(membership.divisionId || "");
-    setSelectedTeamId(membership.teamId);
+    setSelectedScope({
+      associationId: membership.associationId,
+      clubId: membership.clubId,
+      divisionId: membership.divisionId || "",
+      teamId: membership.teamId,
+    });
     navigate("/dashboard");
   };
 
@@ -1462,6 +1474,16 @@ const AppLayout = () => {
                 )}
                 {mode === "player" && voterTeamMemberships.length > 1 ? (
                   <div className="flex min-w-0 items-center gap-1">
+                    {playerCanBrowseParentEntities && selectedPlayerMembership?.divisionId && (
+                      <button
+                        type="button"
+                        className={staticCascadeClass}
+                        title={`Open ${selectedDivisionObj?.name || "division"} dashboard`}
+                        onClick={() => navigate(`/divisions/${selectedPlayerMembership.divisionId}`)}
+                      >
+                        {selectedDivisionObj?.name || "Division"}
+                      </button>
+                    )}
                     <Select value={selectedTeamId || voterTeamMemberships[0]?.teamId} onValueChange={handleVoterTeamChange}>
                       <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[190px]")}>
                         <SelectValue placeholder="Select team" />
@@ -1474,35 +1496,26 @@ const AppLayout = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    {selectedPlayerMembership && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="shrink-0 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                        title={`Open ${selectedPlayerMembership.teamName} dashboard`}
-                        onClick={() => navigate(`/teams/${selectedPlayerMembership.teamId}`)}
-                      >
-                        <LayoutDashboard className="h-4 w-4" />
-                      </Button>
-                    )}
                   </div>
                 ) : (
                   <>
-                    {mode === "player" && selectedDivisionObj && (
-                      <div className={staticCascadeClass} title={selectedDivisionObj.name}>
-                        {selectedDivisionObj.name}
-                      </div>
-                    )}
-                    {mode === "player" && selectedPlayerMembership && (
+                    {mode === "player" && playerCanBrowseParentEntities && selectedDivisionObj && (
                       <button
                         type="button"
                         className={staticCascadeClass}
-                        title={`Open ${selectedPlayerMembership.teamName} dashboard`}
-                        onClick={() => navigate(`/teams/${selectedPlayerMembership.teamId}`)}
+                        title={`Open ${selectedDivisionObj.name} dashboard`}
+                        onClick={() => navigate(`/divisions/${selectedDivisionObj.id}`)}
+                      >
+                        {selectedDivisionObj.name}
+                      </button>
+                    )}
+                    {mode === "player" && selectedPlayerMembership && (
+                      <div
+                        className={staticCascadeClass}
+                        title={selectedPlayerMembership.teamName}
                       >
                         {selectedTeam ? getTeamDisplayName(selectedTeam) : playerTeamName}
-                      </button>
+                      </div>
                     )}
                   </>
                 )}

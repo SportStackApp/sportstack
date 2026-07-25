@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 export type DisplayMembershipType = "PRIMARY" | "SECONDARY" | "FILL_IN" | "PERMANENT" | string;
 
 const MEMBERSHIP_STYLES: Record<"PRIMARY" | "SECONDARY" | "FILL_IN", string> = {
-  PRIMARY: "border-blue-300 bg-blue-100 text-blue-800 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-200",
-  SECONDARY: "border-violet-300 bg-violet-100 text-violet-800 dark:border-violet-700 dark:bg-violet-950 dark:text-violet-200",
-  FILL_IN: "border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200",
+  PRIMARY: "border-emerald-500 bg-emerald-100 text-emerald-950 dark:border-emerald-500 dark:bg-emerald-950 dark:text-emerald-100",
+  SECONDARY: "border-violet-500 bg-violet-100 text-violet-950 dark:border-violet-500 dark:bg-violet-950 dark:text-violet-100",
+  FILL_IN: "border-amber-500 bg-amber-100 text-amber-950 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-100",
 };
 
 const normaliseMembershipType = (membershipType: DisplayMembershipType) => {
