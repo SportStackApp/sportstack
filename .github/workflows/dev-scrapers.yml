@@ -21,6 +21,7 @@ on:
           - wimmera
           - player-registry
           - player-history
+          - storage-diagnostics
       upload_to_supabase:
         description: Upload match scraper results to Dev Supabase
         required: true
@@ -35,6 +36,29 @@ env:
   PYTHONUNBUFFERED: "1"
 
 jobs:
+  storage-diagnostics:
+    name: Inspect Dev Storage usage
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.task == 'storage-diagnostics'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Report read-only Dev Storage usage
+        env:
+          SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
+        run: python scripts/inspect_supabase_storage_usage.py
+
   hockey-ballarat:
     name: Hockey Ballarat to Dev
     if: >-
