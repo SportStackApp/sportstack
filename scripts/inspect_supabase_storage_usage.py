@@ -14,7 +14,7 @@ from collections.abc import Iterable, Iterator
 from typing import Any
 from urllib.error import HTTPError
 from urllib.parse import quote, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 EXPECTED_DEV_PROJECT_REF = "icqegnpjbizccjebjfhb"
 EXPECTED_DEV_HOST = f"{EXPECTED_DEV_PROJECT_REF}.supabase.co"
@@ -23,6 +23,23 @@ PAGE_SIZE = 1000
 
 class UnsafeTargetError(RuntimeError):
     """Raised when the diagnostic is pointed anywhere except SportStack Dev."""
+
+
+class RejectRedirects(HTTPRedirectHandler):
+    """Stop before a credential-bearing Storage request follows any redirect."""
+
+    def redirect_request(
+        self,
+        req: Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> Request | None:
+        raise UnsafeTargetError(
+            f"Refusing redirected Storage API request (HTTP {code})"
+        )
 
 
 def require_env(name: str) -> str:
@@ -34,7 +51,18 @@ def require_env(name: str) -> str:
 
 def validate_dev_target(supabase_url: str) -> str:
     parsed = urlparse(supabase_url)
-    if parsed.scheme != "https" or parsed.hostname != EXPECTED_DEV_HOST:
+    is_canonical_dev_url = (
+        parsed.scheme == "https"
+        and parsed.netloc == EXPECTED_DEV_HOST
+        and parsed.hostname == EXPECTED_DEV_HOST
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.path in ("", "/")
+        and not parsed.params
+        and not parsed.query
+        and not parsed.fragment
+    )
+    if not is_canonical_dev_url:
         raise UnsafeTargetError(
             f"Refusing non-Dev Supabase target; expected https://{EXPECTED_DEV_HOST}"
         )
@@ -85,8 +113,10 @@ class StorageApi:
     """Minimal read-only client for Supabase Storage metadata."""
 
     def __init__(self, supabase_url: str, service_key: str) -> None:
-        self.base_url = supabase_url.rstrip("/")
+        validate_dev_target(supabase_url)
+        self.base_url = f"https://{EXPECTED_DEV_HOST}"
         self.service_key = service_key
+        self.opener = build_opener(RejectRedirects())
 
     def _request_json(
         self,
@@ -113,7 +143,7 @@ class StorageApi:
             },
         )
         try:
-            with urlopen(request, timeout=60) as response:
+            with self.opener.open(request, timeout=60) as response:
                 return json.loads(response.read().decode("utf-8"))
         except HTTPError as error:
             raise RuntimeError(
@@ -160,7 +190,7 @@ class StorageApi:
                 if not name:
                     continue
                 metadata = entry.get("metadata")
-                if metadata is None:
+                if entry.get("id") is None:
                     child_prefix = f"{prefix}/{name}".strip("/")
                     child_top_level = top_level_prefix or name
                     yield from self._iter_folder(

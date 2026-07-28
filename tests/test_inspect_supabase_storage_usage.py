@@ -36,6 +36,58 @@ class SupabaseStorageUsageTests(unittest.TestCase):
                 "https://icqegnpjbizccjebjfhb.supabase.co.example.com"
             )
 
+    def test_rejects_noncanonical_dev_base_urls(self) -> None:
+        for url in (
+            "https://user:password@icqegnpjbizccjebjfhb.supabase.co",
+            "https://icqegnpjbizccjebjfhb.supabase.co:444",
+            "https://icqegnpjbizccjebjfhb.supabase.co/storage/v1",
+            "https://icqegnpjbizccjebjfhb.supabase.co?redirect=example.com",
+            "https://icqegnpjbizccjebjfhb.supabase.co#fragment",
+        ):
+            with self.subTest(url=url):
+                with self.assertRaises(storage_usage.UnsafeTargetError):
+                    storage_usage.validate_dev_target(url)
+
+    def test_storage_client_installs_a_redirect_rejecting_opener(self) -> None:
+        inspector = storage_usage.StorageApi(
+            "https://icqegnpjbizccjebjfhb.supabase.co",
+            "test-key",
+        )
+        opener = getattr(inspector, "opener", None)
+
+        self.assertIsNotNone(opener, "Storage client must use an explicit URL opener")
+        redirect_handler = next(
+            (
+                handler
+                for handler in opener.handlers
+                if isinstance(handler, storage_usage.RejectRedirects)
+            ),
+            None,
+        )
+        self.assertIsNotNone(
+            redirect_handler,
+            "Storage client must reject redirects before credentials can cross hosts",
+        )
+        request = storage_usage.Request(
+            "https://icqegnpjbizccjebjfhb.supabase.co/storage/v1/bucket",
+            headers={
+                "Authorization": "Bearer test-key",
+                "apikey": "test-key",
+            },
+        )
+        with self.assertRaisesRegex(
+            storage_usage.UnsafeTargetError,
+            "redirected Storage API request",
+        ):
+            redirect_handler.redirect_request(
+                request,
+                None,
+                302,
+                "Found",
+                {},
+                "https://example.com/capture",
+            )
+
     def test_summary_aggregates_sizes_without_object_paths(self) -> None:
         summary = storage_usage.summarise_objects(
             [
@@ -81,15 +133,31 @@ class SupabaseStorageUsageTests(unittest.TestCase):
         )
         pages = {
             ("", 0): [
-                {"name": "hockey-ballarat", "metadata": None},
-                {"name": "private-root-a.json", "metadata": {"size": 5}},
+                {"id": None, "name": "hockey-ballarat", "metadata": None},
+                {
+                    "id": "root-a",
+                    "name": "private-root-a.json",
+                    "metadata": {"size": 5},
+                },
             ],
             ("", 2): [
-                {"name": "private-root-b.json", "metadata": {"size": "7"}},
+                {
+                    "id": "root-b",
+                    "name": "private-root-b.json",
+                    "metadata": {"size": "7"},
+                },
             ],
             ("hockey-ballarat", 0): [
-                {"name": "private-one.json", "metadata": {"size": 11}},
-                {"name": "private-two.json", "metadata": {"size": 13}},
+                {
+                    "id": "one",
+                    "name": "private-one.json",
+                    "metadata": {"size": 11},
+                },
+                {
+                    "id": "two",
+                    "name": "private-two.json",
+                    "metadata": {"size": 13},
+                },
             ],
             ("hockey-ballarat", 2): [],
         }
@@ -160,6 +228,40 @@ class SupabaseStorageUsageTests(unittest.TestCase):
             "private-two.json",
         ):
             self.assertNotIn(object_name, report_text)
+
+    def test_object_with_null_metadata_is_counted_not_treated_as_folder(self) -> None:
+        inspector = storage_usage.StorageApi(
+            "https://icqegnpjbizccjebjfhb.supabase.co",
+            "test-key",
+        )
+
+        def fake_request(
+            method: str,
+            path: str,
+            payload: dict[str, object] | None = None,
+        ) -> object:
+            assert payload is not None
+            if payload["prefix"] == "":
+                return [
+                    {
+                        "id": "object-1",
+                        "name": "private-null-metadata.json",
+                        "metadata": None,
+                    }
+                ]
+            return []
+
+        with mock.patch.object(
+            inspector,
+            "_request_json",
+            side_effect=fake_request,
+        ):
+            records = list(inspector.iter_objects("scrape-backups"))
+
+        self.assertEqual(
+            [{"top_level_prefix": "__root__", "size": 0}],
+            records,
+        )
 
 
 if __name__ == "__main__":
