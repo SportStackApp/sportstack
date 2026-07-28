@@ -124,6 +124,69 @@ After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
 
+Date: 2026-07-29
+
+What changed:
+
+- Investigated the failed `Dev Supabase Scrapers` fixture import from GitHub Actions logs. The
+  installed Player MVP Voting trigger function used invalid `pg_catalog.greatest(...)`, causing
+  fixture upserts to fail with SQLSTATE `42883`.
+- Added the forward-only migration
+  `20260729010000_fix_mvp_initial_close_at_greatest.sql`; it replaces the invalid call with
+  PostgreSQL's valid unqualified `greatest(...)` expression and preserves the hardened function
+  privileges. The historical migration was not rewritten.
+- Added a manual Dev-only Storage metadata diagnostic to `dev-scrapers.yml`. It accepts only the
+  canonical SportStack Dev Supabase URL, rejects redirects and every mutation endpoint, and omits
+  individual object names and secret values from its report.
+- A late independent review found that the first diagnostic version could follow a redirect with
+  credential headers and could mistake an object with nullable metadata for a folder. Run
+  `30372402203` was cancelled, follow-up commit `3a2afca` corrected both defects, and corrected run
+  `30373160637` completed successfully.
+- The corrected read-only run measured 791,008,706 bytes across 537 Dev Storage objects
+  (0.736684 GiB). The `scrape-backups` bucket accounts for 785,438,860 bytes across 524 objects;
+  Hockey Ballarat is 435,878,127 bytes, Sunraysia 330,456,412 bytes, Wimmera 15,439,496 bytes,
+  player history 2,009,724 bytes and player registry 1,655,101 bytes. No object was deleted.
+
+Checks run:
+
+- All 38 Python tests and Python compilation checks passed, including canonical target, redirect
+  rejection, mutation-route rejection, recursive pagination, nullable-metadata object counting
+  and output privacy regressions.
+- PostgreSQL 16 behavioural validation, workflow YAML parsing, `git diff --check`,
+  `npx tsc --noEmit` and `npm run build` passed.
+- Independent diff-only review passed the final redirect and object-discrimination correction.
+- Full `npm run lint` remains at the known repository-wide baseline of 229 errors and 50 warnings;
+  the incident changes did not attempt unrelated lint cleanup.
+
+Deployment state:
+
+- Commits `2955e6e` and `3a2afca` are pushed to `origin/dev`; the Dev worktree is clean and aligned
+  with the remote.
+- The additive SQL repair is committed but remains unapplied to the hosted Dev database. Repository
+  secrets contain no Dev database password or Supabase access token, local Supabase CLI state is
+  unlinked, and `supabase/config.toml` identifies Production, so no blind `supabase db push` was
+  attempted.
+- The normal Dev fixture import has not been rerun because its installed database trigger remains
+  faulty until the additive repair is applied.
+- `main`, `prod`, Production Supabase, Production Storage and Production deployment remain
+  untouched.
+
+What Aaron should test next:
+
+- Authenticate the SportStack Dev Supabase dashboard, verify the currently installed
+  `private.mvp_initial_close_at` definition, apply only the reviewed additive repair, then rerun the
+  Dev fixture import and confirm SQLSTATE `42883` no longer occurs.
+- Prepare a read-only retention dry-run for `scrape-backups` and review recoverable bytes before
+  approving any deletion. Do not delete backups solely from the aggregate totals above.
+
+Risk level:
+
+- Medium. The code and workflow changes are Dev-only and the Storage inspection was read-only. A
+  database migration is included but has not been applied. No destructive or Production action
+  occurred.
+
+### Previous handoff entries
+
 Date: 2026-07-25
 
 What changed:
@@ -182,8 +245,6 @@ Risk level:
 
 - Medium. This includes additive Dev RLS changes. No destructive database action or Production
   change was performed.
-
-### Previous handoff entries
 
 Date: 2026-07-24
 
