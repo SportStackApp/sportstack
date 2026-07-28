@@ -28,6 +28,28 @@ drifted.
 - The release path for app changes is `dev` -> `main` -> `prod`. Promotion to `prod` requires
   separate owner approval because it changes the public production deployment.
 
+## Development autonomy and production boundary
+
+- Routine, non-destructive work on `dev` and `main` is owner-pre-approved. Agents may inspect,
+  edit, test, commit and push to either branch without asking for each action, provided the
+  required quality checks are run and the intended branch and diff are verified first.
+- Intentional `dev` -> `main` staging promotions are also pre-approved after fetching both branches,
+  reviewing their divergence and verifying that only the intended tested commits will move.
+  `main` is non-production, but it is public staging and shares the Dev database.
+- Non-destructive Dev-database work and additive Dev-only migrations, RLS/Auth changes, role-enum
+  additions and Edge Function changes may proceed when required by the task only after checking the
+  live Dev schema, completing an appropriate dry-run or rollback test, and documenting the result.
+- `prod` and every production system remain restricted. Any `prod` commit, push or merge;
+  production deployment; Production database, Auth, Storage, Edge Function or secret change; or
+  production DNS, Cloudflare, Vercel or automation-policy change requires explicit owner approval.
+- Branch autonomy does not authorise force-pushes, history rewrites, branch deletion, check bypass,
+  destructive database operations, secret disclosure or changing remote protection rules. These
+  remain separately controlled.
+- Keep Hermes command approvals in `smart` mode. Do not disable global safety controls to implement
+  branch-specific autonomy.
+- For unattended work, follow `docs/overnight-agent-plan.md`; its narrower overnight boundaries
+  override the broader daytime `dev`/`main` autonomy for that run.
+
 ## Source of truth order
 1. `AGENTS.md`
 2. `docs/current-state.md`
@@ -73,10 +95,13 @@ There is no automated test suite yet. Do the relevant manual smoke test and say 
   `className="w-64 max-w-xs"`; truncate with ellipsis, never widen columns.
 
 ## Safety rules
-- **Confirm with the owner before:** any destructive DB op (DELETE/DROP/TRUNCATE), any schema
-  migration, any change to RLS/auth/Edge Functions/the role enum, anything touching secrets, and
-  any merge or push to `prod`. Workflow changes merged to the default `main` branch can also alter
-  scheduled live automation and require confirmation.
+- **Confirm with the owner before:** any destructive DB op (DELETE/DROP/TRUNCATE), anything touching
+  secrets, any Production-system change, and any merge or push to `prod`.
+- Dev-only additive schema, RLS/Auth, Edge Function and role-enum work follows the pre-approved
+  non-production gates in `Development autonomy and production boundary` above.
+- Workflow changes may move through `dev` and `main` without separate approval only when review
+  proves they use Dev targets exclusively. Any workflow path capable of selecting Production,
+  using Production secrets or changing production schedules requires explicit owner approval.
 - Never read, print, or expose `.env` / `.env.local` or the Supabase **service** key.
 - The frontend may only use the **anon/publishable** key. The service key is server/CI-only.
 - If a fact isn't in the handoff docs, latest repo history, or the live DB, mark it `UNKNOWN — needs confirmation` and ask.
@@ -109,7 +134,10 @@ There is no automated test suite yet. Do the relevant manual smoke test and say 
   `main` to `prod`; a `prod` push triggers the Vercel production deployment.
 - `.github/workflows/*.yml` are a special case because scheduled workflows run from GitHub's
   default branch (`main`) and select Dev or Production through different secret names. Review the
-  target secrets and get owner confirmation before merging workflow changes to `main`.
+  target secrets before merging workflow changes to `main`; get owner confirmation whenever a
+  Production target, Production secret selector or production schedule can be affected.
+- Never force-push `dev`, `main` or `prod`, rewrite their history, delete them or bypass required
+  checks without explicit owner approval.
 - Branches: `fix/…`, `feat/…`, `chore/…`. Commits: `type(scope): summary`.
 
 ## How to report completed work

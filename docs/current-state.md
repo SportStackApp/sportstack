@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-07-25
+Last updated: 2026-07-29
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -30,8 +30,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
 
 ## Current priority
 
-Keep work focused on the existing SportStack web app and the daily dashboard,
-availability and communications owner-test cycle.
+SportStack and its supporting processes are Aaron's primary focus, representing approximately 90%
+of planned work. Keep effort on the existing SportStack web app, its data/import reliability,
+deployment path and the daily dashboard, availability and communications owner-test cycle.
 
 Near-term priority areas:
 
@@ -69,6 +70,8 @@ The backend is Supabase: Postgres, Auth, Storage, Row Level Security, and Edge F
 
 - App changes go to `dev` first, then `main` for staging, then `prod` after explicit production
   approval.
+- Routine tested work, commits and pushes on `dev` and `main`, including intentional staging
+  promotions, are owner-pre-approved. Verify branch divergence and the exact promotion set first.
 - A push to `prod` triggers the public Vercel production deployment.
 - Workflow files are a special case: scheduled GitHub Actions run from the default `main` branch
   and select Dev or Production using different secret names. Confirm the target before changing
@@ -76,7 +79,18 @@ The backend is Supabase: Postgres, Auth, Storage, Row Level Security, and Edge F
 - Treat Production data as real. Dev/main share one non-production database and can affect each
   other's test data.
 - Do not expose `.env`, `.env.local`, Supabase service-role keys, private Player MVP Voting tokens, or other secrets.
-- Non-destructive work on Development is pre-approved. Still confirm before destructive database work, secrets work, any `main` or `prod` promotion, and any Production change.
+- Non-destructive work on Development is pre-approved. Additive Dev-only migrations, RLS/Auth,
+  Edge Function and role-enum work may proceed with live-schema verification, dry-run or rollback
+  testing and documented results.
+- Still confirm before destructive database work, secrets work, any `prod` promotion and every
+  Production change. Force-pushes, history rewrites, branch deletion and check bypass remain
+  separately restricted.
+- GitHub API inspection on 29 July 2026 found no classic branch protection or repository rulesets
+  on `dev`, `main` or `prod`. The production boundary is currently procedural until a reviewed
+  remote `prod` protection policy is approved and applied.
+- Bounded unattended work follows `docs/overnight-agent-plan.md`. The initial overnight scope keeps
+  all edits on `dev`, blocks database writes and does not promote the 18 pending Dev commits to
+  `main` automatically.
 - Use Australian English in user-facing text.
 - Use `DD/MM/YYYY` dates and respect the association timezone where relevant.
 
