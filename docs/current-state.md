@@ -146,6 +146,11 @@ What changed:
   (0.736684 GiB). The `scrape-backups` bucket accounts for 785,438,860 bytes across 524 objects;
   Hockey Ballarat is 435,878,127 bytes, Sunraysia 330,456,412 bytes, Wimmera 15,439,496 bytes,
   player history 2,009,724 bytes and player registry 1,655,101 bytes. No object was deleted.
+- Supabase documents Storage Size as an organisation-level GB-hours metric: effectively the
+  billing-period average, with all projects shown by default. The screenshot's approximately
+  1.18 GB therefore does not conflict with Dev's 0.791 GB live byte count; the remaining split
+  between other projects and earlier usage is unconfirmed until dashboard authentication is
+  available.
 
 Checks run:
 
