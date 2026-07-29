@@ -92,6 +92,11 @@ the installed function after migration 16.
 `supabase/pending-migrations/lock_down_mvp_voting_access.sql` remains deliberately parked. It is not
 part of this release and must not be applied without the separately approved Player MVP pilot gate.
 
+The 29 July read-only Umpire Match Voting preflight still matches the migration's guarded baseline:
+271 vote lines, snapshot checksum `64e69e27af02befeae361a75c9046f6c`, exactly one audit actor and
+no duplicate non-empty profile RevSports IDs. The seven existing vote-edit rows predate the
+backfill. Repeat this check immediately before applying the migration.
+
 ## Edge Functions and scheduled work
 
 - Update `mvp-voting-email-reminders` from current source. The deployed Production source does not

@@ -158,6 +158,9 @@ Checks run:
   job is absent because its migration and function are not yet deployed.
 - Confirmed live Production `send-profile-access-link` already contains the current safe RevSports
   ID transfer behaviour and does not need a release solely for its Git diff.
+- The read-only Production Umpire Match Voting preflight matched the guarded backfill baseline:
+  271 vote lines, the expected snapshot checksum, one audit actor and no duplicate non-empty
+  profile RevSports IDs.
 - Supabase security advisers were run read-only. Their broader existing findings remain a separate
   reviewed backlog; no security setting or policy was changed.
 
