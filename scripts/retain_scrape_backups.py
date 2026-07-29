@@ -1,25 +1,75 @@
-"""Plan tiered retention for SportStack Dev scraper backups.
+"""Plan or apply guarded retention for SportStack Dev scraper backups.
 
 Backups are grouped by upload-run prefixes of the form
-``source/YYYY/MM/DD/HHMMSS``. Planning is pure and performs no Storage I/O.
+``source/YYYY/MM/DD/HHMMSS``. Dry-run planning is read-only; apply requires
+exact approved aggregate guards and verifies the resulting Storage inventory.
 """
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
+import re
 from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.error import HTTPError
 from urllib.parse import quote
+from urllib.request import Request
 
 RECENT_WINDOW = timedelta(days=7)
 WEEKLY_ARCHIVE_END = timedelta(days=21)
 BACKUP_BUCKET = "scrape-backups"
 PAGE_SIZE = 1000
 EXPECTED_DEV_PROJECT_REF = "icqegnpjbizccjebjfhb"
+
+
+class DevRetentionStorageApi:
+    """Dev-only adapter that adds one guarded bulk-delete operation."""
+
+    def __init__(self, reader: Any) -> None:
+        expected_base_url = f"https://{EXPECTED_DEV_PROJECT_REF}.supabase.co"
+        if reader.base_url != expected_base_url:
+            raise RuntimeError("Refusing retention client with a non-Dev base URL")
+        self.reader = reader
+
+    def _request_json(
+        self,
+        method: str,
+        path: str,
+        payload: dict[str, Any] | None = None,
+    ) -> Any:
+        return self.reader._request_json(method, path, payload)
+
+    def delete_objects(self, paths: list[str]) -> None:
+        if not paths:
+            raise RuntimeError("Refusing an empty retention deletion request")
+        if len(paths) != len(set(paths)):
+            raise RuntimeError("Refusing duplicate retention deletion paths")
+        if any(_parse_run(path) is None for path in paths):
+            raise RuntimeError("Refusing non-canonical retention deletion paths")
+
+        body = json.dumps({"prefixes": paths}, separators=(",", ":")).encode("utf-8")
+        request = Request(
+            f"{self.reader.base_url}/storage/v1/object/{BACKUP_BUCKET}",
+            data=body,
+            method="DELETE",
+            headers={
+                "Authorization": f"Bearer {self.reader.service_key}",
+                "apikey": self.reader.service_key,
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with self.reader.opener.open(request, timeout=60) as response:
+                response.read()
+        except HTTPError as error:
+            raise RuntimeError(
+                f"Storage API returned HTTP {error.code} for guarded retention deletion"
+            ) from error
 
 
 def iter_backup_objects(
@@ -50,11 +100,14 @@ def iter_backup_objects(
                 raise RuntimeError("Unexpected response from Storage object list")
             for entry in result:
                 if not isinstance(entry, dict):
-                    continue
-                name = str(entry.get("name") or "").strip("/")
-                if not name:
-                    continue
-                path = f"{prefix}/{name}".strip("/")
+                    raise RuntimeError("Storage listing contains a malformed entry")
+                raw_name = entry.get("name")
+                if not isinstance(raw_name, str):
+                    raise RuntimeError("Storage listing contains a malformed object name")
+                if not raw_name or "/" in raw_name:
+                    raise RuntimeError("Storage listing contains a malformed object name")
+                name = raw_name
+                path = name if not prefix else f"{prefix}/{name}"
                 if entry.get("id") is None:
                     yield from iter_folder(path)
                     continue
@@ -262,6 +315,22 @@ def build_public_report(
     }
 
 
+def _validated_inventory_paths(
+    records: list[dict[str, Any]],
+    *,
+    context: str,
+) -> set[str]:
+    paths: list[str] = []
+    for record in records:
+        path = record.get("path")
+        if not isinstance(path, str) or not path:
+            raise RuntimeError(f"{context} inventory contains a malformed object path")
+        paths.append(path)
+    if len(paths) != len(set(paths)):
+        raise RuntimeError(f"{context} inventory contains duplicate object paths")
+    return set(paths)
+
+
 def run_dry_run(
     client: Any,
     *,
@@ -275,6 +344,7 @@ def run_dry_run(
             f"Refusing non-Dev retention target; expected {EXPECTED_DEV_PROJECT_REF}"
         )
     records = list(iter_backup_objects(client))
+    _validated_inventory_paths(records, context="Retention dry-run")
     plan = build_retention_plan(records, as_of=as_of)
     report = build_public_report(records, plan, as_of=as_of)
     report.update(
@@ -286,7 +356,120 @@ def run_dry_run(
     return report
 
 
-def main() -> None:
+def run_apply(
+    client: Any,
+    *,
+    project_ref: str,
+    as_of: datetime,
+    expected_delete_count: int,
+    expected_delete_bytes: int,
+    expected_plan_sha256: str,
+) -> dict[str, Any]:
+    """Apply only a retention plan matching every approved aggregate guard."""
+
+    if project_ref != EXPECTED_DEV_PROJECT_REF:
+        raise RuntimeError(
+            f"Refusing non-Dev retention target; expected {EXPECTED_DEV_PROJECT_REF}"
+        )
+    records = list(iter_backup_objects(client))
+    _validated_inventory_paths(records, context="Retention apply")
+
+    plan = build_retention_plan(records, as_of=as_of)
+    report = build_public_report(records, plan, as_of=as_of)
+    actual_count = int(report["objects"]["delete"])
+    actual_bytes = int(report["bytes"]["delete"])
+    actual_digest = str(report["plan_sha256"])
+
+    if actual_count != expected_delete_count:
+        raise RuntimeError(
+            "Retention apply object count mismatch: "
+            f"expected {expected_delete_count}, found {actual_count}"
+        )
+    if actual_bytes != expected_delete_bytes:
+        raise RuntimeError(
+            "Retention apply byte count mismatch: "
+            f"expected {expected_delete_bytes}, found {actual_bytes}"
+        )
+    if actual_digest != expected_plan_sha256:
+        raise RuntimeError("Retention apply plan SHA-256 mismatch")
+
+    delete_error: Exception | None = None
+    try:
+        client.delete_objects(list(plan["delete_paths"]))
+    except Exception as error:
+        delete_error = error
+
+    try:
+        after_records = list(iter_backup_objects(client))
+        after_paths = _validated_inventory_paths(
+            after_records,
+            context="Post-delete",
+        )
+    except Exception as verification_error:
+        raise RuntimeError(
+            "Retention delete outcome is unknown because post-delete "
+            "verification could not complete; do not retry automatically"
+        ) from verification_error
+
+    delete_paths = set(plan["delete_paths"])
+    keep_paths = set(plan["keep_paths"])
+    remaining_delete_count = len(delete_paths & after_paths)
+    missing_keep_count = len(keep_paths - after_paths)
+    if remaining_delete_count or missing_keep_count:
+        raise RuntimeError(
+            "Retention post-delete verification failed: "
+            f"{remaining_delete_count} deletion candidates remain and "
+            f"{missing_keep_count} retained objects are missing"
+        )
+
+    report.update(
+        {
+            "mode": "apply",
+            "apply_outcome": (
+                "verified-after-uncertain-request" if delete_error else "verified"
+            ),
+            "project_ref": project_ref,
+            "bucket": BACKUP_BUCKET,
+            "post_delete_verification": {
+                "objects": len(after_records),
+                "bytes": sum(_safe_size(record) for record in after_records),
+                "approved_deletion_objects_remaining": remaining_delete_count,
+                "approved_keep_objects_missing": missing_keep_count,
+            },
+        }
+    )
+    return report
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Plan or apply guarded SportStack Dev scrape-backup retention"
+    )
+    parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--expected-delete-count", type=int)
+    parser.add_argument("--expected-delete-bytes", type=int)
+    parser.add_argument("--expected-plan-sha256")
+    args = parser.parse_args(argv)
+
+    guards = (
+        args.expected_delete_count,
+        args.expected_delete_bytes,
+        args.expected_plan_sha256,
+    )
+    if args.apply:
+        if any(value is None for value in guards):
+            parser.error("--apply requires every expected retention guard")
+        if args.expected_delete_count <= 0 or args.expected_delete_bytes <= 0:
+            parser.error("expected deletion count and bytes must be positive")
+        if not re.fullmatch(r"[0-9a-f]{64}", args.expected_plan_sha256):
+            parser.error("expected plan SHA-256 must be 64 lowercase hexadecimal characters")
+    elif any(value is not None for value in guards):
+        parser.error("expected retention guards are valid only with --apply")
+    return args
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     try:
         from inspect_supabase_storage_usage import (
             StorageApi,
@@ -308,11 +491,23 @@ def main() -> None:
         raise RuntimeError("Missing SUPABASE_SERVICE_KEY/SUPABASE_SERVICE_ROLE_KEY")
 
     project_ref = validate_dev_target(supabase_url)
-    report = run_dry_run(
-        StorageApi(supabase_url, service_key),
-        project_ref=project_ref,
-        as_of=datetime.now(timezone.utc),
-    )
+    reader = StorageApi(supabase_url, service_key)
+    as_of = datetime.now(timezone.utc)
+    if args.apply:
+        report = run_apply(
+            DevRetentionStorageApi(reader),
+            project_ref=project_ref,
+            as_of=as_of,
+            expected_delete_count=args.expected_delete_count,
+            expected_delete_bytes=args.expected_delete_bytes,
+            expected_plan_sha256=args.expected_plan_sha256,
+        )
+    else:
+        report = run_dry_run(
+            reader,
+            project_ref=project_ref,
+            as_of=as_of,
+        )
     print(json.dumps(report, indent=2, sort_keys=True))
 
 

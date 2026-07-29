@@ -23,14 +23,31 @@ on:
           - player-history
           - storage-diagnostics
           - storage-retention-dry-run
+          - storage-retention-apply
       upload_to_supabase:
         description: Upload match scraper results to Dev Supabase
         required: true
         default: true
         type: boolean
+      retention_expected_delete_count:
+        description: Approved retention deletion object count (apply only)
+        required: false
+        type: string
+      retention_expected_delete_bytes:
+        description: Approved retention deletion byte count (apply only)
+        required: false
+        type: string
+      retention_expected_plan_sha256:
+        description: Approved retention plan SHA-256 (apply only)
+        required: false
+        type: string
 
 permissions:
   contents: read
+
+concurrency:
+  group: dev-supabase-scrapers
+  cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -82,6 +99,36 @@ jobs:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
         run: python scripts/retain_scrape_backups.py
+
+  storage-retention-apply:
+    name: Apply approved Dev scrape-backup retention
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.task == 'storage-retention-apply'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Apply exactly approved Dev scrape-backup retention plan
+        env:
+          SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
+          RETENTION_EXPECTED_DELETE_COUNT: ${{ inputs.retention_expected_delete_count }}
+          RETENTION_EXPECTED_DELETE_BYTES: ${{ inputs.retention_expected_delete_bytes }}
+          RETENTION_EXPECTED_PLAN_SHA256: ${{ inputs.retention_expected_plan_sha256 }}
+        run: |
+          python scripts/retain_scrape_backups.py --apply \
+            --expected-delete-count "$RETENTION_EXPECTED_DELETE_COUNT" \
+            --expected-delete-bytes "$RETENTION_EXPECTED_DELETE_BYTES" \
+            --expected-plan-sha256 "$RETENTION_EXPECTED_PLAN_SHA256"
 
   hockey-ballarat:
     name: Hockey Ballarat to Dev

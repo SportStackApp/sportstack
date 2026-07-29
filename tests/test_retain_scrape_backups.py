@@ -54,6 +54,32 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
         )
         self.assertEqual(set(paths) - set(plan["delete_paths"]), set(plan["keep_paths"]))
 
+    def test_exact_age_boundaries_and_sources_are_independent(self) -> None:
+        retention = load_retention_module()
+        as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
+        paths = [
+            "alpha/2026/07/22/120000/exact-seven.json",
+            "alpha/2026/07/15/120000/exact-fourteen.json",
+            "alpha/2026/07/08/120000/exact-twenty-one.json",
+            "alpha/2026/07/16/120000/delete-week-one-later.json",
+            "alpha/2026/07/09/120000/delete-week-two-later.json",
+            "beta/2026/07/16/120000/keep-beta-week-one.json",
+            "beta/2026/07/09/120000/keep-beta-week-two.json",
+        ]
+
+        plan = retention.build_retention_plan(
+            [{"path": path, "size": 1} for path in paths],
+            as_of=as_of,
+        )
+
+        self.assertEqual(
+            {
+                "alpha/2026/07/16/120000/delete-week-one-later.json",
+                "alpha/2026/07/09/120000/delete-week-two-later.json",
+            },
+            set(plan["delete_paths"]),
+        )
+
     def test_keeps_noncanonical_timestamp_paths_as_unparseable(self) -> None:
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
@@ -213,6 +239,25 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
             records,
         )
 
+    def test_backup_inventory_fails_closed_on_malformed_entry(self) -> None:
+        retention = load_retention_module()
+
+        for malformed_name in ("", "/late.json", "late.json/", "nested/late.json"):
+            with self.subTest(name=malformed_name):
+
+                class FakeStorageClient:
+                    def _request_json(self, method, path, payload=None):
+                        return [
+                            {
+                                "id": "object-1",
+                                "name": malformed_name,
+                                "metadata": {"size": 1},
+                            }
+                        ]
+
+                with self.assertRaisesRegex(RuntimeError, "malformed"):
+                    list(retention.iter_backup_objects(FakeStorageClient()))
+
     def test_run_dry_run_identifies_dev_project_and_fixed_bucket(self) -> None:
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
@@ -238,9 +283,389 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
         self.assertEqual("scrape-backups", report["bucket"])
         self.assertEqual("dry-run", report["mode"])
 
+    def test_dry_run_fails_closed_on_duplicate_object_path(self) -> None:
+        retention = load_retention_module()
+        duplicate = {
+            "path": "sunraysia/2026/06/30/100000/backup.json",
+            "size": 20,
+        }
+
+        with mock.patch.object(
+            retention,
+            "iter_backup_objects",
+            return_value=iter([duplicate, duplicate]),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "duplicate"):
+                retention.run_dry_run(
+                    object(),
+                    project_ref="icqegnpjbizccjebjfhb",
+                    as_of=datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc),
+                )
+
+    def test_apply_count_mismatch_aborts_before_delete(self) -> None:
+        retention = load_retention_module()
+        as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
+        records = [
+            {
+                "path": "sunraysia/2026/06/30/100000/delete.json",
+                "size": 20,
+            },
+            {
+                "path": "sunraysia/2026/06/01/100000/keep.json",
+                "size": 30,
+            },
+        ]
+
+        class FakeDeleteClient:
+            def __init__(self) -> None:
+                self.delete_calls: list[list[str]] = []
+
+            def delete_objects(self, paths: list[str]) -> None:
+                self.delete_calls.append(paths)
+
+        client = FakeDeleteClient()
+        with mock.patch.object(
+            retention,
+            "iter_backup_objects",
+            return_value=iter(records),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "object count"):
+                retention.run_apply(
+                    client,
+                    project_ref="icqegnpjbizccjebjfhb",
+                    as_of=as_of,
+                    expected_delete_count=2,
+                    expected_delete_bytes=20,
+                    expected_plan_sha256="0" * 64,
+                )
+
+        self.assertEqual([], client.delete_calls)
+
+    def test_apply_byte_and_digest_mismatches_abort_before_delete(self) -> None:
+        retention = load_retention_module()
+        as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
+        records = [
+            {"path": "sunraysia/2026/06/30/100000/delete.json", "size": 20},
+            {"path": "sunraysia/2026/06/01/100000/keep.json", "size": 30},
+        ]
+        plan = retention.build_retention_plan(records, as_of=as_of)
+        approved = retention.build_public_report(records, plan, as_of=as_of)
+
+        cases = [
+            (
+                "bytes",
+                21,
+                approved["plan_sha256"],
+                "byte count",
+            ),
+            (
+                "digest",
+                20,
+                "0" * 64,
+                "SHA-256",
+            ),
+        ]
+        for label, expected_bytes, expected_digest, error_pattern in cases:
+            with self.subTest(label=label):
+                client = mock.Mock()
+                with mock.patch.object(
+                    retention,
+                    "iter_backup_objects",
+                    return_value=iter(records),
+                ):
+                    with self.assertRaisesRegex(RuntimeError, error_pattern):
+                        retention.run_apply(
+                            client,
+                            project_ref="icqegnpjbizccjebjfhb",
+                            as_of=as_of,
+                            expected_delete_count=1,
+                            expected_delete_bytes=expected_bytes,
+                            expected_plan_sha256=expected_digest,
+                        )
+                client.delete_objects.assert_not_called()
+
+    def test_apply_verifies_deleted_and_retained_objects(self) -> None:
+        retention = load_retention_module()
+        as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
+        delete_path = "sunraysia/2026/06/30/100000/delete.json"
+        keep_path = "sunraysia/2026/06/01/100000/keep.json"
+        before = [
+            {"path": delete_path, "size": 20},
+            {"path": keep_path, "size": 30},
+        ]
+        after = [{"path": keep_path, "size": 30}]
+        plan = retention.build_retention_plan(before, as_of=as_of)
+        approved = retention.build_public_report(before, plan, as_of=as_of)
+
+        class FakeDeleteClient:
+            def __init__(self) -> None:
+                self.delete_calls: list[list[str]] = []
+
+            def delete_objects(self, paths: list[str]) -> None:
+                self.delete_calls.append(paths)
+
+        client = FakeDeleteClient()
+        with mock.patch.object(
+            retention,
+            "iter_backup_objects",
+            side_effect=[iter(before), iter(after)],
+        ):
+            report = retention.run_apply(
+                client,
+                project_ref="icqegnpjbizccjebjfhb",
+                as_of=as_of,
+                expected_delete_count=1,
+                expected_delete_bytes=20,
+                expected_plan_sha256=approved["plan_sha256"],
+            )
+
+        self.assertEqual([[delete_path]], client.delete_calls)
+        self.assertEqual(
+            {
+                "objects": 1,
+                "bytes": 30,
+                "approved_deletion_objects_remaining": 0,
+                "approved_keep_objects_missing": 0,
+            },
+            report["post_delete_verification"],
+        )
+        report_text = json.dumps(report, sort_keys=True)
+        self.assertNotIn(delete_path, report_text)
+        self.assertNotIn(keep_path, report_text)
+
+    def test_apply_fails_if_a_deletion_candidate_remains(self) -> None:
+        retention = load_retention_module()
+        as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
+        before = [
+            {"path": "sunraysia/2026/06/30/100000/delete.json", "size": 20},
+            {"path": "sunraysia/2026/06/01/100000/keep.json", "size": 30},
+        ]
+        plan = retention.build_retention_plan(before, as_of=as_of)
+        approved = retention.build_public_report(before, plan, as_of=as_of)
+        client = mock.Mock()
+
+        with mock.patch.object(
+            retention,
+            "iter_backup_objects",
+            side_effect=[iter(before), iter(before)],
+        ):
+            with self.assertRaisesRegex(RuntimeError, "post-delete verification"):
+                retention.run_apply(
+                    client,
+                    project_ref="icqegnpjbizccjebjfhb",
+                    as_of=as_of,
+                    expected_delete_count=1,
+                    expected_delete_bytes=20,
+                    expected_plan_sha256=approved["plan_sha256"],
+                )
+        client.delete_objects.assert_called_once()
+
+    def test_apply_fails_if_an_approved_retained_object_is_missing(self) -> None:
+        retention = load_retention_module()
+        as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
+        before = [
+            {"path": "sunraysia/2026/06/30/100000/delete.json", "size": 20},
+            {"path": "sunraysia/2026/06/01/100000/keep.json", "size": 30},
+        ]
+        plan = retention.build_retention_plan(before, as_of=as_of)
+        approved = retention.build_public_report(before, plan, as_of=as_of)
+        client = mock.Mock()
+
+        with mock.patch.object(
+            retention,
+            "iter_backup_objects",
+            side_effect=[iter(before), iter([])],
+        ):
+            with self.assertRaisesRegex(RuntimeError, "retained objects are missing"):
+                retention.run_apply(
+                    client,
+                    project_ref="icqegnpjbizccjebjfhb",
+                    as_of=as_of,
+                    expected_delete_count=1,
+                    expected_delete_bytes=20,
+                    expected_plan_sha256=approved["plan_sha256"],
+                )
+        client.delete_objects.assert_called_once()
+
+    def test_apply_verifies_after_uncertain_delete_outcome(self) -> None:
+        retention = load_retention_module()
+        as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
+        delete_path = "sunraysia/2026/06/30/100000/delete.json"
+        keep_path = "sunraysia/2026/06/01/100000/keep.json"
+        before = [
+            {"path": delete_path, "size": 20},
+            {"path": keep_path, "size": 30},
+        ]
+        after = [{"path": keep_path, "size": 30}]
+        plan = retention.build_retention_plan(before, as_of=as_of)
+        approved = retention.build_public_report(before, plan, as_of=as_of)
+        client = mock.Mock()
+        client.delete_objects.side_effect = TimeoutError("simulated uncertain outcome")
+
+        with mock.patch.object(
+            retention,
+            "iter_backup_objects",
+            side_effect=[iter(before), iter(after)],
+        ) as inventory:
+            report = retention.run_apply(
+                client,
+                project_ref="icqegnpjbizccjebjfhb",
+                as_of=as_of,
+                expected_delete_count=1,
+                expected_delete_bytes=20,
+                expected_plan_sha256=approved["plan_sha256"],
+            )
+
+        self.assertEqual(2, inventory.call_count)
+        self.assertEqual("verified-after-uncertain-request", report["apply_outcome"])
+        self.assertEqual(0, report["post_delete_verification"]["approved_deletion_objects_remaining"])
+        self.assertEqual(0, report["post_delete_verification"]["approved_keep_objects_missing"])
+
+    def test_apply_reports_unknown_when_uncertain_delete_cannot_be_verified(self) -> None:
+        retention = load_retention_module()
+        as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
+        before = [
+            {"path": "sunraysia/2026/06/30/100000/delete.json", "size": 20},
+            {"path": "sunraysia/2026/06/01/100000/keep.json", "size": 30},
+        ]
+        plan = retention.build_retention_plan(before, as_of=as_of)
+        approved = retention.build_public_report(before, plan, as_of=as_of)
+        client = mock.Mock()
+        client.delete_objects.side_effect = TimeoutError("simulated uncertain outcome")
+
+        with mock.patch.object(
+            retention,
+            "iter_backup_objects",
+            side_effect=[iter(before), RuntimeError("simulated verification failure")],
+        ) as inventory:
+            with self.assertRaisesRegex(RuntimeError, "outcome is unknown"):
+                retention.run_apply(
+                    client,
+                    project_ref="icqegnpjbizccjebjfhb",
+                    as_of=as_of,
+                    expected_delete_count=1,
+                    expected_delete_bytes=20,
+                    expected_plan_sha256=approved["plan_sha256"],
+                )
+
+        self.assertEqual(2, inventory.call_count)
+        client.delete_objects.assert_called_once()
+
+    def test_apply_reports_unknown_when_successful_delete_cannot_be_verified(self) -> None:
+        retention = load_retention_module()
+        as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
+        before = [
+            {"path": "sunraysia/2026/06/30/100000/delete.json", "size": 20},
+            {"path": "sunraysia/2026/06/01/100000/keep.json", "size": 30},
+        ]
+        plan = retention.build_retention_plan(before, as_of=as_of)
+        approved = retention.build_public_report(before, plan, as_of=as_of)
+        client = mock.Mock()
+
+        with mock.patch.object(
+            retention,
+            "iter_backup_objects",
+            side_effect=[iter(before), RuntimeError("simulated post-list failure")],
+        ):
+            with self.assertRaisesRegex(RuntimeError, "outcome is unknown"):
+                retention.run_apply(
+                    client,
+                    project_ref="icqegnpjbizccjebjfhb",
+                    as_of=as_of,
+                    expected_delete_count=1,
+                    expected_delete_bytes=20,
+                    expected_plan_sha256=approved["plan_sha256"],
+                )
+        client.delete_objects.assert_called_once()
+
+    def test_apply_reports_unknown_for_invalid_post_delete_inventory(self) -> None:
+        retention = load_retention_module()
+        as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
+        delete_record = {
+            "path": "sunraysia/2026/06/30/100000/delete.json",
+            "size": 20,
+        }
+        keep_record = {
+            "path": "sunraysia/2026/06/01/100000/keep.json",
+            "size": 30,
+        }
+        before = [delete_record, keep_record]
+        plan = retention.build_retention_plan(before, as_of=as_of)
+        approved = retention.build_public_report(before, plan, as_of=as_of)
+        client = mock.Mock()
+        client.delete_objects.side_effect = TimeoutError("simulated uncertain outcome")
+
+        with mock.patch.object(
+            retention,
+            "iter_backup_objects",
+            side_effect=[iter(before), iter([keep_record, keep_record])],
+        ):
+            with self.assertRaisesRegex(RuntimeError, "outcome is unknown"):
+                retention.run_apply(
+                    client,
+                    project_ref="icqegnpjbizccjebjfhb",
+                    as_of=as_of,
+                    expected_delete_count=1,
+                    expected_delete_bytes=20,
+                    expected_plan_sha256=approved["plan_sha256"],
+                )
+        client.delete_objects.assert_called_once()
+
+    def test_delete_adapter_uses_exact_fixed_bucket_endpoint(self) -> None:
+        retention = load_retention_module()
+        path = "sunraysia/2026/06/30/100000/backup.json"
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self) -> bytes:
+                return b"[]"
+
+        class FakeOpener:
+            def __init__(self) -> None:
+                self.requests = []
+
+            def open(self, request, timeout: int):
+                self.requests.append((request, timeout))
+                return FakeResponse()
+
+        class FakeReader:
+            base_url = "https://icqegnpjbizccjebjfhb.supabase.co"
+            service_key = "fake-test-key"
+
+            def __init__(self) -> None:
+                self.opener = FakeOpener()
+
+            def _request_json(self, method, path, payload=None):
+                raise AssertionError("listing was not expected")
+
+        reader = FakeReader()
+        client = retention.DevRetentionStorageApi(reader)
+        client.delete_objects([path])
+
+        self.assertEqual(1, len(reader.opener.requests))
+        request, timeout = reader.opener.requests[0]
+        self.assertEqual(60, timeout)
+        self.assertEqual("DELETE", request.get_method())
+        self.assertEqual(
+            "https://icqegnpjbizccjebjfhb.supabase.co/storage/v1/object/scrape-backups",
+            request.full_url,
+        )
+        self.assertEqual({"prefixes": [path]}, json.loads(request.data))
+
+    def test_apply_cli_requires_every_expected_guard(self) -> None:
+        retention = load_retention_module()
+
+        with self.assertRaises(SystemExit):
+            retention.parse_args(["--apply"])
+
 
 class RetentionWorkflowSafetyTests(unittest.TestCase):
-    def test_workflow_exposes_only_a_manual_dev_retention_dry_run(self) -> None:
+    def test_workflow_guards_manual_dev_retention_apply(self) -> None:
         workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
         self.assertIn("- storage-retention-dry-run", workflow)
@@ -251,7 +676,14 @@ class RetentionWorkflowSafetyTests(unittest.TestCase):
             "SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}",
             workflow,
         )
-        self.assertNotIn("retain_scrape_backups.py --apply", workflow)
+        self.assertIn("- storage-retention-apply", workflow)
+        self.assertIn("inputs.task == 'storage-retention-apply'", workflow)
+        self.assertIn("retain_scrape_backups.py --apply", workflow)
+        self.assertIn("--expected-delete-count", workflow)
+        self.assertIn("--expected-delete-bytes", workflow)
+        self.assertIn("--expected-plan-sha256", workflow)
+        self.assertIn("group: dev-supabase-scrapers", workflow)
+        self.assertIn("cancel-in-progress: false", workflow)
 
 
 if __name__ == "__main__":
