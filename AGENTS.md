@@ -132,6 +132,11 @@ There is no automated test suite yet. Do the relevant manual smoke test and say 
 ## Branch & commit conventions
 - App changes go to `dev` first, then `main` for staging. After explicit release approval, merge
   `main` to `prod`; a `prod` push triggers the Vercel production deployment.
+- Before every commit or consequential GitHub CLI action, verify the repository identity is
+  `Aaron Mullane <admin@sportstackapp.com.au>` and the active GitHub CLI account is
+  `SportStackApp`. Checkouts outside `C:\Projects\SportStack` may need a repository-local Git
+  identity override. Keep a working HTTPS remote unless the documented SSH alias has been verified
+  on the current Windows profile.
 - `.github/workflows/*.yml` are a special case because scheduled workflows run from GitHub's
   default branch (`main`) and select Dev or Production through different secret names. Review the
   target secrets before merging workflow changes to `main`; get owner confirmation whenever a

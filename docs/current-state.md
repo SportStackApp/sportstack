@@ -128,6 +128,58 @@ Date: 2026-07-29
 
 What changed:
 
+- Read all 15 current Markdown notes in the Hermes Vault and corrected stale SportStack storage,
+  scraper, workstation identity, SSH and setup-status claims.
+- Corrected this checkout's repository-local Git identity to
+  `Aaron Mullane <admin@sportstackapp.com.au>`. The working HTTPS remote and active
+  `SportStackApp` GitHub CLI account were retained.
+- Completed a read-only Production compatibility audit. Current `main` is 42 commits ahead of
+  `prod` and expects 15 tables, seven columns and six functions that are missing from live
+  Production.
+- Confirmed that 16 active migrations, two Edge Function deployments and the communications
+  notification schedule must be completed before the approved Git promotion to `prod`.
+- Added `docs/production-release-readiness-2026-07-29.md` with the exact backup-first rollout,
+  verification and recovery sequence.
+- Left `supabase/pending-migrations/lock_down_mvp_voting_access.sql` parked and excluded from the
+  release.
+
+Checks run:
+
+- Verified `dev` and `main` were aligned at `266afe2` before this documentation commit; `prod`
+  remained at `426935d`.
+- `npx tsc --noEmit` passed.
+- `npm run build` passed with the existing large-chunk warning.
+- All 59 focused Python Storage, retention, placeholder and SQL migration-safety tests passed.
+- Full `npm run lint` remains at the documented repository-wide baseline of 433 errors and
+  89 warnings; these documentation-only corrections added no lint finding.
+- Verified both Supabase projects were `ACTIVE_HEALTHY` and compared live Production migrations,
+  schema objects, Edge Function source and scheduled-job metadata with current source.
+- Confirmed the existing Production Player MVP reminder job is active; the newer communications
+  job is absent because its migration and function are not yet deployed.
+- Confirmed live Production `send-profile-access-link` already contains the current safe RevSports
+  ID transfer behaviour and does not need a release solely for its Git diff.
+- Supabase security advisers were run read-only. Their broader existing findings remain a separate
+  reviewed backlog; no security setting or policy was changed.
+
+What Aaron should test next:
+
+- No Production test yet. First approve and complete the backup-first Production database and
+  Edge Function gate documented in `docs/production-release-readiness-2026-07-29.md`.
+- After that gate, smoke-test staging and Production in the order documented there.
+
+Risk level:
+
+- Low for these documentation and local Git-identity corrections. No migration, Production
+  resource, secret, scheduled job or production deployment was changed.
+- High for the pending Production rollout because it contains schema, RLS, data-backfill, function,
+  scheduler and public deployment changes. It remains confirmation-gated.
+
+### Previous handoff entries
+
+Date: 2026-07-29
+
+What changed:
+
 - Refreshed the current GitHub branch state and confirmed the release history remained linear:
   `prod` was an ancestor of `main`, and `main` was an ancestor of `dev`.
 - Fast-forwarded local `dev` to current `origin/dev`, then promoted the complete approved Dev
@@ -162,8 +214,6 @@ Risk level:
 - Medium. This promotes the accumulated Dev application, migration, Edge Function and Dev-only
   workflow source into staging. No migration or Edge Function was deployed by this task, and no
   Production resource was touched.
-
-### Previous handoff entries
 
 Date: 2026-07-29
 
