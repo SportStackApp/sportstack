@@ -2,12 +2,41 @@
 
 ## Decision
 
-**Do not push current `main` to `prod` until the Production database and Edge Functions are made
-compatible.** The application release is approved in principle, but publishing the Git branch first
-would expose code that expects database objects that Production does not yet have.
+**The Production compatibility gate is complete.** The verified backup, 16 migrations, two Edge
+Functions and both scheduled jobs are in place. Current `main` is approved for the final
+fast-forward to `prod`.
 
-This document records a read-only audit. No Production database, function, secret, scheduled job or
-deployment was changed during the audit.
+The baseline sections below preserve the read-only audit that preceded the release. The release
+execution section records the approved Production changes completed afterwards.
+
+## Release execution
+
+- Created and independently verified a restricted manual logical backup at
+  `C:\Users\mulla\AppData\Local\SportStack\backups\prod\2026-07-29-pre-release-3f531a0`:
+  `roles.sql` (297 bytes), `schema.sql` (346,651 bytes) and `data.sql` (46,324,074 bytes).
+- Repeated the guarded Umpire Match Voting preflight immediately before migration. The live values
+  remained 271 vote lines, checksum `64e69e27af02befeae361a75c9046f6c`, one audit actor, seven
+  existing edit rows and no duplicate non-empty profile RevSports IDs.
+- Applied all 16 approved migrations in order. The backfill linked 250 vote lines to 143 profiles,
+  left the reviewed 21 unmatched lines unlinked and created the expected 492 audit rows.
+- Verified all expected tables and functions exist, every new public table has RLS enabled, the
+  sensitive notification functions remain service-role-only, and anonymous callers cannot execute
+  the signed-in admin functions.
+- Corrected two stale audit names: current source uses `profiles.theme_preference`, not
+  `profiles.account_theme`; feedback photos use `app_feedback_attachments.storage_path`, not an
+  `app_feedback.attachment_paths` column.
+- Deployed Production `mvp-voting-email-reminders` version 6 and
+  `sportstack-notification-dispatch` version 1 with their existing custom authentication and
+  `verify_jwt = false` settings. Unauthorised test calls returned HTTP 401 for both functions.
+- Verified `mvp-voting-email-reminders` is active every minute and
+  `sportstack-notification-dispatch` is active every 15 minutes. The notification credential exists
+  in Vault and its value was not read or logged.
+- Re-ran Supabase advisers. The release-linked warnings are limited to three intentional signed-in
+  `SECURITY DEFINER` admin functions that perform their own permission checks; anonymous execution
+  is denied. The broader existing adviser backlog remains separate.
+- Confirmed the staging landing page loads and `/dashboard` redirects signed-out visitors to
+  `/login`. A signed-in staging browser session was not available, so signed-in workflow checks
+  remain part of the Production owner smoke test.
 
 ## Audited baseline
 
@@ -48,10 +77,9 @@ them missing.
 - `player_vote_lines.profile_id`
 - `teams.mvp_notifications_enabled`
 - `profiles.registered_club_id`
-- `profiles.account_theme`
+- `profiles.theme_preference`
 - `team_memberships.activated_at`
 - `player_position_preferences.team_id`
-- `app_feedback.attachment_paths`
 
 ### Functions
 
@@ -139,8 +167,8 @@ result.
   forward fix. Use the verified logical backup only for a genuine recovery event because a full
   restore can overwrite newer Production data.
 
-## Approval still required
+## Approval
 
-The owner must explicitly approve the Production backup, the 16 Production migrations, the two
-Edge Function deployments and the scheduled-job configuration. The Git `prod` promotion is already
-approved, but it remains last in the sequence above.
+The owner approved the Production backup, 16 migrations, two Edge Function deployments, scheduled
+job configuration and Git `prod` promotion. The compatibility gate is complete; the Git promotion
+remains last in the controlled sequence above.

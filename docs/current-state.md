@@ -128,54 +128,55 @@ Date: 2026-07-29
 
 What changed:
 
-- Read all 15 current Markdown notes in the Hermes Vault and corrected stale SportStack storage,
-  scraper, workstation identity, SSH and setup-status claims.
-- Corrected this checkout's repository-local Git identity to
-  `Aaron Mullane <admin@sportstackapp.com.au>`. The working HTTPS remote and active
-  `SportStackApp` GitHub CLI account were retained.
-- Completed a read-only Production compatibility audit. Current `main` is 42 commits ahead of
-  `prod` and expects 15 tables, seven columns and six functions that are missing from live
-  Production.
-- Confirmed that 16 active migrations, two Edge Function deployments and the communications
-  notification schedule must be completed before the approved Git promotion to `prod`.
-- Added `docs/production-release-readiness-2026-07-29.md` with the exact backup-first rollout,
-  verification and recovery sequence.
-- Left `supabase/pending-migrations/lock_down_mvp_voting_access.sql` parked and excluded from the
-  release.
+- Completed the approved Production compatibility gate before the Git `prod` promotion.
+- Created and independently verified a restricted three-file Production logical backup: roles,
+  schema and 46 MB of data. The database password was kept out of files, logs and the repository.
+- Applied all 16 approved Production migrations in order. The guarded Umpire Match Voting backfill
+  linked 250 of the 271 vote lines and produced the expected 492 audit records.
+- Corrected the readiness note's stale schema names. Current source uses
+  `profiles.theme_preference` and `app_feedback_attachments.storage_path`; it does not expect
+  `profiles.account_theme` or `app_feedback.attachment_paths`.
+- Deployed Production `mvp-voting-email-reminders` version 6 and the new
+  `sportstack-notification-dispatch` version 1.
+- Enabled the one-minute Player MVP reminder schedule and 15-minute SportStack notification
+  dispatcher schedule. Their Vault credentials were verified by presence only and were not read.
+- Kept `supabase/pending-migrations/lock_down_mvp_voting_access.sql` parked and excluded.
+- This handoff entry accompanies the approved final fast-forward from `main` to `prod`.
 
 Checks run:
 
-- Verified `dev` and `main` were aligned at `266afe2` before this documentation commit; `prod`
-  remained at `426935d`.
-- `npx tsc --noEmit` passed.
-- `npm run build` passed with the existing large-chunk warning.
-- All 59 focused Python Storage, retention, placeholder and SQL migration-safety tests passed.
-- Full `npm run lint` remains at the documented repository-wide baseline of 433 errors and
-  89 warnings; these documentation-only corrections added no lint finding.
-- Verified both Supabase projects were `ACTIVE_HEALTHY` and compared live Production migrations,
-  schema objects, Edge Function source and scheduled-job metadata with current source.
-- Confirmed the existing Production Player MVP reminder job is active; the newer communications
-  job is absent because its migration and function are not yet deployed.
-- Confirmed live Production `send-profile-access-link` already contains the current safe RevSports
-  ID transfer behaviour and does not need a release solely for its Git diff.
-- The read-only Production Umpire Match Voting preflight matched the guarded backfill baseline:
-  271 vote lines, the expected snapshot checksum, one audit actor and no duplicate non-empty
-  profile RevSports IDs.
-- Supabase security advisers were run read-only. Their broader existing findings remain a separate
-  reviewed backlog; no security setting or policy was changed.
+- Production remained `ACTIVE_HEALTHY` on Postgres 17 throughout the database work.
+- The fresh guarded preflight matched 271 vote lines, checksum
+  `64e69e27af02befeae361a75c9046f6c`, one audit actor, seven existing edit rows and no duplicate
+  non-empty profile RevSports IDs.
+- All 16 migration history records exist. All expected tables, corrected columns and functions are
+  present; all new public tables have RLS enabled.
+- Anonymous execution is denied for the sensitive release functions. Service-only notification
+  functions retain service-role-only execution; the signed-in admin functions retain their
+  intended internal role checks.
+- Unauthorised HTTP tests returned 401 for both deployed functions. Current Player MVP scheduled
+  calls return 200 in Production logs.
+- Supabase security and performance advisers were rerun. The wider old adviser backlog remains
+  separate; newly created indexes correctly appear unused before normal Production traffic.
+- The staging landing page loaded as SportStack and a signed-out `/dashboard` request redirected
+  to `/login`. No signed-in staging session was available in Chrome.
+- Before this release documentation commit, `origin/dev` and `origin/main` were aligned at
+  `3f531a0`; `origin/prod` remained the direct ancestor at `426935d`, 44 commits behind.
 
 What Aaron should test next:
 
-- No Production test yet. First approve and complete the backup-first Production database and
-  Edge Function gate documented in `docs/production-release-readiness-2026-07-29.md`.
-- After that gate, smoke-test staging and Production in the order documented there.
+- After the accompanying `prod` deployment is ready, sign into Production and check Dashboard,
+  Communications, availability, Profile, Player MVP administration, Umpire Match Voting
+  administration and the key admin pages.
+- Confirm the Supabase usage warning separately before 22 August 2026; the organisation currently
+  exceeds the Free-plan file-storage allowance.
 
 Risk level:
 
-- Low for these documentation and local Git-identity corrections. No migration, Production
-  resource, secret, scheduled job or production deployment was changed.
-- High for the pending Production rollout because it contains schema, RLS, data-backfill, function,
-  scheduler and public deployment changes. It remains confirmation-gated.
+- High. This release includes additive Production schema/RLS changes, a guarded data backfill, two
+  Edge Function deployments, scheduled jobs and the approved public app deployment.
+- Recovery uses the verified logical backup for a genuine database recovery event and a normal Git
+  revert or Vercel redeploy for the app. Do not force-push Production history.
 
 ### Previous handoff entries
 
