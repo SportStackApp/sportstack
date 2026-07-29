@@ -134,7 +134,13 @@ What changed:
 - Added the forward-only migration
   `20260729010000_fix_mvp_initial_close_at_greatest.sql`; it replaces the invalid call with
   PostgreSQL's valid unqualified `greatest(...)` expression and preserves the hardened function
-  privileges. The historical migration was not rewritten.
+  privileges. The historical migration was not rewritten. The exact additive migration was
+  transaction-rehearsed, applied to hosted SportStack Dev project `icqegnpjbizccjebjfhb`, verified
+  in the installed function definition and recorded in Dev migration history.
+- Manual Dev workflow run `30422373959` then completed successfully. Hockey Ballarat, Sunraysia and
+  Wimmera all scraped, uploaded their backups and verified 534 fixture upserts. The complete run log
+  contains no SQLSTATE `42883`, `pg_catalog.greatest` occurrence or Python traceback. One Player MVP
+  session opened during the run and had a valid future close time tied to the next fixture.
 - Added a manual Dev-only Storage metadata diagnostic to `dev-scrapers.yml`. It accepts only the
   canonical SportStack Dev Supabase URL, rejects redirects and every mutation endpoint, and omits
   individual object names and secret values from its report.
@@ -151,44 +157,53 @@ What changed:
   1.18 GB therefore does not conflict with Dev's 0.791 GB live byte count; the remaining split
   between other projects and earlier usage is unconfirmed until dashboard authentication is
   available.
+- Added a manual-only, Dev-only, read-only scrape-backup retention planner in verified commit
+  `0d5c900`. It keeps every run from the latest seven days, one earliest run per source in each of
+  days 8-14 and 15-21, and the earliest available run per source/calendar month thereafter.
+  Non-canonical paths fail closed and are retained; public output contains aggregates and a plan
+  digest but no object paths. There is no delete/apply capability.
+- Retention dry-run `30424114628` succeeded against `scrape-backups`. It measured 815,903,576 bytes
+  across 543 objects and 201 runs. The plan keeps 165,434,680 bytes across 113 objects and 47 runs,
+  and identifies 650,468,896 bytes across 430 objects and 154 runs as deletion candidates
+  (620.335 MiB, 79.72%). It safely retained all unparseable objects; the count was zero. No object
+  was changed or deleted. Plan SHA-256:
+  `4dc5d0cb73a77f05124a1cfa9267946ee4ca184da4b5b98835b0c1e7f6fdea7d`.
 
 Checks run:
 
-- All 38 Python tests and Python compilation checks passed, including canonical target, redirect
+- All 45 Python tests and Python compilation checks passed, including canonical target, redirect
   rejection, mutation-route rejection, recursive pagination, nullable-metadata object counting
-  and output privacy regressions.
+  and output privacy regressions, strict timestamp grammar and unambiguous plan hashing.
 - PostgreSQL 16 behavioural validation, workflow YAML parsing, `git diff --check`,
-  `npx tsc --noEmit` and `npm run build` passed.
-- Independent diff-only review passed the final redirect and object-discrimination correction.
-- Full `npm run lint` remains at the known repository-wide baseline of 229 errors and 50 warnings;
+  `npx tsc --noEmit` and literal `bun run build` passed.
+- Independent diff-only review passed the corrected retention implementation after first identifying
+  and then verifying the fix for lenient non-canonical timestamp parsing.
+- Full `bun run lint` remains at the known repository-wide baseline of 229 errors and 50 warnings;
   the incident changes did not attempt unrelated lint cleanup.
 
 Deployment state:
 
-- Commits `2955e6e` and `3a2afca` are pushed to `origin/dev`; the Dev worktree is clean and aligned
-  with the remote.
-- The additive SQL repair is committed but remains unapplied to the hosted Dev database. Repository
-  secrets contain no Dev database password or Supabase access token, local Supabase CLI state is
-  unlinked, and `supabase/config.toml` identifies Production, so no blind `supabase db push` was
-  attempted.
-- The normal Dev fixture import has not been rerun because its installed database trigger remains
-  faulty until the additive repair is applied.
+- Incident-remediation commits and retention commit `0d5c900` are pushed to `origin/dev`.
+- The additive SQL repair is applied and verified on hosted Dev only. Local Supabase CLI state is
+  explicitly linked to Dev through the dedicated `sportstack-dev` profile; no blind migration push
+  was used.
+- The affected normal Dev fixture-import path has been rerun successfully and SQLSTATE `42883` no
+  longer blocks fixture upserts.
 - `main`, `prod`, Production Supabase, Production Storage and Production deployment remain
   untouched.
 
 What Aaron should test next:
 
-- Authenticate the SportStack Dev Supabase dashboard, verify the currently installed
-  `private.mvp_initial_close_at` definition, apply only the reviewed additive repair, then rerun the
-  Dev fixture import and confirm SQLSTATE `42883` no longer occurs.
-- Prepare a read-only retention dry-run for `scrape-backups` and review recoverable bytes before
-  approving any deletion. Do not delete backups solely from the aggregate totals above.
+- Review dry-run `30424114628`, its aggregate candidate counts and plan SHA-256. Any deletion still
+  requires explicit destructive approval and a separate implementation with count/digest guards.
+- After an approved cleanup, rerun the read-only Storage diagnostic and confirm retained recovery
+  points and measured bytes match the policy. No cleanup has occurred yet.
 
 Risk level:
 
-- Medium. The code and workflow changes are Dev-only and the Storage inspection was read-only. A
-  database migration is included but has not been applied. No destructive or Production action
-  occurred.
+- Medium. The additive database migration was applied to Dev and verified through a successful
+  fixture-import rerun. Retention inspection was read-only and no Storage object was changed or
+  deleted. No Production action occurred.
 
 ### Previous handoff entries
 
