@@ -128,6 +128,47 @@ Date: 2026-07-29
 
 What changed:
 
+- Refreshed the current GitHub branch state and confirmed the release history remained linear:
+  `prod` was an ancestor of `main`, and `main` was an ancestor of `dev`.
+- Fast-forwarded local `dev` to current `origin/dev`, then promoted the complete approved Dev
+  history to `main` without creating a merge commit or rewriting history.
+- Local `dev`, local `main`, `origin/dev` and `origin/main` now all point to commit `142a730`.
+- Reviewed the changed `Dev Supabase Scrapers` workflow before promotion. It uses only
+  `DEV_SUPABASE_*` secrets, keeps the existing schedule and exposes Storage cleanup only as a
+  manually selected action guarded by exact object count, byte count and plan SHA-256.
+- Left `prod` at commit `426935d`. Production Supabase, Production Storage and the production
+  website were not changed.
+
+Checks run:
+
+- `npx tsc --noEmit` passed.
+- `npm run build` passed with the existing large-chunk warning.
+- All 31 focused Storage diagnostic, retention and SQL migration-safety tests passed.
+- Full `npm run lint` still reports the documented repository-wide baseline of 433 errors and
+  89 warnings; no new lint work was included in this branch promotion.
+- Git divergence verification returned `0 0` for `origin/dev...origin/main`.
+- Vercel reported the Main deployment successful, and both the Dev and Main public addresses
+  returned HTTP 200.
+
+What Aaron should test next:
+
+- Open `https://main.sportstackapp.com.au` and complete a short staging smoke test of the player
+  dashboard, Communications, team switching, Profile and the main admin pages.
+- Keep Production testing and promotion separate until the full 41-commit Production release is
+  reviewed and explicitly approved.
+
+Risk level:
+
+- Medium. This promotes the accumulated Dev application, migration, Edge Function and Dev-only
+  workflow source into staging. No migration or Edge Function was deployed by this task, and no
+  Production resource was touched.
+
+### Previous handoff entries
+
+Date: 2026-07-29
+
+What changed:
+
 - Investigated the failed `Dev Supabase Scrapers` fixture import from GitHub Actions logs. The
   installed Player MVP Voting trigger function used invalid `pg_catalog.greatest(...)`, causing
   fixture upserts to fail with SQLSTATE `42883`.
@@ -223,8 +264,6 @@ Risk level:
   fixture-import rerun. The separately approved Dev Storage cleanup deleted only the exact reviewed
   430-object plan and independently verified all 113 retained objects remain. No database row,
   Production Storage object or other Production resource was changed.
-
-### Previous handoff entries
 
 Date: 2026-07-25
 
