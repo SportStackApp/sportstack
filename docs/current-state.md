@@ -161,29 +161,47 @@ What changed:
   `0d5c900`. It keeps every run from the latest seven days, one earliest run per source in each of
   days 8-14 and 15-21, and the earliest available run per source/calendar month thereafter.
   Non-canonical paths fail closed and are retained; public output contains aggregates and a plan
-  digest but no object paths. There is no delete/apply capability.
+  digest but no object paths. That commit had no delete/apply capability.
 - Retention dry-run `30424114628` succeeded against `scrape-backups`. It measured 815,903,576 bytes
   across 543 objects and 201 runs. The plan keeps 165,434,680 bytes across 113 objects and 47 runs,
   and identifies 650,468,896 bytes across 430 objects and 154 runs as deletion candidates
   (620.335 MiB, 79.72%). It safely retained all unparseable objects; the count was zero. No object
   was changed or deleted. Plan SHA-256:
   `4dc5d0cb73a77f05124a1cfa9267946ee4ca184da4b5b98835b0c1e7f6fdea7d`.
+- Added the separate guarded Dev-only cleanup path in verified commit `5bde29c`. It is manual-only,
+  uses only `DEV_*` secrets, fixes the exact Dev project and `scrape-backups` bucket, rejects
+  redirects and malformed or duplicate inventory records, and permits one bulk DELETE attempt only
+  after a fresh plan exactly matches the approved object count, bytes and SHA-256. It always performs
+  post-delete inventory; an unverifiable outcome fails explicitly and must not be retried
+  automatically. Workflow-wide concurrency prevents overlap with scraper uploads.
+- Guarded apply run `30429657407` exactly matched the approved plan and completed successfully. It
+  deleted 650,468,896 bytes across 430 objects and 154 runs. Built-in verification found zero
+  approved deletion objects remaining and zero approved retained objects missing, leaving
+  165,434,680 bytes across 113 objects and 47 runs.
+- Independent read-only post-cleanup run `30429923749` confirmed the same 113 objects, 47 runs and
+  165,434,680 bytes, with zero further deletion candidates and zero candidate bytes. The empty-plan
+  SHA-256 is `4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`.
 
 Checks run:
 
-- All 45 Python tests and Python compilation checks passed, including canonical target, redirect
+- All 59 Python tests and Python compilation checks passed, including canonical target, redirect
   rejection, mutation-route rejection, recursive pagination, nullable-metadata object counting
-  and output privacy regressions, strict timestamp grammar and unambiguous plan hashing.
+  and output privacy regressions, strict timestamp grammar, unambiguous plan hashing, exact apply
+  guards, malformed and duplicate inventory rejection, uncertain DELETE handling and post-delete
+  retained/deleted-set verification.
 - PostgreSQL 16 behavioural validation, workflow YAML parsing, `git diff --check`,
   `npx tsc --noEmit` and literal `bun run build` passed.
-- Independent diff-only review passed the corrected retention implementation after first identifying
-  and then verifying the fix for lenient non-canonical timestamp parsing.
+- Independent fail-closed reviews first identified and then verified fixes for lenient
+  non-canonical timestamp parsing, slash normalisation and incomplete post-delete unknown-outcome
+  handling. The final destructive implementation received PASS with no blocking security or logic
+  concern before commit, push or execution.
 - Full `bun run lint` remains at the known repository-wide baseline of 229 errors and 50 warnings;
   the incident changes did not attempt unrelated lint cleanup.
 
 Deployment state:
 
-- Incident-remediation commits and retention commit `0d5c900` are pushed to `origin/dev`.
+- Incident-remediation commits and retention commits `0d5c900` and `5bde29c` are pushed to
+  `origin/dev`.
 - The additive SQL repair is applied and verified on hosted Dev only. Local Supabase CLI state is
   explicitly linked to Dev through the dedicated `sportstack-dev` profile; no blind migration push
   was used.
@@ -194,16 +212,17 @@ Deployment state:
 
 What Aaron should test next:
 
-- Review dry-run `30424114628`, its aggregate candidate counts and plan SHA-256. Any deletion still
-  requires explicit destructive approval and a separate implementation with count/digest guards.
-- After an approved cleanup, rerun the read-only Storage diagnostic and confirm retained recovery
-  points and measured bytes match the policy. No cleanup has occurred yet.
+- Review apply run `30429657407` and independent inventory run `30429923749` in GitHub Actions.
+- Confirm the Supabase Storage dashboard trends down after its organisation-level GB-hours window
+  catches up. Keep cleanup manual; do not schedule destructive retention without a separate policy
+  and approval.
 
 Risk level:
 
 - Medium. The additive database migration was applied to Dev and verified through a successful
-  fixture-import rerun. Retention inspection was read-only and no Storage object was changed or
-  deleted. No Production action occurred.
+  fixture-import rerun. The separately approved Dev Storage cleanup deleted only the exact reviewed
+  430-object plan and independently verified all 113 retained objects remain. No database row,
+  Production Storage object or other Production resource was changed.
 
 ### Previous handoff entries
 
