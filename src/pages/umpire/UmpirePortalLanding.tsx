@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { ChevronRight, ClipboardCheck, ShieldCheck } from "lucide-react";
+import { ChevronRight, ClipboardCheck, LogIn, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { buildLoginPath } from "@/lib/authRedirect";
 import fieldBg from "@/assets/Field_1.png";
 
 export default function UmpirePortalLanding() {
@@ -40,12 +41,21 @@ export default function UmpirePortalLanding() {
             </div>
           </div>
 
-          <Link to="/umpire/public-vote" className="block">
-            <Button size="lg" className="w-full gap-2">
-              Umpire Login
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </Link>
+          <div className="space-y-3">
+            <Link to="/umpire/public-vote" className="block">
+              <Button size="lg" className="w-full gap-2">
+                Umpire Login without account
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </Link>
+
+            <Link to={buildLoginPath("/umpire/vote")} className="block">
+              <Button size="lg" variant="outline" className="w-full gap-2">
+                <LogIn className="h-5 w-5" />
+                Login with account
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </main>

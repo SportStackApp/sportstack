@@ -31,6 +31,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { isProfileReviewRequired } from "@/lib/profileCompletion";
 import type { Database } from "@/integrations/supabase/types";
 import { loadPlayerHistory, type PlayerHistoryRecord } from "@/lib/playerHistory";
+import { getSafeAppPath } from "@/lib/authRedirect";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 type MembershipType = Database["public"]["Enums"]["membership_type"];
@@ -114,8 +116,11 @@ interface PrimaryChangeRequestData {
 
 const Profile = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { testRole, setTestRole } = useTestRole();
+  const returnTo = getSafeAppPath(searchParams.get("returnTo"), "");
   
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [memberships, setMemberships] = useState<TeamMembershipData[]>([]);
@@ -461,6 +466,9 @@ const Profile = () => {
         title: "Profile Updated",
         description: "Your profile has been saved successfully.",
       });
+      if (returnTo && !returnTo.startsWith("/profile")) {
+        navigate(returnTo, { replace: true });
+      }
     }
   };
 

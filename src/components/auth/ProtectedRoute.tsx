@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { isProfileReviewRequired } from "@/lib/profileCompletion";
+import { buildLoginPath } from "@/lib/authRedirect";
 
 const ProtectedRoute = () => {
   const { user, loading } = useAuth();
@@ -66,11 +67,13 @@ const ProtectedRoute = () => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={buildLoginPath(returnTo)} replace />;
   }
 
   if (needsProfileReview && location.pathname !== "/profile") {
-    return <Navigate to="/profile?review=1" replace />;
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={`/profile?review=1&returnTo=${encodeURIComponent(returnTo)}`} replace />;
   }
 
   return <Outlet />;

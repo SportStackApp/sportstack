@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,13 +8,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppMode } from "@/contexts/AppModeContext";
+import { getSafeAppPath } from "@/lib/authRedirect";
 import fieldBg from "@/assets/Field_1.png";
 
 const Login = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { signIn, signInWithGoogle, user, loading } = useAuth();
   const { modeLanding, loading: modeLoading } = useAppMode();
+  const returnTo = getSafeAppPath(searchParams.get("returnTo"), modeLanding);
+  const fromUmpirePortal = returnTo === "/umpire/vote";
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -25,9 +29,9 @@ const Login = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (!loading && !modeLoading && user) {
-      navigate(modeLanding);
+      navigate(returnTo, { replace: true });
     }
-  }, [user, loading, modeLoading, navigate, modeLanding]);
+  }, [user, loading, modeLoading, navigate, returnTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +67,8 @@ const Login = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    const { error } = await signInWithGoogle();
+    const callbackPath = `/login?returnTo=${encodeURIComponent(returnTo)}`;
+    const { error } = await signInWithGoogle(callbackPath);
     
     if (error) {
       toast({
@@ -88,11 +93,11 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md animate-fade-in">
           <Link
-            to="/"
+            to={fromUmpirePortal ? "/umpire" : "/"}
             className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
-            Back to home
+            {fromUmpirePortal ? "Back to Umpire Portal" : "Back to home"}
           </Link>
 
           <Card variant="ghost" className="border-0 shadow-none">

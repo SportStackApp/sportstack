@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { applyPendingSignup } from "@/lib/applyPendingSignup";
 import { useToast } from "@/hooks/use-toast";
 import { logError } from "@/lib/logError";
+import { getSafeAppPath } from "@/lib/authRedirect";
 
 interface AuthContextType {
   user: User | null;
@@ -11,7 +12,7 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signInWithGoogle: () => Promise<{ error: Error | null }>;
+  signInWithGoogle: (redirectPath?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -126,11 +127,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return { error: error as Error | null };
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (redirectPath?: string) => {
+    const safeRedirectPath = getSafeAppPath(redirectPath, "/login");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/login`,
+        redirectTo: `${window.location.origin}${safeRedirectPath}`,
       },
     });
     

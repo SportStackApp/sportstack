@@ -137,6 +137,10 @@ What changed:
 
 - Added a SportStack public Hockey Ballarat Umpire Portal landing at `/umpire` and a three-step
   public flow at `/umpire/public-vote`: Match Info, Player Votes and Confirm.
+- The Umpire Portal landing offers **Umpire Login without account** for the public flow and
+  **Login with account** for normal SportStack authentication followed by `/umpire/vote`.
+- Safe internal return paths now survive email/password login, Google login and the required
+  first-sign-in profile review. Existing placeholder-claim checking still runs on sign-in.
 - The Match Info step records the public submitter's name/email and supports either self-submission
   or submission on behalf of another umpire with a required reason.
 - The player search combines 448 current Hockey Ballarat SportStack profiles with distinct names
@@ -161,10 +165,22 @@ What changed:
 - Updated Umpire Match Voting administration to label public portal submissions and show the
   public reference, submitter email and unverified identity status.
 - Production, `prod`, DNS and `sportstackapp.com.au` remain unchanged.
+- A live audit found the intended voter-default migration was not installed and both current
+  `handle_new_user()` functions created only profiles. A forward-only Dev migration restores one
+  unscoped `VOTER` role for future accounts without backfilling existing users. Deliberate active
+  team assignment can still add the separate `PLAYER` role.
 
 Checks run:
 
 - Dev live-schema audit and transaction rollback dry-run passed before the migration was applied.
+- Dev recorded additive migration `20260730124436_restore_default_voter_role`. Post-apply checks
+  confirmed the fixed search path and that browser roles cannot execute `handle_new_user()`.
+- A rollback-only functional sign-up test created a profile and exactly one unscoped `VOTER` role,
+  with no `PLAYER` role. The test transaction was rolled back and left no test account or role.
+- A read-only Production audit found the voter default is not yet enforced there. Production was
+  not changed; enabling it remains a separate explicitly approved release step.
+- Supabase advisors reported no new finding tied to `handle_new_user()`; the existing unrelated
+  security and performance advisory backlog remains.
 - Dev function checks returned 168 eligible Hockey Ballarat fixtures, the expected Junior ballot,
   448 association profiles and 16 distinct unresolved pending name spellings for the sampled flow.
 - Anonymous and authenticated roles cannot execute the atomic insert function or access the
@@ -175,7 +191,8 @@ Checks run:
 
 What Aaron should test next:
 
-- On Dev, open `/umpire`, choose **Umpire Login**, and test self and on-behalf submission.
+- On Dev, open `/umpire` and confirm **Umpire Login without account** opens the public flow.
+- Sign out, choose **Login with account**, sign in normally and confirm it lands on `/umpire/vote`.
 - Confirm Round -> Division -> Fixture, Junior and Senior vote cards, SportStack/Pending player
   suggestions, manual names, number-only warning, team selection and the final review screen.
 - Submit one clearly marked test ballot, then review it in `/admin/umpire-voting` and approve it

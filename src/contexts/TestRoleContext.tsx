@@ -4,8 +4,9 @@ import type { Database } from "@/integrations/supabase/types";
 type Role = Database["public"]["Enums"]["app_role"];
 
 const DEV_TOOLS_ROLE_KEY = "devToolsRole";
-const DEFAULT_ROLE: Role = "PLAYER";
+const DEFAULT_ROLE: Role = "VOTER";
 const VALID_ROLES: Role[] = [
+  "VOTER",
   "PLAYER",
   "COACH",
   "TEAM_MANAGER",
