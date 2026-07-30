@@ -144,6 +144,8 @@ What changed:
   after the corresponding submission is approved, while new free-text names remain allowed.
 - Player name or number is required, not both. Number-only entries show a warning that the number
   may not identify the player reliably.
+- The public round selector shows each round's earliest and latest fixture dates in Australian
+  `DD/MM/YYYY` format so umpires can identify the correct round more easily.
 - Junior fixtures use the four-line 2/1 male and 2/1 female ballot. Senior and Masters fixtures use
   the 3/2/1 ballot. The server derives the scheme and points instead of trusting browser values.
 - Applied the additive `public_umpire_portal` migration to SportStack Dev only. It adds public

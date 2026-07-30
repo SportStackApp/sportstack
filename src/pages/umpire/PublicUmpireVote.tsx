@@ -68,6 +68,21 @@ const wizardSteps = [
   { number: 3, label: "Confirm" },
 ] as const;
 
+const fixtureDateFormatter = new Intl.DateTimeFormat("en-AU", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "Australia/Melbourne",
+});
+
+const formatRoundDateRange = (timestamps: number[]) => {
+  if (timestamps.length === 0) return "";
+
+  const firstDate = fixtureDateFormatter.format(new Date(Math.min(...timestamps)));
+  const lastDate = fixtureDateFormatter.format(new Date(Math.max(...timestamps)));
+  return firstDate === lastDate ? firstDate : `${firstDate} – ${lastDate}`;
+};
+
 export default function PublicUmpireVote() {
   const { toast } = useToast();
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -116,10 +131,21 @@ export default function PublicUmpireVote() {
     void refreshFixtures();
   }, [refreshFixtures]);
 
-  const rounds = useMemo(
-    () => Array.from(new Set(fixtures.map((fixture) => fixture.roundNumber))).sort((a, b) => a - b),
-    [fixtures],
-  );
+  const rounds = useMemo(() => {
+    const fixtureDatesByRound = new Map<number, number[]>();
+
+    fixtures.forEach((fixture) => {
+      const timestamps = fixtureDatesByRound.get(fixture.roundNumber) || [];
+      const timestamp = fixture.fixtureDate ? Date.parse(fixture.fixtureDate) : Number.NaN;
+      if (Number.isFinite(timestamp)) timestamps.push(timestamp);
+      fixtureDatesByRound.set(fixture.roundNumber, timestamps);
+    });
+
+    return Array.from(fixtureDatesByRound, ([number, timestamps]) => ({
+      number,
+      dateRange: formatRoundDateRange(timestamps),
+    })).sort((left, right) => left.number - right.number);
+  }, [fixtures]);
 
   const divisions = useMemo(() => {
     const byId = new Map<string, string>();
@@ -426,7 +452,9 @@ export default function PublicUmpireVote() {
                     </SelectTrigger>
                     <SelectContent>
                       {rounds.map((round) => (
-                        <SelectItem key={round} value={String(round)}>Round {round}</SelectItem>
+                        <SelectItem key={round.number} value={String(round.number)}>
+                          Round {round.number}{round.dateRange ? ` · ${round.dateRange}` : ""}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
