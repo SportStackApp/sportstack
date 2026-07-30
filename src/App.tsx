@@ -27,6 +27,8 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import VotingPortal from "./pages/VotingPortal";
 import UmpireVoteSubmit from "./pages/umpire/UmpireVoteSubmit";
+import UmpirePortalLanding from "./pages/umpire/UmpirePortalLanding";
+import PublicUmpireVote from "./pages/umpire/PublicUmpireVote";
 import MvpVotes from "./pages/MvpVotes";
 import MvpVoteCast from "./pages/MvpVoteCast";
 
@@ -126,6 +128,8 @@ const App = () => (
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/pending" element={<Pending />} />
                   <Route path="/vote/:token" element={<RetiredMvpTokenRoute />} />
+                  <Route path="/umpire" element={<UmpirePortalLanding />} />
+                  <Route path="/umpire/public-vote" element={<PublicUmpireVote />} />
 
                   {/* Protected Routes with App Layout */}
                   <Route element={<ProtectedRoute />}>

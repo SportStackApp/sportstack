@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.sportstack-notification-dispatch]
 verify_jwt = false
+
+[functions.public-umpire-match-voting]
+verify_jwt = false

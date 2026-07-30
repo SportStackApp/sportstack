@@ -8,6 +8,7 @@ import type { UmpireLinkedPlayerOption } from "@/lib/umpireLinkedPlayers";
 interface UmpireLinkedPlayerPickerProps {
   value: string;
   profileId: string | null;
+  selectedOptionId?: string | null;
   options: UmpireLinkedPlayerOption[];
   loading?: boolean;
   disabled?: boolean;
@@ -21,6 +22,7 @@ const normaliseSearch = (value: string) => value.trim().toLocaleLowerCase("en-AU
 export function UmpireLinkedPlayerPicker({
   value,
   profileId,
+  selectedOptionId = null,
   options,
   loading = false,
   disabled = false,
@@ -52,8 +54,15 @@ export function UmpireLinkedPlayerPicker({
   }, [options, showAll, value]);
 
   const selectedOption = useMemo(
-    () => options.find((option) => option.profileId === profileId),
-    [options, profileId],
+    () =>
+      options.find((option) =>
+        selectedOptionId
+          ? option.optionId === selectedOptionId
+          : profileId
+          ? option.profileId === profileId
+          : false,
+      ),
+    [options, profileId, selectedOptionId],
   );
 
   const handleBlur = () => {
@@ -105,13 +114,18 @@ export function UmpireLinkedPlayerPicker({
         </Button>
       </div>
 
-      {profileId ? (
+      {selectedOption?.profileId ? (
         <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
           <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">
             Linked to {selectedOption?.name || value}
             {selectedOption?.number ? ` #${selectedOption.number}` : ""}
           </span>
+        </div>
+      ) : selectedOption?.source === "unresolved" ? (
+        <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+          <UserRoundX className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Pending umpire entry; an admin will verify this spelling.</span>
         </div>
       ) : value.trim() ? (
         <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
@@ -140,10 +154,14 @@ export function UmpireLinkedPlayerPicker({
           ) : (
             matches.map((option) => (
               <button
-                key={option.profileId}
+                key={option.optionId}
                 type="button"
                 role="option"
-                aria-selected={option.profileId === profileId}
+                aria-selected={
+                  selectedOptionId
+                    ? option.optionId === selectedOptionId
+                    : Boolean(profileId && option.profileId === profileId)
+                }
                 className="flex w-full min-w-0 items-start gap-2 rounded-sm px-3 py-2 text-left hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
@@ -164,7 +182,13 @@ export function UmpireLinkedPlayerPicker({
                   </p>
                 </div>
                 <Badge variant="outline" className="shrink-0 text-[10px]">
-                  {option.source === "roster" ? "Roster" : "Club"}
+                  {option.source === "roster"
+                    ? "Roster"
+                    : option.source === "club"
+                    ? "Club"
+                    : option.source === "unresolved"
+                    ? "Pending"
+                    : "SportStack"}
                 </Badge>
               </button>
             ))

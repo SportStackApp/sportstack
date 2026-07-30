@@ -9,13 +9,14 @@ export interface UmpireLinkedPlayerContext {
 }
 
 export interface UmpireLinkedPlayerOption {
-  profileId: string;
+  optionId: string;
+  profileId: string | null;
   name: string;
   number: string;
   teamId: string | null;
   teamLabel: string;
   contextLabel: string;
-  source: "roster" | "club";
+  source: "roster" | "club" | "association" | "unresolved";
 }
 
 interface ProfileOptionRow {
@@ -159,6 +160,7 @@ export async function loadUmpireLinkedPlayers(
   const candidates = new Map<string, CandidateAccumulator>();
 
   const addCandidate = (option: UmpireLinkedPlayerOption) => {
+    if (!option.profileId) return;
     const existing = candidates.get(option.profileId);
     if (!existing) {
       candidates.set(option.profileId, {
@@ -208,6 +210,7 @@ export async function loadUmpireLinkedPlayers(
     }
 
     addCandidate({
+      optionId: `profile:${profile.id}`,
       profileId: profile.id,
       name: profileName(profile),
       number: normaliseNumber(row.jersey),
@@ -241,6 +244,7 @@ export async function loadUmpireLinkedPlayers(
     }
 
     addCandidate({
+      optionId: `profile:${profile.id}`,
       profileId: profile.id,
       name: profileName(profile),
       number: normaliseNumber(membership.jersey_number),

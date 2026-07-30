@@ -98,6 +98,11 @@ interface SubmissionRow {
   proxy_submitter_id?: string | null;
   proxy_submitter_name?: string | null;
   umpire_user_id?: string | null;
+  is_public_submission?: boolean;
+  public_submitter_name?: string | null;
+  public_submitter_email?: string | null;
+  public_identity_status?: "UNVERIFIED" | "LINKED" | null;
+  public_submission_reference?: string | null;
   submitted_at: string;
 }
 
@@ -298,18 +303,23 @@ const getEditFieldLabel = (fieldName: string | null | undefined) => {
   return fieldName?.replaceAll("_", " ") || "Change";
 };
 
-type SubmissionSource = "self" | "public_proxy" | "admin_proxy";
+type SubmissionSource = "self" | "proxy" | "public_portal" | "public_portal_proxy" | "admin_proxy";
 const UNASSIGNED_SEASON_VALUE = "__UNASSIGNED_SEASON__";
 
 const getSubmissionSource = (submission: SubmissionRow): SubmissionSource => {
   if (submission.submitted_by_admin_id || submission.submitted_by_admin_name) return "admin_proxy";
-  if (submission.proxy_submitter_id || submission.proxy_submitter_name || submission.proxy_umpire_name) return "public_proxy";
+  if (submission.is_public_submission) {
+    return submission.proxy_umpire_name ? "public_portal_proxy" : "public_portal";
+  }
+  if (submission.proxy_submitter_id || submission.proxy_submitter_name || submission.proxy_umpire_name) return "proxy";
   return "self";
 };
 
 const getSubmissionSourceLabel = (source: SubmissionSource) => {
   if (source === "admin_proxy") return "Admin proxy";
-  if (source === "public_proxy") return "Public proxy";
+  if (source === "public_portal_proxy") return "Public portal proxy";
+  if (source === "public_portal") return "Public portal";
+  if (source === "proxy") return "Proxy";
   return "Self";
 };
 
@@ -425,7 +435,7 @@ export default function UmpireVotingModule() {
       ] = await Promise.all([
         moduleSupabase
           .from("player_vote_submissions")
-          .select("id, fixture_id, association_id, division_id, round_number, home_team_id, away_team_id, is_approved, is_locked, is_deleted, proxy_umpire_name, proxy_reason, submitted_by_admin_id, submitted_by_admin_name, proxy_submitter_id, proxy_submitter_name, umpire_user_id, submitted_at")
+          .select("id, fixture_id, association_id, division_id, round_number, home_team_id, away_team_id, is_approved, is_locked, is_deleted, proxy_umpire_name, proxy_reason, submitted_by_admin_id, submitted_by_admin_name, proxy_submitter_id, proxy_submitter_name, umpire_user_id, is_public_submission, public_submitter_name, public_submitter_email, public_identity_status, public_submission_reference, submitted_at")
           .order("submitted_at", { ascending: false })
           .limit(250),
         moduleSupabase.from("player_vote_lines").select("id, submission_id, votes, profile_id, player_name, player_number, team_id").limit(1000),
@@ -901,6 +911,7 @@ export default function UmpireVotingModule() {
   const getSubmittedForName = useCallback(
     (submission: SubmissionRow) =>
       submission.proxy_umpire_name ||
+      (submission.is_public_submission ? submission.public_submitter_name : null) ||
       (submission.umpire_user_id ? profileNameMap.get(submission.umpire_user_id) : null) ||
       "Self",
     [profileNameMap],
@@ -910,6 +921,7 @@ export default function UmpireVotingModule() {
     (submission: SubmissionRow) =>
       submission.submitted_by_admin_name ||
       (submission.submitted_by_admin_id ? profileNameMap.get(submission.submitted_by_admin_id) : null) ||
+      submission.public_submitter_name ||
       submission.proxy_submitter_name ||
       (submission.proxy_submitter_id ? profileNameMap.get(submission.proxy_submitter_id) : null) ||
       (submission.umpire_user_id ? profileNameMap.get(submission.umpire_user_id) : null) ||
@@ -931,6 +943,8 @@ export default function UmpireVotingModule() {
           getSubmittedForName(submission),
           getSubmittedByName(submission),
           getSubmissionSourceLabel(getSubmissionSource(submission)),
+          submission.public_submitter_email,
+          submission.public_submission_reference,
           submission.proxy_reason,
           context?.roundNumber ? `round ${context.roundNumber}` : "",
           context?.divisionId ? divisionNameMap.get(context.divisionId) : "",
@@ -1141,14 +1155,16 @@ export default function UmpireVotingModule() {
         `${submission.home_team_id ? teamNameMap.get(submission.home_team_id) || "" : ""} vs ${submission.away_team_id ? teamNameMap.get(submission.away_team_id) || "" : ""}`,
         getSubmittedForName(submission),
         getSubmittedByName(submission),
+        submission.public_submitter_email || "",
         getSubmissionSourceLabel(getSubmissionSource(submission)),
+        submission.public_submission_reference || "",
         submission.proxy_reason || "",
         submission.is_deleted ? "Deleted" : submission.is_approved ? "Approved" : "Pending",
         lines,
       ];
     });
     const csv = [
-      ["Submitted", "Round", "Division", "Match", "Submitted for", "Submitted by", "Source", "Proxy reason", "Status", "Votes"],
+      ["Submitted", "Round", "Division", "Match", "Submitted for", "Submitted by", "Submitter email", "Source", "Reference", "Proxy reason", "Status", "Votes"],
       ...rows,
     ]
       .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
@@ -1664,7 +1680,14 @@ export default function UmpireVotingModule() {
                               <div className="max-w-[220px] truncate text-xs text-muted-foreground">{submission.proxy_reason}</div>
                             )}
                           </TableCell>
-                          <TableCell>{getSubmittedByName(submission)}</TableCell>
+                          <TableCell>
+                            <div>{getSubmittedByName(submission)}</div>
+                            {submission.public_submitter_email && (
+                              <div className="max-w-[220px] truncate text-xs text-muted-foreground">
+                                {submission.public_submitter_email}
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline">{getSubmissionSourceLabel(source)}</Badge>
                           </TableCell>
@@ -1858,6 +1881,9 @@ export default function UmpireVotingModule() {
                   <div>
                     <p className="text-xs font-semibold uppercase text-muted-foreground">Submitted by</p>
                     <p className="font-medium">{getSubmittedByName(selectedSubmission)}</p>
+                    {selectedSubmission.public_submitter_email && (
+                      <p className="text-xs text-muted-foreground">{selectedSubmission.public_submitter_email}</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-xs font-semibold uppercase text-muted-foreground">Source</p>
@@ -1867,6 +1893,15 @@ export default function UmpireVotingModule() {
                     <p className="text-xs font-semibold uppercase text-muted-foreground">Submitted</p>
                     <p className="font-medium">{new Date(selectedSubmission.submitted_at).toLocaleString("en-AU")}</p>
                   </div>
+                  {selectedSubmission.public_submission_reference && (
+                    <div>
+                      <p className="text-xs font-semibold uppercase text-muted-foreground">Public reference</p>
+                      <p className="font-mono text-sm font-medium">{selectedSubmission.public_submission_reference}</p>
+                      <Badge variant="secondary" className="mt-1">
+                        {selectedSubmission.public_identity_status === "LINKED" ? "Identity linked" : "Identity unverified"}
+                      </Badge>
+                    </div>
+                  )}
                   {selectedSubmission.proxy_reason && (
                     <div className="md:col-span-2">
                       <p className="text-xs font-semibold uppercase text-muted-foreground">Proxy/admin reason</p>

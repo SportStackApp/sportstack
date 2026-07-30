@@ -131,6 +131,53 @@ After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
 
+Date: 2026-07-30
+
+What changed:
+
+- Added a SportStack public Hockey Ballarat Umpire Portal landing at `/umpire` and a three-step
+  public flow at `/umpire/public-vote`: Match Info, Player Votes and Confirm.
+- The Match Info step records the public submitter's name/email and supports either self-submission
+  or submission on behalf of another umpire with a required reason.
+- The player search combines 448 current Hockey Ballarat SportStack profiles with distinct names
+  from pending, non-deleted Umpire Match Voting submissions. Pending spellings stop being offered
+  after the corresponding submission is approved, while new free-text names remain allowed.
+- Player name or number is required, not both. Number-only entries show a warning that the number
+  may not identify the player reliably.
+- Junior fixtures use the four-line 2/1 male and 2/1 female ballot. Senior and Masters fixtures use
+  the 3/2/1 ballot. The server derives the scheme and points instead of trusting browser values.
+- Applied the additive `public_umpire_portal` migration to SportStack Dev only. It adds public
+  submitter/reference/idempotency fields, vote scheme line keys, hashed rate-limit events and a
+  service-role-only atomic insert function.
+- Deployed Dev `public-umpire-match-voting` version 2 with JWT gateway verification off because it
+  performs its own origin, fixture, association, Turnstile, rate-limit and payload checks. Official
+  Cloudflare test keys are limited to local, Dev and main/staging; Production fails closed without
+  separately approved real configuration.
+- Updated Umpire Match Voting administration to label public portal submissions and show the
+  public reference, submitter email and unverified identity status.
+- Production, `prod`, DNS and `sportstackapp.com.au` remain unchanged.
+
+Checks run:
+
+- Dev live-schema audit and transaction rollback dry-run passed before the migration was applied.
+- Dev function checks returned 168 eligible Hockey Ballarat fixtures, the expected Junior ballot,
+  448 association profiles and 16 distinct unresolved pending name spellings for the sampled flow.
+- Anonymous and authenticated roles cannot execute the atomic insert function or access the
+  rate-limit table; only `service_role` can execute the insert function.
+- `npx tsc --noEmit`, focused changed-file ESLint and `npm run build` pass. Repository-wide lint
+  still fails on the existing legacy backlog. The usual browser verification command is not
+  installed on this Windows profile, so Aaron's visual Dev smoke test remains required.
+
+What Aaron should test next:
+
+- On Dev, open `/umpire`, choose **Umpire Login**, and test self and on-behalf submission.
+- Confirm Round -> Division -> Fixture, Junior and Senior vote cards, SportStack/Pending player
+  suggestions, manual names, number-only warning, team selection and the final review screen.
+- Submit one clearly marked test ballot, then review it in `/admin/umpire-voting` and approve it
+  only after linking/correcting each player.
+
+### Previous handoff entry
+
 Date: 2026-07-29
 
 What changed:
