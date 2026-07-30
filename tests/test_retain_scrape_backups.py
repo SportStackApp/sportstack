@@ -24,19 +24,20 @@ def load_retention_module():
 
 
 class ScrapeBackupRetentionTests(unittest.TestCase):
-    def test_keeps_recent_weekly_and_monthly_run_tiers(self) -> None:
+    def test_keeps_recent_daily_weekly_and_monthly_run_tiers(self) -> None:
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
         paths = [
-            "hockey-ballarat/2026/07/29/100000/recent-a.json",
-            "hockey-ballarat/2026/07/23/100000/recent-b.json",
-            "hockey-ballarat/2026/07/21/100000/week-one-later.json",
-            "hockey-ballarat/2026/07/16/100000/week-one-earliest.json",
-            "hockey-ballarat/2026/07/13/100000/week-two-later.json",
-            "hockey-ballarat/2026/07/09/100000/week-two-earliest.json",
-            "hockey-ballarat/2026/06/30/100000/month-later.json",
-            "hockey-ballarat/2026/06/01/100000/month-earliest.json",
-            "hockey-ballarat/2026/05/20/100000/older-month.json",
+            "hockey-ballarat/2026/07/29/080000/recent-first.json",
+            "hockey-ballarat/2026/07/29/100000/recent-middle.json",
+            "hockey-ballarat/2026/07/29/110000/recent-last.json",
+            "hockey-ballarat/2026/07/25/080000/daily-earlier.json",
+            "hockey-ballarat/2026/07/25/100000/daily-latest.json",
+            "hockey-ballarat/2026/07/08/080000/weekly-earlier.json",
+            "hockey-ballarat/2026/07/10/100000/weekly-latest.json",
+            "hockey-ballarat/2026/05/01/080000/monthly-earlier.json",
+            "hockey-ballarat/2026/05/20/100000/monthly-latest.json",
+            "hockey-ballarat/2025/05/20/100000/expired.json",
         ]
 
         plan = retention.build_retention_plan(
@@ -46,25 +47,24 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
 
         self.assertEqual(
             {
-                "hockey-ballarat/2026/07/21/100000/week-one-later.json",
-                "hockey-ballarat/2026/07/13/100000/week-two-later.json",
-                "hockey-ballarat/2026/06/30/100000/month-later.json",
+                "hockey-ballarat/2026/07/29/100000/recent-middle.json",
+                "hockey-ballarat/2026/07/25/080000/daily-earlier.json",
+                "hockey-ballarat/2026/07/08/080000/weekly-earlier.json",
+                "hockey-ballarat/2026/05/01/080000/monthly-earlier.json",
+                "hockey-ballarat/2025/05/20/100000/expired.json",
             },
             set(plan["delete_paths"]),
         )
         self.assertEqual(set(paths) - set(plan["delete_paths"]), set(plan["keep_paths"]))
 
-    def test_exact_age_boundaries_and_sources_are_independent(self) -> None:
+    def test_sources_are_retained_independently(self) -> None:
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
         paths = [
-            "alpha/2026/07/22/120000/exact-seven.json",
-            "alpha/2026/07/15/120000/exact-fourteen.json",
-            "alpha/2026/07/08/120000/exact-twenty-one.json",
-            "alpha/2026/07/16/120000/delete-week-one-later.json",
-            "alpha/2026/07/09/120000/delete-week-two-later.json",
-            "beta/2026/07/16/120000/keep-beta-week-one.json",
-            "beta/2026/07/09/120000/keep-beta-week-two.json",
+            "alpha/2026/07/25/080000/alpha-earlier.json",
+            "alpha/2026/07/25/100000/alpha-latest.json",
+            "beta/2026/07/25/080000/beta-earlier.json",
+            "beta/2026/07/25/100000/beta-latest.json",
         ]
 
         plan = retention.build_retention_plan(
@@ -74,8 +74,8 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
 
         self.assertEqual(
             {
-                "alpha/2026/07/16/120000/delete-week-one-later.json",
-                "alpha/2026/07/09/120000/delete-week-two-later.json",
+                "alpha/2026/07/25/080000/alpha-earlier.json",
+                "beta/2026/07/25/080000/beta-earlier.json",
             },
             set(plan["delete_paths"]),
         )
@@ -106,11 +106,11 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
                 "size": 10,
             },
             {
-                "path": "sunraysia/2026/06/30/100000/private-delete.json",
+                "path": "sunraysia/2026/05/01/100000/private-delete.json",
                 "size": 20,
             },
             {
-                "path": "sunraysia/2026/06/01/100000/private-keep.json",
+                "path": "sunraysia/2026/05/20/100000/private-keep.json",
                 "size": 30,
             },
             {"path": "unexpected-private-object.json", "size": 40},
@@ -307,11 +307,11 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
         records = [
             {
-                "path": "sunraysia/2026/06/30/100000/delete.json",
+                "path": "sunraysia/2026/05/01/100000/delete.json",
                 "size": 20,
             },
             {
-                "path": "sunraysia/2026/06/01/100000/keep.json",
+                "path": "sunraysia/2026/05/20/100000/keep.json",
                 "size": 30,
             },
         ]
@@ -345,8 +345,8 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
         records = [
-            {"path": "sunraysia/2026/06/30/100000/delete.json", "size": 20},
-            {"path": "sunraysia/2026/06/01/100000/keep.json", "size": 30},
+            {"path": "sunraysia/2026/05/01/100000/delete.json", "size": 20},
+            {"path": "sunraysia/2026/05/20/100000/keep.json", "size": 30},
         ]
         plan = retention.build_retention_plan(records, as_of=as_of)
         approved = retention.build_public_report(records, plan, as_of=as_of)
@@ -387,8 +387,8 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
     def test_apply_verifies_deleted_and_retained_objects(self) -> None:
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
-        delete_path = "sunraysia/2026/06/30/100000/delete.json"
-        keep_path = "sunraysia/2026/06/01/100000/keep.json"
+        delete_path = "sunraysia/2026/05/01/100000/delete.json"
+        keep_path = "sunraysia/2026/05/20/100000/keep.json"
         before = [
             {"path": delete_path, "size": 20},
             {"path": keep_path, "size": 30},
@@ -437,8 +437,8 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
         before = [
-            {"path": "sunraysia/2026/06/30/100000/delete.json", "size": 20},
-            {"path": "sunraysia/2026/06/01/100000/keep.json", "size": 30},
+            {"path": "sunraysia/2026/05/01/100000/delete.json", "size": 20},
+            {"path": "sunraysia/2026/05/20/100000/keep.json", "size": 30},
         ]
         plan = retention.build_retention_plan(before, as_of=as_of)
         approved = retention.build_public_report(before, plan, as_of=as_of)
@@ -464,8 +464,8 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
         before = [
-            {"path": "sunraysia/2026/06/30/100000/delete.json", "size": 20},
-            {"path": "sunraysia/2026/06/01/100000/keep.json", "size": 30},
+            {"path": "sunraysia/2026/05/01/100000/delete.json", "size": 20},
+            {"path": "sunraysia/2026/05/20/100000/keep.json", "size": 30},
         ]
         plan = retention.build_retention_plan(before, as_of=as_of)
         approved = retention.build_public_report(before, plan, as_of=as_of)
@@ -490,8 +490,8 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
     def test_apply_verifies_after_uncertain_delete_outcome(self) -> None:
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
-        delete_path = "sunraysia/2026/06/30/100000/delete.json"
-        keep_path = "sunraysia/2026/06/01/100000/keep.json"
+        delete_path = "sunraysia/2026/05/01/100000/delete.json"
+        keep_path = "sunraysia/2026/05/20/100000/keep.json"
         before = [
             {"path": delete_path, "size": 20},
             {"path": keep_path, "size": 30},
@@ -525,8 +525,8 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
         before = [
-            {"path": "sunraysia/2026/06/30/100000/delete.json", "size": 20},
-            {"path": "sunraysia/2026/06/01/100000/keep.json", "size": 30},
+            {"path": "sunraysia/2026/05/01/100000/delete.json", "size": 20},
+            {"path": "sunraysia/2026/05/20/100000/keep.json", "size": 30},
         ]
         plan = retention.build_retention_plan(before, as_of=as_of)
         approved = retention.build_public_report(before, plan, as_of=as_of)
@@ -555,8 +555,8 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
         before = [
-            {"path": "sunraysia/2026/06/30/100000/delete.json", "size": 20},
-            {"path": "sunraysia/2026/06/01/100000/keep.json", "size": 30},
+            {"path": "sunraysia/2026/05/01/100000/delete.json", "size": 20},
+            {"path": "sunraysia/2026/05/20/100000/keep.json", "size": 30},
         ]
         plan = retention.build_retention_plan(before, as_of=as_of)
         approved = retention.build_public_report(before, plan, as_of=as_of)
@@ -582,11 +582,11 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
         delete_record = {
-            "path": "sunraysia/2026/06/30/100000/delete.json",
+            "path": "sunraysia/2026/05/01/100000/delete.json",
             "size": 20,
         }
         keep_record = {
-            "path": "sunraysia/2026/06/01/100000/keep.json",
+            "path": "sunraysia/2026/05/20/100000/keep.json",
             "size": 30,
         }
         before = [delete_record, keep_record]
@@ -644,7 +644,10 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
                 raise AssertionError("listing was not expected")
 
         reader = FakeReader()
-        client = retention.DevRetentionStorageApi(reader)
+        client = retention.RetentionStorageApi(
+            reader,
+            retention.EXPECTED_DEV_PROJECT_REF,
+        )
         client.delete_objects([path])
 
         self.assertEqual(1, len(reader.opener.requests))
@@ -663,6 +666,51 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             retention.parse_args(["--apply"])
 
+    def test_production_apply_requires_exact_approval_phrase(self) -> None:
+        retention = load_retention_module()
+        base_args = [
+            "--expected-project-ref",
+            retention.EXPECTED_PRODUCTION_PROJECT_REF,
+            "--apply",
+            "--expected-delete-count",
+            "1",
+            "--expected-delete-bytes",
+            "1",
+            "--expected-plan-sha256",
+            "0" * 64,
+        ]
+
+        with self.assertRaises(SystemExit):
+            retention.parse_args(base_args)
+
+        parsed = retention.parse_args(
+            base_args
+            + [
+                "--production-approval",
+                retention.PRODUCTION_APPROVAL_PHRASE,
+            ]
+        )
+        self.assertEqual(
+            retention.EXPECTED_PRODUCTION_PROJECT_REF,
+            parsed.expected_project_ref,
+        )
+
+    def test_production_run_apply_checks_phrase_before_inventory(self) -> None:
+        retention = load_retention_module()
+
+        with mock.patch.object(retention, "iter_backup_objects") as inventory:
+            with self.assertRaisesRegex(RuntimeError, "approval phrase"):
+                retention.run_apply(
+                    object(),
+                    project_ref=retention.EXPECTED_PRODUCTION_PROJECT_REF,
+                    as_of=datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc),
+                    expected_delete_count=1,
+                    expected_delete_bytes=1,
+                    expected_plan_sha256="0" * 64,
+                )
+
+        inventory.assert_not_called()
+
 
 class RetentionWorkflowSafetyTests(unittest.TestCase):
     def test_workflow_guards_manual_dev_retention_apply(self) -> None:
@@ -671,6 +719,7 @@ class RetentionWorkflowSafetyTests(unittest.TestCase):
         self.assertIn("- storage-retention-dry-run", workflow)
         self.assertIn("inputs.task == 'storage-retention-dry-run'", workflow)
         self.assertIn("python scripts/retain_scrape_backups.py", workflow)
+        self.assertIn("--expected-project-ref icqegnpjbizccjebjfhb", workflow)
         self.assertIn("SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}", workflow)
         self.assertIn(
             "SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}",

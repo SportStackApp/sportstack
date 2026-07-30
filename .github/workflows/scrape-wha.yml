@@ -6,49 +6,12 @@
 # Can write directly to Supabase (revsports_players table) when enabled.
 # Also uploads CSV backups from the /data folder to Supabase Storage.
 #
-# Schedule (AEST = UTC+10):
-#   Daily       — 2am AEST every day
-#   Sat & Sun   — hourly from 8am to 8pm AEST (on the hour, same as HB)
-#
-# Manual trigger: Actions tab → "Scrape — Wimmera Hockey Association" → Run workflow
+# Manual fallback only. Normal Production scheduling is owned by
+# production-scrapers.yml so it cannot accidentally run twice.
 
 name: Scrape — Wimmera Hockey Association
 
 on:
-  schedule:
-    # ── Daily 2am AEST (16:00 UTC) ───────────────────────────
-    - cron: "0 16 * * *"
-
-    # ── Saturday hourly 8am–8pm AEST ─────────────────────────
-    - cron: "0 22 * * 5"   # 8:00am Sat
-    - cron: "0 23 * * 5"   # 9:00am Sat
-    - cron: "0 0  * * 6"   # 10:00am Sat
-    - cron: "0 1  * * 6"   # 11:00am Sat
-    - cron: "0 2  * * 6"   # 12:00pm Sat
-    - cron: "0 3  * * 6"   # 1:00pm Sat
-    - cron: "0 4  * * 6"   # 2:00pm Sat
-    - cron: "0 5  * * 6"   # 3:00pm Sat
-    - cron: "0 6  * * 6"   # 4:00pm Sat
-    - cron: "0 7  * * 6"   # 5:00pm Sat
-    - cron: "0 8  * * 6"   # 6:00pm Sat
-    - cron: "0 9  * * 6"   # 7:00pm Sat
-    - cron: "0 10 * * 6"   # 8:00pm Sat
-
-    # ── Sunday hourly 8am–8pm AEST ────────────────────────────
-    - cron: "0 22 * * 6"   # 8:00am Sun
-    - cron: "0 23 * * 6"   # 9:00am Sun
-    - cron: "0 0  * * 0"   # 10:00am Sun
-    - cron: "0 1  * * 0"   # 11:00am Sun
-    - cron: "0 2  * * 0"   # 12:00pm Sun
-    - cron: "0 3  * * 0"   # 1:00pm Sun
-    - cron: "0 4  * * 0"   # 2:00pm Sun
-    - cron: "0 5  * * 0"   # 3:00pm Sun
-    - cron: "0 6  * * 0"   # 4:00pm Sun
-    - cron: "0 7  * * 0"   # 5:00pm Sun
-    - cron: "0 8  * * 0"   # 6:00pm Sun
-    - cron: "0 9  * * 0"   # 7:00pm Sun
-    - cron: "0 10 * * 0"   # 8:00pm Sun
-
   workflow_dispatch:
     inputs:
       only_grades:
@@ -64,7 +27,15 @@ on:
         required: false
         default: ''
       upload_to_supabase:
-        description: 'Upload scraped rows to Supabase? Scheduled runs always upload.'
+        description: 'Upload scraped rows to Production Supabase?'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      upload_backup:
+        description: 'Save a compressed Production Storage backup?'
         required: true
         default: 'false'
         type: choice
@@ -81,7 +52,7 @@ jobs:
     # Force GitHub Actions to use Node.js 24 (required after June 2026 deprecation)
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      UPLOAD_TO_SUPABASE: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_to_supabase }}
+      UPLOAD_TO_SUPABASE: ${{ inputs.upload_to_supabase }}
 
     steps:
       - name: Checkout repo
@@ -111,6 +82,7 @@ jobs:
         run: python scraper/scraper.py
 
       - name: Upload backup to Supabase Storage
+        if: inputs.upload_backup == 'true'
         env:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}

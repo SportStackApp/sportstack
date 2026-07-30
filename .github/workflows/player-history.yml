@@ -9,29 +9,33 @@
 # Uses Playwright (headless Chromium) because history pages are
 # JavaScript-rendered.
 #
-# Schedule (AEST = UTC+10):
-#   Wednesday night — 3am AEST (1 hour after registry scraper)
-#   Sunday night    — 3am AEST (1 hour after registry scraper)
+# Manual fallback only. Normal Production scheduling is owned by
+# production-scrapers.yml so it cannot accidentally run twice.
 #
-# Runs 1 hour after the registry scraper each time so player IDs are ready.
 # With ~727 players at 0.8s delay, expect ~15–20 minutes to complete.
-#
-# Manual trigger: Actions tab → "Player History Scraper" → Run workflow
 
 name: Player History Scraper
 
 on:
-  schedule:
-    # Wednesday night 3am AEST = 17:00 UTC Wednesday
-    - cron: "0 17 * * 3"
-
-    # Sunday night 3am AEST = 17:00 UTC Sunday
-    - cron: "0 17 * * 0"
-
   workflow_dispatch:
+    inputs:
+      confirm_production:
+        description: Confirm this fallback may write to Production
+        required: true
+        default: STOP
+        type: choice
+        options:
+          - STOP
+          - RUN_PRODUCTION
+      upload_backup:
+        description: Save a compressed Production Storage backup?
+        required: true
+        default: false
+        type: boolean
 
 jobs:
   scrape-history:
+    if: inputs.confirm_production == 'RUN_PRODUCTION'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -63,6 +67,7 @@ jobs:
         run: python scraper/history_scraper.py
 
       - name: Upload backup to Supabase Storage
+        if: inputs.upload_backup
         env:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}

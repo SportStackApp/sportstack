@@ -4,8 +4,9 @@ on:
   schedule:
     # GitHub schedules use UTC. These run early morning in Melbourne.
     - cron: "0 18 * * *" # Match scrapers: 04:00 AEST / 05:00 AEDT
-    - cron: "0 19 * * *" # Player registry: 05:00 AEST / 06:00 AEDT
-    - cron: "0 20 * * 0,3" # Player history: Sun/Wed, 06:00 AEST / 07:00 AEDT
+    - cron: "0 19 * * 1,4" # Player registry: Mon/Thu, 05:00 AEST / 06:00 AEDT
+    - cron: "0 20 * * 1" # Player history: Mon, 06:00 AEST / 07:00 AEDT
+    - cron: "0 21 * * 1" # Read-only retention report: Mon, 07:00 AEST / 08:00 AEDT
   workflow_dispatch:
     inputs:
       task:
@@ -28,6 +29,11 @@ on:
         description: Upload match scraper results to Dev Supabase
         required: true
         default: true
+        type: boolean
+      upload_backup:
+        description: Save a compressed backup snapshot to Dev Storage
+        required: true
+        default: false
         type: boolean
       retention_expected_delete_count:
         description: Approved retention deletion object count (apply only)
@@ -75,13 +81,15 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
+          EXPECTED_SUPABASE_PROJECT_REF: icqegnpjbizccjebjfhb
         run: python scripts/inspect_supabase_storage_usage.py
 
   storage-retention-dry-run:
     name: Plan Dev scrape-backup retention
     if: >-
-      github.event_name == 'workflow_dispatch' &&
-      inputs.task == 'storage-retention-dry-run'
+      (github.event_name == 'schedule' && github.event.schedule == '0 21 * * 1') ||
+      (github.event_name == 'workflow_dispatch' &&
+        inputs.task == 'storage-retention-dry-run')
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -98,7 +106,10 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
-        run: python scripts/retain_scrape_backups.py
+          EXPECTED_SUPABASE_PROJECT_REF: icqegnpjbizccjebjfhb
+        run: >-
+          python scripts/retain_scrape_backups.py
+          --expected-project-ref icqegnpjbizccjebjfhb
 
   storage-retention-apply:
     name: Apply approved Dev scrape-backup retention
@@ -121,11 +132,13 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
+          EXPECTED_SUPABASE_PROJECT_REF: icqegnpjbizccjebjfhb
           RETENTION_EXPECTED_DELETE_COUNT: ${{ inputs.retention_expected_delete_count }}
           RETENTION_EXPECTED_DELETE_BYTES: ${{ inputs.retention_expected_delete_bytes }}
           RETENTION_EXPECTED_PLAN_SHA256: ${{ inputs.retention_expected_plan_sha256 }}
         run: |
           python scripts/retain_scrape_backups.py --apply \
+            --expected-project-ref icqegnpjbizccjebjfhb \
             --expected-delete-count "$RETENTION_EXPECTED_DELETE_COUNT" \
             --expected-delete-bytes "$RETENTION_EXPECTED_DELETE_BYTES" \
             --expected-plan-sha256 "$RETENTION_EXPECTED_PLAN_SHA256"
@@ -140,6 +153,7 @@ jobs:
     timeout-minutes: 30
     env:
       UPLOAD_TO_SUPABASE: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_to_supabase }}
+      UPLOAD_BACKUP: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_backup }}
 
     steps:
       - name: Check out repository
@@ -165,6 +179,7 @@ jobs:
         run: python scraper/scraper.py
 
       - name: Upload scraper backup to Dev Storage
+        if: env.UPLOAD_BACKUP == 'true'
         env:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
@@ -190,6 +205,7 @@ jobs:
     timeout-minutes: 30
     env:
       UPLOAD_TO_SUPABASE: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_to_supabase }}
+      UPLOAD_BACKUP: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_backup }}
 
     steps:
       - name: Check out repository
@@ -215,6 +231,7 @@ jobs:
         run: python scraper/scraper.py
 
       - name: Upload scraper backup to Dev Storage
+        if: env.UPLOAD_BACKUP == 'true'
         env:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
@@ -240,6 +257,7 @@ jobs:
     timeout-minutes: 30
     env:
       UPLOAD_TO_SUPABASE: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_to_supabase }}
+      UPLOAD_BACKUP: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_backup }}
 
     steps:
       - name: Check out repository
@@ -266,6 +284,7 @@ jobs:
         run: python scraper/scraper.py
 
       - name: Upload scraper backup to Dev Storage
+        if: env.UPLOAD_BACKUP == 'true'
         env:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
@@ -284,7 +303,7 @@ jobs:
   player-registry:
     name: Player registry to Dev
     if: >-
-      (github.event_name == 'schedule' && github.event.schedule == '0 19 * * *') ||
+      (github.event_name == 'schedule' && github.event.schedule == '0 19 * * 1,4') ||
       (github.event_name == 'workflow_dispatch' &&
         (inputs.task == 'all' || inputs.task == 'player-registry'))
     runs-on: ubuntu-latest
@@ -292,6 +311,7 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
       SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
+      UPLOAD_BACKUP: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_backup }}
 
     steps:
       - name: Check out repository
@@ -314,6 +334,7 @@ jobs:
         run: python scraper/player_registry_scraper.py
 
       - name: Upload player registry backup to Dev Storage
+        if: env.UPLOAD_BACKUP == 'true'
         run: |
           python scripts/upload_scrape_backups_to_storage.py \
             --source-dir data/player-registry \
@@ -322,7 +343,7 @@ jobs:
   player-history:
     name: Player history to Dev
     if: >-
-      (github.event_name == 'schedule' && github.event.schedule == '0 20 * * 0,3') ||
+      (github.event_name == 'schedule' && github.event.schedule == '0 20 * * 1') ||
       (github.event_name == 'workflow_dispatch' &&
         (inputs.task == 'all' || inputs.task == 'player-history'))
     runs-on: ubuntu-latest
@@ -330,6 +351,7 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
       SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
+      UPLOAD_BACKUP: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_backup }}
 
     steps:
       - name: Check out repository
@@ -352,6 +374,7 @@ jobs:
         run: python scraper/history_scraper.py
 
       - name: Upload player history backup to Dev Storage
+        if: env.UPLOAD_BACKUP == 'true'
         run: |
           python scripts/upload_scrape_backups_to_storage.py \
             --source-dir data/player-history \

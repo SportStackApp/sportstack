@@ -88,35 +88,42 @@ The backend is Supabase: Postgres, Auth, Storage, Row Level Security, and Edge F
 - GitHub API inspection on 29 July 2026 found no classic branch protection or repository rulesets
   on `dev`, `main` or `prod`. The production boundary is currently procedural until a reviewed
   remote `prod` protection policy is approved and applied.
-- Bounded unattended work follows `docs/overnight-agent-plan.md`. The initial overnight scope keeps
-  all edits on `dev`, blocks database writes and does not promote the 18 pending Dev commits to
-  `main` automatically.
+- Bounded unattended work follows `docs/overnight-agent-plan.md`. Every run must recheck branch
+  divergence and must not promote `dev` to `main` automatically.
 - Use Australian English in user-facing text.
 - Use `DD/MM/YYYY` dates and respect the association timezone where relevant.
 
 ## Recently changed
 
-Recent repo evidence shows Player MVP Voting voter access and app feedback work landed after the older handoff documents were written.
+The approved Production compatibility release completed on 29 July 2026. Local and remote `dev`,
+`main` and `prod` were confirmed aligned at `53561de` before the 30 July Dev-only scraper-routine
+work began.
 
 Known recent themes:
 
-- Voter-only Player MVP Voting session discovery was adjusted.
-- Primary/secondary voter team switching was added.
-- App metadata was renamed to SportStack.
-- `app_feedback` support was added.
-- Some older lint issues may still exist outside the touched files.
+- Production now contains the released communications, availability, profile, Player MVP Voting,
+  Umpire Match Voting and Safety Hub read-only compatibility package.
+- Player MVP reminder and SportStack notification Edge Functions and schedules are active.
+- Production scraper backups still need a guarded retention pass; no Production object has been
+  deleted during the 30 July audit.
+- The repository-wide lint backlog remains separate from focused changed-file checks.
 
 ## Known broken / uncertain
 
 Treat these as current caution areas unless a newer live check proves otherwise:
 
 - Older handoff docs may be stale in places.
-- Player MVP Voting status differs across docs: some say built/live, others say partial. Check current code, latest PRs, and live data before planning work on that module.
-- Email sending/reminders for Player MVP Voting need confirmation before assuming they are fully implemented.
+- Player MVP Voting is built and live. Older dated notes that describe mock email buttons or manual
+  session opening are historical and must not override the current release record.
+- Player MVP reminder calls are deployed and scheduled; email delivery should still be monitored
+  through normal logs and owner testing.
 - Fixture `division_id` / `season_id` reliability needs confirmation before joining fixtures directly to divisions.
 - Live Supabase schema can drift from migration files, so verify live schema before database-dependent work.
 - Edge Functions in the repo and deployed Edge Functions may be out of sync.
-- There is no formal automated test suite yet.
+- Supabase Storage Size is an organisation-wide GB-hour average. Check per-project object totals
+  before assuming a dashboard warning reflects the current live byte count.
+- There is no formal automated browser suite yet. Focused Python tests cover scraper and Storage
+  safety tooling.
 
 ## Current Codex handoff template
 
@@ -2280,6 +2287,79 @@ What Aaron should test next:
 Risk level:
 
 - Medium. Additive schema and Edge Function changes are included, but no destructive database work is required.
+
+## 30 July 2026 - Scraper schedule and Storage retention preparation
+
+What changed:
+
+- Replaced the overlapping Production schedules with one consolidated, bounded workflow prepared
+  on `dev`. The five old Production workflows are now manual-only fallbacks.
+- Reduced routine match refreshes to one daily baseline, two Friday Sunraysia refreshes and three
+  Saturday/Sunday refreshes. Player Registry runs Monday/Thursday; Player History runs Monday.
+- Future backups use one compressed `.tar.gz` object per source and routine run. Extra match-day
+  refreshes update data without saving another near-identical backup.
+- Added weekly read-only Storage reports and a guarded retention policy: two daily snapshots for
+  three days, daily through day 14, weekly through day 60, monthly through day 365, then expiry.
+- Generalised the Storage diagnostic and retention scripts for the exact known Dev and Production
+  project references. Production deletion also requires an exact confirmation phrase.
+- Updated current handoff, release, overnight and historical-note guidance.
+- Archived all eight local stashes into the verified Git bundle recorded in the handoff, then
+  cleared the stash list so the repository can return to a clean state.
+
+Live read-only audit:
+
+- Dev `scrape-backups`: 124 objects and 181,040,447 bytes.
+- Production `scrape-backups`: 1,013 objects and 1,593,506,009 bytes.
+- The proposed policy projected 858 Production deletion candidates using 1,367,090,366 bytes,
+  leaving 155 objects using about 216 MB. This projection is not approval to delete.
+- No Production Storage object, database row, schedule, secret or deployment was changed.
+
+Files changed:
+
+- `.github/workflows/dev-scrapers.yml`
+- `.github/workflows/production-scrapers.yml`
+- `.github/workflows/player-history.yml`
+- `.github/workflows/player-registry.yml`
+- `.github/workflows/scrape-hb.yml`
+- `.github/workflows/scrape-sunraysia.yml`
+- `.github/workflows/scrape-wha.yml`
+- `scripts/inspect_supabase_storage_usage.py`
+- `scripts/retain_scrape_backups.py`
+- `scripts/upload_scrape_backups_to_storage.py`
+- `tests/test_inspect_supabase_storage_usage.py`
+- `tests/test_retain_scrape_backups.py`
+- `tests/test_scraper_workflow_routine.py`
+- `tests/test_upload_scrape_backups_to_storage.py`
+- `docs/scraper-operations.md`
+- `CODEX_HANDOFF.md`
+- `CODEX_HANDOFF_EXTRAS.md`
+- `docs/overnight-agent-plan.md`
+- `docs/production-release-readiness-2026-07-29.md`
+- `docs/safety-hub-database-integration-plan.md`
+- `notes/README.md`
+- `notes/known-issues.md`
+
+Checks run:
+
+- 69 Python tests passed.
+- All seven GitHub workflow files passed YAML parsing and `actionlint` validation.
+- `npx tsc --noEmit` passed.
+- `npm run build` passed with the existing large-chunk warning.
+- `npm run lint` was run and still reports the existing repository-wide backlog of 433 errors and
+  89 warnings in older untouched files.
+
+What Aaron should test next:
+
+- Review `docs/scraper-operations.md` and confirm the proposed Production run times and retention
+  tiers.
+- If approved, promote the workflow package to `main`, then run the read-only Production Storage
+  diagnostic and retention dry run.
+- Approve the exact new count, bytes and SHA-256 separately before any Production deletion.
+
+Risk level:
+
+- Medium while prepared on `dev`. No migration or data deletion is included. Promotion to `main`
+  would activate Production-capable schedules and requires explicit owner approval.
 
 ## How to update this file
 

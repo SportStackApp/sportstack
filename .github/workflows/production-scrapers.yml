@@ -1,0 +1,299 @@
+name: Production Supabase Scrapers
+
+on:
+  schedule:
+    # GitHub schedules use UTC. Local times move by one hour during daylight saving.
+    - cron: "0 18 * * *" # Daily match baseline: 04:00 AEST / 05:00 AEDT
+    - cron: "0 8,12 * * 5" # Friday indoor refresh: 18:00/22:00 AEST
+    - cron: "0 2,6,10 * * 6,0" # Weekend refresh: 12:00/16:00/20:00 AEST
+    - cron: "0 19 * * 1,4" # Player registry: Mon/Thu, 05:00 AEST
+    - cron: "0 20 * * 1" # Player history: Mon, 06:00 AEST
+    - cron: "0 21 * * 1" # Read-only retention report: Mon, 07:00 AEST
+  workflow_dispatch:
+    inputs:
+      task:
+        description: What should be refreshed in Production?
+        required: true
+        default: storage-diagnostics
+        type: choice
+        options:
+          - storage-diagnostics
+          - storage-retention-dry-run
+          - storage-retention-apply
+          - all
+          - match-scrapers
+          - hockey-ballarat
+          - sunraysia
+          - wimmera
+          - player-registry
+          - player-history
+      write_to_production:
+        description: Allow this manual scraper run to write to Production Supabase
+        required: true
+        default: false
+        type: boolean
+      upload_backup:
+        description: Save a compressed backup snapshot to Production Storage
+        required: true
+        default: false
+        type: boolean
+      retention_expected_delete_count:
+        description: Approved retention deletion object count (apply only)
+        required: false
+        type: string
+      retention_expected_delete_bytes:
+        description: Approved retention deletion byte count (apply only)
+        required: false
+        type: string
+      retention_expected_plan_sha256:
+        description: Approved retention plan SHA-256 (apply only)
+        required: false
+        type: string
+      retention_production_approval:
+        description: Exact approval phrase shown in the operations guide (apply only)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-supabase-scrapers
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  PYTHONUNBUFFERED: "1"
+  EXPECTED_SUPABASE_PROJECT_REF: svierarfcolhcfjpmwck
+
+jobs:
+  storage-diagnostics:
+    name: Inspect Production Storage usage
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.task == 'storage-diagnostics'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Report read-only Production Storage usage
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scripts/inspect_supabase_storage_usage.py
+
+  storage-retention-dry-run:
+    name: Plan Production scrape-backup retention
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '0 21 * * 1') ||
+      (github.event_name == 'workflow_dispatch' &&
+        inputs.task == 'storage-retention-dry-run')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Report read-only Production retention plan
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: >-
+          python scripts/retain_scrape_backups.py
+          --expected-project-ref svierarfcolhcfjpmwck
+
+  storage-retention-apply:
+    name: Apply approved Production scrape-backup retention
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.task == 'storage-retention-apply'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Apply exactly approved Production retention plan
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RETENTION_EXPECTED_DELETE_COUNT: ${{ inputs.retention_expected_delete_count }}
+          RETENTION_EXPECTED_DELETE_BYTES: ${{ inputs.retention_expected_delete_bytes }}
+          RETENTION_EXPECTED_PLAN_SHA256: ${{ inputs.retention_expected_plan_sha256 }}
+          RETENTION_PRODUCTION_APPROVAL: ${{ inputs.retention_production_approval }}
+        run: |
+          python scripts/retain_scrape_backups.py --apply \
+            --expected-project-ref svierarfcolhcfjpmwck \
+            --expected-delete-count "$RETENTION_EXPECTED_DELETE_COUNT" \
+            --expected-delete-bytes "$RETENTION_EXPECTED_DELETE_BYTES" \
+            --expected-plan-sha256 "$RETENTION_EXPECTED_PLAN_SHA256" \
+            --production-approval "$RETENTION_PRODUCTION_APPROVAL"
+
+  match-scrapers:
+    name: ${{ matrix.association }} to Production
+    if: >-
+      (github.event_name == 'schedule' &&
+        (github.event.schedule == '0 18 * * *' ||
+         github.event.schedule == '0 8,12 * * 5' ||
+         github.event.schedule == '0 2,6,10 * * 6,0')) ||
+      (github.event_name == 'workflow_dispatch' &&
+        (inputs.task == 'all' ||
+         inputs.task == 'match-scrapers' ||
+         inputs.task == 'hockey-ballarat' ||
+         inputs.task == 'sunraysia' ||
+         inputs.task == 'wimmera'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - task: hockey-ballarat
+            association: Hockey Ballarat
+            portal_url: https://www.revolutionise.com.au/hockeyballarat
+            output_dir: data/hockey-ballarat
+            source_name: hockey-ballarat
+            competition_id: ""
+          - task: sunraysia
+            association: Sunraysia Hockey Association
+            portal_url: https://www.sunraysiahockey.com.au
+            output_dir: data/sunraysia
+            source_name: sunraysia
+            competition_id: ""
+          - task: wimmera
+            association: Wimmera Hockey Association
+            portal_url: https://www.revolutionise.com.au/wimmeraha
+            output_dir: data/wimmera
+            source_name: wimmera
+            competition_id: "26593"
+    env:
+      SOURCE_SELECTED: >-
+        ${{ github.event_name == 'schedule' &&
+            (github.event.schedule != '0 8,12 * * 5' || matrix.task == 'sunraysia') ||
+            inputs.task == 'all' ||
+            inputs.task == 'match-scrapers' ||
+            inputs.task == matrix.task }}
+      UPLOAD_TO_SUPABASE: ${{ github.event_name == 'schedule' && 'true' || inputs.write_to_production }}
+      UPLOAD_BACKUP: >-
+        ${{ github.event_name == 'schedule' && github.event.schedule == '0 18 * * *' && 'true' ||
+            github.event_name == 'workflow_dispatch' && inputs.upload_backup && 'true' || 'false' }}
+    steps:
+      - name: Check out repository
+        if: env.SOURCE_SELECTED == 'true'
+        uses: actions/checkout@v4
+      - name: Set up Python
+        if: env.SOURCE_SELECTED == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install scraper dependencies
+        if: env.SOURCE_SELECTED == 'true'
+        run: pip install requests beautifulsoup4 supabase
+      - name: Run match scraper
+        if: env.SOURCE_SELECTED == 'true'
+        env:
+          PORTAL_URL: ${{ matrix.portal_url }}
+          ASSOCIATION_NAME: ${{ matrix.association }}
+          OUTPUT_DIR: ${{ matrix.output_dir }}
+          COMPETITION_ID: ${{ matrix.competition_id }}
+          UPSERT_SUPABASE: ${{ env.UPLOAD_TO_SUPABASE }}
+          UPSERT_SUPABASE_V2: ${{ env.UPLOAD_TO_SUPABASE }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scraper/scraper.py
+      - name: Upload compressed Production backup
+        if: env.SOURCE_SELECTED == 'true' && env.UPLOAD_BACKUP == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: >-
+          python scripts/upload_scrape_backups_to_storage.py
+          --source-dir "${{ matrix.output_dir }}"
+          --source-name "${{ matrix.source_name }}"
+      - name: Import staged fixtures into Production
+        if: env.SOURCE_SELECTED == 'true' && env.UPLOAD_TO_SUPABASE == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scraper/fixture_import.py --apply
+
+  player-registry:
+    name: Player registry to Production
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '0 19 * * 1,4') ||
+      (github.event_name == 'workflow_dispatch' &&
+        inputs.write_to_production &&
+        (inputs.task == 'all' || inputs.task == 'player-registry'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      UPLOAD_BACKUP: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_backup }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install scraper dependencies
+        run: pip install playwright beautifulsoup4 supabase
+      - name: Install Playwright browser
+        run: python -m playwright install chromium
+      - name: Run player registry scraper
+        env:
+          OUTPUT_DIR: data/player-registry
+        run: python scraper/player_registry_scraper.py
+      - name: Upload compressed player registry backup
+        if: env.UPLOAD_BACKUP == 'true'
+        run: >-
+          python scripts/upload_scrape_backups_to_storage.py
+          --source-dir data/player-registry
+          --source-name player-registry
+
+  player-history:
+    name: Player history to Production
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '0 20 * * 1') ||
+      (github.event_name == 'workflow_dispatch' &&
+        inputs.write_to_production &&
+        (inputs.task == 'all' || inputs.task == 'player-history'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      UPLOAD_BACKUP: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_backup }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install scraper dependencies
+        run: pip install playwright beautifulsoup4 supabase
+      - name: Install Playwright browser
+        run: python -m playwright install chromium
+      - name: Run player history scraper
+        env:
+          OUTPUT_DIR: data/player-history
+        run: python scraper/history_scraper.py
+      - name: Upload compressed player history backup
+        if: env.UPLOAD_BACKUP == 'true'
+        run: >-
+          python scripts/upload_scrape_backups_to_storage.py
+          --source-dir data/player-history
+          --source-name player-history

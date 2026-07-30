@@ -7,8 +7,9 @@ preserving downloadable CSV/TXT/JSON backups from each workflow run.
 from __future__ import annotations
 
 import argparse
-import mimetypes
 import os
+import tarfile
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -52,22 +53,37 @@ def collect_files(source_dir: Path) -> list[Path]:
     return sorted(files)
 
 
-def upload_file(client, bucket_name: str, source_dir: Path, path: Path, prefix: str) -> str:
-    relative_path = path.relative_to(source_dir).as_posix()
-    storage_path = f"{prefix}/{relative_path}"
-    content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-    file_options = {"content-type": content_type}
+def build_compressed_archive(source_dir: Path, files: list[Path]):
+    """Return one gzip-compressed tar stream with safe relative member names."""
 
-    with path.open("rb") as handle:
-        try:
-            client.storage.from_(bucket_name).upload(storage_path, handle, file_options)
-        except Exception as error:
-            # Supabase Storage upload does not replace existing files by default.
-            # If this path already exists, update it instead.
-            if "already exists" not in str(error).lower():
-                raise
-            handle.seek(0)
-            client.storage.from_(bucket_name).update(storage_path, handle, file_options)
+    archive = tempfile.SpooledTemporaryFile(max_size=32 * 1024 * 1024)
+    with tarfile.open(fileobj=archive, mode="w:gz") as tar:
+        for path in files:
+            relative_path = path.relative_to(source_dir)
+            tar.add(path, arcname=relative_path.as_posix(), recursive=False)
+    archive.seek(0)
+    return archive
+
+
+def upload_archive(
+    client,
+    bucket_name: str,
+    archive,
+    prefix: str,
+    source_name: str,
+) -> str:
+    storage_path = f"{prefix}/{source_name}.tar.gz"
+    file_options = {"content-type": "application/gzip"}
+
+    try:
+        client.storage.from_(bucket_name).upload(storage_path, archive, file_options)
+    except Exception as error:
+        # Timestamped paths should be unique. Retain a safe update fallback for a
+        # retried run that has the same second-level timestamp.
+        if "already exists" not in str(error).lower():
+            raise
+        archive.seek(0)
+        client.storage.from_(bucket_name).update(storage_path, archive, file_options)
 
     return storage_path
 
@@ -96,14 +112,19 @@ def main() -> None:
     run_stamp = datetime.now(timezone.utc).strftime("%Y/%m/%d/%H%M%S")
     prefix = f"{args.source_name}/{run_stamp}"
 
-    uploaded = [
-        upload_file(client, args.bucket, source_dir, path, prefix)
-        for path in files
-    ]
+    with build_compressed_archive(source_dir, files) as archive:
+        upload_archive(
+            client,
+            args.bucket,
+            archive,
+            prefix,
+            args.source_name,
+        )
 
-    print(f"Uploaded {len(uploaded)} backup file(s) to Supabase Storage bucket '{args.bucket}':")
-    for storage_path in uploaded:
-        print(f"- {storage_path}")
+    print(
+        f"Compressed {len(files)} backup file(s) into one private Storage object "
+        f"for source '{args.source_name}'."
+    )
 
 
 if __name__ == "__main__":

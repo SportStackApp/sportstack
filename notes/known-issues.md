@@ -42,3 +42,21 @@ The Supabase emails for password resets, placeholder claim links, and welcome me
 - Add one-off hard-coded permission checks that will need to be unwound during the re-scope.
 - Treat module inheritance as only a Super Admin setting.
 - Rebuild address structure or pitch rotation as part of small feedback fixes.
+
+## Production Scraper Storage Retention Rollout
+
+**Logged:** 30 July 2026
+**Status:** Prepared on `dev` - Production approval still required
+
+**Current position:**
+- Production `scrape-backups` contained 1,013 objects using 1,593,506,009 bytes during the read-only
+  audit.
+- The new consolidated schedule, compressed backup format and bounded retention policy are prepared
+  on `dev`.
+- No Production schedule or Storage object has been changed by the preparation task.
+
+**Approval gates:**
+- Review and approve the exact workflow promotion from `dev` to `main` because it changes
+  Production scraper schedules and secret usage paths.
+- Run a fresh Production retention dry run after promotion.
+- Approve the exact deletion object count, byte count and SHA-256 before the guarded apply.

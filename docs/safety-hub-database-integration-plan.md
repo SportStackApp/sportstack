@@ -1,7 +1,7 @@
 # Safety Hub Database Integration Plan
 
 Status: database migration applied to Dev and Production on 18 July 2026;
-Dev-only test data and the local read-only frontend connection are complete
+Dev test data and the read-only frontend connection are committed and released
 
 Migration source:
 
@@ -223,7 +223,8 @@ Result:
 
 ### Step 4 - Read-Only UI Connection
 
-Status: complete locally; not committed, pushed or deployed.
+Status: complete, committed and released. The UI remains read-only; forms still validate locally
+and do not write to Supabase.
 
 - Replace mock register and dashboard arrays with scoped Supabase reads.
 - Keep forms disabled until reads, filters, drawers and links are verified.
@@ -280,6 +281,5 @@ live form write was included.
 
 The next action requiring Aaron's approval is:
 
-> Commit and push the read-only Safety Hub connection through the normal
-> `dev`-first workflow, then test Association Admin and Club Admin scope before
-> enabling any form writes.
+> Design and test the Dev-only form-write and settings package, including Association Admin and
+> Club Admin scope checks, before any Safety Hub write path or Production data seeding is enabled.

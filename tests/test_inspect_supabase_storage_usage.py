@@ -25,9 +25,23 @@ class SupabaseStorageUsageTests(unittest.TestCase):
         )
 
     def test_rejects_the_production_project(self) -> None:
-        with self.assertRaisesRegex(storage_usage.UnsafeTargetError, "Refusing non-Dev"):
+        with self.assertRaisesRegex(storage_usage.UnsafeTargetError, "Refusing Supabase target"):
             storage_usage.validate_dev_target(
                 "https://svierarfcolhcfjpmwck.supabase.co"
+            )
+
+    def test_accepts_production_only_when_explicitly_expected(self) -> None:
+        self.assertEqual(
+            storage_usage.EXPECTED_PRODUCTION_PROJECT_REF,
+            storage_usage.validate_target(
+                "https://svierarfcolhcfjpmwck.supabase.co",
+                storage_usage.EXPECTED_PRODUCTION_PROJECT_REF,
+            ),
+        )
+        with self.assertRaises(storage_usage.UnsafeTargetError):
+            storage_usage.validate_target(
+                "https://icqegnpjbizccjebjfhb.supabase.co",
+                storage_usage.EXPECTED_PRODUCTION_PROJECT_REF,
             )
 
     def test_rejects_a_deceptive_host(self) -> None:

@@ -8,73 +8,12 @@
 # Sunraysia runs both grass field and indoor competitions.
 # Indoor rounds are played on Friday evenings — extra runs added for those.
 #
-# Schedule (AEST = UTC+10):
-#   Daily           — 2am AEST every day
-#   Sat & Sun       — hourly from 7:30am to 7:30pm AEST (on the half hour)
-#   Friday evenings — hourly from 4:30pm to 10:30pm AEST (indoor competition)
-#
-# Staggering: Sunraysia runs on the half hour (:30). HB runs on the hour (:00).
-#
-# Manual trigger: Actions tab → "Scrape — Sunraysia Hockey Association" → Run workflow
+# Manual fallback only. Normal Production scheduling is owned by
+# production-scrapers.yml so it cannot accidentally run twice.
 
 name: Scrape — Sunraysia Hockey Association
 
 on:
-  schedule:
-    # ── Daily 2am AEST (16:00 UTC) ───────────────────────────
-    - cron: "0 16 * * *"
-
-    # ── Friday evening hourly 4:30pm–10:30pm AEST (indoor) ───
-    # AEST = UTC+10, so subtract 10hrs
-    # 4:30pm Fri AEST  = 06:30 UTC Fri
-    # 5:30pm Fri AEST  = 07:30 UTC Fri
-    # 6:30pm Fri AEST  = 08:30 UTC Fri
-    # 7:30pm Fri AEST  = 09:30 UTC Fri
-    # 8:30pm Fri AEST  = 10:30 UTC Fri
-    # 9:30pm Fri AEST  = 11:30 UTC Fri
-    # 10:30pm Fri AEST = 12:30 UTC Fri
-    - cron: "30 6  * * 5"   # 4:30pm Fri
-    - cron: "30 7  * * 5"   # 5:30pm Fri
-    - cron: "30 8  * * 5"   # 6:30pm Fri
-    - cron: "30 9  * * 5"   # 7:30pm Fri
-    - cron: "30 10 * * 5"   # 8:30pm Fri
-    - cron: "30 11 * * 5"   # 9:30pm Fri
-    - cron: "30 12 * * 5"   # 10:30pm Fri
-
-    # ── Saturday hourly 7:30am–7:30pm AEST ───────────────────
-    # Sat 7:30am  AEST = 21:30 UTC Fri → day-of-week 5
-    # Sat 8:30am–7:30pm AEST = 22:30–09:30 UTC Sat → day-of-week 6
-    - cron: "30 21 * * 5"   # 7:30am Sat
-    - cron: "30 22 * * 5"   # 8:30am Sat
-    - cron: "30 23 * * 5"   # 9:30am Sat
-    - cron: "30 0  * * 6"   # 10:30am Sat
-    - cron: "30 1  * * 6"   # 11:30am Sat
-    - cron: "30 2  * * 6"   # 12:30pm Sat
-    - cron: "30 3  * * 6"   # 1:30pm Sat
-    - cron: "30 4  * * 6"   # 2:30pm Sat
-    - cron: "30 5  * * 6"   # 3:30pm Sat
-    - cron: "30 6  * * 6"   # 4:30pm Sat
-    - cron: "30 7  * * 6"   # 5:30pm Sat
-    - cron: "30 8  * * 6"   # 6:30pm Sat
-    - cron: "30 9  * * 6"   # 7:30pm Sat
-
-    # ── Sunday hourly 7:30am–7:30pm AEST ─────────────────────
-    # Sun 7:30am  AEST = 21:30 UTC Sat → day-of-week 6
-    # Sun 8:30am–7:30pm AEST = 22:30–09:30 UTC Sun → day-of-week 0
-    - cron: "30 21 * * 6"   # 7:30am Sun
-    - cron: "30 22 * * 6"   # 8:30am Sun
-    - cron: "30 23 * * 6"   # 9:30am Sun
-    - cron: "30 0  * * 0"   # 10:30am Sun
-    - cron: "30 1  * * 0"   # 11:30am Sun
-    - cron: "30 2  * * 0"   # 12:30pm Sun
-    - cron: "30 3  * * 0"   # 1:30pm Sun
-    - cron: "30 4  * * 0"   # 2:30pm Sun
-    - cron: "30 5  * * 0"   # 3:30pm Sun
-    - cron: "30 6  * * 0"   # 4:30pm Sun
-    - cron: "30 7  * * 0"   # 5:30pm Sun
-    - cron: "30 8  * * 0"   # 6:30pm Sun
-    - cron: "30 9  * * 0"   # 7:30pm Sun
-
   workflow_dispatch:
     inputs:
       only_grades:
@@ -90,7 +29,15 @@ on:
         required: false
         default: ''
       upload_to_supabase:
-        description: 'Upload scraped rows to Supabase? Scheduled runs always upload.'
+        description: 'Upload scraped rows to Production Supabase?'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      upload_backup:
+        description: 'Save a compressed Production Storage backup?'
         required: true
         default: 'false'
         type: choice
@@ -107,7 +54,7 @@ jobs:
     # Force GitHub Actions to use Node.js 24 (required after June 2026 deprecation)
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      UPLOAD_TO_SUPABASE: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_to_supabase }}
+      UPLOAD_TO_SUPABASE: ${{ inputs.upload_to_supabase }}
 
     steps:
       - name: Checkout repo
@@ -136,6 +83,7 @@ jobs:
         run: python scraper/scraper.py
 
       - name: Upload backup to Supabase Storage
+        if: inputs.upload_backup == 'true'
         env:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}

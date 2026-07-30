@@ -27,7 +27,8 @@ Keep useful SportStack work progressing during an unattended overnight window wi
 - No secret access and no reading `.env` or `.env.local`.
 - No destructive operation, force-push, history rewrite, branch deletion or check bypass.
 - No GitHub branch-protection, ruleset, environment-policy or repository-settings change.
-- No automatic `dev` -> `main` promotion. `dev` is currently 18 commits ahead of `main`; main autonomy is available, but that promotion needs an intentional reviewed task rather than an unattended blanket merge.
+- No automatic `dev` -> `main` promotion. Recheck current divergence at the start of every run;
+  any promotion needs an intentional reviewed task rather than an unattended blanket merge.
 - No workflow change capable of selecting Production or using Production secret names.
 
 ## Job sequence
@@ -85,5 +86,6 @@ Every job must stop safely and report rather than improvise if:
 
 - Intermediate job outputs remain local and are chained into later jobs.
 - Only the final morning briefing is delivered to this conversation.
-- Jobs run from `C:\Projects\SportStack\sportstack`, so `AGENTS.md` is injected for every run.
+- Jobs run from the configured SportStack workspace. Confirm the actual path at the start of every
+  run rather than relying on an older machine-specific path.
 - Each scheduled agent run has Hermes' scheduler time limit; there is no unbounded autonomous loop.

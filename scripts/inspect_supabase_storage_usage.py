@@ -1,4 +1,4 @@
-"""Report aggregate Supabase Storage usage for the SportStack Dev project.
+"""Report aggregate Supabase Storage usage for a known SportStack project.
 
 The Storage object-list endpoint uses POST for a read operation. This script
 allows that one POST path and rejects every mutation endpoint. It never prints
@@ -17,12 +17,16 @@ from urllib.parse import quote, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 EXPECTED_DEV_PROJECT_REF = "icqegnpjbizccjebjfhb"
-EXPECTED_DEV_HOST = f"{EXPECTED_DEV_PROJECT_REF}.supabase.co"
+EXPECTED_PRODUCTION_PROJECT_REF = "svierarfcolhcfjpmwck"
+ALLOWED_PROJECT_REFS = {
+    EXPECTED_DEV_PROJECT_REF,
+    EXPECTED_PRODUCTION_PROJECT_REF,
+}
 PAGE_SIZE = 1000
 
 
 class UnsafeTargetError(RuntimeError):
-    """Raised when the diagnostic is pointed anywhere except SportStack Dev."""
+    """Raised when the diagnostic target does not exactly match its guard."""
 
 
 class RejectRedirects(HTTPRedirectHandler):
@@ -49,12 +53,16 @@ def require_env(name: str) -> str:
     return value
 
 
-def validate_dev_target(supabase_url: str) -> str:
+def validate_target(supabase_url: str, expected_project_ref: str) -> str:
+    if expected_project_ref not in ALLOWED_PROJECT_REFS:
+        raise UnsafeTargetError("Refusing unknown SportStack Supabase project reference")
+
+    expected_host = f"{expected_project_ref}.supabase.co"
     parsed = urlparse(supabase_url)
-    is_canonical_dev_url = (
+    is_canonical_url = (
         parsed.scheme == "https"
-        and parsed.netloc == EXPECTED_DEV_HOST
-        and parsed.hostname == EXPECTED_DEV_HOST
+        and parsed.netloc == expected_host
+        and parsed.hostname == expected_host
         and parsed.username is None
         and parsed.password is None
         and parsed.path in ("", "/")
@@ -62,11 +70,17 @@ def validate_dev_target(supabase_url: str) -> str:
         and not parsed.query
         and not parsed.fragment
     )
-    if not is_canonical_dev_url:
+    if not is_canonical_url:
         raise UnsafeTargetError(
-            f"Refusing non-Dev Supabase target; expected https://{EXPECTED_DEV_HOST}"
+            f"Refusing Supabase target; expected https://{expected_host}"
         )
-    return EXPECTED_DEV_PROJECT_REF
+    return expected_project_ref
+
+
+def validate_dev_target(supabase_url: str) -> str:
+    """Backward-compatible helper for callers that must remain Dev-only."""
+
+    return validate_target(supabase_url, EXPECTED_DEV_PROJECT_REF)
 
 
 def _object_size(record: dict[str, Any]) -> int:
@@ -112,9 +126,14 @@ def summarise_objects(records: Iterable[dict[str, Any]]) -> dict[str, Any]:
 class StorageApi:
     """Minimal read-only client for Supabase Storage metadata."""
 
-    def __init__(self, supabase_url: str, service_key: str) -> None:
-        validate_dev_target(supabase_url)
-        self.base_url = f"https://{EXPECTED_DEV_HOST}"
+    def __init__(
+        self,
+        supabase_url: str,
+        service_key: str,
+        expected_project_ref: str = EXPECTED_DEV_PROJECT_REF,
+    ) -> None:
+        validate_target(supabase_url, expected_project_ref)
+        self.base_url = f"https://{expected_project_ref}.supabase.co"
         self.service_key = service_key
         self.opener = build_opener(RejectRedirects())
 
@@ -250,8 +269,15 @@ def main() -> None:
     if not service_key:
         raise RuntimeError("Missing SUPABASE_SERVICE_KEY/SUPABASE_SERVICE_ROLE_KEY")
 
-    project_ref = validate_dev_target(supabase_url)
-    report = build_report(StorageApi(supabase_url, service_key), project_ref)
+    expected_project_ref = os.getenv(
+        "EXPECTED_SUPABASE_PROJECT_REF",
+        EXPECTED_DEV_PROJECT_REF,
+    )
+    project_ref = validate_target(supabase_url, expected_project_ref)
+    report = build_report(
+        StorageApi(supabase_url, service_key, expected_project_ref),
+        project_ref,
+    )
     print(json.dumps(report, indent=2, sort_keys=True))
 
 

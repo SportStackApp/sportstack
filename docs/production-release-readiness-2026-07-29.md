@@ -2,9 +2,9 @@
 
 ## Decision
 
-**The Production compatibility gate is complete.** The verified backup, 16 migrations, two Edge
-Functions and both scheduled jobs are in place. Current `main` is approved for the final
-fast-forward to `prod`.
+**The Production compatibility gate and final Git promotion are complete.** The verified backup,
+16 migrations, two Edge Functions and both scheduled jobs are in place. Local and remote `dev`,
+`main` and `prod` were confirmed aligned at `53561de` on 30 July 2026.
 
 The baseline sections below preserve the read-only audit that preceded the release. The release
 execution section records the approved Production changes completed afterwards.
@@ -170,5 +170,5 @@ result.
 ## Approval
 
 The owner approved the Production backup, 16 migrations, two Edge Function deployments, scheduled
-job configuration and Git `prod` promotion. The compatibility gate is complete; the Git promotion
-remains last in the controlled sequence above.
+job configuration and Git `prod` promotion. The compatibility gate and Git promotion are complete.
+The remaining release follow-up is the signed-in Production owner smoke test.

@@ -1,4 +1,4 @@
-"""Plan or apply guarded retention for SportStack Dev scraper backups.
+"""Plan or apply guarded retention for known SportStack scraper backups.
 
 Backups are grouped by upload-run prefixes of the form
 ``source/YYYY/MM/DD/HHMMSS``. Dry-run planning is read-only; apply requires
@@ -20,20 +20,30 @@ from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request
 
-RECENT_WINDOW = timedelta(days=7)
-WEEKLY_ARCHIVE_END = timedelta(days=21)
+RECENT_WINDOW = timedelta(days=3)
+DAILY_ARCHIVE_END = timedelta(days=14)
+WEEKLY_ARCHIVE_END = timedelta(days=60)
+MONTHLY_ARCHIVE_END = timedelta(days=365)
 BACKUP_BUCKET = "scrape-backups"
 PAGE_SIZE = 1000
 EXPECTED_DEV_PROJECT_REF = "icqegnpjbizccjebjfhb"
+EXPECTED_PRODUCTION_PROJECT_REF = "svierarfcolhcfjpmwck"
+ALLOWED_PROJECT_REFS = {
+    EXPECTED_DEV_PROJECT_REF,
+    EXPECTED_PRODUCTION_PROJECT_REF,
+}
+PRODUCTION_APPROVAL_PHRASE = "DELETE PRODUCTION SCRAPE BACKUPS"
 
 
-class DevRetentionStorageApi:
-    """Dev-only adapter that adds one guarded bulk-delete operation."""
+class RetentionStorageApi:
+    """Known-project adapter that adds one guarded bulk-delete operation."""
 
-    def __init__(self, reader: Any) -> None:
-        expected_base_url = f"https://{EXPECTED_DEV_PROJECT_REF}.supabase.co"
+    def __init__(self, reader: Any, expected_project_ref: str) -> None:
+        if expected_project_ref not in ALLOWED_PROJECT_REFS:
+            raise RuntimeError("Refusing unknown retention project reference")
+        expected_base_url = f"https://{expected_project_ref}.supabase.co"
         if reader.base_url != expected_base_url:
-            raise RuntimeError("Refusing retention client with a non-Dev base URL")
+            raise RuntimeError("Refusing retention client with an unexpected base URL")
         self.reader = reader
 
     def _request_json(
@@ -173,21 +183,33 @@ def build_retention_plan(
         run_metadata[run_prefix] = (source, run_at)
 
     keep_runs: set[str] = set()
-    weekly_candidates: dict[tuple[str, int], list[str]] = defaultdict(list)
+    recent_candidates: dict[tuple[str, object], list[str]] = defaultdict(list)
+    daily_candidates: dict[tuple[str, object], list[str]] = defaultdict(list)
+    weekly_candidates: dict[tuple[str, int, int], list[str]] = defaultdict(list)
     monthly_candidates: dict[tuple[str, int, int], list[str]] = defaultdict(list)
 
     for run_prefix, (source, run_at) in run_metadata.items():
         age = as_of - run_at
         if age <= RECENT_WINDOW:
-            keep_runs.add(run_prefix)
+            recent_candidates[(source, run_at.date())].append(run_prefix)
+        elif age <= DAILY_ARCHIVE_END:
+            daily_candidates[(source, run_at.date())].append(run_prefix)
         elif age <= WEEKLY_ARCHIVE_END:
-            weekly_band = 1 if age <= timedelta(days=14) else 2
-            weekly_candidates[(source, weekly_band)].append(run_prefix)
-        else:
+            iso_year, iso_week, _ = run_at.isocalendar()
+            weekly_candidates[(source, iso_year, iso_week)].append(run_prefix)
+        elif age <= MONTHLY_ARCHIVE_END:
             monthly_candidates[(source, run_at.year, run_at.month)].append(run_prefix)
 
-    for candidates in (*weekly_candidates.values(), *monthly_candidates.values()):
-        keep_runs.add(min(candidates, key=lambda prefix: run_metadata[prefix][1]))
+    for candidates in recent_candidates.values():
+        ordered = sorted(candidates, key=lambda prefix: run_metadata[prefix][1])
+        keep_runs.add(ordered[0])
+        keep_runs.add(ordered[-1])
+    for candidates in (
+        *daily_candidates.values(),
+        *weekly_candidates.values(),
+        *monthly_candidates.values(),
+    ):
+        keep_runs.add(max(candidates, key=lambda prefix: run_metadata[prefix][1]))
 
     keep_paths = list(unparseable_paths)
     delete_paths: list[str] = []
@@ -289,9 +311,15 @@ def build_public_report(
         "mode": "dry-run",
         "as_of": as_of.astimezone(timezone.utc).isoformat(),
         "policy": {
-            "recent_days_keep_all": 7,
-            "prior_weekly_bands": 2,
-            "older_monthly_selection": "earliest available run per source/month",
+            "recent_days": 3,
+            "recent_selection": "earliest and latest run per source/day",
+            "daily_through_day": 14,
+            "daily_selection": "latest run per source/day",
+            "weekly_through_day": 60,
+            "weekly_selection": "latest run per source/ISO week",
+            "monthly_through_day": 365,
+            "monthly_selection": "latest run per source/month",
+            "older_than_days": "delete after 365 days",
             "unparseable_objects": "keep",
         },
         "objects": {
@@ -337,12 +365,10 @@ def run_dry_run(
     project_ref: str,
     as_of: datetime,
 ) -> dict[str, Any]:
-    """Inventory Dev backups and return an aggregate retention plan."""
+    """Inventory a known project and return an aggregate retention plan."""
 
-    if project_ref != EXPECTED_DEV_PROJECT_REF:
-        raise RuntimeError(
-            f"Refusing non-Dev retention target; expected {EXPECTED_DEV_PROJECT_REF}"
-        )
+    if project_ref not in ALLOWED_PROJECT_REFS:
+        raise RuntimeError("Refusing unknown retention target")
     records = list(iter_backup_objects(client))
     _validated_inventory_paths(records, context="Retention dry-run")
     plan = build_retention_plan(records, as_of=as_of)
@@ -364,13 +390,17 @@ def run_apply(
     expected_delete_count: int,
     expected_delete_bytes: int,
     expected_plan_sha256: str,
+    production_approval: str | None = None,
 ) -> dict[str, Any]:
     """Apply only a retention plan matching every approved aggregate guard."""
 
-    if project_ref != EXPECTED_DEV_PROJECT_REF:
-        raise RuntimeError(
-            f"Refusing non-Dev retention target; expected {EXPECTED_DEV_PROJECT_REF}"
-        )
+    if project_ref not in ALLOWED_PROJECT_REFS:
+        raise RuntimeError("Refusing unknown retention target")
+    if (
+        project_ref == EXPECTED_PRODUCTION_PROJECT_REF
+        and production_approval != PRODUCTION_APPROVAL_PHRASE
+    ):
+        raise RuntimeError("Production retention approval phrase is missing or incorrect")
     records = list(iter_backup_objects(client))
     _validated_inventory_paths(records, context="Retention apply")
 
@@ -443,12 +473,18 @@ def run_apply(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Plan or apply guarded SportStack Dev scrape-backup retention"
+        description="Plan or apply guarded SportStack scrape-backup retention"
+    )
+    parser.add_argument(
+        "--expected-project-ref",
+        default=os.getenv("EXPECTED_SUPABASE_PROJECT_REF", EXPECTED_DEV_PROJECT_REF),
+        choices=sorted(ALLOWED_PROJECT_REFS),
     )
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--expected-delete-count", type=int)
     parser.add_argument("--expected-delete-bytes", type=int)
     parser.add_argument("--expected-plan-sha256")
+    parser.add_argument("--production-approval")
     args = parser.parse_args(argv)
 
     guards = (
@@ -463,8 +499,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             parser.error("expected deletion count and bytes must be positive")
         if not re.fullmatch(r"[0-9a-f]{64}", args.expected_plan_sha256):
             parser.error("expected plan SHA-256 must be 64 lowercase hexadecimal characters")
+        if (
+            args.expected_project_ref == EXPECTED_PRODUCTION_PROJECT_REF
+            and args.production_approval != PRODUCTION_APPROVAL_PHRASE
+        ):
+            parser.error(
+                "Production apply requires the exact production approval phrase"
+            )
     elif any(value is not None for value in guards):
         parser.error("expected retention guards are valid only with --apply")
+    if (
+        args.expected_project_ref != EXPECTED_PRODUCTION_PROJECT_REF
+        and args.production_approval is not None
+    ):
+        parser.error("Production approval is valid only for the Production project")
     return args
 
 
@@ -474,13 +522,13 @@ def main(argv: list[str] | None = None) -> None:
         from inspect_supabase_storage_usage import (
             StorageApi,
             require_env,
-            validate_dev_target,
+            validate_target,
         )
     except ModuleNotFoundError:
         from scripts.inspect_supabase_storage_usage import (
             StorageApi,
             require_env,
-            validate_dev_target,
+            validate_target,
         )
 
     supabase_url = require_env("SUPABASE_URL")
@@ -490,17 +538,18 @@ def main(argv: list[str] | None = None) -> None:
     if not service_key:
         raise RuntimeError("Missing SUPABASE_SERVICE_KEY/SUPABASE_SERVICE_ROLE_KEY")
 
-    project_ref = validate_dev_target(supabase_url)
-    reader = StorageApi(supabase_url, service_key)
+    project_ref = validate_target(supabase_url, args.expected_project_ref)
+    reader = StorageApi(supabase_url, service_key, args.expected_project_ref)
     as_of = datetime.now(timezone.utc)
     if args.apply:
         report = run_apply(
-            DevRetentionStorageApi(reader),
+            RetentionStorageApi(reader, args.expected_project_ref),
             project_ref=project_ref,
             as_of=as_of,
             expected_delete_count=args.expected_delete_count,
             expected_delete_bytes=args.expected_delete_bytes,
             expected_plan_sha256=args.expected_plan_sha256,
+            production_approval=args.production_approval,
         )
     else:
         report = run_dry_run(

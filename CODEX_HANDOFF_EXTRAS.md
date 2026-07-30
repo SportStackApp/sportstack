@@ -1,5 +1,9 @@
 # CODEX HANDOFF — EXTRAS
 
+> Historical setup package. The recommended repository files now exist and the current operating
+> state is maintained in `AGENTS.md`, `docs/current-state.md` and `CODEX_HANDOFF.md`. Do not use the
+> unchecked items below as a current task list without verifying them again.
+
 Companion to `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` and
 `PROJECT_SCOPE_UI_UX_AND_IMPLEMENTATION_PLAN.md`. Contains the four extra outputs (A–D).
 
