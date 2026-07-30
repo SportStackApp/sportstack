@@ -523,7 +523,7 @@ export default function PublicUmpireVote() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-                Search SportStack names or pending umpire entries. You can also type a new name.
+                Start typing a player's name. You can also enter a new name.
               </div>
 
               {voteCards.map((card, index) => {
@@ -543,7 +543,7 @@ export default function PublicUmpireVote() {
                           profileId={card.profileId}
                           selectedOptionId={card.optionId}
                           options={players}
-                          placeholder="Type at least two letters"
+                          simplifiedSuggestions
                           onNameChange={(playerName) =>
                             updateVoteCard(index, { optionId: null, profileId: null, playerName })
                           }

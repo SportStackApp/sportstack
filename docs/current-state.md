@@ -146,6 +146,9 @@ What changed:
   may not identify the player reliably.
 - The public round selector shows each round's earliest and latest fixture dates in Australian
   `DD/MM/YYYY` format so umpires can identify the correct round more easily.
+- The public player picker opens after the first typed character with no separate search button.
+  Suggestions show the player's name and primary club/team only; manual or unresolved names use
+  the short `Needs admin review.` message.
 - Junior fixtures use the four-line 2/1 male and 2/1 female ballot. Senior and Masters fixtures use
   the 3/2/1 ballot. The server derives the scheme and points instead of trusting browser values.
 - Applied the additive `public_umpire_portal` migration to SportStack Dev only. It adds public

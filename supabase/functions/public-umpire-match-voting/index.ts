@@ -346,7 +346,7 @@ const loadPlayerOptions = async (serviceClient: any, context: FixtureContext) =>
   for (const ids of chunksOf(teamIds)) {
     const { data, error } = await serviceClient
       .from("team_memberships")
-      .select("user_id, team_id, jersey_number")
+      .select("user_id, team_id, jersey_number, membership_type")
       .in("team_id", ids)
       .eq("status", "ACTIVE");
     if (error) throw error;
@@ -370,8 +370,14 @@ const loadPlayerOptions = async (serviceClient: any, context: FixtureContext) =>
     profileRows.push(...(data || []));
   }
 
+  const teamById = new Map(teams.map((team: any) => [team.id, team]));
+  const clubById = new Map(clubs.map((club: any) => [club.id, club]));
   const relevantMemberships = new Map<string, any>();
+  const primaryMemberships = new Map<string, any>();
   membershipRows.forEach((membership) => {
+    if (membership.membership_type === "PRIMARY" && !primaryMemberships.has(membership.user_id)) {
+      primaryMemberships.set(membership.user_id, membership);
+    }
     if (
       membership.team_id === context.homeTeam.id ||
       membership.team_id === context.awayTeam.id
@@ -385,6 +391,13 @@ const loadPlayerOptions = async (serviceClient: any, context: FixtureContext) =>
     const name = [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
     if (!name || profileCandidates.has(profile.id)) return;
     const membership = relevantMemberships.get(profile.id);
+    const primaryMembership = primaryMemberships.get(profile.id);
+    const primaryTeam = primaryMembership ? teamById.get(primaryMembership.team_id) : null;
+    const primaryClub = primaryTeam?.club_id
+      ? clubById.get(primaryTeam.club_id)
+      : profile.registered_club_id
+      ? clubById.get(profile.registered_club_id)
+      : null;
     const team = membership?.team_id === context.homeTeam.id
       ? context.homeTeam
       : membership?.team_id === context.awayTeam.id
@@ -399,7 +412,7 @@ const loadPlayerOptions = async (serviceClient: any, context: FixtureContext) =>
         : String(membership.jersey_number),
       teamId: team?.id || null,
       teamLabel: team?.name || "Select fixture team",
-      contextLabel: "SportStack profile",
+      contextLabel: [primaryClub?.name, primaryTeam?.name].filter(Boolean).join(" · "),
       source: "association",
     });
   });
@@ -438,7 +451,7 @@ const loadPlayerOptions = async (serviceClient: any, context: FixtureContext) =>
       number: "",
       teamId: null,
       teamLabel: "Select fixture team",
-      contextLabel: "Pending umpire entry",
+      contextLabel: "",
       source: "unresolved",
     });
   }
