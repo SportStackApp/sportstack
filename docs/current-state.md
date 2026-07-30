@@ -181,6 +181,8 @@ Checks run:
   not changed; enabling it remains a separate explicitly approved release step.
 - Supabase advisors reported no new finding tied to `handle_new_user()`; the existing unrelated
   security and performance advisory backlog remains.
+- Dev `/umpire` returned HTTP 200 after deployment. Its deployed bundle contains both new login
+  labels and the SportStack Dev Supabase project reference, with no Production project reference.
 - Dev function checks returned 168 eligible Hockey Ballarat fixtures, the expected Junior ballot,
   448 association profiles and 16 distinct unresolved pending name spellings for the sampled flow.
 - Anonymous and authenticated roles cannot execute the atomic insert function or access the
