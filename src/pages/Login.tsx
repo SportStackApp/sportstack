@@ -18,7 +18,8 @@ const Login = () => {
   const { signIn, signInWithGoogle, user, loading } = useAuth();
   const { modeLanding, loading: modeLoading } = useAppMode();
   const returnTo = getSafeAppPath(searchParams.get("returnTo"), modeLanding);
-  const fromUmpirePortal = returnTo === "/umpire/vote";
+  const returnPathname = returnTo.split(/[?#]/, 1)[0];
+  const fromUmpirePortal = returnPathname === "/umpire/public-vote" || returnPathname === "/umpire/vote";
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({

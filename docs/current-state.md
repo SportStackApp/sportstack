@@ -137,10 +137,12 @@ What changed:
 
 - Added a SportStack public Hockey Ballarat Umpire Portal landing at `/umpire` and a three-step
   public flow at `/umpire/public-vote`: Match Info, Player Votes and Confirm.
-- The Umpire Portal landing offers **Umpire Login without account** for the public flow and
-  **Login with account** for normal SportStack authentication followed by `/umpire/vote`.
-- Safe internal return paths now survive email/password login, Google login and the required
-  first-sign-in profile review. Existing placeholder-claim checking still runs on sign-in.
+- The Umpire Portal landing offers **Umpire Login without account** for the editable public flow
+  and **Login with account** for normal SportStack authentication followed by the same public flow.
+- Account sign-in returns to `/umpire/public-vote?account=1`, fills the submitter name and email
+  from the SportStack account and makes both fields read-only. It does not enter the protected app.
+- Safe internal return paths survive email/password and Google login. Existing placeholder-claim
+  checking still runs on sign-in.
 - The Match Info step records the public submitter's name/email and supports either self-submission
   or submission on behalf of another umpire with a required reason.
 - The player search combines 448 current Hockey Ballarat SportStack profiles with distinct names
@@ -194,7 +196,8 @@ Checks run:
 What Aaron should test next:
 
 - On Dev, open `/umpire` and confirm **Umpire Login without account** opens the public flow.
-- Sign out, choose **Login with account**, sign in normally and confirm it lands on `/umpire/vote`.
+- Sign out, choose **Login with account**, sign in normally and confirm it lands on the public vote
+  form with the account name and email filled and uneditable.
 - Confirm Round -> Division -> Fixture, Junior and Senior vote cards, SportStack/Pending player
   suggestions, manual names, number-only warning, team selection and the final review screen.
 - Submit one clearly marked test ballot, then review it in `/admin/umpire-voting` and approve it

@@ -49,7 +49,7 @@ export default function UmpirePortalLanding() {
               </Button>
             </Link>
 
-            <Link to={buildLoginPath("/umpire/vote")} className="block">
+            <Link to={buildLoginPath("/umpire/public-vote?account=1")} className="block">
               <Button size="lg" variant="outline" className="w-full gap-2">
                 <LogIn className="h-5 w-5" />
                 Login with account

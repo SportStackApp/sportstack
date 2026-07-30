@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -35,6 +35,9 @@ import {
   type PublicUmpireFixture,
 } from "@/lib/publicUmpirePortal";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { buildLoginPath } from "@/lib/authRedirect";
 
 interface VoteCard {
   lineKey: string;
@@ -85,6 +88,10 @@ const formatRoundDateRange = (timestamps: number[]) => {
 
 export default function PublicUmpireVote() {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
+  const useAccountIdentity = searchParams.get("account") === "1";
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [fixtures, setFixtures] = useState<PublicUmpireFixture[]>([]);
   const [associationName, setAssociationName] = useState("Hockey Ballarat");
@@ -98,6 +105,8 @@ export default function PublicUmpireVote() {
 
   const [submitterName, setSubmitterName] = useState("");
   const [submitterEmail, setSubmitterEmail] = useState("");
+  const [loadingAccountIdentity, setLoadingAccountIdentity] = useState(useAccountIdentity);
+  const [accountIdentityError, setAccountIdentityError] = useState<string | null>(null);
   const [submissionMode, setSubmissionMode] = useState<"self" | "proxy">("self");
   const [proxyUmpireName, setProxyUmpireName] = useState("");
   const [proxyReason, setProxyReason] = useState("");
@@ -130,6 +139,58 @@ export default function PublicUmpireVote() {
   useEffect(() => {
     void refreshFixtures();
   }, [refreshFixtures]);
+
+  useEffect(() => {
+    if (!useAccountIdentity || authLoading) return;
+
+    if (!user) {
+      navigate(buildLoginPath("/umpire/public-vote?account=1"), { replace: true });
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAccountIdentity = async () => {
+      setLoadingAccountIdentity(true);
+      setAccountIdentityError(null);
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      const profileName = [profile?.first_name, profile?.last_name]
+        .filter((part): part is string => Boolean(part?.trim()))
+        .join(" ")
+        .trim();
+      const metadata = user.user_metadata as Record<string, unknown>;
+      const metadataName = [metadata.full_name, metadata.name]
+        .find((value): value is string => typeof value === "string" && Boolean(value.trim()))
+        ?.trim() || "";
+      const accountName = profileName || metadataName;
+      const accountEmail = user.email?.trim() || "";
+
+      setSubmitterName(accountName);
+      setSubmitterEmail(accountEmail);
+
+      if (!accountName || !accountEmail) {
+        setAccountIdentityError(
+          "We could not load a complete name and email from your SportStack account. Please try signing in again.",
+        );
+      }
+
+      setLoadingAccountIdentity(false);
+    };
+
+    void loadAccountIdentity();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, navigate, useAccountIdentity, user]);
 
   const rounds = useMemo(() => {
     const fixtureDatesByRound = new Map<number, number[]>();
@@ -173,6 +234,7 @@ export default function PublicUmpireVote() {
   const matchStepIsValid = Boolean(
     submitterName.trim() &&
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(submitterEmail.trim()) &&
+      (!useAccountIdentity || (!loadingAccountIdentity && !accountIdentityError)) &&
       selectedFixture &&
       (submissionMode === "self" || (proxyUmpireName.trim() && proxyReason.trim())),
   );
@@ -365,6 +427,18 @@ export default function PublicUmpireVote() {
               <CardDescription>Tell us who is submitting, then choose the completed fixture.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {useAccountIdentity && (
+                <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <div>
+                    <p className="font-medium">Using your SportStack account</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Your name and email are filled from your account and cannot be changed here.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   type="button"
@@ -393,8 +467,11 @@ export default function PublicUmpireVote() {
                     id="submitter-name"
                     value={submitterName}
                     onChange={(event) => setSubmitterName(event.target.value)}
+                    readOnly={useAccountIdentity}
                     maxLength={100}
                     autoComplete="name"
+                    className={useAccountIdentity ? "bg-muted" : undefined}
+                    placeholder={loadingAccountIdentity ? "Loading account name..." : undefined}
                   />
                 </div>
                 <div className="space-y-2">
@@ -404,11 +481,20 @@ export default function PublicUmpireVote() {
                     type="email"
                     value={submitterEmail}
                     onChange={(event) => setSubmitterEmail(event.target.value)}
+                    readOnly={useAccountIdentity}
                     maxLength={254}
                     autoComplete="email"
+                    className={useAccountIdentity ? "bg-muted" : undefined}
+                    placeholder={loadingAccountIdentity ? "Loading account email..." : undefined}
                   />
                 </div>
               </div>
+
+              {useAccountIdentity && accountIdentityError && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                  {accountIdentityError}
+                </div>
+              )}
 
               {submissionMode === "proxy" && (
                 <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
