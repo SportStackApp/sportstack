@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-07-29
+Last updated: 2026-07-30
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -2373,6 +2373,60 @@ Risk level:
 
 - Medium while prepared on `dev`. No migration or data deletion is included. Promotion to `main`
   would activate Production-capable schedules and requires explicit owner approval.
+
+## 30 July 2026 - Fault-tolerant fixture timing and match durations
+
+What changed:
+
+- Added the nullable, range-checked `divisions.default_match_duration_minutes` setting to Dev.
+  Existing divisions remain null and inherit their association setting; no duration was guessed or
+  backfilled.
+- Match finish now resolves from exact fixture finish, division duration, association default, then
+  a 90-minute system fallback. Fill-in access expiry uses the same hierarchy plus its existing grace
+  period.
+- Division, association and fixture administration now expose the relevant duration or exact-finish
+  setting. Moving a fixture start preserves an existing exact duration unless a new finish is saved.
+- Added a fail-closed targeted-scrape preflight. It fetches only the selected fixture's current
+  RevSports round page, updates a moved start, postpones an early scrape, and blocks the result
+  scrape when verification fails.
+- Regenerated the public Supabase TypeScript types from the connected Dev project.
+- Kept the nightly full catch-up, targeted-run no-backup rule, weekly compressed backups and sparse
+  retention policy unchanged.
+
+Environment boundary:
+
+- The additive migration was applied only to SportStack Dev `icqegnpjbizccjebjfhb` and verified
+  with rollback-only duration, rescheduling and fill-in-expiry assertions.
+- `main`, `prod`, Production Supabase, Production Storage and the existing Production schedule were
+  not changed. Promotion of the Production-capable workflow remains a separate approval step.
+
+Checks run:
+
+- All 83 Python tests passed, including duration hierarchy, moved-start preservation, fail-closed
+  preflight, retry limits, workflow safety and backup-retention guards.
+- All seven workflow files passed YAML parsing and `actionlint` 1.7.12.
+- A read-only public smoke test found fixture `2563943` on its current round page and verified its
+  01/08/2026 08:00 Melbourne start without any Supabase write.
+- The Dev schema has zero configured division overrides after migration. New private functions use
+  fixed search paths and retain owner-only execution.
+- `npx tsc --noEmit` and `npm run build` passed. The build retains its existing large-chunk warning.
+- The required full `npm run lint` still reports the unchanged repository baseline of 433 errors
+  and 89 warnings. The three changed admin files retain their existing 20 errors and 7 warnings;
+  no new lint category was introduced by this change.
+
+What Aaron should test next:
+
+- On Dev, set one test division to 70 minutes, leave another blank, and confirm the displayed
+  inherited duration.
+- Edit a future fixture with an exact finish, then move only its start and confirm the same duration
+  is preserved.
+- Keep `main`, `prod` and Production retention untouched until the separate promotion and deletion
+  approvals.
+
+Risk level:
+
+- Medium. This includes an additive Dev schema and RLS change plus prepared workflow behaviour.
+  It includes no data backfill, Production write or Storage deletion.
 
 ## How to update this file
 

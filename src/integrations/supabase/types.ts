@@ -868,6 +868,7 @@ export type Database = {
           association_id: string
           competition_id: string | null
           created_at: string
+          default_match_duration_minutes: number | null
           gender: string | null
           id: string
           max_age: number | null
@@ -880,6 +881,7 @@ export type Database = {
           association_id: string
           competition_id?: string | null
           created_at?: string
+          default_match_duration_minutes?: number | null
           gender?: string | null
           id?: string
           max_age?: number | null
@@ -892,6 +894,7 @@ export type Database = {
           association_id?: string
           competition_id?: string | null
           created_at?: string
+          default_match_duration_minutes?: number | null
           gender?: string | null
           id?: string
           max_age?: number | null

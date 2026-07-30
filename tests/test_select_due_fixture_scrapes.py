@@ -31,6 +31,7 @@ class DueFixtureSelectorTests(unittest.TestCase):
             "id": "fixture-1",
             "fixture_date": "2026-08-01T01:00:00+00:00",
             "scheduled_end_at": None,
+            "division_id": "division-1",
             "status": "SCHEDULED",
             "revsports_match_url": (
                 "https://www.revolutionise.com.au/hockeyballarat/game/12345"
@@ -42,6 +43,7 @@ class DueFixtureSelectorTests(unittest.TestCase):
             "competition_name": "2026 Winter",
             "grade": "Division 1 Men",
             "round_name": "Round 12",
+            "round_number": 12,
             "game_date": "2026-08-01",
             "game_time": "11:00:00",
             "venue_name": "Prince of Wales Park",
@@ -73,6 +75,13 @@ class DueFixtureSelectorTests(unittest.TestCase):
             {
                 "name": "Hockey Ballarat",
                 "default_match_duration_minutes": 90,
+                "timezone": "Australia/Melbourne",
+            }
+        ]
+        self.divisions = [
+            {
+                "id": "division-1",
+                "default_match_duration_minutes": None,
             }
         ]
 
@@ -82,6 +91,7 @@ class DueFixtureSelectorTests(unittest.TestCase):
             [fixture or self.fixture],
             [source or self.source],
             self.associations,
+            self.divisions,
             as_of=self.as_of,
         )
 
@@ -94,6 +104,8 @@ class DueFixtureSelectorTests(unittest.TestCase):
         self.assertEqual("Hockey Ballarat", targets[0]["association_name"])
         self.assertEqual("14930", targets[0]["grade_id"])
         self.assertEqual("300", targets[0]["venue_id"])
+        self.assertEqual("12", targets[0]["round_number"])
+        self.assertEqual("90", targets[0]["duration_minutes"])
 
     def test_waits_until_expected_finish_and_honours_exact_end(self) -> None:
         selector = load_selector_module()
@@ -101,6 +113,7 @@ class DueFixtureSelectorTests(unittest.TestCase):
             [self.fixture],
             [self.source],
             self.associations,
+            self.divisions,
             as_of=datetime(2026, 8, 1, 2, 0, tzinfo=timezone.utc),
         )
         exact_end_fixture = deepcopy(self.fixture)
@@ -108,6 +121,46 @@ class DueFixtureSelectorTests(unittest.TestCase):
 
         self.assertEqual([], before_finish)
         self.assertEqual([], self.select(fixture=exact_end_fixture))
+
+    def test_division_duration_overrides_association_default(self) -> None:
+        selector = load_selector_module()
+        self.divisions[0]["default_match_duration_minutes"] = 70
+
+        before_finish = selector.select_due_targets(
+            [self.fixture],
+            [self.source],
+            self.associations,
+            self.divisions,
+            as_of=datetime(2026, 8, 1, 2, 9, tzinfo=timezone.utc),
+        )
+        after_finish = selector.select_due_targets(
+            [self.fixture],
+            [self.source],
+            self.associations,
+            self.divisions,
+            as_of=datetime(2026, 8, 1, 2, 22, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual([], before_finish)
+        self.assertEqual("70", after_finish[0]["duration_minutes"])
+
+    def test_invalid_or_blank_settings_fall_back_safely(self) -> None:
+        selector = load_selector_module()
+
+        self.assertEqual(
+            90,
+            selector.resolve_duration_minutes(
+                {"default_match_duration_minutes": None},
+                {"default_match_duration_minutes": None},
+            ),
+        )
+        self.assertEqual(
+            90,
+            selector.resolve_duration_minutes(
+                {"default_match_duration_minutes": 999},
+                {"default_match_duration_minutes": 90},
+            ),
+        )
 
     def test_completed_recently_scraped_and_old_fixtures_are_skipped(self) -> None:
         completed = deepcopy(self.fixture)

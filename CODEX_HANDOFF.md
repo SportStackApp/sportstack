@@ -28,7 +28,11 @@ Future agents should start by reading these files in order:
 - The Production excess is caused by the old hourly weekend workflows saving separate raw backup
   files after every run.
 - The current Dev change selects exact fixtures every 15 minutes after their calculated finish,
-  retries late results, runs one nightly full catch-up and never backs up the small targeted runs.
+  verifies the current RevSports round-card start before scraping, retries late results, runs one
+  nightly full catch-up and never backs up the small targeted runs.
+- Calculated finish now uses exact fixture finish, division duration, association default, then a
+  90-minute fallback. The additive duration migration is applied to Dev only; existing divisions
+  remain blank and inherit their association setting.
 - Routine match backups are weekly. Retention keeps the latest, nearest 1/2/4-week snapshots, then
   one per month for 12 months. The read-only projection keeps 44 of 1,013 existing objects and
   identifies 969 objects using 1,533,329,605 bytes as deletion candidates.

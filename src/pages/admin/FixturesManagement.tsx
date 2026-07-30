@@ -32,6 +32,7 @@ import * as XLSX from "xlsx";
 interface FixtureRow {
   id: string;
   fixture_date: string | null;
+  scheduled_end_at: string | null;
   status: string;
   home_score: number | null;
   away_score: number | null;
@@ -70,6 +71,8 @@ interface FixtureForm {
   round_number: string;
   fixture_date: string;
   game_time: string;
+  scheduled_end_date: string;
+  scheduled_end_time: string;
   venue_id: string;
   pitch_id: string;
   status: string;
@@ -98,6 +101,8 @@ const emptyForm: FixtureForm = {
   round_number: "",
   fixture_date: "",
   game_time: "",
+  scheduled_end_date: "",
+  scheduled_end_time: "",
   venue_id: "",
   pitch_id: "",
   status: "SCHEDULED",
@@ -112,20 +117,29 @@ const emptyFixtureTeamScope: FixtureTeamScope = {
 };
 
 const FIXTURE_SELECT =
-  "id, fixture_date, status, home_score, away_score, notes, round_number, venue_id, pitch_id, home_team_id, away_team_id, revsports_match_url, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
+  "id, fixture_date, scheduled_end_at, status, home_score, away_score, notes, round_number, venue_id, pitch_id, home_team_id, away_team_id, revsports_match_url, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
 
 const splitDateTime = (value: string | null) => {
   if (!value) return { fixture_date: "", game_time: "" };
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return { fixture_date: "", game_time: "" };
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return {
-    fixture_date: date.toISOString().slice(0, 10),
+    fixture_date: `${year}-${month}-${day}`,
     game_time: date.toTimeString().slice(0, 5),
   };
 };
 
 const combineDateTime = (date: string, time: string) =>
   time ? `${date}T${time}:00` : `${date}T00:00:00`;
+
+const combineOptionalDateTime = (date: string, time: string) =>
+  date && time ? combineDateTime(date, time) : null;
+
+const isValidExactEnd = (startAt: string, exactEndAt: string | null) =>
+  exactEndAt === null || new Date(exactEndAt).getTime() > new Date(startAt).getTime();
 
 const normaliseStatus = (status: string) => status.toUpperCase();
 const formatStatusLabel = (status: string) =>
@@ -148,6 +162,8 @@ const FixturesManagement = () => {
   const [editForm, setEditForm] = useState({
     date: "",
     time: "",
+    endDate: "",
+    endTime: "",
     homeTeamId: "",
     awayTeamId: "",
     round: "",
@@ -399,10 +415,13 @@ const FixturesManagement = () => {
     });
     
     const dateParts = splitDateTime(fixture.fixture_date);
+    const endParts = splitDateTime(fixture.scheduled_end_at);
     
     setEditForm({
       date: dateParts.fixture_date,
       time: dateParts.game_time,
+      endDate: endParts.fixture_date,
+      endTime: endParts.game_time,
       homeTeamId: fixture.home_team_id ?? "",
       awayTeamId: fixture.away_team_id ?? "",
       round: String(fixture.round_number ?? ""),
@@ -460,11 +479,24 @@ const FixturesManagement = () => {
       return;
     }
 
+    if ((editForm.endDate && !editForm.endTime) || (!editForm.endDate && editForm.endTime)) {
+      toast({ title: "Check exact finish", description: "Enter both an end date and end time, or leave both blank.", variant: "destructive" });
+      return;
+    }
+
+    const fixtureStartAt = combineDateTime(editForm.date, editForm.time);
+    const exactEndAt = combineOptionalDateTime(editForm.endDate, editForm.endTime);
+    if (!isValidExactEnd(fixtureStartAt, exactEndAt)) {
+      toast({ title: "Check exact finish", description: "The exact finish must be after the fixture start.", variant: "destructive" });
+      return;
+    }
+
     const { error } = await supabase.from("fixtures").update({
       home_team_id: editForm.homeTeamId,
       away_team_id: editForm.awayTeamId || null,
       round_number: editForm.round ? parseInt(editForm.round, 10) : null,
-      fixture_date: combineDateTime(editForm.date, editForm.time),
+      fixture_date: fixtureStartAt,
+      scheduled_end_at: exactEndAt,
       venue_id: editForm.venueId || null,
       pitch_id: editForm.pitchId || null,
       status: toDbStatus(editForm.status),
@@ -502,11 +534,24 @@ const FixturesManagement = () => {
       return;
     }
 
+    if ((addForm.scheduled_end_date && !addForm.scheduled_end_time) || (!addForm.scheduled_end_date && addForm.scheduled_end_time)) {
+      toast({ title: "Check exact finish", description: "Enter both an end date and end time, or leave both blank.", variant: "destructive" });
+      return;
+    }
+
+    const fixtureStartAt = combineDateTime(addForm.fixture_date, addForm.game_time);
+    const exactEndAt = combineOptionalDateTime(addForm.scheduled_end_date, addForm.scheduled_end_time);
+    if (!isValidExactEnd(fixtureStartAt, exactEndAt)) {
+      toast({ title: "Check exact finish", description: "The exact finish must be after the fixture start.", variant: "destructive" });
+      return;
+    }
+
     const { error } = await supabase.from("fixtures").insert({
       home_team_id: addForm.home_team_id,
       away_team_id: addForm.away_team_id || null,
       round_number: addForm.round_number ? parseInt(addForm.round_number, 10) : null,
-      fixture_date: combineDateTime(addForm.fixture_date, addForm.game_time),
+      fixture_date: fixtureStartAt,
+      scheduled_end_at: exactEndAt,
       venue_id: addForm.venue_id || null,
       pitch_id: addForm.pitch_id || null,
       status: toDbStatus(addForm.status),
@@ -887,6 +932,24 @@ const FixturesManagement = () => {
               </div>
             </div>
             <div className="space-y-2">
+              <Label>Exact finish override</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  aria-label="Exact finish date"
+                  type="date"
+                  value={addForm.scheduled_end_date}
+                  onChange={(event) => setAddForm((form) => ({ ...form, scheduled_end_date: event.target.value }))}
+                />
+                <Input
+                  aria-label="Exact finish time"
+                  type="time"
+                  value={addForm.scheduled_end_time}
+                  onChange={(event) => setAddForm((form) => ({ ...form, scheduled_end_time: event.target.value }))}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Optional. Leave blank to use the division or association duration.</p>
+            </div>
+            <div className="space-y-2">
               <Label>Round</Label>
               <Input type="number" value={addForm.round_number} onChange={(event) => setAddForm((form) => ({ ...form, round_number: event.target.value }))} />
             </div>
@@ -947,7 +1010,7 @@ const FixturesManagement = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="order-4 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-6">
+            <div className="order-5 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-6">
               {renderFixtureTeamScopeControls(editTeamScope, (nextScope) => {
                 setEditTeamScope(nextScope);
                 setEditForm((form) => ({ ...form, homeTeamId: "", awayTeamId: "" }));
@@ -964,7 +1027,7 @@ const FixturesManagement = () => {
                 className="h-10 w-full"
               />
             </div>
-            <div className="order-5 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-3">
+            <div className="order-6 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-3">
               <Label className="text-sm font-medium">Venue</Label>
               <Select
                 value={editForm.venueId || "__none__"}
@@ -979,7 +1042,7 @@ const FixturesManagement = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="order-6 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-3">
+            <div className="order-7 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-3">
               <Label className="text-sm font-medium">Pitch</Label>
               <Select
                 disabled={!editForm.venueId}
@@ -999,7 +1062,7 @@ const FixturesManagement = () => {
             </div>
 
             {/* Row 4: home and away teams */}
-            <div className="order-7 grid grid-cols-1 gap-3 rounded-lg border border-border bg-muted/10 p-4 sm:grid-cols-2 md:col-span-6">
+            <div className="order-8 grid grid-cols-1 gap-3 rounded-lg border border-border bg-muted/10 p-4 sm:grid-cols-2 md:col-span-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Home Team *</Label>
                 {renderTeamSelect(
@@ -1043,7 +1106,27 @@ const FixturesManagement = () => {
                 className="h-10 w-full"
               />
             </div>
-            <div className="order-9 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-3">
+            <div className="order-4 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-6">
+              <Label className="text-sm font-medium">Exact finish override</Label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Input
+                  aria-label="Exact finish date"
+                  type="date"
+                  value={editForm.endDate}
+                  onChange={(e) => setEditForm((form) => ({ ...form, endDate: e.target.value }))}
+                  className="h-10 w-full"
+                />
+                <Input
+                  aria-label="Exact finish time"
+                  type="time"
+                  value={editForm.endTime}
+                  onChange={(e) => setEditForm((form) => ({ ...form, endTime: e.target.value }))}
+                  className="h-10 w-full"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Optional. If the start moves and this value is unchanged, the same match length is kept.</p>
+            </div>
+            <div className="order-10 space-y-2 rounded-lg border border-border bg-muted/10 p-4 md:col-span-3">
               <Label className="text-sm font-medium">Score</Label>
               <div className="flex h-10 items-center gap-2">
                 <Input

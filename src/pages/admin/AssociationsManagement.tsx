@@ -127,6 +127,7 @@ const AssociationsManagement = () => {
     banner_url: "",
     primary_colour: "",
     secondary_colour: "",
+    default_match_duration_minutes: "90",
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
@@ -197,6 +198,7 @@ const AssociationsManagement = () => {
         banner_url: association.banner_url || "",
         primary_colour: association.primary_colour || "",
         secondary_colour: association.secondary_colour || "",
+        default_match_duration_minutes: association.default_match_duration_minutes.toString(),
       });
       setLogoPreviewUrl(association.logo_url || "");
     } else {
@@ -209,6 +211,7 @@ const AssociationsManagement = () => {
         banner_url: "",
         primary_colour: "",
         secondary_colour: "",
+        default_match_duration_minutes: "90",
       });
       setLogoPreviewUrl("");
     }
@@ -221,6 +224,16 @@ const AssociationsManagement = () => {
   const handleSave = async () => {
     if (!formData.name.trim()) {
       toast({ title: "Error", description: "Name is required", variant: "destructive" });
+      return;
+    }
+
+    const durationMinutes = Number(formData.default_match_duration_minutes);
+    if (!Number.isInteger(durationMinutes) || durationMinutes < 30 || durationMinutes > 240) {
+      toast({
+        title: "Check match duration",
+        description: "Enter a whole number from 30 to 240 minutes.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -303,6 +316,7 @@ const AssociationsManagement = () => {
       banner_url: formData.banner_url.trim() || null,
       primary_colour: formData.primary_colour.trim() || null,
       secondary_colour: formData.secondary_colour.trim() || null,
+      default_match_duration_minutes: durationMinutes,
     };
 
     if (editingAssociation) {
@@ -431,6 +445,19 @@ const AssociationsManagement = () => {
                   {formErrors.abbreviation && (
                     <p className="text-sm text-destructive">{formErrors.abbreviation}</p>
                   )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="association-match-duration">Default match duration (minutes) *</Label>
+                  <Input
+                    id="association-match-duration"
+                    type="number"
+                    min={30}
+                    max={240}
+                    step={1}
+                    value={formData.default_match_duration_minutes}
+                    onChange={(e) => setFormData({ ...formData, default_match_duration_minutes: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">Used when a fixture and its division do not set a more specific finish.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="logo">Logo</Label>
@@ -720,6 +747,7 @@ const AssociationsManagement = () => {
                   <TableHead>Abbreviation</TableHead>
                   <TableHead>Website</TableHead>
                   <TableHead>Logo</TableHead>
+                  <TableHead>Default Duration</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -749,6 +777,7 @@ const AssociationsManagement = () => {
                           "-"
                         )}
                       </TableCell>
+                      <TableCell>{association.default_match_duration_minutes} min</TableCell>
                       <TableCell className="text-right">
                         {canEdit(association.id) && (
                           <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(association)}>

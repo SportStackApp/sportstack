@@ -1,7 +1,7 @@
 """Select exact RevSports fixtures due for a small post-match refresh.
 
-The selector is read-only. It uses SportStack fixture times and each
-association's default match duration, then returns a GitHub Actions matrix.
+The selector is read-only. It resolves each finish from an exact fixture end,
+division duration, association default, then a 90-minute system fallback.
 Completed fixtures stop being selected. Uncompleted fixtures are retried at a
 bounded interval for a short period so a late RevSports result is still found.
 """
@@ -90,18 +90,36 @@ def validate_source_url(
     return str(value).strip() if is_safe else ""
 
 
-def _duration_minutes(association: dict[str, Any]) -> int:
+def _valid_duration(value: Any) -> int | None:
     try:
-        duration = int(association.get("default_match_duration_minutes") or 90)
+        duration = int(value)
     except (TypeError, ValueError):
-        return 90
-    return duration if 30 <= duration <= 240 else 90
+        return None
+    return duration if 30 <= duration <= 240 else None
+
+
+def resolve_duration_minutes(
+    division: dict[str, Any] | None,
+    association: dict[str, Any],
+) -> int:
+    """Resolve division, association, then the safe 90-minute fallback."""
+
+    division_duration = _valid_duration(
+        division.get("default_match_duration_minutes") if division else None
+    )
+    if division_duration is not None:
+        return division_duration
+    association_duration = _valid_duration(
+        association.get("default_match_duration_minutes")
+    )
+    return association_duration if association_duration is not None else 90
 
 
 def select_due_targets(
     fixtures: list[dict[str, Any]],
     source_rows: list[dict[str, Any]],
     associations: list[dict[str, Any]],
+    divisions: list[dict[str, Any]],
     *,
     as_of: datetime,
     max_targets: int = MAX_TARGETS,
@@ -121,6 +139,11 @@ def select_due_targets(
         str(row.get("name") or ""): row
         for row in associations
         if row.get("name")
+    }
+    divisions_by_id = {
+        str(row.get("id") or ""): row
+        for row in divisions
+        if row.get("id")
     }
     selected: list[tuple[datetime, dict[str, str]]] = []
 
@@ -142,8 +165,17 @@ def select_due_targets(
             continue
         expected_finish = parse_timestamp(fixture.get("scheduled_end_at"))
         if expected_finish is None:
+            duration_minutes = resolve_duration_minutes(
+                divisions_by_id.get(str(fixture.get("division_id") or "")),
+                association,
+            )
             expected_finish = fixture_start + timedelta(
-                minutes=_duration_minutes(association)
+                minutes=duration_minutes
+            )
+        else:
+            duration_minutes = max(
+                1,
+                round((expected_finish - fixture_start).total_seconds() / 60),
             )
         age = as_of - expected_finish
         if age < timedelta(0) or age > MAX_TARGET_AGE:
@@ -201,8 +233,11 @@ def select_due_targets(
                     "competition_name": str(source.get("competition_name") or ""),
                     "grade": str(source.get("grade") or ""),
                     "round_name": str(source.get("round_name") or ""),
+                    "round_number": str(source.get("round_number") or ""),
                     "competition_id": str(raw.get("revsports_competition_id") or ""),
                     "grade_id": str(raw.get("revsports_grade_id") or ""),
+                    "timezone": str(association.get("timezone") or "Australia/Melbourne"),
+                    "duration_minutes": str(duration_minutes),
                     "home_team_url": home_team_url,
                     "away_team_url": away_team_url,
                     "home_team_label": str(
@@ -267,7 +302,7 @@ def main() -> None:
     fixtures = (
         client.table("fixtures")
         .select(
-            "id,fixture_date,scheduled_end_at,status,revsports_match_url"
+            "id,fixture_date,scheduled_end_at,status,division_id,revsports_match_url"
         )
         .gte("fixture_date", (now - MAX_TARGET_AGE - timedelta(hours=4)).isoformat())
         .lte("fixture_date", now.isoformat())
@@ -286,22 +321,37 @@ def main() -> None:
         client,
         "source_revsports_matches",
         "match_url,association_name,competition_name,grade,round_name,"
-        "game_date,game_time,venue_name,pitch_name,home_team_name,"
+        "round_number,game_date,game_time,venue_name,pitch_name,home_team_name,"
         "away_team_name,last_seen_at,raw_data",
         "match_url",
         match_urls,
     )
     associations = (
         client.table("associations")
-        .select("name,default_match_duration_minutes")
+        .select("name,timezone,default_match_duration_minutes")
         .execute()
         .data
         or []
+    )
+    division_ids = sorted(
+        {
+            str(row.get("division_id") or "")
+            for row in fixtures
+            if row.get("division_id")
+        }
+    )
+    divisions = _fetch_in_batches(
+        client,
+        "divisions",
+        "id,default_match_duration_minutes",
+        "id",
+        division_ids,
     )
     targets = select_due_targets(
         fixtures,
         source_rows,
         associations,
+        divisions,
         as_of=now,
     )
     payload = json.dumps({"include": targets}, separators=(",", ":"))

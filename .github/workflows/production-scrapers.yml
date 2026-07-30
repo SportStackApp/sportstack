@@ -192,7 +192,23 @@ jobs:
           python-version: "3.11"
       - name: Install scraper dependencies
         run: pip install -r scraper/requirements-match.txt
+      - name: Verify fixture start from its current round page
+        id: preflight
+        env:
+          FIXTURE_ID: ${{ matrix.fixture_id }}
+          PORTAL_URL: ${{ matrix.portal_url }}
+          TARGET_MATCH_URL: ${{ matrix.match_url }}
+          TARGET_COMPETITION_ID: ${{ matrix.competition_id }}
+          TARGET_GRADE_ID: ${{ matrix.grade_id }}
+          TARGET_ROUND_NUMBER: ${{ matrix.round_number }}
+          TARGET_TIMEZONE: ${{ matrix.timezone }}
+          TARGET_DURATION_MINUTES: ${{ matrix.duration_minutes }}
+          APPLY_SCHEDULE_UPDATE: "true"
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scripts/verify_due_fixture_schedule.py
       - name: Scrape only the selected fixture
+        if: steps.preflight.outputs.should_scrape == 'true'
         env:
           PORTAL_URL: ${{ matrix.portal_url }}
           ASSOCIATION_NAME: ${{ matrix.association_name }}
@@ -207,8 +223,8 @@ jobs:
           TARGET_AWAY_TEAM_URL: ${{ matrix.away_team_url }}
           TARGET_HOME_TEAM_LABEL: ${{ matrix.home_team_label }}
           TARGET_AWAY_TEAM_LABEL: ${{ matrix.away_team_label }}
-          TARGET_GAME_DATE: ${{ matrix.game_date }}
-          TARGET_GAME_TIME: ${{ matrix.game_time }}
+          TARGET_GAME_DATE: ${{ steps.preflight.outputs.game_date }}
+          TARGET_GAME_TIME: ${{ steps.preflight.outputs.game_time }}
           TARGET_VENUE: ${{ matrix.venue }}
           TARGET_PITCH: ${{ matrix.pitch }}
           TARGET_VENUE_URL: ${{ matrix.venue_url }}
@@ -221,6 +237,7 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python scraper/scraper.py
       - name: Import only the selected fixture
+        if: steps.preflight.outputs.should_scrape == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}

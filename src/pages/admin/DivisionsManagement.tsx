@@ -46,6 +46,7 @@ interface Division {
   age_group: string | null;
   min_age: number | null;
   max_age: number | null;
+  default_match_duration_minutes: number | null;
   created_at: string;
 }
 
@@ -85,6 +86,7 @@ const DivisionsManagement = () => {
     age_group: "",
     min_age: "",
     max_age: "",
+    default_match_duration_minutes: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -153,6 +155,11 @@ const DivisionsManagement = () => {
     return filteredDivisions.slice(startIdx, startIdx + rowsPerPage);
   }, [filteredDivisions, currentPage, rowsPerPage]);
 
+  const associationById = useMemo(
+    () => new Map(associations.map((association) => [association.id, association])),
+    [associations],
+  );
+
   const handleOpenDialog = (div?: Division) => {
     if (div) {
       setEditingDivision(div);
@@ -164,6 +171,7 @@ const DivisionsManagement = () => {
         age_group: div.age_group || "",
         min_age: div.min_age !== null && div.min_age !== undefined ? div.min_age.toString() : "",
         max_age: div.max_age !== null && div.max_age !== undefined ? div.max_age.toString() : "",
+        default_match_duration_minutes: div.default_match_duration_minutes?.toString() ?? "",
       });
     } else {
       setEditingDivision(null);
@@ -176,6 +184,7 @@ const DivisionsManagement = () => {
         age_group: "",
         min_age: "",
         max_age: "",
+        default_match_duration_minutes: "",
       });
     }
     setDialogOpen(true);
@@ -195,6 +204,17 @@ const DivisionsManagement = () => {
       return;
     }
 
+    const durationText = formData.default_match_duration_minutes.trim();
+    const durationMinutes = durationText === "" ? null : Number(durationText);
+    if (durationMinutes !== null && (!Number.isInteger(durationMinutes) || durationMinutes < 30 || durationMinutes > 240)) {
+      toast({
+        title: "Check match duration",
+        description: "Enter a whole number from 30 to 240 minutes, or leave it blank to inherit the association default.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
 
     const selectedComp = competitions.find((c) => c.id === formData.competition_id);
@@ -209,6 +229,7 @@ const DivisionsManagement = () => {
       age_group: formData.age_group.trim() || null,
       min_age: formData.min_age.trim() !== "" ? parseInt(formData.min_age, 10) : null,
       max_age: formData.max_age.trim() !== "" ? parseInt(formData.max_age, 10) : null,
+      default_match_duration_minutes: durationMinutes,
     };
 
     if (editingDivision) {
@@ -316,6 +337,22 @@ const DivisionsManagement = () => {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g., Division 1 Open"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="division-match-duration">Match duration (minutes)</Label>
+                  <Input
+                    id="division-match-duration"
+                    type="number"
+                    min={30}
+                    max={240}
+                    step={1}
+                    value={formData.default_match_duration_minutes}
+                    onChange={(e) => setFormData({ ...formData, default_match_duration_minutes: e.target.value })}
+                    placeholder="Inherit association default"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leave blank to inherit {associationById.get(formData.association_id)?.default_match_duration_minutes ?? 90} minutes from the association.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Gender</Label>
@@ -477,13 +514,14 @@ const DivisionsManagement = () => {
                   <TableHead>Association</TableHead>
                   <TableHead>Gender</TableHead>
                   <TableHead>Age Group</TableHead>
+                  <TableHead>Match Duration</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedDivisions.map((div) => {
                   const compName = competitions.find((c) => c.id === div.competition_id)?.name || "-";
-                  const assocName = associations.find((a) => a.id === div.association_id)?.name || "-";
+                  const assocName = associationById.get(div.association_id)?.name || "-";
                   return (
                     <TableRow key={div.id}>
                       <TableCell className="font-medium">{div.name}</TableCell>
@@ -492,6 +530,11 @@ const DivisionsManagement = () => {
                       <TableCell>{div.gender === "Womens" ? "Women's" : (div.gender || "-")}</TableCell>
                       <TableCell>
                         {div.age_group ? div.age_group + (div.max_age ? " (U" + div.max_age + ")" : "") + (div.min_age ? " (" + div.min_age + "+)" : "") : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {div.default_match_duration_minutes !== null
+                          ? `${div.default_match_duration_minutes} min`
+                          : `Inherits ${associationById.get(div.association_id)?.default_match_duration_minutes ?? 90} min`}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(div)}>

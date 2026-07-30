@@ -46,6 +46,14 @@ class ScraperWorkflowRoutineTests(unittest.TestCase):
 
         self.assertIn("python scripts/select_due_fixture_scrapes.py", text)
         self.assertIn("fromJson(needs.select-due-fixtures.outputs.matrix)", text)
+        self.assertIn("python scripts/verify_due_fixture_schedule.py", text)
+        self.assertIn("APPLY_SCHEDULE_UPDATE: \"true\"", text)
+        self.assertIn("TARGET_ROUND_NUMBER: ${{ matrix.round_number }}", text)
+        self.assertEqual(
+            2,
+            text.count("if: steps.preflight.outputs.should_scrape == 'true'"),
+        )
+        self.assertIn("TARGET_GAME_DATE: ${{ steps.preflight.outputs.game_date }}", text)
         self.assertIn("TARGET_MATCH_URL: ${{ matrix.match_url }}", text)
         self.assertIn('--match-url "${{ matrix.match_url }}"', text)
         self.assertNotIn("Upload compressed Production backup", text.split("targeted-match-scrapes:", 1)[1].split("match-scrapers:", 1)[0])

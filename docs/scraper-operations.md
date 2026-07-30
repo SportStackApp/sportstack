@@ -28,14 +28,29 @@ daylight saving.
 | Player history | Tuesday at 06:00 AEST / 07:00 AEDT | Yes |
 | Storage retention report | Monday at 02:00 AEST / 03:00 AEDT | Read-only report |
 
-For each scheduled fixture, the selector uses `scheduled_end_at` when available. Otherwise it adds
-the association's default match duration to the fixture start. It then runs the scraper against
-that exact RevSports match URL instead of crawling every grade and round. If RevSports has not
-posted the result yet, the fixture can retry every 45 minutes for up to 12 hours. Once SportStack
-marks it completed, it drops out of the selector.
+For each scheduled fixture, the selector calculates its finish in this order:
+
+1. Exact fixture finish (`scheduled_end_at`).
+2. Division match duration.
+3. Association default match duration.
+4. Safe system fallback of 90 minutes.
+
+Before any result scrape, a preflight fetches only that fixture's RevSports round page and verifies
+the current start time. If RevSports moved the start later, SportStack updates the fixture, keeps
+the same exact duration when one was set, and postpones the result scrape. If the page fetch,
+fixture lookup or start-time check fails, the result scrape does not run early; the selector tries
+again on a later check and the nightly full catch-up remains the final safety net.
+
+Once verified and due, the scraper requests only the exact RevSports match URL instead of crawling
+every grade and round. If RevSports has not posted the result yet, the fixture can retry every 45
+minutes for up to 12 hours. Once SportStack marks it completed, it drops out of the selector.
 
 Targeted runs are temporary GitHub runner files only. They are not uploaded to Storage. The nightly
 full scrape catches late or changed results across all grades and associations.
+
+Division administrators may leave match duration blank to inherit the association value. Existing
+divisions are deliberately left blank until an administrator enters a verified duration. Fill-in
+access expiry uses the same finish hierarchy plus the association's existing grace period.
 
 ## When to run each manual option
 
