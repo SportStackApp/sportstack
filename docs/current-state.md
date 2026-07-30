@@ -171,6 +171,9 @@ What changed:
   `handle_new_user()` functions created only profiles. A forward-only Dev migration restores one
   unscoped `VOTER` role for future accounts without backfilling existing users. Deliberate active
   team assignment can still add the separate `PLAYER` role.
+- Fast-forwarded the seven Umpire Portal commits from `dev` to `main` staging. Production was not
+  promoted because its database migrations, Edge Function and real Turnstile configuration are
+  not yet installed; deploying the frontend alone would leave the public submission flow broken.
 
 Checks run:
 
@@ -187,6 +190,8 @@ Checks run:
   labels and the SportStack Dev Supabase project reference, with no Production project reference.
 - The corrected account path, encoded login return URL and account-mode public form all returned
   HTTP 200 on Dev. The deployed bundle contains the public account route and locked-identity copy.
+- Main staging deployed the same public account route, referenced only SportStack Dev Supabase and
+  completed a read-only Match Info call for Hockey Ballarat with 168 eligible fixtures.
 - Dev function checks returned 168 eligible Hockey Ballarat fixtures, the expected Junior ballot,
   448 association profiles and 16 distinct unresolved pending name spellings for the sampled flow.
 - Anonymous and authenticated roles cannot execute the atomic insert function or access the
