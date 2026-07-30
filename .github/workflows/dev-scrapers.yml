@@ -3,10 +3,11 @@ name: Dev Supabase Scrapers
 on:
   schedule:
     # GitHub schedules use UTC. These run early morning in Melbourne.
-    - cron: "0 18 * * *" # Match scrapers: 04:00 AEST / 05:00 AEDT
-    - cron: "0 19 * * 1,4" # Player registry: Mon/Thu, 05:00 AEST / 06:00 AEDT
-    - cron: "0 20 * * 1" # Player history: Mon, 06:00 AEST / 07:00 AEDT
-    - cron: "0 21 * * 1" # Read-only retention report: Mon, 07:00 AEST / 08:00 AEDT
+    - cron: "0 18 * * 1" # Tuesday morning match scraper verification
+    - cron: "0 19 * * 1" # Tuesday morning registry plus weekly backup
+    - cron: "0 19 * * 4" # Friday morning registry without another backup
+    - cron: "0 20 * * 1" # Tuesday morning player history
+    - cron: "0 21 * * 1" # Tuesday morning read-only retention report
   workflow_dispatch:
     inputs:
       task:
@@ -146,7 +147,7 @@ jobs:
   hockey-ballarat:
     name: Hockey Ballarat to Dev
     if: >-
-      (github.event_name == 'schedule' && github.event.schedule == '0 18 * * *') ||
+      (github.event_name == 'schedule' && github.event.schedule == '0 18 * * 1') ||
       (github.event_name == 'workflow_dispatch' &&
         (inputs.task == 'all' || inputs.task == 'match-scrapers' || inputs.task == 'hockey-ballarat'))
     runs-on: ubuntu-latest
@@ -165,7 +166,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install scraper dependencies
-        run: pip install requests beautifulsoup4 supabase
+        run: pip install -r scraper/requirements-match.txt
 
       - name: Run Hockey Ballarat scraper
         env:
@@ -198,7 +199,7 @@ jobs:
   sunraysia:
     name: Sunraysia Hockey Association to Dev
     if: >-
-      (github.event_name == 'schedule' && github.event.schedule == '0 18 * * *') ||
+      (github.event_name == 'schedule' && github.event.schedule == '0 18 * * 1') ||
       (github.event_name == 'workflow_dispatch' &&
         (inputs.task == 'all' || inputs.task == 'match-scrapers' || inputs.task == 'sunraysia'))
     runs-on: ubuntu-latest
@@ -217,7 +218,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install scraper dependencies
-        run: pip install requests beautifulsoup4 supabase
+        run: pip install -r scraper/requirements-match.txt
 
       - name: Run Sunraysia scraper
         env:
@@ -250,7 +251,7 @@ jobs:
   wimmera:
     name: Wimmera Hockey Association to Dev
     if: >-
-      (github.event_name == 'schedule' && github.event.schedule == '0 18 * * *') ||
+      (github.event_name == 'schedule' && github.event.schedule == '0 18 * * 1') ||
       (github.event_name == 'workflow_dispatch' &&
         (inputs.task == 'all' || inputs.task == 'match-scrapers' || inputs.task == 'wimmera'))
     runs-on: ubuntu-latest
@@ -269,7 +270,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install scraper dependencies
-        run: pip install requests beautifulsoup4 supabase
+        run: pip install -r scraper/requirements-match.txt
 
       - name: Run Wimmera scraper
         env:
@@ -303,7 +304,9 @@ jobs:
   player-registry:
     name: Player registry to Dev
     if: >-
-      (github.event_name == 'schedule' && github.event.schedule == '0 19 * * 1,4') ||
+      (github.event_name == 'schedule' &&
+        (github.event.schedule == '0 19 * * 1' ||
+         github.event.schedule == '0 19 * * 4')) ||
       (github.event_name == 'workflow_dispatch' &&
         (inputs.task == 'all' || inputs.task == 'player-registry'))
     runs-on: ubuntu-latest
@@ -311,7 +314,9 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
       SUPABASE_SERVICE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
-      UPLOAD_BACKUP: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_backup }}
+      UPLOAD_BACKUP: >-
+        ${{ github.event_name == 'schedule' && github.event.schedule == '0 19 * * 1' && 'true' ||
+            github.event_name == 'workflow_dispatch' && inputs.upload_backup && 'true' || 'false' }}
 
     steps:
       - name: Check out repository
@@ -323,7 +328,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install scraper dependencies
-        run: pip install playwright beautifulsoup4 supabase
+        run: pip install -r scraper/requirements-browser.txt
 
       - name: Install Playwright browser
         run: python -m playwright install chromium
@@ -363,7 +368,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install scraper dependencies
-        run: pip install playwright beautifulsoup4 supabase
+        run: pip install -r scraper/requirements-browser.txt
 
       - name: Install Playwright browser
         run: python -m playwright install chromium

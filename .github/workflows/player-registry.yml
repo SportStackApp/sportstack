@@ -52,7 +52,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install Python dependencies
-        run: pip install playwright beautifulsoup4 supabase
+        run: pip install -r scraper/requirements-browser.txt
 
       - name: Install Playwright browser
         run: python -m playwright install chromium

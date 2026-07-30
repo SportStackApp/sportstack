@@ -20,9 +20,7 @@ from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request
 
-RECENT_WINDOW = timedelta(days=3)
-DAILY_ARCHIVE_END = timedelta(days=14)
-WEEKLY_ARCHIVE_END = timedelta(days=60)
+WEEKLY_TARGET_DAYS = (0, 7, 14, 28)
 MONTHLY_ARCHIVE_END = timedelta(days=365)
 BACKUP_BUCKET = "scrape-backups"
 PAGE_SIZE = 1000
@@ -183,32 +181,34 @@ def build_retention_plan(
         run_metadata[run_prefix] = (source, run_at)
 
     keep_runs: set[str] = set()
-    recent_candidates: dict[tuple[str, object], list[str]] = defaultdict(list)
-    daily_candidates: dict[tuple[str, object], list[str]] = defaultdict(list)
-    weekly_candidates: dict[tuple[str, int, int], list[str]] = defaultdict(list)
+    source_candidates: dict[str, list[str]] = defaultdict(list)
     monthly_candidates: dict[tuple[str, int, int], list[str]] = defaultdict(list)
 
     for run_prefix, (source, run_at) in run_metadata.items():
         age = as_of - run_at
-        if age <= RECENT_WINDOW:
-            recent_candidates[(source, run_at.date())].append(run_prefix)
-        elif age <= DAILY_ARCHIVE_END:
-            daily_candidates[(source, run_at.date())].append(run_prefix)
-        elif age <= WEEKLY_ARCHIVE_END:
-            iso_year, iso_week, _ = run_at.isocalendar()
-            weekly_candidates[(source, iso_year, iso_week)].append(run_prefix)
-        elif age <= MONTHLY_ARCHIVE_END:
+        if age < timedelta(0):
+            # Keep future-dated objects for manual review rather than deleting
+            # data whose timestamp may reflect clock drift.
+            keep_runs.add(run_prefix)
+            continue
+        if age <= MONTHLY_ARCHIVE_END:
+            source_candidates[source].append(run_prefix)
+        if timedelta(days=28) < age <= MONTHLY_ARCHIVE_END:
             monthly_candidates[(source, run_at.year, run_at.month)].append(run_prefix)
 
-    for candidates in recent_candidates.values():
-        ordered = sorted(candidates, key=lambda prefix: run_metadata[prefix][1])
-        keep_runs.add(ordered[0])
-        keep_runs.add(ordered[-1])
-    for candidates in (
-        *daily_candidates.values(),
-        *weekly_candidates.values(),
-        *monthly_candidates.values(),
-    ):
+    for candidates in source_candidates.values():
+        for target_days in WEEKLY_TARGET_DAYS:
+            target = as_of - timedelta(days=target_days)
+            keep_runs.add(
+                min(
+                    candidates,
+                    key=lambda prefix: (
+                        abs((run_metadata[prefix][1] - target).total_seconds()),
+                        -run_metadata[prefix][1].timestamp(),
+                    ),
+                )
+            )
+    for candidates in monthly_candidates.values():
         keep_runs.add(max(candidates, key=lambda prefix: run_metadata[prefix][1]))
 
     keep_paths = list(unparseable_paths)
@@ -311,12 +311,9 @@ def build_public_report(
         "mode": "dry-run",
         "as_of": as_of.astimezone(timezone.utc).isoformat(),
         "policy": {
-            "recent_days": 3,
-            "recent_selection": "earliest and latest run per source/day",
-            "daily_through_day": 14,
-            "daily_selection": "latest run per source/day",
-            "weekly_through_day": 60,
-            "weekly_selection": "latest run per source/ISO week",
+            "weekly_target_days": list(WEEKLY_TARGET_DAYS),
+            "weekly_selection": "nearest available run per source/target age",
+            "monthly_after_day": 28,
             "monthly_through_day": 365,
             "monthly_selection": "latest run per source/month",
             "older_than_days": "delete after 365 days",

@@ -2294,12 +2294,14 @@ What changed:
 
 - Replaced the overlapping Production schedules with one consolidated, bounded workflow prepared
   on `dev`. The five old Production workflows are now manual-only fallbacks.
-- Reduced routine match refreshes to one daily baseline, two Friday Sunraysia refreshes and three
-  Saturday/Sunday refreshes. Player Registry runs Monday/Thursday; Player History runs Monday.
-- Future backups use one compressed `.tar.gz` object per source and routine run. Extra match-day
-  refreshes update data without saving another near-identical backup.
-- Added weekly read-only Storage reports and a guarded retention policy: two daily snapshots for
-  three days, daily through day 14, weekly through day 60, monthly through day 365, then expiry.
+- Added a fixture-aware selector that checks every 15 minutes, calculates each expected finish from
+  `scheduled_end_at` or the association default duration, and scrapes only that exact RevSports
+  match URL. Incomplete results retry every 45 minutes for up to 12 hours.
+- Added one nightly full catch-up across all three associations. Targeted runs stay temporary and
+  are never uploaded to Storage; only the full run after Sunday matches gets a routine match backup.
+- Future backups use one compressed `.tar.gz` object per selected source run.
+- Added weekly read-only Storage reports and a guarded retention policy that keeps the latest,
+  nearest 1-week, 2-week and 4-week snapshots, then one per month for up to 12 months.
 - Generalised the Storage diagnostic and retention scripts for the exact known Dev and Production
   project references. Production deletion also requires an exact confirmation phrase.
 - Updated current handoff, release, overnight and historical-note guidance.
@@ -2310,8 +2312,10 @@ Live read-only audit:
 
 - Dev `scrape-backups`: 124 objects and 181,040,447 bytes.
 - Production `scrape-backups`: 1,013 objects and 1,593,506,009 bytes.
-- The proposed policy projected 858 Production deletion candidates using 1,367,090,366 bytes,
-  leaving 155 objects using about 216 MB. This projection is not approval to delete.
+- The revised policy projected 969 Production deletion candidates using 1,533,329,605 bytes,
+  leaving 44 objects using 60,176,404 bytes. This projection is not approval to delete.
+- Live timing checks found 38 scheduled fixtures finishing in the next three days and no fixture
+  due at the time of the read-only audit.
 - No Production Storage object, database row, schedule, secret or deployment was changed.
 
 Files changed:
@@ -2323,11 +2327,18 @@ Files changed:
 - `.github/workflows/scrape-hb.yml`
 - `.github/workflows/scrape-sunraysia.yml`
 - `.github/workflows/scrape-wha.yml`
+- `scraper/scraper.py`
+- `scraper/fixture_import.py`
+- `scraper/requirements-supabase.txt`
+- `scraper/requirements-match.txt`
+- `scraper/requirements-browser.txt`
 - `scripts/inspect_supabase_storage_usage.py`
 - `scripts/retain_scrape_backups.py`
+- `scripts/select_due_fixture_scrapes.py`
 - `scripts/upload_scrape_backups_to_storage.py`
 - `tests/test_inspect_supabase_storage_usage.py`
 - `tests/test_retain_scrape_backups.py`
+- `tests/test_select_due_fixture_scrapes.py`
 - `tests/test_scraper_workflow_routine.py`
 - `tests/test_upload_scrape_backups_to_storage.py`
 - `docs/scraper-operations.md`
@@ -2341,8 +2352,10 @@ Files changed:
 
 Checks run:
 
-- 69 Python tests passed.
+- 77 Python tests passed.
 - All seven GitHub workflow files passed YAML parsing and `actionlint` validation.
+- A real public one-fixture scrape fetched only the selected match and its two teams, producing 16
+  player rows with no Supabase writes and no quality warnings.
 - `npx tsc --noEmit` passed.
 - `npm run build` passed with the existing large-chunk warning.
 - `npm run lint` was run and still reports the existing repository-wide backlog of 433 errors and
@@ -2350,8 +2363,8 @@ Checks run:
 
 What Aaron should test next:
 
-- Review `docs/scraper-operations.md` and confirm the proposed Production run times and retention
-  tiers.
+- Review `docs/scraper-operations.md` and confirm the exact-fixture, nightly catch-up and sparse
+  retention routine.
 - If approved, promote the workflow package to `main`, then run the read-only Production Storage
   diagnostic and retention dry run.
 - Approve the exact new count, bytes and SHA-256 separately before any Production deletion.

@@ -255,7 +255,7 @@ def load_seasons() -> list[dict]:
     return supabase.table("seasons").select("id, association_id, name, year, start_date, end_date").execute().data
 
 
-def load_scraped_games(association: str) -> list:
+def load_scraped_games(association: str, match_url: str | None = None) -> list:
     """
     Fetches one row per unique match_url from revsports_players for the given association.
     We only need game-level columns (not player-level), so we deduplicate by match_url.
@@ -267,11 +267,15 @@ def load_scraped_games(association: str) -> list:
     rows = []
     start = 0
     while True:
-        page = (
+        query = (
             supabase.table("revsports_players")
             .select("*")
             .eq("association", association)
-            .order("id")
+        )
+        if match_url:
+            query = query.eq("match_url", match_url)
+        page = (
+            query.order("id")
             .range(start, start + READ_PAGE_SIZE - 1)
             .execute()
             .data
@@ -285,11 +289,28 @@ def load_scraped_games(association: str) -> list:
     page_count = max(1, (len(rows) + READ_PAGE_SIZE - 1) // READ_PAGE_SIZE)
     log.info(f"  Loaded {len(rows)} staging rows across {page_count} pages")
 
-    # Deduplicate: keep one row per match_url
+    # Deduplicate: keep one row per match URL. Prefer a scored row, then the
+    # newest scrape. This prevents an older pre-game NO_PLAYERS placeholder
+    # from hiding a result captured by a targeted post-match scrape.
     seen = {}
     for row in rows:
         url = row.get("match_url")
-        if url and url not in seen:
+        if not url:
+            continue
+        candidate_rank = (
+            int(row.get("home_score") is not None and row.get("away_score") is not None),
+            str(row.get("scraped_at") or ""),
+        )
+        existing = seen.get(url)
+        existing_rank = (
+            int(
+                existing is not None
+                and existing.get("home_score") is not None
+                and existing.get("away_score") is not None
+            ),
+            str((existing or {}).get("scraped_at") or ""),
+        )
+        if existing is None or candidate_rank > existing_rank:
             seen[url] = row
 
     games = list(seen.values())
@@ -767,7 +788,14 @@ def parse_args() -> argparse.Namespace:
     mode.add_argument("--dry-run", action="store_true", help="Report fixture, division, season and pitch resolution counts without writing to the DB (default).")
     mode.add_argument("--apply", action="store_true", help="Write fixture fields to the DB, including resolved division_id, season_id and pitch_id.")
     parser.add_argument("--backfill-dry-run", action="store_true", help="Also report division_id/season_id/pitch_id resolvability for existing fixtures before any update.")
-    return parser.parse_args()
+    parser.add_argument("--association", choices=ASSOCIATIONS, help="Limit the import to one association.")
+    parser.add_argument("--match-url", help="Limit the import to one exact staged RevSports match URL.")
+    args = parser.parse_args()
+    if args.match_url and not args.association:
+        parser.error("--match-url requires --association")
+    if args.match_url and args.backfill_dry_run:
+        parser.error("--match-url cannot be combined with --backfill-dry-run")
+    return args
 
 
 def run():
@@ -793,10 +821,15 @@ def run():
     grand_total_skipped = 0
     grand_report = {"stats": Counter(), "unresolved_reasons": Counter(), "samples": []}
 
-    for association in ASSOCIATIONS:
+    associations = [args.association] if args.association else ASSOCIATIONS
+    for association in associations:
         log.info(f"\n--- Processing: {association} ---")
 
-        games = load_scraped_games(association)
+        games = load_scraped_games(association, args.match_url)
+        if args.match_url and not games:
+            raise RuntimeError(
+                "Targeted fixture import found no staging row for the approved match URL"
+            )
         resolved, skipped, report = build_fixture_rows(
             games,
             team_map,

@@ -14,6 +14,8 @@ Future agents should start by reading these files in order:
 
 - Before the current Dev-only scraper-routine work, local and remote `dev`, `main` and `prod` were
   aligned at `53561de` with a clean working tree and no open pull request.
+- The scraper-routine package is being completed on `dev`; `main` and `prod` remain unchanged until
+  Aaron separately approves the Production-capable workflow promotion.
 - The approved Production compatibility release is complete. The 16 migrations, two Edge Functions,
   scheduled notification jobs and final Git promotion were completed on 29 July 2026.
 - Production signed-in owner smoke testing remains the main release follow-up.
@@ -25,8 +27,11 @@ Future agents should start by reading these files in order:
   bytes in Production `scrape-backups`.
 - The Production excess is caused by the old hourly weekend workflows saving separate raw backup
   files after every run.
-- The current Dev change consolidates Production scheduling, compresses future backups, adds a
-  bounded retention policy and makes legacy workflows manual-only.
+- The current Dev change selects exact fixtures every 15 minutes after their calculated finish,
+  retries late results, runs one nightly full catch-up and never backs up the small targeted runs.
+- Routine match backups are weekly. Retention keeps the latest, nearest 1/2/4-week snapshots, then
+  one per month for 12 months. The read-only projection keeps 44 of 1,013 existing objects and
+  identifies 969 objects using 1,533,329,605 bytes as deletion candidates.
 - No Production file has been deleted and no Production schedule has changed yet. Promotion of the
   workflow change to `main`, and the exact Production deletion plan, require separate approval.
 

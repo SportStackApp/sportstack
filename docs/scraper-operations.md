@@ -12,28 +12,36 @@ daylight saving.
 
 | Task | Routine | Backup |
 |---|---|---|
-| Hockey Ballarat, Sunraysia and Wimmera match scrapers | Daily at 04:00 AEST / 05:00 AEDT | Yes, one compressed archive per source |
-| Player registry | Monday and Thursday at 05:00 AEST / 06:00 AEDT | Yes |
-| Player history | Monday at 06:00 AEST / 07:00 AEDT | Yes |
-| Storage retention report | Monday at 07:00 AEST / 08:00 AEDT | Read-only report |
+| Hockey Ballarat, Sunraysia and Wimmera match scrapers | Tuesday at 04:00 AEST / 05:00 AEDT | Yes, one compressed archive per source |
+| Player registry | Tuesday and Friday mornings | Tuesday only |
+| Player history | Tuesday at 06:00 AEST / 07:00 AEDT | Yes |
+| Storage retention report | Tuesday at 07:00 AEST / 08:00 AEDT | Read-only report |
 
 ### Production
 
 | Task | Routine | Backup |
 |---|---|---|
-| All three match scrapers | Daily at 04:00 AEST / 05:00 AEDT | Yes, one compressed archive per source |
-| Sunraysia indoor refresh window | Friday at 18:00 and 22:00 AEST | No routine backup |
-| Weekend match refresh window | Saturday and Sunday at 12:00, 16:00 and 20:00 AEST | No routine backup |
-| Player registry | Monday and Thursday at 05:00 AEST / 06:00 AEDT | Yes |
-| Player history | Monday at 06:00 AEST / 07:00 AEDT | Yes |
-| Storage retention report | Monday at 07:00 AEST / 08:00 AEDT | Read-only report |
+| Due-fixture selector | Every 15 minutes | No |
+| Exact fixture refresh | After its calculated finish, with controlled retries | No |
+| Full match catch-up | Nightly at 00:30 AEST / 01:30 AEDT | Monday early run, after Sunday matches |
+| Player registry | Tuesday and Friday mornings | Tuesday only |
+| Player history | Tuesday at 06:00 AEST / 07:00 AEDT | Yes |
+| Storage retention report | Monday at 02:00 AEST / 03:00 AEDT | Read-only report |
 
-The extra match-day runs update the database but do not save another near-identical backup. The
-daily baseline is the recoverable snapshot for that day.
+For each scheduled fixture, the selector uses `scheduled_end_at` when available. Otherwise it adds
+the association's default match duration to the fixture start. It then runs the scraper against
+that exact RevSports match URL instead of crawling every grade and round. If RevSports has not
+posted the result yet, the fixture can retry every 45 minutes for up to 12 hours. Once SportStack
+marks it completed, it drops out of the selector.
+
+Targeted runs are temporary GitHub runner files only. They are not uploaded to Storage. The nightly
+full scrape catches late or changed results across all grades and associations.
 
 ## When to run each manual option
 
 - `hockey-ballarat`, `sunraysia` or `wimmera`: use when only that source is late or incorrect.
+- `due-fixture-refresh`: run the same due-fixture selection manually. Production writes still need
+  `write_to_production` enabled.
 - `match-scrapers`: use after a broad fixture/result correction or a missed match-day schedule.
 - `player-registry`: use after player lists or season totals change. It does not need to run after
   every match refresh.
@@ -65,10 +73,9 @@ tar -xzf source-name.tar.gz
 
 Retention is calculated per scraper source and per complete upload run:
 
-- First 3 days: keep the earliest and latest run from each day.
-- Days 4 to 14: keep the latest run from each day.
-- Days 15 to 60: keep the latest run from each ISO week.
-- Days 61 to 365: keep the latest run from each month.
+- Keep the latest available backup.
+- Keep the backups nearest to 1 week, 2 weeks and 4 weeks old.
+- After 4 weeks, keep the latest backup from each month for up to 12 months.
 - Older than 365 days: delete.
 - Any object with an unexpected path is kept for manual review.
 
@@ -91,9 +98,10 @@ Read-only checks on 30/07/2026 found:
 | Development | 124 | 181,040,447 |
 | Production | 1,013 | 1,593,506,009 |
 
-The new policy's read-only Production projection keeps 155 objects using about 216 MB and identifies
-858 objects using about 1.27 GB as deletion candidates. This is not approval to delete them. A fresh
-workflow dry run must produce the exact guarded plan before any Production apply.
+The sparser policy's read-only Production projection keeps 44 objects using 60,176,404 bytes and
+identifies 969 objects using 1,533,329,605 bytes as deletion candidates. A fresh workflow dry run
+must still produce the exact guarded plan before any Production apply. This is not approval to
+delete existing backups.
 
 Supabase reports Storage Size as an organisation-wide GB-hour average. The usage graph can remain
 high after deletion until the averaging window catches up.

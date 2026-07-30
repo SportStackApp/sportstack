@@ -3,12 +3,13 @@ name: Production Supabase Scrapers
 on:
   schedule:
     # GitHub schedules use UTC. Local times move by one hour during daylight saving.
-    - cron: "0 18 * * *" # Daily match baseline: 04:00 AEST / 05:00 AEDT
-    - cron: "0 8,12 * * 5" # Friday indoor refresh: 18:00/22:00 AEST
-    - cron: "0 2,6,10 * * 6,0" # Weekend refresh: 12:00/16:00/20:00 AEST
-    - cron: "0 19 * * 1,4" # Player registry: Mon/Thu, 05:00 AEST
-    - cron: "0 20 * * 1" # Player history: Mon, 06:00 AEST
-    - cron: "0 21 * * 1" # Read-only retention report: Mon, 07:00 AEST
+    - cron: "7,22,37,52 * * * *" # Due-fixture check every 15 minutes
+    - cron: "30 14 * * 1-6" # Nightly full catch-up: 00:30 AEST / 01:30 AEDT
+    - cron: "30 14 * * 0" # Monday early catch-up plus weekly backup
+    - cron: "0 19 * * 1" # Tuesday morning registry plus weekly backup
+    - cron: "0 19 * * 4" # Friday morning registry refresh
+    - cron: "0 20 * * 1" # Tuesday morning player history
+    - cron: "0 16 * * 0" # Monday retention report after weekly backup
   workflow_dispatch:
     inputs:
       task:
@@ -20,6 +21,7 @@ on:
           - storage-diagnostics
           - storage-retention-dry-run
           - storage-retention-apply
+          - due-fixture-refresh
           - all
           - match-scrapers
           - hockey-ballarat
@@ -90,7 +92,7 @@ jobs:
   storage-retention-dry-run:
     name: Plan Production scrape-backup retention
     if: >-
-      (github.event_name == 'schedule' && github.event.schedule == '0 21 * * 1') ||
+      (github.event_name == 'schedule' && github.event.schedule == '0 16 * * 0') ||
       (github.event_name == 'workflow_dispatch' &&
         inputs.task == 'storage-retention-dry-run')
     runs-on: ubuntu-latest
@@ -140,13 +142,99 @@ jobs:
             --expected-plan-sha256 "$RETENTION_EXPECTED_PLAN_SHA256" \
             --production-approval "$RETENTION_PRODUCTION_APPROVAL"
 
+  select-due-fixtures:
+    name: Select completed fixture windows
+    if: >-
+      (github.event_name == 'schedule' &&
+        github.event.schedule == '7,22,37,52 * * * *') ||
+      (github.event_name == 'workflow_dispatch' &&
+        inputs.task == 'due-fixture-refresh')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+      count: ${{ steps.select.outputs.count }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install selector dependency
+        run: pip install -r scraper/requirements-supabase.txt
+      - name: Build safe due-fixture matrix
+        id: select
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scripts/select_due_fixture_scrapes.py
+
+  targeted-match-scrapes:
+    name: Target game ${{ matrix.game_id }}
+    needs: select-due-fixtures
+    if: >-
+      needs.select-due-fixtures.result == 'success' &&
+      needs.select-due-fixtures.outputs.count != '0' &&
+      (github.event_name == 'schedule' || inputs.write_to_production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJson(needs.select-due-fixtures.outputs.matrix) }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install scraper dependencies
+        run: pip install -r scraper/requirements-match.txt
+      - name: Scrape only the selected fixture
+        env:
+          PORTAL_URL: ${{ matrix.portal_url }}
+          ASSOCIATION_NAME: ${{ matrix.association_name }}
+          OUTPUT_DIR: ${{ matrix.output_dir }}
+          TARGET_MATCH_URL: ${{ matrix.match_url }}
+          TARGET_COMPETITION_NAME: ${{ matrix.competition_name }}
+          TARGET_GRADE: ${{ matrix.grade }}
+          TARGET_ROUND: ${{ matrix.round_name }}
+          TARGET_COMPETITION_ID: ${{ matrix.competition_id }}
+          TARGET_GRADE_ID: ${{ matrix.grade_id }}
+          TARGET_HOME_TEAM_URL: ${{ matrix.home_team_url }}
+          TARGET_AWAY_TEAM_URL: ${{ matrix.away_team_url }}
+          TARGET_HOME_TEAM_LABEL: ${{ matrix.home_team_label }}
+          TARGET_AWAY_TEAM_LABEL: ${{ matrix.away_team_label }}
+          TARGET_GAME_DATE: ${{ matrix.game_date }}
+          TARGET_GAME_TIME: ${{ matrix.game_time }}
+          TARGET_VENUE: ${{ matrix.venue }}
+          TARGET_PITCH: ${{ matrix.pitch }}
+          TARGET_VENUE_URL: ${{ matrix.venue_url }}
+          TARGET_VENUE_ID: ${{ matrix.venue_id }}
+          TARGET_UMPIRE_1: ${{ matrix.umpire_1 }}
+          TARGET_UMPIRE_2: ${{ matrix.umpire_2 }}
+          UPSERT_SUPABASE: "true"
+          UPSERT_SUPABASE_V2: "true"
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scraper/scraper.py
+      - name: Import only the selected fixture
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: >-
+          python scraper/fixture_import.py --apply
+          --association "${{ matrix.association_name }}"
+          --match-url "${{ matrix.match_url }}"
+
   match-scrapers:
     name: ${{ matrix.association }} to Production
     if: >-
       (github.event_name == 'schedule' &&
-        (github.event.schedule == '0 18 * * *' ||
-         github.event.schedule == '0 8,12 * * 5' ||
-         github.event.schedule == '0 2,6,10 * * 6,0')) ||
+        (github.event.schedule == '30 14 * * 1-6' ||
+         github.event.schedule == '30 14 * * 0')) ||
       (github.event_name == 'workflow_dispatch' &&
         (inputs.task == 'all' ||
          inputs.task == 'match-scrapers' ||
@@ -179,14 +267,13 @@ jobs:
             competition_id: "26593"
     env:
       SOURCE_SELECTED: >-
-        ${{ github.event_name == 'schedule' &&
-            (github.event.schedule != '0 8,12 * * 5' || matrix.task == 'sunraysia') ||
+        ${{ github.event_name == 'schedule' ||
             inputs.task == 'all' ||
             inputs.task == 'match-scrapers' ||
             inputs.task == matrix.task }}
       UPLOAD_TO_SUPABASE: ${{ github.event_name == 'schedule' && 'true' || inputs.write_to_production }}
       UPLOAD_BACKUP: >-
-        ${{ github.event_name == 'schedule' && github.event.schedule == '0 18 * * *' && 'true' ||
+        ${{ github.event_name == 'schedule' && github.event.schedule == '30 14 * * 0' && 'true' ||
             github.event_name == 'workflow_dispatch' && inputs.upload_backup && 'true' || 'false' }}
     steps:
       - name: Check out repository
@@ -199,7 +286,7 @@ jobs:
           python-version: "3.11"
       - name: Install scraper dependencies
         if: env.SOURCE_SELECTED == 'true'
-        run: pip install requests beautifulsoup4 supabase
+        run: pip install -r scraper/requirements-match.txt
       - name: Run match scraper
         if: env.SOURCE_SELECTED == 'true'
         env:
@@ -231,7 +318,9 @@ jobs:
   player-registry:
     name: Player registry to Production
     if: >-
-      (github.event_name == 'schedule' && github.event.schedule == '0 19 * * 1,4') ||
+      (github.event_name == 'schedule' &&
+        (github.event.schedule == '0 19 * * 1' ||
+         github.event.schedule == '0 19 * * 4')) ||
       (github.event_name == 'workflow_dispatch' &&
         inputs.write_to_production &&
         (inputs.task == 'all' || inputs.task == 'player-registry'))
@@ -240,7 +329,9 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-      UPLOAD_BACKUP: ${{ github.event_name == 'schedule' && 'true' || inputs.upload_backup }}
+      UPLOAD_BACKUP: >-
+        ${{ github.event_name == 'schedule' && github.event.schedule == '0 19 * * 1' && 'true' ||
+            github.event_name == 'workflow_dispatch' && inputs.upload_backup && 'true' || 'false' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -249,7 +340,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install scraper dependencies
-        run: pip install playwright beautifulsoup4 supabase
+        run: pip install -r scraper/requirements-browser.txt
       - name: Install Playwright browser
         run: python -m playwright install chromium
       - name: Run player registry scraper
@@ -284,7 +375,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install scraper dependencies
-        run: pip install playwright beautifulsoup4 supabase
+        run: pip install -r scraper/requirements-browser.txt
       - name: Install Playwright browser
         run: python -m playwright install chromium
       - name: Run player history scraper

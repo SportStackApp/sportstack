@@ -63,7 +63,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 supabase
+        run: pip install -r scraper/requirements-match.txt
 
       - name: Remove legacy output files
         run: |

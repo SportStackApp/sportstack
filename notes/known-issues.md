@@ -51,8 +51,10 @@ The Supabase emails for password resets, placeholder claim links, and welcome me
 **Current position:**
 - Production `scrape-backups` contained 1,013 objects using 1,593,506,009 bytes during the read-only
   audit.
-- The new consolidated schedule, compressed backup format and bounded retention policy are prepared
-  on `dev`.
+- The new exact-fixture refresh, nightly full catch-up, weekly compressed backup and 12-month
+  monthly retention routine are prepared on `dev`.
+- The revised read-only projection identifies 969 objects using 1,533,329,605 bytes as deletion
+  candidates and keeps 44 objects using 60,176,404 bytes.
 - No Production schedule or Storage object has been changed by the preparation task.
 
 **Approval gates:**

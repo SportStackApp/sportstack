@@ -44,6 +44,24 @@ ASSOCIATION_NAME = os.getenv("ASSOCIATION_NAME", "Hockey Ballarat")
 ONLY_GRADES = os.getenv("ONLY_GRADES", "")
 ONLY_ROUNDS = os.getenv("ONLY_ROUNDS", "")
 ONLY_TEAM = os.getenv("ONLY_TEAM", "")
+TARGET_MATCH_URL = os.getenv("TARGET_MATCH_URL", "").strip()
+TARGET_COMPETITION_NAME = os.getenv("TARGET_COMPETITION_NAME", "").strip()
+TARGET_GRADE = os.getenv("TARGET_GRADE", "").strip()
+TARGET_ROUND = os.getenv("TARGET_ROUND", "").strip()
+TARGET_COMPETITION_ID = os.getenv("TARGET_COMPETITION_ID", "").strip()
+TARGET_GRADE_ID = os.getenv("TARGET_GRADE_ID", "").strip()
+TARGET_HOME_TEAM_URL = os.getenv("TARGET_HOME_TEAM_URL", "").strip()
+TARGET_AWAY_TEAM_URL = os.getenv("TARGET_AWAY_TEAM_URL", "").strip()
+TARGET_HOME_TEAM_LABEL = os.getenv("TARGET_HOME_TEAM_LABEL", "").strip()
+TARGET_AWAY_TEAM_LABEL = os.getenv("TARGET_AWAY_TEAM_LABEL", "").strip()
+TARGET_GAME_DATE = os.getenv("TARGET_GAME_DATE", "").strip()
+TARGET_GAME_TIME = os.getenv("TARGET_GAME_TIME", "").strip()
+TARGET_VENUE = os.getenv("TARGET_VENUE", "").strip()
+TARGET_PITCH = os.getenv("TARGET_PITCH", "").strip()
+TARGET_VENUE_URL = os.getenv("TARGET_VENUE_URL", "").strip()
+TARGET_VENUE_ID = os.getenv("TARGET_VENUE_ID", "").strip()
+TARGET_UMPIRE_1 = os.getenv("TARGET_UMPIRE_1", "").strip()
+TARGET_UMPIRE_2 = os.getenv("TARGET_UMPIRE_2", "").strip()
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "../data")
 DELAY = float(os.getenv("SCRAPE_DELAY", "0.8") or "0.8")
 UPSERT_SUPABASE = os.getenv("UPSERT_SUPABASE", "false").strip().lower() in {"1", "true", "yes", "y"}
@@ -216,6 +234,34 @@ def normalize_url(href: str, page_url: str) -> str:
 
 def path_matches(href: str, pattern: str) -> bool:
     return bool(re.search(pattern, urlparse(href).path))
+
+
+def validate_target_source_url(value: str, path_suffix_pattern: str, label: str) -> str:
+    """Reject a targeted URL unless it is canonical and stays on the portal."""
+
+    candidate = urlparse(value)
+    portal = urlparse(PORTAL_URL)
+    portal_prefix = portal.path.rstrip("/")
+    expected_path = rf"{re.escape(portal_prefix)}{path_suffix_pattern}"
+    try:
+        candidate_port = candidate.port
+    except ValueError as error:
+        raise RuntimeError(f"Unsafe targeted {label} URL") from error
+    is_safe = (
+        candidate.scheme == "https"
+        and candidate.netloc == portal.netloc
+        and candidate.hostname == portal.hostname
+        and candidate.username is None
+        and candidate.password is None
+        and candidate_port is None
+        and re.fullmatch(expected_path, candidate.path) is not None
+        and not candidate.params
+        and not candidate.query
+        and not candidate.fragment
+    )
+    if not is_safe:
+        raise RuntimeError(f"Unsafe targeted {label} URL")
+    return value
 
 
 def extract_revsports_team_id(team_url: str) -> str:
@@ -982,6 +1028,7 @@ def upsert_revsports_v2_source(client, csv_rows: list[dict], quality_issue_count
             "only_grades": only_grades,
             "only_rounds": only_rounds,
             "only_team": only_team,
+            "target_match_url": TARGET_MATCH_URL or None,
             "version": VERSION,
         },
     }
@@ -1831,7 +1878,31 @@ def main():
     print(f"Grades:      {only_grades or 'All'}")
     print(f"Rounds:      {only_rounds or 'All'}")
     print(f"Team:        {only_team or 'All'}")
+    print(f"Target game: {TARGET_MATCH_URL or 'Full scrape'}")
     print("=" * 60)
+
+    target_team_urls: list[str] = []
+    target_venue_url = ""
+    if TARGET_MATCH_URL:
+        validate_target_source_url(TARGET_MATCH_URL, r"/game/\d+", "match")
+        target_team_urls = [
+            validate_target_source_url(
+                TARGET_HOME_TEAM_URL,
+                r"/games/team/\d+/\d+",
+                "home team",
+            ),
+            validate_target_source_url(
+                TARGET_AWAY_TEAM_URL,
+                r"/games/team/\d+/\d+",
+                "away team",
+            ),
+        ]
+        if TARGET_VENUE_URL:
+            target_venue_url = validate_target_source_url(
+                TARGET_VENUE_URL,
+                r"/venues/\d+/\d+",
+                "venue",
+            )
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     QUALITY_WARNINGS.clear()
@@ -1850,7 +1921,15 @@ def main():
             from supabase import create_client
             print("\nFetching fixtures from Supabase...")
             client_temp = create_client(supabase_url, supabase_key)
-            fixtures_data = client_temp.table("fixtures").select("id, revsports_match_url").execute().data or []
+            fixture_query = client_temp.table("fixtures").select(
+                "id, revsports_match_url"
+            )
+            if TARGET_MATCH_URL:
+                fixture_query = fixture_query.eq(
+                    "revsports_match_url",
+                    TARGET_MATCH_URL,
+                )
+            fixtures_data = fixture_query.execute().data or []
             for f in fixtures_data:
                 url = f.get("revsports_match_url")
                 if url:
@@ -1883,7 +1962,18 @@ def main():
     csv_rows = []
 
     team_lookup_cache = {}
-    grades = get_all_grades(session, PORTAL_URL)
+    if TARGET_MATCH_URL:
+        grades = [
+            {
+                "name": TARGET_GRADE,
+                "url": TARGET_MATCH_URL,
+                "competition_name": TARGET_COMPETITION_NAME,
+                "competition_id": TARGET_COMPETITION_ID,
+                "grade_id": TARGET_GRADE_ID,
+            }
+        ]
+    else:
+        grades = get_all_grades(session, PORTAL_URL)
     print(f"\nFound {len(grades)} grades.")
 
     for grade in grades:
@@ -1892,7 +1982,21 @@ def main():
             continue
         print(f"\n[Grade] {grade['name']}")
 
-        rounds = get_rounds(session, grade["url"])
+        if TARGET_MATCH_URL:
+            round_number_match = re.search(r"\d+", TARGET_ROUND)
+            rounds = [
+                {
+                    "round_label": TARGET_ROUND,
+                    "url": TARGET_MATCH_URL,
+                    "competition_id": TARGET_COMPETITION_ID,
+                    "grade_id": TARGET_GRADE_ID,
+                    "round_number": (
+                        round_number_match.group(0) if round_number_match else ""
+                    ),
+                }
+            ]
+        else:
+            rounds = get_rounds(session, grade["url"])
         print(f"  {len(rounds)} rounds.")
 
         for rnd in rounds:
@@ -1901,7 +2005,32 @@ def main():
                 continue
             print(f"\n  [Round] {rnd['round_label']}")
 
-            games = get_game_links(session, rnd["url"])
+            if TARGET_MATCH_URL:
+                games = [
+                    {
+                        "game_url": TARGET_MATCH_URL,
+                        "team_urls": target_team_urls,
+                        "team_labels": [
+                            TARGET_HOME_TEAM_LABEL,
+                            TARGET_AWAY_TEAM_LABEL,
+                        ],
+                        "round_venue": TARGET_VENUE,
+                        "round_pitch": TARGET_PITCH,
+                        "round_venue_url": target_venue_url,
+                        "round_venue_id": TARGET_VENUE_ID,
+                        "round_date": TARGET_GAME_DATE,
+                        "round_time": TARGET_GAME_TIME,
+                        "round_home_score": "",
+                        "round_away_score": "",
+                        "round_umpires": [
+                            value
+                            for value in (TARGET_UMPIRE_1, TARGET_UMPIRE_2)
+                            if value
+                        ],
+                    }
+                ]
+            else:
+                games = get_game_links(session, rnd["url"])
             print(f"    {len(games)} games.")
 
             for game_info in games:

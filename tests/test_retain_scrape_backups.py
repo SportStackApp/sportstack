@@ -24,17 +24,20 @@ def load_retention_module():
 
 
 class ScrapeBackupRetentionTests(unittest.TestCase):
-    def test_keeps_recent_daily_weekly_and_monthly_run_tiers(self) -> None:
+    def test_keeps_current_one_two_four_week_and_monthly_snapshots(self) -> None:
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
         paths = [
             "hockey-ballarat/2026/07/29/080000/recent-first.json",
             "hockey-ballarat/2026/07/29/100000/recent-middle.json",
             "hockey-ballarat/2026/07/29/110000/recent-last.json",
-            "hockey-ballarat/2026/07/25/080000/daily-earlier.json",
-            "hockey-ballarat/2026/07/25/100000/daily-latest.json",
-            "hockey-ballarat/2026/07/08/080000/weekly-earlier.json",
-            "hockey-ballarat/2026/07/10/100000/weekly-latest.json",
+            "hockey-ballarat/2026/07/22/080000/week-one-earlier.json",
+            "hockey-ballarat/2026/07/22/110000/week-one.json",
+            "hockey-ballarat/2026/07/15/110000/week-two.json",
+            "hockey-ballarat/2026/07/08/110000/week-three-delete.json",
+            "hockey-ballarat/2026/07/01/110000/week-four.json",
+            "hockey-ballarat/2026/06/01/080000/june-earlier.json",
+            "hockey-ballarat/2026/06/20/100000/june-latest.json",
             "hockey-ballarat/2026/05/01/080000/monthly-earlier.json",
             "hockey-ballarat/2026/05/20/100000/monthly-latest.json",
             "hockey-ballarat/2025/05/20/100000/expired.json",
@@ -47,9 +50,11 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
 
         self.assertEqual(
             {
+                "hockey-ballarat/2026/07/29/080000/recent-first.json",
                 "hockey-ballarat/2026/07/29/100000/recent-middle.json",
-                "hockey-ballarat/2026/07/25/080000/daily-earlier.json",
-                "hockey-ballarat/2026/07/08/080000/weekly-earlier.json",
+                "hockey-ballarat/2026/07/22/080000/week-one-earlier.json",
+                "hockey-ballarat/2026/07/08/110000/week-three-delete.json",
+                "hockey-ballarat/2026/06/01/080000/june-earlier.json",
                 "hockey-ballarat/2026/05/01/080000/monthly-earlier.json",
                 "hockey-ballarat/2025/05/20/100000/expired.json",
             },
@@ -61,10 +66,14 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
         retention = load_retention_module()
         as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
         paths = [
-            "alpha/2026/07/25/080000/alpha-earlier.json",
-            "alpha/2026/07/25/100000/alpha-latest.json",
-            "beta/2026/07/25/080000/beta-earlier.json",
-            "beta/2026/07/25/100000/beta-latest.json",
+            "alpha/2026/07/29/080000/alpha-earlier.json",
+            "alpha/2026/07/29/100000/alpha-middle.json",
+            "alpha/2026/07/29/110000/alpha-latest.json",
+            "alpha/2026/07/22/110000/alpha-week-one.json",
+            "beta/2026/07/29/080000/beta-earlier.json",
+            "beta/2026/07/29/100000/beta-middle.json",
+            "beta/2026/07/29/110000/beta-latest.json",
+            "beta/2026/07/22/110000/beta-week-one.json",
         ]
 
         plan = retention.build_retention_plan(
@@ -74,8 +83,10 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
 
         self.assertEqual(
             {
-                "alpha/2026/07/25/080000/alpha-earlier.json",
-                "beta/2026/07/25/080000/beta-earlier.json",
+                "alpha/2026/07/29/080000/alpha-earlier.json",
+                "alpha/2026/07/29/100000/alpha-middle.json",
+                "beta/2026/07/29/080000/beta-earlier.json",
+                "beta/2026/07/29/100000/beta-middle.json",
             },
             set(plan["delete_paths"]),
         )
@@ -96,6 +107,19 @@ class ScrapeBackupRetentionTests(unittest.TestCase):
 
         self.assertIn(malformed_path, plan["keep_paths"])
         self.assertNotIn(malformed_path, plan["delete_paths"])
+
+    def test_future_dated_run_is_retained_for_manual_review(self) -> None:
+        retention = load_retention_module()
+        as_of = datetime(2026, 7, 29, 12, 0, tzinfo=timezone.utc)
+        future_path = "alpha/2026/07/30/080000/future.json"
+
+        plan = retention.build_retention_plan(
+            [{"path": future_path, "size": 100}],
+            as_of=as_of,
+        )
+
+        self.assertEqual([future_path], plan["keep_paths"])
+        self.assertEqual([], plan["delete_paths"])
 
     def test_dry_run_report_is_aggregate_and_omits_object_paths(self) -> None:
         retention = load_retention_module()
