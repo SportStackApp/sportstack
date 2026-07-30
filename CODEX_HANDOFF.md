@@ -12,10 +12,11 @@ Future agents should start by reading these files in order:
 
 ## Current release state
 
-- Before the current Dev-only scraper-routine work, local and remote `dev`, `main` and `prod` were
-  aligned at `53561de` with a clean working tree and no open pull request.
-- The scraper-routine package is being completed on `dev`; `main` and `prod` remain unchanged until
-  Aaron separately approves the Production-capable workflow promotion.
+- The fault-tolerant fixture scraper and match-duration package was promoted through `dev`, `main`
+  and `prod` on 30 July 2026 at `398f386` after Aaron approved the Production release.
+- The consolidated Production scraper workflow is active on GitHub's default branch. Vercel
+  Production completed successfully, the public site returned 200, signed-out `/dashboard`
+  redirected to `/login`, and the deployed bundle referenced Production Supabase only.
 - The approved Production compatibility release is complete. The 16 migrations, two Edge Functions,
   scheduled notification jobs and final Git promotion were completed on 29 July 2026.
 - Production signed-in owner smoke testing remains the main release follow-up.
@@ -24,20 +25,21 @@ Future agents should start by reading these files in order:
 ## Scraper storage state
 
 - Read-only checks on 30 July found 181,040,447 bytes in Dev `scrape-backups` and 1,593,506,009
-  bytes in Production `scrape-backups`.
+  bytes across 1,013 Production `scrape-backups` objects.
 - The Production excess is caused by the old hourly weekend workflows saving separate raw backup
   files after every run.
-- The current Dev change selects exact fixtures every 15 minutes after their calculated finish,
+- The released routine selects exact fixtures every 15 minutes after their calculated finish,
   verifies the current RevSports round-card start before scraping, retries late results, runs one
   nightly full catch-up and never backs up the small targeted runs.
 - Calculated finish now uses exact fixture finish, division duration, association default, then a
-  90-minute fallback. The additive duration migration is applied to Dev only; existing divisions
-  remain blank and inherit their association setting.
+  90-minute fallback. The additive duration migration is applied and verified in Dev and
+  Production; all existing divisions remain blank and inherit their association setting.
 - Routine match backups are weekly. Retention keeps the latest, nearest 1/2/4-week snapshots, then
-  one per month for 12 months. The read-only projection keeps 44 of 1,013 existing objects and
-  identifies 969 objects using 1,533,329,605 bytes as deletion candidates.
-- No Production file has been deleted and no Production schedule has changed yet. Promotion of the
-  workflow change to `main`, and the exact Production deletion plan, require separate approval.
+  one per month for 12 months. Production dry-run `30529006936` keeps 44 of 1,013 existing objects
+  and identifies 969 objects using 1,533,329,605 bytes as deletion candidates. Its exact plan
+  SHA-256 is `0f76b636191078b6e5c6fe971110058d4ad8560142617398299069fa2ee549c2`.
+- No Production file has been deleted. Retention apply still requires Aaron's separate exact
+  destructive confirmation.
 
 ## Local repository cleanup
 
@@ -49,9 +51,8 @@ Future agents should start by reading these files in order:
 
 1. Complete the signed-in Production smoke test for Dashboard, Communications, availability,
    Profile, Player MVP administration, Umpire Match Voting administration and key admin pages.
-2. Review `docs/scraper-operations.md`, especially the Production schedule and retention tiers.
-3. After the Dev checks pass, approve or reject the separate `main` workflow promotion and guarded
-   Production retention apply.
+2. Review the exact guarded retention totals in `docs/scraper-operations.md` and approve or reject
+   the separate Production deletion.
 
 Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace and Safety Hub write forms
 remain parked.

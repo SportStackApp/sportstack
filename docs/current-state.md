@@ -2428,6 +2428,53 @@ Risk level:
 - Medium. This includes an additive Dev schema and RLS change plus prepared workflow behaviour.
   It includes no data backfill, Production write or Storage deletion.
 
+## 30 July 2026 - Fault-tolerant scraper Production release
+
+What changed:
+
+- Created and independently verified a fresh three-file Production logical backup before schema
+  work at `C:\Users\mulla\AppData\Local\SportStack\backups\prod\2026-07-30-pre-fixture-timing-398f386`.
+- Applied Production migration `add_division_match_durations` and verified the column, constraint,
+  four triggers, scoped Division write policy, fixed function privileges and migration history.
+- Re-ran rollback-only live assertions for division duration, exact fixture finish, moved-start
+  duration preservation and fill-in access expiry. All 21 existing division overrides remain null.
+- Fast-forwarded `398f386` through `dev`, `main` and `prod` without force-pushing. The consolidated
+  Production scraper workflow is now active on GitHub's default branch.
+- Verified successful staging and Production Vercel deployments. Production returned HTTP 200,
+  signed-out `/dashboard` redirected to `/login`, the browser reported no console errors, and the
+  deployed bundle referenced Production Supabase but not Dev Supabase.
+- Ran read-only Production Storage diagnostic `30528787498` and retention dry-run `30529006936`.
+  No Storage object was deleted.
+
+Current Storage plan:
+
+- Production has 1,013 `scrape-backups` objects using 1,593,506,009 bytes. The three other app-data
+  buckets together use about 5.2 MB and are excluded from cleanup.
+- Keep 44 backup objects using 60,176,404 bytes and delete 969 old backup objects using
+  1,533,329,605 bytes.
+- Exact plan SHA-256:
+  `0f76b636191078b6e5c6fe971110058d4ad8560142617398299069fa2ee549c2`.
+- The guarded deletion remains pending Aaron's separate exact destructive confirmation.
+
+Checks run:
+
+- All 83 Python tests passed and all seven workflows passed `actionlint` 1.7.12 before release.
+- `npx tsc --noEmit` and `npm run build` passed before release; the existing large-chunk warning
+  remains unchanged.
+- Production migration metadata and transaction/rollback functional checks passed after apply.
+- Supabase security and performance advisors were rerun; the existing unrelated backlog remains,
+  with no finding tied to the new private functions or duration column.
+
+What Aaron should test next:
+
+- Complete the signed-in Production smoke test for the duration fields and key administration pages.
+- Approve or reject the separate guarded deletion of the 969 exact backup objects.
+
+Risk level:
+
+- High for the completed Production release because it included an additive Production migration,
+  workflow schedule activation and public deployment. No data backfill or Storage deletion occurred.
+
 ## How to update this file
 
 When Codex finishes a task, add a dated entry with:

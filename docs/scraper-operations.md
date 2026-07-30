@@ -113,10 +113,10 @@ Read-only checks on 30/07/2026 found:
 | Development | 124 | 181,040,447 |
 | Production | 1,013 | 1,593,506,009 |
 
-The sparser policy's read-only Production projection keeps 44 objects using 60,176,404 bytes and
-identifies 969 objects using 1,533,329,605 bytes as deletion candidates. A fresh workflow dry run
-must still produce the exact guarded plan before any Production apply. This is not approval to
-delete existing backups.
+Production workflow dry-run `30529006936` keeps 44 objects using 60,176,404 bytes and identifies
+969 objects using 1,533,329,605 bytes as deletion candidates. Its exact plan SHA-256 is
+`0f76b636191078b6e5c6fe971110058d4ad8560142617398299069fa2ee549c2`. These values are the required
+apply guards, but they are not approval to delete existing backups.
 
 Supabase reports Storage Size as an organisation-wide GB-hour average. The usage graph can remain
 high after deletion until the averaging window catches up.
