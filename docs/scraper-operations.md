@@ -111,12 +111,12 @@ Read-only checks on 30/07/2026 found:
 | Project | Scrape objects | Scrape bytes |
 |---|---:|---:|
 | Development | 124 | 181,040,447 |
-| Production | 1,013 | 1,593,506,009 |
+| Production | 44 | 60,176,404 |
 
-Production workflow dry-run `30529006936` keeps 44 objects using 60,176,404 bytes and identifies
-969 objects using 1,533,329,605 bytes as deletion candidates. Its exact plan SHA-256 is
-`0f76b636191078b6e5c6fe971110058d4ad8560142617398299069fa2ee549c2`. These values are the required
-apply guards, but they are not approval to delete existing backups.
+After dry-run `30529006936`, Aaron supplied the exact destructive confirmation. Guarded Production
+apply `30530191487` removed the approved 969 objects using 1,533,329,605 bytes. Its post-delete
+verification found zero approved deletion objects remaining, zero retained objects missing, and all
+44 intended recovery objects present. Independent database verification matched those totals.
 
 Supabase reports Storage Size as an organisation-wide GB-hour average. The usage graph can remain
 high after deletion until the averaging window catches up.

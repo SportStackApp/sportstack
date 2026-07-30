@@ -2444,17 +2444,19 @@ What changed:
   signed-out `/dashboard` redirected to `/login`, the browser reported no console errors, and the
   deployed bundle referenced Production Supabase but not Dev Supabase.
 - Ran read-only Production Storage diagnostic `30528787498` and retention dry-run `30529006936`.
-  No Storage object was deleted.
+  No Storage object was deleted during those read-only runs.
+- After Aaron supplied the exact destructive confirmation, guarded apply `30530191487` removed the
+  approved 969 old scraper-backup objects using 1,533,329,605 bytes.
 
-Current Storage plan:
+Storage cleanup outcome:
 
-- Production has 1,013 `scrape-backups` objects using 1,593,506,009 bytes. The three other app-data
-  buckets together use about 5.2 MB and are excluded from cleanup.
-- Keep 44 backup objects using 60,176,404 bytes and delete 969 old backup objects using
-  1,533,329,605 bytes.
+- Production `scrape-backups` now has 44 retained objects using 60,176,404 bytes. The three other
+  app-data buckets were excluded and remain unchanged.
+- Workflow post-delete verification found zero approved deletion candidates remaining and zero
+  retained objects missing. An independent database query matched the 44-object/60,176,404-byte
+  result.
 - Exact plan SHA-256:
   `0f76b636191078b6e5c6fe971110058d4ad8560142617398299069fa2ee549c2`.
-- The guarded deletion remains pending Aaron's separate exact destructive confirmation.
 
 Checks run:
 
@@ -2468,12 +2470,13 @@ Checks run:
 What Aaron should test next:
 
 - Complete the signed-in Production smoke test for the duration fields and key administration pages.
-- Approve or reject the separate guarded deletion of the 969 exact backup objects.
+- Allow the Supabase organisation-wide GB-hour Storage graph time to reflect the completed cleanup.
 
 Risk level:
 
 - High for the completed Production release because it included an additive Production migration,
-  workflow schedule activation and public deployment. No data backfill or Storage deletion occurred.
+  workflow schedule activation, public deployment and an approved permanent deletion of old backup
+  objects. The 44 intended recovery objects remain present.
 
 ## How to update this file
 

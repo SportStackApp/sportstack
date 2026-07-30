@@ -38,8 +38,9 @@ Future agents should start by reading these files in order:
   one per month for 12 months. Production dry-run `30529006936` keeps 44 of 1,013 existing objects
   and identifies 969 objects using 1,533,329,605 bytes as deletion candidates. Its exact plan
   SHA-256 is `0f76b636191078b6e5c6fe971110058d4ad8560142617398299069fa2ee549c2`.
-- No Production file has been deleted. Retention apply still requires Aaron's separate exact
-  destructive confirmation.
+- Aaron supplied the exact destructive confirmation and Production apply run `30530191487`
+  removed the approved 969 objects using 1,533,329,605 bytes. Post-delete verification found all
+  44 retained objects present, no approved deletion candidate remaining, and 60,176,404 bytes left.
 
 ## Local repository cleanup
 
@@ -51,8 +52,7 @@ Future agents should start by reading these files in order:
 
 1. Complete the signed-in Production smoke test for Dashboard, Communications, availability,
    Profile, Player MVP administration, Umpire Match Voting administration and key admin pages.
-2. Review the exact guarded retention totals in `docs/scraper-operations.md` and approve or reject
-   the separate Production deletion.
+2. Allow the Supabase organisation-wide GB-hour Storage graph time to reflect the completed cleanup.
 
 Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace and Safety Hub write forms
 remain parked.
