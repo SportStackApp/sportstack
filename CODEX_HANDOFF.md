@@ -14,6 +14,8 @@ Future agents should start by reading these files in order:
 
 - The fault-tolerant fixture scraper and match-duration package was promoted through `dev`, `main`
   and `prod` on 30 July 2026 at `398f386` after Aaron approved the Production release.
+- The follow-up release and storage records brought `dev`, `main` and `prod` to `682b8ea` on
+  30 July 2026.
 - The consolidated Production scraper workflow is active on GitHub's default branch. Vercel
   Production completed successfully, the public site returned 200, signed-out `/dashboard`
   redirected to `/login`, and the deployed bundle referenced Production Supabase only.
@@ -24,10 +26,10 @@ Future agents should start by reading these files in order:
 
 ## Scraper storage state
 
-- Read-only checks on 30 July found 181,040,447 bytes in Dev `scrape-backups` and 1,593,506,009
-  bytes across 1,013 Production `scrape-backups` objects.
-- The Production excess is caused by the old hourly weekend workflows saving separate raw backup
-  files after every run.
+- The Production excess caused by old hourly weekend backups is resolved. Approved cleanup run
+  `30530191487` removed 969 objects using 1,533,329,605 bytes.
+- Production `scrape-backups` now contains the intended 44 recovery objects using 60,176,404 bytes.
+  Post-delete workflow and database checks agreed, with no approved candidate left behind.
 - The released routine selects exact fixtures every 15 minutes after their calculated finish,
   verifies the current RevSports round-card start before scraping, retries late results, runs one
   nightly full catch-up and never backs up the small targeted runs.
@@ -35,12 +37,20 @@ Future agents should start by reading these files in order:
   90-minute fallback. The additive duration migration is applied and verified in Dev and
   Production; all existing divisions remain blank and inherit their association setting.
 - Routine match backups are weekly. Retention keeps the latest, nearest 1/2/4-week snapshots, then
-  one per month for 12 months. Production dry-run `30529006936` keeps 44 of 1,013 existing objects
-  and identifies 969 objects using 1,533,329,605 bytes as deletion candidates. Its exact plan
-  SHA-256 is `0f76b636191078b6e5c6fe971110058d4ad8560142617398299069fa2ee549c2`.
-- Aaron supplied the exact destructive confirmation and Production apply run `30530191487`
-  removed the approved 969 objects using 1,533,329,605 bytes. Post-delete verification found all
-  44 retained objects present, no approved deletion candidate remaining, and 60,176,404 bytes left.
+  one per month for 12 months. The organisation-wide Supabase GB-hour graph may take time to reflect
+  the lower stored total.
+
+## Obsidian note continuity
+
+- Committed repository Markdown is authoritative. Its generated, read-only Hermes mirror is
+  `Projects/SportStack Repository`, with `_Index.md` as the entry point.
+- The curated Vault notes own only the project boundary, priorities, action register and operating
+  procedure. They link back to the generated mirror for changing implementation and release detail.
+- `AGENTS.md` requires a refresh/read at the start of meaningful work and a sync plus `-Check` after
+  the canonical note changes are pushed to `dev`.
+- The current-user Windows task `SportStack Obsidian Note Sync` runs daily at 7:00 pm local time and
+  catches up after missed runs. It reads `origin/dev`, so feature branches and uncommitted files
+  cannot become the published record.
 
 ## Local repository cleanup
 

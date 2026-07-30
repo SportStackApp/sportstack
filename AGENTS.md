@@ -145,6 +145,29 @@ There is no automated test suite yet. Do the relevant manual smoke test and say 
   checks without explicit owner approval.
 - Branches: `fix/…`, `feat/…`, `chore/…`. Commits: `type(scope): summary`.
 
+## Obsidian / Hermes Vault notes
+
+- The committed repository notes remain the source of truth. The Hermes Vault contains a generated,
+  read-only mirror plus four curated SportStack notes.
+- At the start of meaningful work, run
+  `pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Fetch`, then read:
+  - `Projects/SportStack.md`
+  - `Strategy/SportStack Focus.md`
+  - `Operations/Open Items.md`
+  - the mirrored `Projects/SportStack Repository/_Index.md`
+- During meaningful work, update the appropriate repository source: `docs/current-state.md`,
+  `CODEX_HANDOFF.md`, `docs/scraper-operations.md`, `notes/known-issues.md`, or another scoped note.
+- After the canonical change is committed and pushed to `dev`, run the sync again followed by
+  `pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check`. Do not report the
+  documentation as complete unless both commands pass.
+- Update a curated Hermes note directly only when its owned boundary, priority or action status
+  changes. Do not duplicate changing release detail there; link to the generated repository mirror.
+- If the Vault or OneDrive is unavailable, report `OBSIDIAN SYNC PENDING` in the handoff instead of
+  silently treating the notes as current.
+- The sync whitelist contains only root Markdown and Markdown under `docs/` and `notes/`, plus the
+  extensionless Planner note. Never add `.env`, secrets, database dumps, SQL backups, `data/`, logs
+  or credentials to the mirror.
+
 ## How to report completed work
 1. Plain-English summary of what changed and why.
 2. List of files changed.

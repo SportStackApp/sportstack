@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "defaultSourceRef": "origin/dev",
+  "vaultRelativeRoot": "Projects/SportStack Repository",
+  "include": {
+    "rootMarkdown": true,
+    "directories": [
+      "docs",
+      "notes"
+    ],
+    "extensions": [
+      ".md"
+    ],
+    "additionalFiles": [
+      {
+        "source": "docs/Planner Module",
+        "destination": "docs/Planner Module.md"
+      }
+    ]
+  },
+  "curatedNotes": [
+    "Projects/SportStack.md",
+    "Strategy/SportStack Focus.md",
+    "Operations/Open Items.md",
+    "Operations/Safe Operating Procedures.md"
+  ]
+}

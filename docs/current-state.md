@@ -2478,6 +2478,54 @@ Risk level:
   workflow schedule activation, public deployment and an approved permanent deletion of old backup
   objects. The 44 intended recovery objects remain present.
 
+## 30 July 2026 - Obsidian note continuity
+
+What changed:
+
+- Added a one-way, verified sync from committed SportStack Markdown to the Hermes Obsidian Vault.
+  The repository remains authoritative; the generated Vault mirror is read-only.
+- Added a tracked whitelist so only root Markdown and Markdown under `docs/` and `notes/` is copied,
+  plus the extensionless Planner note. Secrets, environment files, data, SQL and backup files are
+  excluded.
+- Added a generated Vault index and hash manifest, a verification-only mode and a local audit log.
+- Added a daily Windows task named `SportStack Obsidian Note Sync`. It runs at 7:00 pm local time,
+  catches up when the computer was unavailable and publishes from `origin/dev` rather than the
+  current working branch.
+- Added the mandatory start/close-out routine to `AGENTS.md`: refresh and read the Vault before
+  meaningful work, update the repository notes during work, then sync and verify after pushing.
+
+Files changed:
+
+- `AGENTS.md`
+- `CODEX_HANDOFF.md`
+- `config/obsidian-note-sync.json`
+- `docs/current-state.md`
+- `notes/README.md`
+- `scripts/register-obsidian-note-sync-task.ps1`
+- `scripts/sync-sportstack-notes-to-obsidian.ps1`
+
+Checks run:
+
+- Both PowerShell scripts passed parser validation and the JSON configuration parsed successfully.
+- A temporary Obsidian vault completed an exact 44-file sync and independent hash/manifest check.
+- A deliberate mirror edit failed verification as designed; the next sync repaired it and the
+  follow-up check passed.
+- The Windows task registered successfully and reports its next daily run.
+- The real Hermes Vault mirror was refreshed from the committed `origin/dev` notes and passed
+  `-Check` verification.
+- `npx tsc --noEmit` and `npm run build` passed. The existing large-chunk build warning remains.
+- The required full `npm run lint` retained the unrelated repository baseline of 433 errors and
+  89 warnings. This documentation/PowerShell-only change adds no linted application source.
+
+What Aaron should test next:
+
+- Open `Projects/SportStack Repository/_Index` in Obsidian and follow one link to a repository note.
+
+Risk level:
+
+- Low. This adds documentation tooling and a reversible current-user scheduled task. It makes no
+  application, database, Supabase Storage, secret or Production change.
+
 ## How to update this file
 
 When Codex finishes a task, add a dated entry with:
