@@ -78,6 +78,24 @@ cp .env.example .env.local      # fill VITE_SUPABASE_* (ask the owner; never com
 npm run dev                     # http://localhost:8081
 ```
 
+## Dependency and tool readiness
+
+- Before starting a task, check whether the repository already declares the required dependency
+  and whether the local installed version matches it.
+- If a missing dependency, Codex skill or add-on would materially improve the work, do not silently
+  work around it. Install the project-pinned option when the install is safe and within the approved
+  task scope; otherwise tell Aaron exactly what is needed, what it enables and what help or approval
+  is required.
+- Prefer reproducible project dependency files and pinned versions. Do not expose secrets, alter
+  Production, or make an irreversible system-wide change as part of setup.
+- Verify each installation and record it in the task handoff so the next agent can reuse it.
+
+For the Supabase-backed Python scraper tools, install the pinned client with:
+
+```bash
+python -m pip install --requirement scraper/requirements-supabase.txt
+```
+
 ## Test / quality commands (run ALL before completing work)
 ```bash
 npm run lint

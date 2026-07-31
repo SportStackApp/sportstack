@@ -117,7 +117,11 @@ Treat these as current caution areas unless a newer live check proves otherwise:
   session opening are historical and must not override the current release record.
 - Player MVP reminder calls are deployed and scheduled; email delivery should still be monitored
   through normal logs and owner testing.
-- Fixture `division_id` / `season_id` reliability needs confirmation before joining fixtures directly to divisions.
+- A read-only SportStack Dev check on 31 July 2026 found 638 fixtures: none are missing
+  `division_id`, while 162 Wimmera fixtures are missing `season_id`. The current analyser can
+  resolve 626/638 fixture divisions and 476/638 seasons from staging and mapping data. Wimmera has
+  no competition-to-season mapping, so its 162 season resolutions remain ambiguous. Do not apply a
+  fixture backfill until that mapping gap and the remaining division/team inconsistencies are reviewed.
 - Live Supabase schema can drift from migration files, so verify live schema before database-dependent work.
 - Edge Functions in the repo and deployed Edge Functions may be out of sync.
 - Supabase Storage Size is an organisation-wide GB-hour average. Check per-project object totals
