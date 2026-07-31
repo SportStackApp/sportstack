@@ -96,11 +96,17 @@ validates the full ballot and saves its header plus every vote line through one 
 function. Direct browser inserts are blocked, duplicate ballots are serialised and blocked, Super
 Admin access is consistent with navigation, and the two modules use explicit names throughout.
 
-## 9. Core administration
+## 9. Core administration — implemented on Dev, owner smoke pending
 
 - Improve user, team and organisation management.
 - Improve fixtures, venues, requests and data-quality tools.
 - Add safer warnings and clearer admin workflows.
+
+Fixture imports now resolve exact Club - Division - Team labels, reject ambiguous or mixed-division
+rows, save division and season links, and require an all-valid preview plus confirmation. Normal
+fixture add/edit also saves those links. Membership-request approval and safe unused-venue deletion
+now use scoped atomic database functions so partial browser writes and silent historical-link loss
+are blocked. Existing duplicate membership data was audited and parked for a separate dry-run review.
 
 ## 10. Permissions and module controls
 

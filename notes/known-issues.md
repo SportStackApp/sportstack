@@ -1,18 +1,36 @@
 # SportsStack — Known Issues & Parked Tasks
 
-## 🟡 Duplicate Team Names in Fixture Import
+## Duplicate Team Names in Fixture Import
 **Logged:** 14 April 2026  
-**Status:** Parked — needs decision before bulk import goes live
+**Status:** Resolved on Dev — 1 August 2026; owner smoke test pending
 
 **Problem:**  
 If two clubs within the same association both have a team with the same name (e.g. both have a "Division 1 Open"), the fixture importer silently picks the first match it finds. This could assign a game to the wrong team with no warning.
 
-**Options discussed:**
-- **Option A** — Enforce unique team names within an association (database constraint)
-- **Option B** — Require `Club – Team Name` format in the import file column (e.g. `Koowinda – Division 1 Open`)
-- **Option C** — Show a warning in the import preview table when a duplicate name match is detected, and ask the user to resolve it manually
+**Resolution:**
+- The template now supplies exact `Club - Division - Team` labels.
+- A short team name is accepted only when it is unique in the selected association and admin scope.
+- Ambiguous names, mixed divisions, missing seasons and duplicate spreadsheet rows block the whole import.
+- Imported fixtures now save their division and season links.
 
-**Recommendation:** Option C is the safest short-term fix — it doesn't change existing data or the template format, but flags the problem visibly at import time.
+## Existing Duplicate Team Membership Data
+
+**Logged:** 1 August 2026
+**Status:** Parked — needs a separate read-only review and approved cleanup plan
+
+**Problem:**
+A Dev read-only audit found 202 repeated user/team membership keys. Of these, 200 contain a Primary
+and Secondary row and two contain two Secondary rows. It also found 44 users with more than one
+Primary membership across teams.
+
+**Current protection:**
+- New membership-request approvals are serialised and atomic.
+- Approval stops when the requested user/team already has duplicate rows.
+- No existing membership was changed or deleted during the audit.
+
+**Next step:**
+Prepare a per-person dry-run report that identifies the intended row to keep. Any cleanup is a
+separate destructive data task and needs Aaron's approval.
 
 ## Email Template Polish
 **Logged:** 30 June 2026  

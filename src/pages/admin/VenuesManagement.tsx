@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +35,21 @@ interface VenueWithMeta extends Venue {
   pitchCount: number;
   associationIds: string[];
 }
+
+interface VenueDeleteInfo {
+  pitchCount: number;
+  teamNames: string[];
+  fixtureCount: number;
+  umpireFixtureCount: number;
+  mappingCount: number;
+}
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error
+    ? error.message
+    : typeof error === "object" && error !== null && "message" in error && typeof error.message === "string"
+      ? error.message
+      : fallback;
 
 const EMPTY_FORM = {
   name: "", address: "", suburb: "", state: "", postcode: "",
@@ -77,7 +92,8 @@ const VenuesManagement = () => {
   // Delete state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingVenue, setDeletingVenue] = useState<Venue | null>(null);
-  const [deleteInfo, setDeleteInfo] = useState<{ pitchCount: number; teamNames: string[] } | null>(null);
+  const [deleteInfo, setDeleteInfo] = useState<VenueDeleteInfo | null>(null);
+  const [deleteInfoError, setDeleteInfoError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   // Pitches inline
@@ -91,20 +107,20 @@ const VenuesManagement = () => {
     if (!scopeLoading && !isAnyAdmin) navigate("/dashboard");
   }, [scopeLoading, isAnyAdmin, navigate]);
 
-  const fetchVenues = async () => {
+  const fetchVenues = useCallback(async () => {
     setLoading(true);
     const [venuesRes, pitchesRes, assocRes, vaRes] = await Promise.all([
       supabase.from("venues").select("*").order("name"),
       supabase.from("pitches").select("venue_id"),
       supabase.from("associations").select("*").order("name"),
-      supabase.from("venue_associations" as any).select("id, venue_id, association_id, allowed_pitch_ids"),
+      supabase.from("venue_associations").select("id, venue_id, association_id, allowed_pitch_ids"),
     ]);
 
     const allAssoc = assocRes.data || [];
     setAssociations(allAssoc);
 
     const vaData = vaRes.data || [];
-    setVenueAssociations((vaData as any) || []);
+    setVenueAssociations(vaData || []);
 
     const pitchCounts: Record<string, number> = {};
     (pitchesRes.data || []).forEach((p) => {
@@ -115,23 +131,23 @@ const VenuesManagement = () => {
     // Scope for ASSOCIATION_ADMIN
     if (!isSuperAdmin && scopedAssociationIds.length > 0) {
       venuesList = venuesList.filter(
-        (v) => (vaData || []).some((va: any) => va.venue_id === v.id && scopedAssociationIds.includes(va.association_id))
+        (venue) => vaData.some((venueLink) => venueLink.venue_id === venue.id && scopedAssociationIds.includes(venueLink.association_id))
       );
     }
 
     setVenues(
-      venuesList.map((v) => ({
-        ...v,
-        pitchCount: pitchCounts[v.id] || 0,
-        associationIds: (vaData || []).filter((va: any) => va.venue_id === v.id).map((va: any) => va.association_id),
+      venuesList.map((venue) => ({
+        ...venue,
+        pitchCount: pitchCounts[venue.id] || 0,
+        associationIds: vaData.filter((venueLink) => venueLink.venue_id === venue.id).map((venueLink) => venueLink.association_id),
       }))
     );
     setLoading(false);
-  };
+  }, [isSuperAdmin, scopedAssociationIds]);
 
   useEffect(() => {
-    if (!scopeLoading && isAnyAdmin) fetchVenues();
-  }, [scopeLoading, isAnyAdmin]);
+    if (!scopeLoading && isAnyAdmin) void fetchVenues();
+  }, [fetchVenues, scopeLoading, isAnyAdmin]);
 
   const filteredVenues = useMemo(() => {
     return venues.filter(v => filterAssociation === "all" || v.associationIds.includes(filterAssociation));
@@ -240,7 +256,7 @@ const VenuesManagement = () => {
     if (saveSuccess) {
       try {
         const { error: deleteError } = await supabase
-          .from("venue_associations" as any)
+          .from("venue_associations")
           .delete()
           .eq("venue_id", venueId);
 
@@ -258,7 +274,7 @@ const VenuesManagement = () => {
             };
           });
           const { error: insertError } = await supabase
-            .from("venue_associations" as any)
+            .from("venue_associations")
             .insert(rowsToInsert);
 
           if (insertError) {
@@ -279,34 +295,69 @@ const VenuesManagement = () => {
   // --- Delete with safety check ---
   const handleDeleteClick = async (venue: Venue) => {
     setDeletingVenue(venue);
-    const [pitchesRes, teamsRes] = await Promise.all([
-      supabase.from("pitches").select("id", { count: "exact", head: true }).eq("venue_id", venue.id),
-      supabase.from("teams").select("name").eq("home_venue_id", venue.id),
-    ]);
-    setDeleteInfo({
-      pitchCount: pitchesRes.count || 0,
-      teamNames: (teamsRes.data || []).map((t) => t.name),
-    });
+    setDeleteInfo(null);
+    setDeleteInfoError(null);
     setDeleteDialogOpen(true);
+
+    try {
+      const [pitchesRes, teamsRes] = await Promise.all([
+        supabase.from("pitches").select("id").eq("venue_id", venue.id),
+        supabase.from("teams").select("name").eq("home_venue_id", venue.id),
+      ]);
+      if (pitchesRes.error) throw pitchesRes.error;
+      if (teamsRes.error) throw teamsRes.error;
+
+      const pitchIds = (pitchesRes.data || []).map((pitch) => pitch.id);
+      const dependencyFilter = pitchIds.length > 0
+        ? `venue_id.eq.${venue.id},pitch_id.in.(${pitchIds.join(",")})`
+        : `venue_id.eq.${venue.id}`;
+
+      const [fixturesRes, umpireFixturesRes, venueMappingsRes, pitchMappingsRes] = await Promise.all([
+        supabase.from("fixtures").select("id").or(dependencyFilter),
+        supabase.from("umpire_fixtures").select("id").or(dependencyFilter),
+        supabase.from("revsports_venue_mappings").select("id").eq("venue_id", venue.id),
+        pitchIds.length > 0
+          ? supabase.from("revsports_pitch_mappings").select("id").in("pitch_id", pitchIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+      const firstError = [
+        fixturesRes.error,
+        umpireFixturesRes.error,
+        venueMappingsRes.error,
+        pitchMappingsRes.error,
+      ].find(Boolean);
+      if (firstError) throw firstError;
+
+      setDeleteInfo({
+        pitchCount: pitchIds.length,
+        teamNames: (teamsRes.data || []).map((team) => team.name),
+        fixtureCount: (fixturesRes.data || []).length,
+        umpireFixtureCount: (umpireFixturesRes.data || []).length,
+        mappingCount: (venueMappingsRes.data || []).length + (pitchMappingsRes.data || []).length,
+      });
+    } catch (error: unknown) {
+      setDeleteInfoError(getErrorMessage(error, "Venue links could not be checked."));
+    }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deletingVenue) return;
+    if (!deletingVenue || !deleteInfo || deleteInfoError) return;
+    if (deleteInfo.fixtureCount > 0 || deleteInfo.umpireFixtureCount > 0 || deleteInfo.mappingCount > 0) return;
     setDeleting(true);
 
-    // 1. Delete pitches
-    await supabase.from("pitches").delete().eq("venue_id", deletingVenue.id);
-    // 2. Clear home_venue_id on teams
-    await supabase.from("teams").update({ home_venue_id: null }).eq("home_venue_id", deletingVenue.id);
-    // 3. Delete venue
-    const { error } = await supabase.from("venues").delete().eq("id", deletingVenue.id);
-    if (error) toast({ title: "Error", description: "Failed to delete venue", variant: "destructive" });
-    else { toast({ title: "Success", description: "Venue deleted" }); fetchVenues(); }
+    const { error } = await supabase.rpc("delete_unused_venue", { p_venue_id: deletingVenue.id });
+    if (error) {
+      toast({ title: "Venue not deleted", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Venue deleted", description: "The unused venue and its pitches were deleted together." });
+      void fetchVenues();
+    }
 
     setDeleting(false);
     setDeleteDialogOpen(false);
     setDeletingVenue(null);
     setDeleteInfo(null);
+    setDeleteInfoError(null);
   };
 
   // --- Pitches inline ---
@@ -356,6 +407,11 @@ const VenuesManagement = () => {
       fetchVenues();
     }
   };
+
+  const deleteBlocked = Boolean(
+    deleteInfo
+    && (deleteInfo.fixtureCount > 0 || deleteInfo.umpireFixtureCount > 0 || deleteInfo.mappingCount > 0),
+  );
 
   if (scopeLoading) {
     return <div className="space-y-6"><Skeleton className="h-10 w-64" /><Skeleton className="h-96" /></div>;
@@ -722,13 +778,29 @@ const VenuesManagement = () => {
             <AlertDialogDescription asChild>
               <div className="space-y-2">
                 <p>This will permanently delete "{deletingVenue?.name}".</p>
-                {deleteInfo && (deleteInfo.pitchCount > 0 || deleteInfo.teamNames.length > 0) && (
+                {!deleteInfo && !deleteInfoError && (
+                  <p className="text-sm text-muted-foreground">Checking fixture and import links...</p>
+                )}
+                {deleteInfoError && (
+                  <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm font-medium text-destructive">
+                    Links could not be checked, so deletion is blocked. {deleteInfoError}
+                  </div>
+                )}
+                {deleteInfo && deleteBlocked && (
+                  <div className="space-y-1 rounded-md border border-destructive/20 bg-destructive/10 p-3">
+                    <p className="text-sm font-semibold text-destructive">Reassign these links before deleting:</p>
+                    {deleteInfo.fixtureCount > 0 && <p className="text-sm">{deleteInfo.fixtureCount} SportStack fixture(s)</p>}
+                    {deleteInfo.umpireFixtureCount > 0 && <p className="text-sm">{deleteInfo.umpireFixtureCount} umpire fixture record(s)</p>}
+                    {deleteInfo.mappingCount > 0 && <p className="text-sm">{deleteInfo.mappingCount} RevSports venue or pitch mapping(s)</p>}
+                  </div>
+                )}
+                {deleteInfo && !deleteBlocked && (deleteInfo.pitchCount > 0 || deleteInfo.teamNames.length > 0) && (
                   <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 space-y-1">
                     {deleteInfo.pitchCount > 0 && (
-                      <p className="text-sm font-medium">⚠️ This venue has {deleteInfo.pitchCount} pitch(es) that will be removed.</p>
+                      <p className="text-sm font-medium">This venue has {deleteInfo.pitchCount} pitch(es) that will be removed.</p>
                     )}
                     {deleteInfo.teamNames.length > 0 && (
-                      <p className="text-sm font-medium">⚠️ This venue is the home venue for: {deleteInfo.teamNames.join(", ")}. Their home venue will be cleared.</p>
+                      <p className="text-sm font-medium">This venue is the home venue for: {deleteInfo.teamNames.join(", ")}. Their home venue will be cleared.</p>
                     )}
                   </div>
                 )}
@@ -737,8 +809,12 @@ const VenuesManagement = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} disabled={deleting} className="bg-destructive text-destructive-foreground">
-              {deleting ? "Deleting..." : "Delete"}
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleting || !deleteInfo || Boolean(deleteInfoError) || deleteBlocked}
+              className="bg-destructive text-destructive-foreground"
+            >
+              {deleting ? "Deleting..." : deleteBlocked ? "Reassign links first" : "Delete Venue"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

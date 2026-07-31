@@ -106,6 +106,10 @@ Future agents should start by reading these files in order:
   3-2-1 path passed a live integrity audit. Signed-in Umpire Match Voting now lists completed fixtures
   only, validates the full ballot and writes its header plus lines atomically through the new
   `submit_umpire_match_vote` function. Browser direct inserts are revoked; Production is unchanged.
+- Block 9 is implemented on Dev pending owner smoke testing. Fixture import and manual fixture
+  editing now preserve division/season scope and block ambiguous team matches. Membership-request
+  approval and unused-venue deletion are atomic, server-authorised Dev functions. A read-only audit
+  found existing duplicate membership data; it was documented without changing any existing row.
 - Do not merge or cherry-pick `chore/domain-structure` commit `3a7d6cc`; it contains the superseded
   assumption that `hb` belongs to the separate ignored Hockey Ballarat module. The corrected work
   is being landed directly on `dev`.
@@ -128,6 +132,8 @@ Future agents should start by reading these files in order:
    Profile, Player MVP administration, Umpire Match Voting administration and key admin pages.
 5. On Dev, submit one clearly marked signed-in Umpire Match Voting test ballot and confirm a repeat
    submission is blocked.
+6. On Dev, download the fixture template, preview one valid row and one deliberately ambiguous team
+   name, then test one membership approval and one unused-venue deletion with disposable Dev data.
 
 Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace and Safety Hub write forms
 remain parked.

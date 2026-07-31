@@ -6511,6 +6511,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      approve_membership_request: {
+        Args: { p_assign_team?: boolean; p_request_id: string }
+        Returns: Json
+      }
       claim_placeholder_profile: {
         Args: { p_real_profile_id: string }
         Returns: {
@@ -6559,6 +6563,7 @@ export type Database = {
           submission_reference: string
         }[]
       }
+      delete_unused_venue: { Args: { p_venue_id: string }; Returns: Json }
       get_mvp_result_check_state: {
         Args: { p_session_id: string }
         Returns: Json

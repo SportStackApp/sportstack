@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment, useMemo } from "react";
+import { useState, useEffect, Fragment, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,8 @@ import * as XLSX from "xlsx";
 
 interface FixtureRow {
   id: string;
+  division_id: string | null;
+  season_id: string | null;
   fixture_date: string | null;
   scheduled_end_at: string | null;
   status: string;
@@ -117,7 +119,7 @@ const emptyFixtureTeamScope: FixtureTeamScope = {
 };
 
 const FIXTURE_SELECT =
-  "id, fixture_date, scheduled_end_at, status, home_score, away_score, notes, round_number, venue_id, pitch_id, home_team_id, away_team_id, revsports_match_url, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
+  "id, division_id, season_id, fixture_date, scheduled_end_at, status, home_score, away_score, notes, round_number, venue_id, pitch_id, home_team_id, away_team_id, revsports_match_url, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
 
 const isByeFixture = (fixture: FixtureRow) =>
   fixture.away_team_id === null && fixture.revsports_match_url?.startsWith("revsports-bye|");
@@ -199,7 +201,7 @@ const FixturesManagement = () => {
   const [allAssocTeams, setAllAssocTeams] = useState<FixtureTeam[]>([]);
   const [allAssociations, setAllAssociations] = useState<{ id: string; name: string }[]>([]);
   const [allClubs, setAllClubs] = useState<{ id: string; name: string; association_id: string }[]>([]);
-  const [allDivisions, setAllDivisions] = useState<{ id: string; name: string; association_id: string }[]>([]);
+  const [allDivisions, setAllDivisions] = useState<{ id: string; name: string; association_id: string; season_id: string | null }[]>([]);
   const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
   const [pitches, setPitches] = useState<{ id: string; name: string; venue_id: string }[]>([]);
   const [filterStatus, setFilterStatus] = useState("ALL");
@@ -207,25 +209,28 @@ const FixturesManagement = () => {
   const [fixtureCascade, setFixtureCascade] = useState<CascadeValue>(emptyCascadeValue);
   const [assocTeamIds, setAssocTeamIds] = useState<string[]>([]);
 
-  const teamIds = selectedTeamId
-    ? [selectedTeamId]
-    : scopedTeamIds.length > 0
-    ? scopedTeamIds
-    : [];
+  const teamIds = useMemo(
+    () => selectedTeamId
+      ? [selectedTeamId]
+      : scopedTeamIds.length > 0
+      ? scopedTeamIds
+      : [],
+    [selectedTeamId, scopedTeamIds],
+  );
 
   useEffect(() => {
     const loadRefData = async () => {
       if (!selectedAssociationId) {
         const [venueRes, teamRes, pitchRes, divisionRes, associationRes, clubRes] = await Promise.all([
           supabase.from("venues").select("id, name").order("name"),
-          (supabase.from("teams" as any).select("id, name, club_id, division_id, divisions(name, association_id, associations(name))") as any).order("name"),
+          supabase.from("teams").select("id, name, club_id, division_id, divisions(name, association_id, associations(name))").order("name"),
           supabase.from("pitches").select("id, name, venue_id").order("name"),
-          supabase.from("divisions" as any).select("id, name, association_id").order("name"),
+          supabase.from("divisions").select("id, name, association_id, season_id").order("name"),
           supabase.from("associations").select("id, name").order("name"),
           supabase.from("clubs").select("id, name, association_id").order("name"),
         ]);
         setVenues(venueRes.data || []);
-        setAllAssocTeams((teamRes.data || []).map((team: any) => ({
+        setAllAssocTeams((teamRes.data || []).map((team) => ({
           id: team.id,
           name: team.name,
           club_id: team.club_id,
@@ -234,7 +239,7 @@ const FixturesManagement = () => {
           associationName: team.divisions?.associations?.name ?? null,
         })));
         setPitches(pitchRes.data || []);
-        setAllDivisions((divisionRes.data || []) as any);
+        setAllDivisions(divisionRes.data || []);
         setAllAssociations(associationRes.data || []);
         setAllClubs(clubRes.data || []);
         return;
@@ -242,20 +247,20 @@ const FixturesManagement = () => {
       const [clubRes, venueRes, divisionRes, associationRes] = await Promise.all([
         supabase.from("clubs").select("id, name, association_id").eq("association_id", selectedAssociationId).order("name"),
         supabase.from("venues").select("id, name").eq("association_id", selectedAssociationId).order("name"),
-        supabase.from("divisions" as any).select("id, name, association_id").order("name"),
+        supabase.from("divisions").select("id, name, association_id, season_id").order("name"),
         supabase.from("associations").select("id, name").order("name"),
       ]);
 
       const clubIds = (clubRes.data || []).map((club) => club.id);
       const loadedVenues = venueRes.data || [];
       setVenues(loadedVenues);
-      setAllDivisions((divisionRes.data || []) as any);
+      setAllDivisions(divisionRes.data || []);
       setAllAssociations(associationRes.data || []);
-      setAllClubs((clubRes.data || []) as any);
+      setAllClubs(clubRes.data || []);
 
       if (clubIds.length > 0) {
-        const { data: teamData } = await (supabase.from("teams" as any).select("id, name, club_id, division_id, divisions(name, association_id, associations(name))").in("club_id", clubIds) as any).order("name");
-        setAllAssocTeams((teamData || []).map((team: any) => ({
+        const { data: teamData } = await supabase.from("teams").select("id, name, club_id, division_id, divisions(name, association_id, associations(name))").in("club_id", clubIds).order("name");
+        setAllAssocTeams((teamData || []).map((team) => ({
           id: team.id,
           name: team.name,
           club_id: team.club_id,
@@ -289,18 +294,18 @@ const FixturesManagement = () => {
         const { data: teams } = await supabase.from("teams").select("id").in("club_id", clubIds);
         setAssocTeamIds((teams || []).map((team) => team.id));
       };
-      fetchAssocTeams();
+      void fetchAssocTeams();
     } else {
       setAssocTeamIds([]);
     }
-  }, [selectedAssociationId, teamIds.join(",")]);
+  }, [selectedAssociationId, teamIds.length]);
 
-  const fetchFixtures = async () => {
+  const fetchFixtures = useCallback(async () => {
     const shouldFetchAll = !selectedAssociationId && !selectedTeamId && scopedTeamIds.length === 0;
     const idsToUse = shouldFetchAll ? null : teamIds.length > 0 ? teamIds : assocTeamIds;
 
     setLoading(true);
-    let query = (supabase.from("fixtures" as any).select(FIXTURE_SELECT) as any).order("fixture_date", { ascending: true });
+    let query = supabase.from("fixtures").select(FIXTURE_SELECT).order("fixture_date", { ascending: true });
 
     if (idsToUse !== null) {
       if (idsToUse.length === 0) {
@@ -323,11 +328,11 @@ const FixturesManagement = () => {
     const loadedFixtures = (data as FixtureRow[]) || [];
     setFixtures(loadedFixtures);
     setLoading(false);
-  };
+  }, [assocTeamIds, scopedTeamIds.length, selectedAssociationId, selectedTeamId, teamIds, toast]);
 
   useEffect(() => {
-    fetchFixtures();
-  }, [selectedAssociationId, selectedTeamId, scopedTeamIds.join(","), assocTeamIds.join(",")]);
+    void fetchFixtures();
+  }, [fetchFixtures]);
 
   const teamById = useMemo(
     () => new Map(allAssocTeams.map((team) => [team.id, team])),
@@ -457,8 +462,7 @@ const FixturesManagement = () => {
 
     try {
       const { data, error } = await supabase
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .from("revsports_players" as any)
+        .from("revsports_players")
         .select("*")
         .eq("fixture_id", fixture.id);
 
@@ -493,6 +497,16 @@ const FixturesManagement = () => {
       return;
     }
 
+    const selectedDivision = allDivisions.find((division) => division.id === editTeamScope.divisionId);
+    if (!selectedDivision?.season_id) {
+      toast({
+        title: "Division setup needs checking",
+        description: "Choose a division with an assigned season before saving this fixture.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if ((editForm.endDate && !editForm.endTime) || (!editForm.endDate && editForm.endTime)) {
       toast({ title: "Check exact finish", description: "Enter both an end date and end time, or leave both blank.", variant: "destructive" });
       return;
@@ -506,6 +520,8 @@ const FixturesManagement = () => {
     }
 
     const { error } = await supabase.from("fixtures").update({
+      division_id: selectedDivision.id,
+      season_id: selectedDivision.season_id,
       home_team_id: editForm.homeTeamId,
       away_team_id: editForm.awayTeamId || null,
       round_number: editForm.round ? parseInt(editForm.round, 10) : null,
@@ -548,6 +564,16 @@ const FixturesManagement = () => {
       return;
     }
 
+    const selectedDivision = allDivisions.find((division) => division.id === addTeamScope.divisionId);
+    if (!selectedDivision?.season_id) {
+      toast({
+        title: "Division setup needs checking",
+        description: "Choose a division with an assigned season before creating this fixture.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if ((addForm.scheduled_end_date && !addForm.scheduled_end_time) || (!addForm.scheduled_end_date && addForm.scheduled_end_time)) {
       toast({ title: "Check exact finish", description: "Enter both an end date and end time, or leave both blank.", variant: "destructive" });
       return;
@@ -561,6 +587,8 @@ const FixturesManagement = () => {
     }
 
     const { error } = await supabase.from("fixtures").insert({
+      division_id: selectedDivision.id,
+      season_id: selectedDivision.season_id,
       home_team_id: addForm.home_team_id,
       away_team_id: addForm.away_team_id || null,
       round_number: addForm.round_number ? parseInt(addForm.round_number, 10) : null,

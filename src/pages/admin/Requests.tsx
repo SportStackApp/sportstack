@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,6 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ensurePlayerRoleForTeam } from "@/lib/playerRoles";
 
 
 interface Request {
@@ -38,6 +37,13 @@ interface Request {
   association_name: string;
 }
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error
+    ? error.message
+    : typeof error === "object" && error !== null && "message" in error && typeof error.message === "string"
+      ? error.message
+      : fallback;
+
 export default function Requests() {
   const { user } = useAuth();
   const { scopeLoading, isSuperAdmin, scopedRoles, scopedAssociationIds, scopedClubIds, scopedTeamIds } = useAdminScope();
@@ -51,14 +57,15 @@ export default function Requests() {
   const [statusFilter, setStatusFilter] = useState<string>("PENDING");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!user || scopeLoading) return;
     setLoading(true);
 
     try {
       const [{ data, error }, { data: primaryData, error: primaryError }] = await Promise.all([
-        supabase.from("requests" as any).select("*").order("created_at", { ascending: false }),
+        supabase.from("requests").select("*").order("created_at", { ascending: false }),
         supabase.from("primary_change_requests").select("*").order("requested_at", { ascending: false }),
       ]);
 
@@ -71,30 +78,30 @@ export default function Requests() {
       // Fetch profiles for name lookups
       const { data: profilesData } = await supabase.from("profiles").select("id, first_name, last_name");
       const profileMap = new Map(
-        (profilesData || []).map((p: any) => [
-          p.id,
-          `${p.first_name || ""} ${p.last_name || ""}`.trim() || "Unknown",
+        (profilesData || []).map((profile) => [
+          profile.id,
+          `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Unknown",
         ])
       );
 
       // Fetch teams for lookups
       const { data: teamsData } = await supabase.from("teams").select("id, name, club_id, clubs(id, name, association_id, associations(id, name))");
       const teamMap = new Map(
-        (teamsData || []).map((t: any) => [
-          t.id,
+        (teamsData || []).map((team) => [
+          team.id,
           {
-            name: t.name,
-            clubId: t.club_id,
-            clubName: t.clubs?.name || "",
-            associationId: t.clubs?.association_id,
-            associationName: t.clubs?.associations?.name || "",
+            name: team.name,
+            clubId: team.club_id,
+            clubName: team.clubs?.name || "",
+            associationId: team.clubs?.association_id,
+            associationName: team.clubs?.associations?.name || "",
           },
         ])
       );
 
       const { data: clubsData } = await supabase.from("clubs").select("id, name, association_id, associations(id, name)");
       const clubMap = new Map(
-        (clubsData || []).map((club: any) => [
+        (clubsData || []).map((club) => [
           club.id,
           {
             name: club.name,
@@ -105,10 +112,10 @@ export default function Requests() {
       );
 
       const { data: associationsData } = await supabase.from("associations").select("id, name");
-      const associationMap = new Map((associationsData || []).map((association: any) => [association.id, association.name]));
+      const associationMap = new Map((associationsData || []).map((association) => [association.id, association.name]));
 
       // Filter requests based on role
-      let filtered: Request[] = allRequests.map((req: any) => {
+      let filtered: Request[] = allRequests.map((req) => {
         const teamInfo = req.team_id ? teamMap.get(req.team_id) : null;
         const clubInfo = req.club_id ? clubMap.get(req.club_id) : null;
         return {
@@ -125,7 +132,7 @@ export default function Requests() {
         };
       });
 
-      const primaryRequests = allPrimaryRequests.map((req: any) => {
+      const primaryRequests = allPrimaryRequests.map((req) => {
         const toTeamInfo = teamMap.get(req.to_team_id);
         const fromTeamInfo = req.from_team_id ? teamMap.get(req.from_team_id) : null;
         return {
@@ -158,7 +165,7 @@ export default function Requests() {
 
       // Apply role-based filtering
       if (!isSuperAdmin) {
-        filtered = filtered.filter((req: any) => {
+        filtered = filtered.filter((req) => {
           if (isAssociationAdmin && scopedAssociationIds.includes(req.association_id)) return true;
           if (isClubAdmin && scopedClubIds.includes(req.club_id)) return true;
           if (isTeamManager && scopedTeamIds.includes(req.team_id)) return true;
@@ -167,23 +174,44 @@ export default function Requests() {
       }
 
       setRequests(filtered);
-    } catch (err: any) {
-      console.error(err);
+    } catch (error: unknown) {
+      console.error(error);
       toast({
         title: "Error fetching requests",
-        description: err.message || "Failed to load requests",
+        description: getErrorMessage(error, "Failed to load requests"),
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    isAssociationAdmin,
+    isClubAdmin,
+    isSuperAdmin,
+    isTeamManager,
+    scopeLoading,
+    scopedAssociationIds,
+    scopedClubIds,
+    scopedTeamIds,
+    toast,
+    user,
+  ]);
 
   useEffect(() => {
-    loadData();
-  }, [user, scopeLoading]);
+    void loadData();
+  }, [loadData]);
 
   const handleApprove = async (request: Request) => {
+    if (processingRequestId) return;
+
+    if (request.source !== "primary_change" && request.team_id && request.membership_type === "PRIMARY") {
+      const confirmed = window.confirm(
+        `${request.target_user_name} may already have a primary team. Approving this will make "${request.team_name}" their new primary team and downgrade any existing primary team to secondary. Continue?`
+      );
+      if (!confirmed) return;
+    }
+
+    setProcessingRequestId(request.id);
     try {
       if (request.source === "primary_change") {
         const { error: primaryError } = await supabase
@@ -198,69 +226,30 @@ export default function Requests() {
         return;
       }
 
-      if (!request.team_id) {
-        const { error: updateError } = await supabase
-          .from("requests" as any)
-          .update({
-            status: "APPROVED",
-            responded_by: user?.id,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", request.id);
-
-        if (updateError) throw updateError;
-
-        toast({ title: "Success", description: "Request approved without a team assignment." });
-        loadData();
-        return;
-      }
-
-      if (request.membership_type === "PRIMARY") {
-        const confirmed = window.confirm(
-          `${request.target_user_name} may already have a primary team. Approving this will make "${request.team_name}" their new primary team and downgrade any existing primary team to secondary. Continue?`
-        );
-        if (!confirmed) return;
-      }
-
-      // Update request status
-      const { error: updateError } = await supabase
-        .from("requests" as any)
-        .update({
-          status: "APPROVED",
-          responded_by: user?.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", request.id);
-
-      if (updateError) throw updateError;
-
-      // If this is a new PRIMARY membership, downgrade any existing PRIMARY
-      // membership for this player first, so they never have two primaries.
-      if (request.membership_type === "PRIMARY") {
-        const { error: downgradeError } = await supabase
-          .from("team_memberships")
-          .update({ membership_type: "SECONDARY" })
-          .eq("user_id", request.target_user_id)
-          .eq("membership_type", "PRIMARY");
-
-        if (downgradeError) throw downgradeError;
-      }
-
-      // Insert into team_memberships with status = ACTIVE
-      const { error: insertError } = await supabase.from("team_memberships").insert({
-        user_id: request.target_user_id,
-        team_id: request.team_id,
-        membership_type: request.membership_type as any,
-        status: "ACTIVE",
+      // The database function locks and validates the request, applies any
+      // membership change and approves the request in one transaction.
+      const { error } = await supabase.rpc("approve_membership_request", {
+        p_request_id: request.id,
+        p_assign_team: true,
       });
 
-      if (insertError) throw insertError;
-      await ensurePlayerRoleForTeam(request.target_user_id, request.team_id);
+      if (error) throw error;
 
-      toast({ title: "Success", description: "Request approved and membership created." });
+      toast({
+        title: "Request approved",
+        description: request.team_id
+          ? "The request and team membership were saved together."
+          : "The request was approved without a team assignment.",
+      });
       loadData();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({
+        title: "Request not approved",
+        description: getErrorMessage(error, "The request could not be approved."),
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingRequestId(null);
     }
   };
 
@@ -272,37 +261,40 @@ export default function Requests() {
   // for association/club-only requests this behaves the same as a normal
   // approval, since there was never a team to assign anyway.
   const handleApproveClubOnly = async (request: Request) => {
+    if (processingRequestId) return;
+
+    const confirmed = window.confirm(
+      `Approve ${request.target_user_name} for ${request.club_name || request.association_name} WITHOUT assigning them to "${request.team_name}"? They will need to be added to a team separately later.`
+    );
+    if (!confirmed) return;
+
+    setProcessingRequestId(request.id);
     try {
-      const confirmed = window.confirm(
-        `Approve ${request.target_user_name} for ${request.club_name || request.association_name} WITHOUT assigning them to "${request.team_name}"? They will need to be added to a team separately later.`
-      );
-      if (!confirmed) return;
+      const { error } = await supabase.rpc("approve_membership_request", {
+        p_request_id: request.id,
+        p_assign_team: false,
+      });
 
-      // Update request status - same as a normal approval
-      const { error: updateError } = await supabase
-        .from("requests" as any)
-        .update({
-          status: "APPROVED",
-          responded_by: user?.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", request.id);
-
-      if (updateError) throw updateError;
-
-      // Deliberately NOT inserting into team_memberships here - that's the
-      // whole point of "club only" approval.
+      if (error) throw error;
 
       toast({
         title: "Success",
         description: "Request approved at club level. No team was assigned.",
       });
       loadData();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({
+        title: "Request not approved",
+        description: getErrorMessage(error, "The request could not be approved."),
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingRequestId(null);
     }
   };
   const handleDecline = async (request: Request) => {
+    if (processingRequestId) return;
+    setProcessingRequestId(request.id);
     try {
       if (request.source === "primary_change") {
         const { error } = await supabase
@@ -322,7 +314,7 @@ export default function Requests() {
       }
 
       const { error } = await supabase
-        .from("requests" as any)
+        .from("requests")
         .update({
           status: "DECLINED",
           responded_by: user?.id,
@@ -334,12 +326,16 @@ export default function Requests() {
 
       toast({ title: "Success", description: "Request declined." });
       loadData();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Error", description: getErrorMessage(error, "The request could not be declined."), variant: "destructive" });
+    } finally {
+      setProcessingRequestId(null);
     }
   };
 
   const handleCancel = async (request: Request) => {
+    if (processingRequestId) return;
+    setProcessingRequestId(request.id);
     try {
       if (request.source === "primary_change") {
         const { error } = await supabase
@@ -355,7 +351,7 @@ export default function Requests() {
       }
 
       const { error } = await supabase
-        .from("requests" as any)
+        .from("requests")
         .update({
           status: "CANCELLED",
           cancelled_by: user?.id,
@@ -367,8 +363,10 @@ export default function Requests() {
 
       toast({ title: "Success", description: "Request cancelled." });
       loadData();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Error", description: getErrorMessage(error, "The request could not be cancelled."), variant: "destructive" });
+    } finally {
+      setProcessingRequestId(null);
     }
   };
 
@@ -544,6 +542,7 @@ export default function Requests() {
                                   size="sm"
                                   className="text-green-600 border-green-200 hover:bg-green-50 h-7 px-2 text-xs"
                                   onClick={() => handleApprove(request)}
+                                  disabled={processingRequestId !== null}
                                 >
                                   <CheckCircle2 className="h-3 w-3 mr-1" /> Approve
                                 </Button>
@@ -553,6 +552,7 @@ export default function Requests() {
                                     size="sm"
                                     className="text-blue-600 border-blue-200 hover:bg-blue-50 h-7 px-2 text-xs"
                                     onClick={() => handleApproveClubOnly(request)}
+                                    disabled={processingRequestId !== null}
                                   >
                                     <Building2 className="h-3 w-3 mr-1" /> Approve (club only)
                                   </Button>
@@ -562,6 +562,7 @@ export default function Requests() {
                                   size="sm"
                                   className="text-red-600 border-red-200 hover:bg-red-50 h-7 px-2 text-xs"
                                   onClick={() => handleDecline(request)}
+                                  disabled={processingRequestId !== null}
                                 >
                                   <XCircle className="h-3 w-3 mr-1" /> Decline
                                 </Button>
@@ -571,6 +572,7 @@ export default function Requests() {
                                     size="sm"
                                     className="text-muted-foreground h-7 px-2 text-xs"
                                     onClick={() => handleCancel(request)}
+                                    disabled={processingRequestId !== null}
                                   >
                                     Cancel
                                   </Button>

@@ -141,6 +141,11 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 - The voting reliability pass still needs an owner smoke test of one signed-in Umpire Match Voting
   ballot on Dev. The Dev database function and existing Player MVP Voting integrity have been
   transaction-tested and audited; Production is unchanged.
+- The core-administration pass still needs an owner smoke test of fixture import/manual editing,
+  membership-request approval and safe unused-venue deletion on Dev.
+- A read-only Dev audit on 1 August 2026 found 202 repeated user/team membership keys and 44 users
+  with more than one Primary team. No existing row was changed; a separate per-person dry run and
+  approval are required before any cleanup.
 
 ## Current Codex handoff template
 
@@ -211,6 +216,22 @@ What changed:
   revoked; the existing service-role public portal path is unaffected.
 - Regenerated `src/integrations/supabase/types.ts` from the live Dev schema and changed the page to use
   the generated `submit_umpire_match_vote` type directly.
+- Completed the Block 9 core-administration reliability pass. Fixture import now uses exact
+  Club - Division - Team labels, rejects ambiguous short names, mixed divisions, missing seasons,
+  same-team and duplicate-sheet rows, and requires every row to be valid before confirmation.
+- Fixture import and normal fixture add/edit now save `division_id` and `season_id`; team-only admins
+  no longer receive every team in the selected club through the import page.
+- Added and applied `20260801040000_atomic_membership_request_approval.sql` to Dev. The signed-in
+  administrator's association/club/team scope is derived server-side, one request and membership
+  change commit together, repeat approval is blocked and concurrent approvals for one person are
+  serialised.
+- Added and applied `20260801041000_safe_venue_delete.sql` to Dev. Venue deletion is scoped and
+  atomic, and is blocked while SportStack fixtures, umpire fixtures or RevSports mappings still use
+  the venue or its pitches. The page shows the blocker counts before deletion.
+- Regenerated the Dev database types for both functions and removed 39 existing loose-type lint
+  errors plus eight hook warnings across the four changed admin screens.
+- Audited existing Dev memberships without changing them: 202 user/team keys are repeated and 44
+  users have multiple Primary teams. The cleanup is parked as a separate destructive-data review.
 
 Checks run:
 
@@ -246,6 +267,15 @@ Checks run:
 - The production build passed with the existing large-bundle warning. Full repository lint now
   reports 489 known legacy problems (405 errors and 84 warnings), down from 521 because this pass
   removed the Umpire Match Voting page's old loose typing.
+- Both Block 9 database functions passed rollback-only functional tests before the exact migrations
+  were applied to Dev. The membership test proved one atomic approval and left no synthetic rows;
+  the venue test proved linked deletion is blocked and unused deletion removes its pitch atomically.
+- Post-apply checks confirmed fixed empty search paths, authenticated-only execution, no anonymous
+  execution and no leftover test rows. Supabase advisers reported no error; their security-definer
+  warnings are expected for these deliberately authenticated functions.
+- Focused ESLint for Fixture Import, Fixtures, Requests and Venues passed with no warning.
+  `npx tsc --noEmit` and the production build passed. Full lint now reports 442 known legacy
+  problems (366 errors and 76 warnings), down from 489 after this pass.
 
 What Aaron should test next:
 
@@ -266,11 +296,18 @@ What Aaron should test next:
   audience confirmation names the correct scope.
 - In Dev Umpire mode, open Umpire Match Voting, confirm only completed fixtures are listed, enter one
   clearly marked test ballot, review it, submit once and confirm a repeat submission is blocked.
+- In Dev Admin, download the fixture import template and confirm its exact team labels. Preview one
+  valid row plus one duplicate or ambiguous row and confirm nothing imports until every row is valid.
+- Add or edit one disposable Dev fixture and confirm its division and season remain linked after
+  reload. Approve one disposable pending membership request and confirm it cannot be approved twice.
+- Open a disposable unused Dev venue, confirm the dependency summary, delete it, then confirm a venue
+  with fixture or RevSports links is blocked.
 
 Risk level:
 
-- Medium. This includes additive Dev-only schema/RLS/grant work, atomic ballot writes and line-up
-  save changes. No Production database, deployment, DNS or redirect change was made.
+- Medium. This includes additive Dev-only schema/RLS/grant work, atomic ballot and admin writes,
+  and line-up save changes. No existing membership cleanup and no Production database, deployment,
+  DNS or redirect change was made.
 
 ### Previous handoff entry
 
