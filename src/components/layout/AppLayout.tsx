@@ -68,6 +68,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAppMode, MODE_LABELS, type AppMode } from "@/contexts/AppModeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useModuleAvailability } from "@/hooks/useModuleAvailability";
 import { APP_ENVIRONMENT, APP_ENVIRONMENT_CLASS, APP_VERSION } from "@/lib/appVersion";
 import { isProfileReviewRequired } from "@/lib/profileCompletion";
 
@@ -105,7 +106,7 @@ const ADMIN_DROPDOWN_SECTIONS: NavSection[] = [
     items: [
       { path: "/admin/users", label: "Users", icon: UserCog },
       { path: "/admin/requests", label: "Requests", icon: ClipboardList },
-      { path: "/admin/roles-permissions", label: "Roles & permissions", icon: Shield },
+      { path: "/admin/roles-permissions", label: "Roles & modules", icon: Shield },
     ],
   },
   {
@@ -192,6 +193,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/admin/venues", label: "Venues", icon: MapPin },
         { path: "/admin/users", label: "Users", icon: UserCog },
         { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+        { path: "/admin/roles-permissions", label: "Roles & modules", icon: Shield },
       ],
     },
   ],
@@ -228,6 +230,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/admin/venues", label: "Venues", icon: MapPin },
         { path: "/admin/users", label: "Users", icon: UserCog },
         { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+        { path: "/admin/roles-permissions", label: "Roles & modules", icon: Shield },
       ],
     },
   ],
@@ -259,6 +262,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/admin/divisions", label: "Divisions", icon: LayoutGrid },
         { path: "/admin/users", label: "Users", icon: UserCog },
         { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+        { path: "/admin/roles-permissions", label: "Roles & modules", icon: Shield },
       ],
     },
   ],
@@ -322,6 +326,7 @@ const ASSOCIATION_ADMIN_DROPDOWN_PATHS = new Set([
   "/admin/umpire-voting",
   "/admin/analytics",
   "/admin/safety-risk",
+  "/admin/roles-permissions",
 ]);
 
 const CLUB_ADMIN_DROPDOWN_PATHS = new Set([
@@ -333,7 +338,16 @@ const CLUB_ADMIN_DROPDOWN_PATHS = new Set([
   "/admin/requests",
   "/admin/mvp-voting",
   "/admin/safety-risk",
+  "/admin/roles-permissions",
 ]);
+
+const NAV_MODULE_KEYS = [
+  "player_mvp",
+  "umpire_match_voting",
+  "committee",
+  "safety_risk",
+  "hockey_trace",
+] as const;
 
 const MOBILE_NAV: Record<AppMode, NavItem[]> = {
   super_admin: NAV_SETS.super_admin[0].items.slice(0, 4),
@@ -482,6 +496,7 @@ const AppLayout = () => {
     selectedClub,
     selectedTeam,
   } = useTeamContext();
+  const { enabled: moduleEnabled } = useModuleAvailability([...NAV_MODULE_KEYS]);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAssociationPopoverOpen, setIsAssociationPopoverOpen] = useState(false);
@@ -867,12 +882,21 @@ const AppLayout = () => {
   const showAssociationSelector = mode === "super_admin";
   const showClubSelector = mode === "super_admin" || mode === "association" || mode === "club";
   const showAdminDropdown = mode === "super_admin" || mode === "association" || mode === "club";
+  const isModulePathEnabled = (path: string) => {
+    if (path === "/mvp-votes" || path === "/admin/mvp-voting") return moduleEnabled.player_mvp;
+    if (path === "/umpire/vote" || path === "/admin/umpire-voting") return moduleEnabled.umpire_match_voting;
+    if (path === "/admin/analytics") return moduleEnabled.player_mvp || moduleEnabled.umpire_match_voting;
+    if (path === "/admin/safety-risk") return moduleEnabled.safety_risk;
+    if (path === "/coaching/trace") return moduleEnabled.hockey_trace;
+    return true;
+  };
 
   const visibleSections = baseSections.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
       if (isVoterOnly && !["/dashboard", "/mvp-votes"].includes(item.path)) return false;
       if (isBrandNewUser && item.path !== "/dashboard") return false;
+      if (!isModulePathEnabled(item.path)) return false;
       if (item.path === "/umpire/vote" && !roles.some((role) => role === "UMPIRE" || role === "SUPER_ADMIN")) return false;
       if (selectedAssociationId && item.path === "/admin/associations") return false;
       if (selectedClubId && item.path === "/admin/clubs") return false;
@@ -918,6 +942,7 @@ const AppLayout = () => {
     ...section,
     items: section.items.filter((item) => {
       if (!showAdminDropdown) return false;
+      if (!isModulePathEnabled(item.path)) return false;
       if (mode === "association" && !ASSOCIATION_ADMIN_DROPDOWN_PATHS.has(item.path)) return false;
       if (mode === "club" && !CLUB_ADMIN_DROPDOWN_PATHS.has(item.path)) return false;
       return true;

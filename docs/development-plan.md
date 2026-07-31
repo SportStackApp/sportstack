@@ -108,11 +108,17 @@ fixture add/edit also saves those links. Membership-request approval and safe un
 now use scoped atomic database functions so partial browser writes and silent historical-link loss
 are blocked. Existing duplicate membership data was audited and parked for a separate dry-run review.
 
-## 10. Permissions and module controls
+## 10. Permissions and module controls — implemented on Dev, owner smoke pending
 
 - Separate permissions for each module.
 - Support association, club, division and team scope.
 - Add committee positions, inherited access and controlled exclusions.
+
+Dev now has live scoped module controls for Player MVP Voting, Umpire Match Voting, Committee
+Management, Risk and Quality Improvement, and the experimental Hockey Trace Lab. Association and
+Club administrators can create confirmed child overrides only inside their managed scope, restore
+inheritance and see the effective result. Signed-in routes and menus apply the closest team,
+division, club or association setting; the existing modules remain enabled by default.
 
 ## 11. Committee setup
 

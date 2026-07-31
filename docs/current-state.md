@@ -146,6 +146,8 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 - A read-only Dev audit on 1 August 2026 found 202 repeated user/team membership keys and 44 users
   with more than one Primary team. No existing row was changed; a separate per-person dry run and
   approval are required before any cleanup.
+- Scoped module controls need an owner smoke test across one parent and child scope. No explicit
+  Dev overrides exist yet, so every current module retains its safe default behaviour.
 
 ## Current Codex handoff template
 
@@ -232,6 +234,17 @@ What changed:
   errors plus eight hook warnings across the four changed admin screens.
 - Audited existing Dev memberships without changing them: 202 user/team keys are repeated and 44
   users have multiple Primary teams. The cleanup is parked as a separate destructive-data review.
+- Completed Block 10 with the additive Dev migration
+  `20260801050000_scoped_module_controls.sql`. It adds explicit module overrides at association,
+  club, division and team level, closest-parent resolution, server-side scope checks and
+  authenticated-only management functions.
+- Reworked Roles & permissions into Roles, permissions & modules. Super, Association and Club
+  administrators can now manage only their authorised organisation levels, with a warning before
+  each override and a Use inherited action. Role descriptions explicitly separate Player MVP
+  Voting from Umpire Match Voting.
+- Added a shared module gate and navigation filtering. Player MVP Voting, Umpire Match Voting,
+  Safety Hub and Hockey Trace signed-in routes use the effective organisation setting. Current
+  modules default to enabled; the experimental Hockey Trace Lab defaults to disabled.
 
 Checks run:
 
@@ -276,6 +289,13 @@ Checks run:
 - Focused ESLint for Fixture Import, Fixtures, Requests and Venues passed with no warning.
   `npx tsc --noEmit` and the production build passed. Full lint now reports 442 known legacy
   problems (366 errors and 76 warnings), down from 489 after this pass.
+- The module-control migration passed a rollback test covering explicit disable, closest-scope
+  resolution, clearing back to inheritance and anonymous write denial before exact Dev apply.
+- Post-apply checks found zero explicit flags, SELECT-only table access for signed-in clients,
+  authenticated-only management functions and fixed empty search paths. No new adviser error was
+  reported; expected signed-in security-definer warnings are documented.
+- Focused ESLint, TypeScript and the production build passed for the module-control UI, route gate,
+  navigation and generated Dev schema types. The existing large-bundle warning remains.
 
 What Aaron should test next:
 
@@ -302,12 +322,15 @@ What Aaron should test next:
   reload. Approve one disposable pending membership request and confirm it cannot be approved twice.
 - Open a disposable unused Dev venue, confirm the dependency summary, delete it, then confirm a venue
   with fixture or RevSports links is blocked.
+- In Roles & modules, choose a disposable child scope and disable Hockey Trace or another
+  non-critical module. Confirm its menu and direct route are blocked, then select Use inherited and
+  confirm its parent/default status returns.
 
 Risk level:
 
-- Medium. This includes additive Dev-only schema/RLS/grant work, atomic ballot and admin writes,
-  and line-up save changes. No existing membership cleanup and no Production database, deployment,
-  DNS or redirect change was made.
+- Medium. This includes additive Dev-only schema/RLS/grant work, atomic ballot/admin writes and
+  module route controls. No explicit module override, existing membership cleanup, Production
+  database, deployment, DNS or redirect change was made.
 
 ### Previous handoff entry
 

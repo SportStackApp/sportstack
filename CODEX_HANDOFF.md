@@ -110,6 +110,10 @@ Future agents should start by reading these files in order:
   editing now preserve division/season scope and block ambiguous team matches. Membership-request
   approval and unused-venue deletion are atomic, server-authorised Dev functions. A read-only audit
   found existing duplicate membership data; it was documented without changing any existing row.
+- Block 10 is implemented on Dev pending owner smoke testing. Roles & modules now includes live,
+  inherited module controls at association, club, division and team scope. Scoped administrators
+  can confirm an enable/disable override or restore inheritance; module routes and navigation use
+  the effective setting. Existing modules default to enabled and Hockey Trace defaults to disabled.
 - Do not merge or cherry-pick `chore/domain-structure` commit `3a7d6cc`; it contains the superseded
   assumption that `hb` belongs to the separate ignored Hockey Ballarat module. The corrected work
   is being landed directly on `dev`.
@@ -134,6 +138,8 @@ Future agents should start by reading these files in order:
    submission is blocked.
 6. On Dev, download the fixture template, preview one valid row and one deliberately ambiguous team
    name, then test one membership approval and one unused-venue deletion with disposable Dev data.
+7. In Dev Roles & modules, disable one non-critical module at a disposable child scope, confirm its
+   menu and direct route are blocked, then select Use inherited and confirm access returns.
 
 Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace and Safety Hub write forms
 remain parked.

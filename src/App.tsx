@@ -56,6 +56,7 @@ import MvpVotingAdmin from "./pages/admin/MvpVotingAdmin";
 import Analytics from "./pages/admin/Analytics";
 import FeedbackResponses from "./pages/admin/FeedbackResponses";
 import RolesPermissions from "./pages/admin/RolesPermissions";
+import { ModuleGate } from "./components/auth/ModuleGate";
 import ModuleLayoutPreview from "./pages/admin/ModuleLayoutPreview";
 import SafetyRiskModule from "./pages/admin/SafetyRiskModule";
 import UmpireVotingModule from "./pages/admin/UmpireVotingModule";
@@ -147,13 +148,13 @@ const App = () => (
                       <Route path="/coaching/formations" element={<FormationLibrary />} />
                       <Route path="/coaching/formations/builder" element={<FormationBuilder />} />
                       <Route path="/coaching/formations/templates/builder" element={<TemplateBuilder />} />
-                      <Route path="/coaching/trace" element={<HockeyTraceLab />} />
+                      <Route path="/coaching/trace" element={<ModuleGate moduleKey="hockey_trace" moduleLabel="Hockey Trace Lab"><HockeyTraceLab /></ModuleGate>} />
                       <Route path="/coaching/:playerId" element={<CoachingPlayerProfile />} />
                       <Route path="/chat" element={<Chat />} />
-                      <Route path="/umpire/vote" element={<UmpireVoteSubmit />} />
+                      <Route path="/umpire/vote" element={<ModuleGate moduleKey="umpire_match_voting" moduleLabel="Umpire Match Voting"><UmpireVoteSubmit /></ModuleGate>} />
                       <Route path="/voting" element={<VotingPortal />} />
-                      <Route path="/mvp-votes" element={<MvpVotes />} />
-                      <Route path="/mvp-votes/:sessionId" element={<MvpVoteCastRoute />} />
+                      <Route path="/mvp-votes" element={<ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpVotes /></ModuleGate>} />
+                      <Route path="/mvp-votes/:sessionId" element={<ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpVoteCastRoute /></ModuleGate>} />
                       <Route path="/profile" element={<Profile />} />
                       
                       {/* Admin Routes */}
@@ -175,9 +176,9 @@ const App = () => (
                       <Route path="/admin/fixture-import" element={<FixtureImport />} />
                       <Route path="/admin/venues" element={<VenuesManagement />} />
                       <Route path="/admin/requests" element={<Requests />} />
-                      <Route path="/admin/mvp-voting" element={<MvpVotingAdmin />} />
-                      <Route path="/admin/umpire-voting" element={<UmpireVotingModule />} />
-                      <Route path="/admin/safety-risk" element={<SafetyRiskModule />} />
+                      <Route path="/admin/mvp-voting" element={<ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpVotingAdmin /></ModuleGate>} />
+                      <Route path="/admin/umpire-voting" element={<ModuleGate moduleKey="umpire_match_voting" moduleLabel="Umpire Match Voting"><UmpireVotingModule /></ModuleGate>} />
+                      <Route path="/admin/safety-risk" element={<ModuleGate moduleKey="safety_risk" moduleLabel="Risk & Quality Improvement"><SafetyRiskModule /></ModuleGate>} />
                       <Route path="/admin/analytics" element={<Analytics />} />
                       <Route path="/admin/roles-permissions" element={<RolesPermissions />} />
                       <Route path="/admin/module-preview" element={<ModuleLayoutPreview />} />

@@ -48,13 +48,24 @@ The Supabase emails for password resets, placeholder claim links, and welcome me
 
 ## Permission, Modules, and Parked Feedback Items
 **Logged:** 3 July 2026  
-**Status:** Parked - include in the permission/module re-scope
+**Status:** In progress - scoped module controls implemented on Dev 1 August 2026
 
 **Do:**
 - Add separate permission concepts for Player MVP Voting submission/result visibility and Umpire Match Voting submission/result visibility, plus committee access and committee president access.
 - Allow module enable/disable rules at association, club, division, and team level.
 - Keep inheritance clear: parent permissions flow down, but child scopes can be excluded or overridden with warning prompts.
 - Decide Club Admin visibility separately for Player MVP Voting submissions/results and Umpire Match Voting submissions/results; do not apply one module's rule to the other or hard-code both to Super Admin and Association Admin only.
+
+**Implemented on Dev:**
+- Player MVP Voting and Umpire Match Voting are separate module keys and role descriptions.
+- Association, club, division and team overrides inherit from the closest parent.
+- Super and Association Admins can manage all four levels in scope; Club Admins can manage their
+  club and teams. Every override has a warning and can return to inherited mode.
+- Signed-in navigation and direct routes enforce the effective module setting.
+
+**Still parked in this item:**
+- Fine-grained per-person submission and result visibility beyond the existing module-specific RLS.
+- Any role-enum change or custom View/Create/Edit/Delete/Approve/Export switch system.
 
 **Do not:**
 - Add one-off hard-coded permission checks that will need to be unwound during the re-scope.

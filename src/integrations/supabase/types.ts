@@ -1854,6 +1854,100 @@ export type Database = {
           },
         ]
       }
+      module_feature_flags: {
+        Row: {
+          association_id: string | null
+          club_id: string | null
+          created_at: string
+          created_by: string | null
+          division_id: string | null
+          enabled: boolean
+          id: string
+          module_key: string
+          notes: string | null
+          scope_id: string
+          scope_type: string
+          team_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          division_id?: string | null
+          enabled: boolean
+          id?: string
+          module_key: string
+          notes?: string | null
+          scope_id: string
+          scope_type: string
+          team_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          division_id?: string | null
+          enabled?: boolean
+          id?: string
+          module_key?: string
+          notes?: string | null
+          scope_id?: string
+          scope_type?: string
+          team_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_feature_flags_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_feature_flags_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_feature_flags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_feature_flags_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_feature_flags_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_feature_flags_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mvp_result_checks: {
         Row: {
           comment: string | null
@@ -6515,6 +6609,10 @@ export type Database = {
         Args: { p_assign_team?: boolean; p_request_id: string }
         Returns: Json
       }
+      can_manage_module_scope: {
+        Args: { p_scope_id: string; p_scope_type: string; p_user_id: string }
+        Returns: boolean
+      }
       claim_placeholder_profile: {
         Args: { p_real_profile_id: string }
         Returns: {
@@ -6534,6 +6632,10 @@ export type Database = {
           subject: string
           work_type: string
         }[]
+      }
+      clear_module_feature_flag: {
+        Args: { p_module_key: string; p_scope_id: string; p_scope_type: string }
+        Returns: boolean
       }
       close_legacy_mvp_sessions_for_cutover: {
         Args: { p_reason: string }
@@ -6595,12 +6697,32 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: Json
       }
+      resolve_module_enabled: {
+        Args: {
+          p_association_id?: string
+          p_club_id?: string
+          p_division_id?: string
+          p_module_key: string
+          p_team_id?: string
+        }
+        Returns: boolean
+      }
       resolve_mvp_result_dispute: {
         Args: { p_closes_at?: string; p_session_id: string }
         Returns: Json
       }
       review_umpire_vote_submission: {
         Args: { p_action: string; p_lines?: Json; p_submission_id: string }
+        Returns: Json
+      }
+      set_module_feature_flag: {
+        Args: {
+          p_enabled: boolean
+          p_module_key: string
+          p_notes?: string
+          p_scope_id: string
+          p_scope_type: string
+        }
         Returns: Json
       }
       set_team_mvp_enabled: {
