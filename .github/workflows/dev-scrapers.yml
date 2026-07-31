@@ -21,6 +21,7 @@ on:
           - hockey-ballarat
           - sunraysia
           - wimmera
+          - fixture-import
           - player-registry
           - player-history
           - storage-diagnostics
@@ -66,6 +67,34 @@ env:
   PYTHONUNBUFFERED: "1"
 
 jobs:
+  fixture-import:
+    name: RevSports fixture import to Dev
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.task == 'fixture-import'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Supabase dependency
+        run: pip install -r scraper/requirements-supabase.txt
+
+      - name: Preview or import all mapped V2 fixtures into Dev
+        env:
+          SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
+        run: >-
+          python scripts/import_revsports_fixtures_v2.py
+          ${{ inputs.apply_fixture_import && '--apply' || '' }}
+
   storage-diagnostics:
     name: Inspect Dev Storage usage
     if: >-

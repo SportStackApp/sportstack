@@ -99,6 +99,8 @@ class ScraperWorkflowRoutineTests(unittest.TestCase):
         dev_text = (WORKFLOWS / "dev-scrapers.yml").read_text(encoding="utf-8")
         self.assertIn("apply_fixture_import:", dev_text)
         self.assertIn("inputs.apply_fixture_import", dev_text)
+        self.assertIn("inputs.task == 'fixture-import'", dev_text)
+        self.assertIn("Preview or import all mapped V2 fixtures into Dev", dev_text)
 
 
 if __name__ == "__main__":
