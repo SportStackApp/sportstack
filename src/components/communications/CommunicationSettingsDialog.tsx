@@ -77,6 +77,8 @@ export function CommunicationSettingsDialog({
   const [newCanPublish, setNewCanPublish] = useState(tab !== "team");
   const [newCanModerate, setNewCanModerate] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const canAdministerChannel = useMemo(() => {
     if (isSuperAdmin) return true;
@@ -93,6 +95,13 @@ export function CommunicationSettingsDialog({
   useEffect(() => {
     if (!open || !user) return;
     const loadSettings = async () => {
+      setLoadingSettings(true);
+      setLoadError(false);
+      setReminderDays("7, 3, 1");
+      setTeamRemindersEnabled(false);
+      setPermissions([]);
+      setCandidates([]);
+      setSelectedUserId("__none__");
       const [clubResult, teamResult] = await Promise.all([
         clubId
           ?
@@ -101,7 +110,7 @@ export function CommunicationSettingsDialog({
             .select("reminder_days")
             .eq("club_id", clubId)
             .maybeSingle()
-          : Promise.resolve({ data: null }),
+          : Promise.resolve({ data: null, error: null }),
         teamId
           ?
           database
@@ -109,8 +118,9 @@ export function CommunicationSettingsDialog({
             .select("enabled")
             .eq("team_id", teamId)
             .maybeSingle()
-          : Promise.resolve({ data: null }),
+          : Promise.resolve({ data: null, error: null }),
       ]);
+      if (clubResult.error || teamResult.error) setLoadError(true);
       if (clubResult?.data?.reminder_days) {
         setReminderDays((clubResult.data.reminder_days as number[]).join(", "));
       }
@@ -118,7 +128,10 @@ export function CommunicationSettingsDialog({
         setTeamRemindersEnabled(teamResult.data.enabled);
       }
 
-      if (!channelId) return;
+      if (!channelId) {
+        setLoadingSettings(false);
+        return;
+      }
       const [permissionResult, membershipResult] = await Promise.all([
         database
           .from("communication_permissions")
@@ -129,6 +142,11 @@ export function CommunicationSettingsDialog({
           .select("user_id, team_id, teams!inner(club_id, clubs!inner(association_id))")
           .eq("status", "ACTIVE"),
       ]);
+      if (permissionResult.error || membershipResult.error) {
+        setLoadError(true);
+        setLoadingSettings(false);
+        return;
+      }
       setPermissions((permissionResult.data || []) as Permission[]);
 
       const scopedMemberships = ((membershipResult.data || []) as MembershipRow[]).filter((membership) => {
@@ -141,12 +159,14 @@ export function CommunicationSettingsDialog({
       const userIds = [...new Set(scopedMemberships.map((membership) => membership.user_id))];
       if (userIds.length === 0) {
         setCandidates([]);
+        setLoadingSettings(false);
         return;
       }
-      const { data: profiles } = await database
+      const { data: profiles, error: profilesError } = await database
         .from("profiles")
         .select("id, first_name, last_name")
         .in("id", userIds);
+      if (profilesError) setLoadError(true);
       setCandidates(
         ((profiles || []) as ProfileRow[])
           .map((profile) => ({
@@ -155,6 +175,7 @@ export function CommunicationSettingsDialog({
           }))
           .sort((a: Candidate, b: Candidate) => a.name.localeCompare(b.name)),
       );
+      setLoadingSettings(false);
     };
     void loadSettings();
   }, [associationId, channelId, clubId, open, tab, teamId, user]);
@@ -191,7 +212,8 @@ export function CommunicationSettingsDialog({
   };
 
   const setTeamReminderState = async (enabled: boolean) => {
-    if (!user || !teamId) return;
+    if (!user || !teamId || saving) return;
+    setSaving(true);
     setTeamRemindersEnabled(enabled);
     const { error } = await database.from("team_availability_reminder_settings").upsert({
       team_id: teamId,
@@ -203,6 +225,7 @@ export function CommunicationSettingsDialog({
       setTeamRemindersEnabled(!enabled);
       toast({ title: "Team reminder setting not saved", description: error.message, variant: "destructive" });
     }
+    setSaving(false);
   };
 
   const addPermission = async () => {
@@ -241,8 +264,11 @@ export function CommunicationSettingsDialog({
     setPermissions((items) => items.filter((item) => item.id !== permissionId));
   };
 
-  const candidateName = (userId: string) =>
-    candidates.find((candidate) => candidate.id === userId)?.name || "Member";
+  const candidateNames = useMemo(
+    () => new Map(candidates.map((candidate) => [candidate.id, candidate.name])),
+    [candidates],
+  );
+  const candidateName = (userId: string) => candidateNames.get(userId) || "Member";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -254,7 +280,16 @@ export function CommunicationSettingsDialog({
           <DialogDescription>Manage only the selected team, club or association scope.</DialogDescription>
         </DialogHeader>
 
-        {tab === "team" && (canManageSchedule || canManageTeamSchedule) && (
+        {loadingSettings && (
+          <p className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">Loading communication settings…</p>
+        )}
+        {loadError && (
+          <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+            Some settings could not be loaded. Close this window and try again before making changes.
+          </p>
+        )}
+
+        {!loadingSettings && !loadError && tab === "team" && (canManageSchedule || canManageTeamSchedule) && (
           <section className="space-y-4 rounded-lg border p-4">
             <div>
               <h3 className="font-medium">Availability reminders</h3>
@@ -285,13 +320,14 @@ export function CommunicationSettingsDialog({
                   id="team-reminders"
                   checked={teamRemindersEnabled}
                   onCheckedChange={(checked) => void setTeamReminderState(checked)}
+                  disabled={saving || loadError}
                 />
               </div>
             )}
           </section>
         )}
 
-        {canAdministerChannel && channelId && (
+        {!loadingSettings && !loadError && canAdministerChannel && channelId && (
           <section className="space-y-4 rounded-lg border p-4">
             <div>
               <h3 className="font-medium">Delegated permissions</h3>

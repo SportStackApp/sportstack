@@ -136,6 +136,8 @@ Treat these as current caution areas unless a newer live check proves otherwise:
   Admin, Club Admin, Team Manager, Player and Umpire modes.
 - The dashboard and availability reliability pass still needs an owner smoke test across a Primary,
   Secondary and, where available, Fill-in fixture.
+- The communications reliability pass still needs an owner smoke test for Team Chat plus one clearly
+  marked Dev-only Club or Association Update.
 
 ## Current Codex handoff template
 
@@ -186,6 +188,14 @@ What changed:
   and only fixtures for which the player is eligible show availability controls.
 - Added separate dashboard load-error states so a failed fixture, calendar or availability request
   is no longer presented as a genuine empty result.
+- Improved Communications with an exact audience summary and a confirmation step for official Club
+  and Association Updates. Enter sends only in Team Chat; official updates can use normal multiline
+  text and must be published with the button and confirmation.
+- Fixed message deep links so automatic bottom scrolling no longer overrides the requested older
+  message. Scope permission and reminder settings are reset during each load, failures are shown
+  instead of stale values, and reminder toggles are locked while saving.
+- Added visible message-load retry behaviour and reaction-save errors. The React review also replaced
+  repeated reply/reaction scans with indexed maps for the 150-message view.
 
 Checks run:
 
@@ -205,6 +215,8 @@ Checks run:
   the known 521-problem legacy backlog and added no changed-file finding.
 - Dashboard focused lint, TypeScript and production build passed. Full repository lint remained at
   the same known 521-problem legacy backlog.
+- Communications focused lint, TypeScript and production build passed. Full repository lint remained
+  at the same known 521-problem legacy backlog.
 
 What Aaron should test next:
 
@@ -220,6 +232,9 @@ What Aaron should test next:
 - On Dev, open the Primary and Secondary teams from the player team switcher. Confirm the banner
   badge, home/away fixture details and availability status are correct; change one response, then
   select it again and confirm it clears to No response.
+- In Dev Communications, send and reply to one Team Chat message, open an older message from a
+  dashboard link, then publish one clearly marked test Club or Association Update and verify the
+  audience confirmation names the correct scope.
 
 Risk level:
 

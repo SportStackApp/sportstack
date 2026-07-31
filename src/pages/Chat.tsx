@@ -104,6 +104,7 @@ const formatTime = (value: string) => {
 const Chat = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get("tab") as CommunicationTab | null;
+  const targetMessageId = searchParams.get("message");
   const [tab, setTab] = useState<CommunicationTab>(
     requestedTab && ["team", "club", "association"].includes(requestedTab) ? requestedTab : "team",
   );
@@ -131,7 +132,9 @@ const Chat = () => {
   const [important, setImportant] = useState(false);
   const [pendingMentions, setPendingMentions] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [sending, setSending] = useState(false);
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [moderating, setModerating] = useState<CommunicationMessage | null>(null);
   const [moderationReason, setModerationReason] = useState("");
@@ -154,6 +157,9 @@ const Chat = () => {
     : tab === "club"
       ? selectedClub?.name || "Select a club"
       : selectedAssociation?.name || "Select an association";
+  const audienceLabel = tab === "team"
+    ? `Active members with access to ${scopeLabel} Team Chat`
+    : `Members with access to ${scopeLabel} ${tab === "club" ? "Club Updates" : "Association Updates"}`;
 
   useEffect(() => {
     if (requestedTab && ["team", "club", "association"].includes(requestedTab)) setTab(requestedTab);
@@ -162,18 +168,25 @@ const Chat = () => {
   useEffect(() => {
     if (!user) return;
     const loadChannels = async () => {
+      setLoadError(false);
       const requests = [
         selectedTeamId
           ? database.from("communication_channels").select("id").eq("team_id", selectedTeamId).maybeSingle()
-          : Promise.resolve({ data: null }),
+          : Promise.resolve({ data: null, error: null }),
         selectedClubId
           ? database.from("communication_channels").select("id").eq("club_id", selectedClubId).maybeSingle()
-          : Promise.resolve({ data: null }),
+          : Promise.resolve({ data: null, error: null }),
         selectedAssociationId
           ? database.from("communication_channels").select("id").eq("association_id", selectedAssociationId).maybeSingle()
-          : Promise.resolve({ data: null }),
+          : Promise.resolve({ data: null, error: null }),
       ];
       const [teamResult, clubResult, associationResult] = await Promise.all(requests);
+      if (teamResult.error || clubResult.error || associationResult.error) {
+        setChannels(defaultChannels);
+        setUnread(defaultUnread);
+        setLoadError(true);
+        return;
+      }
       const nextChannels: ChannelMap = {
         team: teamResult.data?.id || null,
         club: clubResult.data?.id || null,
@@ -229,10 +242,13 @@ const Chat = () => {
     if (!channelId || !user) {
       setMessages([]);
       setReactions([]);
+      setOwnPermission(null);
       setLoading(false);
       return;
     }
     setLoading(true);
+    setLoadError(false);
+    setOwnPermission(null);
     const { data, error } = await database
       .from("communication_messages")
       .select("id, channel_id, message_type, author_id, content, reply_to_id, is_important, edited_at, removed_at, removed_by, moderation_reason, created_at")
@@ -242,6 +258,7 @@ const Chat = () => {
     if (error) {
       console.error("Unable to load communications", error);
       setMessages([]);
+      setLoadError(true);
       setLoading(false);
       return;
     }
@@ -320,14 +337,13 @@ const Chat = () => {
   }, [selectedTeamId, tab]);
 
   useEffect(() => {
-    const targetId = searchParams.get("message");
-    if (!targetId || loading) return;
-    requestAnimationFrame(() => document.getElementById(`communication-${targetId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }));
-  }, [loading, messages, searchParams]);
+    if (!targetMessageId || loading) return;
+    requestAnimationFrame(() => document.getElementById(`communication-${targetMessageId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  }, [loading, messages, targetMessageId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+    if (!targetMessageId) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length, targetMessageId]);
 
   const mentionQuery = useMemo(() => {
     if (tab !== "team") return null;
@@ -337,6 +353,19 @@ const Chat = () => {
   const mentionSuggestions = mentionQuery === null
     ? []
     : members.filter((member) => member.id !== user?.id && member.name.toLowerCase().includes(mentionQuery)).slice(0, 6);
+  const messagesById = useMemo(
+    () => new Map(messages.map((message) => [message.id, message])),
+    [messages],
+  );
+  const reactionsByMessage = useMemo(() => {
+    const grouped = new Map<string, Reaction[]>();
+    for (const reaction of reactions) {
+      const existing = grouped.get(reaction.message_id) || [];
+      existing.push(reaction);
+      grouped.set(reaction.message_id, existing);
+    }
+    return grouped;
+  }, [reactions]);
 
   const chooseMention = (member: Member) => {
     setComposer((current) => current.replace(/(?:^|\s)@([^@\n]*)$/, (value) => `${value.startsWith(" ") ? " " : ""}@${member.name} `));
@@ -351,8 +380,12 @@ const Chat = () => {
     setPendingMentions([]);
   };
 
-  const sendMessage = async () => {
+  const sendMessage = async (broadcastConfirmed = false) => {
     if (!user || !channelId || !composer.trim() || !canPublish || sending) return;
+    if (tab !== "team" && !editing && !broadcastConfirmed) {
+      setPublishConfirmOpen(true);
+      return;
+    }
     setSending(true);
     if (editing) {
       const { error } = await database
@@ -395,10 +428,15 @@ const Chat = () => {
   const toggleReaction = async (messageId: string, emoji: string) => {
     if (!user) return;
     const existing = reactions.find((reaction) => reaction.message_id === messageId && reaction.user_id === user.id && reaction.emoji === emoji);
+    let error;
     if (existing) {
-      await database.from("communication_reactions").delete().eq("id", existing.id);
+      ({ error } = await database.from("communication_reactions").delete().eq("id", existing.id));
     } else {
-      await database.from("communication_reactions").insert({ message_id: messageId, user_id: user.id, emoji });
+      ({ error } = await database.from("communication_reactions").insert({ message_id: messageId, user_id: user.id, emoji }));
+    }
+    if (error) {
+      toast({ title: "Reaction not saved", description: error.message, variant: "destructive" });
+      return;
     }
     await loadMessages();
   };
@@ -451,6 +489,7 @@ const Chat = () => {
             {tab === "team" ? <Users className="h-4 w-4" /> : <Megaphone className="h-4 w-4" />}
             {scopeLabel}
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">Audience: {audienceLabel}</p>
         </div>
         {canOpenSettings && (
           <Button variant="outline" className="gap-2" onClick={() => setSettingsOpen(true)}>
@@ -481,20 +520,27 @@ const Chat = () => {
           <div className="h-[52vh] min-h-[360px] space-y-4 overflow-y-auto p-4">
             {!channelId ? (
               <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
-                Select a {tab} to open this communication area.
+                {loadError ? "This communication area could not be loaded. Refresh and try again." : `Select a ${tab} to open this communication area.`}
               </div>
             ) : loading ? (
               [1, 2, 3].map((item) => <Skeleton key={item} className="h-20 w-full" />)
+            ) : loadError ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                <ShieldAlert className="h-6 w-6 text-destructive" />
+                <p>Messages could not be loaded.</p>
+                <Button variant="outline" size="sm" onClick={() => void loadMessages()}>Try again</Button>
+              </div>
             ) : messages.length === 0 ? (
               <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
                 {tab === "team" ? "No team messages yet. Start the conversation." : "No official updates have been published."}
               </div>
             ) : messages.map((message) => {
               const own = message.author_id === user?.id;
-              const reply = messages.find((item) => item.id === message.reply_to_id);
+              const reply = message.reply_to_id ? messagesById.get(message.reply_to_id) : undefined;
+              const reactionsForMessage = reactionsByMessage.get(message.id) || [];
               const messageReactions = REACTIONS.map((emoji) => ({
                 emoji,
-                rows: reactions.filter((reaction) => reaction.message_id === message.id && reaction.emoji === emoji),
+                rows: reactionsForMessage.filter((reaction) => reaction.emoji === emoji),
               })).filter((group) => group.rows.length > 0);
               return (
                 <article
@@ -503,7 +549,7 @@ const Chat = () => {
                   className={cn(
                     "rounded-xl border p-3 transition-colors",
                     message.is_important && "border-amber-400 bg-amber-50/60 dark:bg-amber-950/20",
-                    searchParams.get("message") === message.id && "ring-2 ring-primary",
+                    targetMessageId === message.id && "ring-2 ring-primary",
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -623,7 +669,7 @@ const Chat = () => {
                 value={composer}
                 onChange={(event) => setComposer(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
+                  if (tab === "team" && event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
                     void sendMessage();
                   }
@@ -637,7 +683,7 @@ const Chat = () => {
                   <label className="flex items-center gap-2 text-sm">
                     <Switch checked={important} onCheckedChange={setImportant} /> Important
                   </label>
-                ) : <span className="text-xs text-muted-foreground">Text only</span>}
+                ) : <span className="text-xs text-muted-foreground">{tab === "team" ? "Enter to send · Shift+Enter for a new line" : "Text only"}</span>}
                 <Button className="gap-2" onClick={() => void sendMessage()} disabled={!composer.trim() || sending}>
                   <Send className="h-4 w-4" /> {editing ? "Save" : tab === "team" ? "Send" : "Publish"}
                 </Button>
@@ -661,6 +707,34 @@ const Chat = () => {
         clubId={selectedClubId}
         associationId={selectedAssociationId}
       />
+
+      <Dialog open={publishConfirmOpen} onOpenChange={setPublishConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Publish official update?</DialogTitle>
+            <DialogDescription>
+              This will publish to: {audienceLabel}. People will receive alerts according
+              to their notification preferences.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border bg-muted/40 p-3 text-sm">
+            <p className="font-medium">{important ? "Important update" : "Official update"}</p>
+            <p className="mt-1 line-clamp-4 whitespace-pre-wrap text-muted-foreground">{composer.trim()}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPublishConfirmOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                setPublishConfirmOpen(false);
+                void sendMessage(true);
+              }}
+              disabled={sending}
+            >
+              Publish update
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(moderating)} onOpenChange={(open) => !open && setModerating(null)}>
         <DialogContent>

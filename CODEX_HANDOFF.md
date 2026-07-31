@@ -98,6 +98,10 @@ Future agents should start by reading these files in order:
   selected team's Primary, Secondary or Fill-in relationship, presents clearer home/away fixture
   information and uses accessible, save-locked availability controls only on eligible fixtures.
   Failed fixture/calendar requests are no longer shown as genuine empty data.
+- Block 7 is implemented on Dev pending owner smoke testing. Communications now displays the exact
+  selected audience, confirms Club and Association broadcasts before publishing, preserves older
+  message deep links, resets permission/reminder state between scopes and reports load/save errors
+  without showing stale or false-empty data.
 - Do not merge or cherry-pick `chore/domain-structure` commit `3a7d6cc`; it contains the superseded
   assumption that `hb` belongs to the separate ignored Hockey Ballarat module. The corrected work
   is being landed directly on `dev`.

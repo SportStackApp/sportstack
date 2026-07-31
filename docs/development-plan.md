@@ -73,11 +73,16 @@ home/away, division, date, time, venue and published line-up information easier 
 availability only for the signed-in player's eligible fixtures. Availability uses accessible
 buttons, prevents repeat writes while saving and reports load failures separately from empty data.
 
-## 7. Communications
+## 7. Communications — implemented on Dev, owner smoke pending
 
 - Improve team communications and notices.
 - Add club and association broadcasts.
 - Improve reminders and relevant audience controls.
+
+Team Chat, Club Updates and Association Updates are live as separate scoped areas. This reliability
+pass adds a visible audience summary, requires confirmation before an official update is published,
+keeps Enter-to-send limited to Team Chat, preserves deep links to older messages, resets scope
+permission/settings state safely and distinguishes load failures from empty conversations.
 
 ## 8. Voting reliability
 
