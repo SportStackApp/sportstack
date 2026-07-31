@@ -27,7 +27,6 @@ Required accounts:
 
 - a scoped Vercel team access token for the SportStack project;
 - a Supabase personal access token belonging to a SportStack organisation Owner or Administrator;
-- Production database access;
 - the Production Cloudflare Turnstile site and secret keys.
 
 Run:
@@ -44,6 +43,14 @@ is saved at:
 The file is outside Git and can only be decrypted by the same Windows account on this PC. It is not
 a replacement for the original provider-side credentials. Revoke and recreate a token in Vercel or
 Supabase if the PC or Windows account is compromised.
+
+The script creates a separate temporary Supabase work directory for Production and deletes it after
+the run. The repository itself stays linked to SportStack Dev. The validated CLI link provides the
+database connection, so the Production database password is not copied, stored or reset.
+
+Production migration filenames have historical drift. The temporary directory rebuilds the live
+migration history as empty placeholder files, then adds only the approved real migration files.
+This lets the CLI compare history without replaying older repository migrations.
 
 ## Read-only preflight
 

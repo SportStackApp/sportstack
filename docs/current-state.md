@@ -137,9 +137,9 @@ What changed:
 
 - Added `scripts/release-production.ps1`, a fail-closed Production release script pinned to the
   approved public Umpire Portal package.
-- The script securely stores Vercel, Supabase, Production database and Turnstile access using
-  Windows user encryption outside the repository. It does not use a plain-text project `.env`
-  file and does not change the repository's normal SportStack Dev Supabase link.
+- The script securely stores Vercel, Supabase and Turnstile access using Windows user encryption
+  outside the repository. It does not use a plain-text project `.env` file and does not change the
+  repository's normal SportStack Dev Supabase link.
 - Its read-only preflight checks the Git/GitHub identity, clean and linear `dev` -> `main` -> `prod`
   history, exact Supabase and Vercel targets, database access, and the pending migration allow-list.
 - Release mode requires the exact owner confirmation phrase, creates and verifies a fresh
@@ -152,15 +152,26 @@ What changed:
   release commands.
 - Installed Vercel CLI 58.4.4 on this Windows profile so releases can use a scoped access token
   instead of repeatedly entering the browser passkey flow.
-- No real access token or Production database credential has been created or stored yet. Creating
-  the Vercel and Supabase access tokens remains confirmation-gated at the provider action.
+- Aaron approved access-token creation. A 30-day Supabase token named
+  `codex-sportstack-prod-release-20260731` was created, encrypted with Windows user protection and
+  verified against both SportStack projects plus a read-only Production migration listing.
+- The existing Production Turnstile site and secret keys were also encrypted for the same Windows
+  user. No database password was copied, stored or reset: an isolated temporary Supabase work
+  directory successfully linked to Production while the repository link remained on Dev.
+- A second live read-only dry-run rebuilt all 157 recorded Production migration versions as empty
+  temporary history placeholders, then confirmed that only
+  `20260730114925_public_umpire_portal.sql` and
+  `20260730124436_restore_default_voter_role.sql` are pending. This handles historical filename
+  drift without replaying any older migration.
+- Vercel access is not configured yet because the account still requires Aaron to complete its
+  browser authentication. Production remains unchanged while that login is pending.
 - Production Supabase, Vercel settings, `prod`, DNS and live data remain unchanged by this setup.
 
 Checks run:
 
 - PowerShell syntax parsing passed for the release script.
 - A disposable test confirmed the credential file is DPAPI-encrypted and does not contain the test
-  token, database password or Turnstile keys in plain text.
+  tokens or Turnstile keys in plain text.
 - A disposable resume test independently rechecked all three backup file sizes and SHA-256 hashes.
 - The fail-closed preflight correctly refused to continue while the new script and documentation
   were uncommitted.
@@ -174,9 +185,9 @@ Checks run:
 
 What Aaron should test next:
 
-- Approve creation of one scoped Vercel team token and one Supabase Owner/Admin personal access
-  token.
-- Complete the secure one-time credential prompts, then run the read-only Production preflight.
+- Complete the Vercel browser authentication, create the scoped team token and finish the encrypted
+  access file.
+- Run the read-only Production preflight.
 - Only after the preflight passes, use the already approved Umpire Portal release mode and complete
   the normal signed-in Production smoke test.
 

@@ -16,9 +16,16 @@ Future agents should start by reading these files in order:
   `dev` and `main` staging. The script is pinned to the exact Production Supabase project, two
   approved migrations, one Edge Function and the Production Vercel setting. Vercel CLI 58.4.4 is
   installed locally.
-- Production access has not been configured yet. The next confirmation-gated action is creating a
-  scoped Vercel team token and a Supabase Owner/Admin personal access token, then saving those plus
-  Production database and Turnstile values through the script's Windows-encrypted prompt.
+- A 30-day Supabase token has been created and verified against both SportStack projects and a
+  read-only Production migration listing. The existing Production Turnstile keys are also staged
+  with Windows user encryption. No database password was copied, reset or stored; Production DB
+  access uses an isolated temporary CLI work directory while the repository stays linked to Dev.
+- The isolated dry-run rebuilt 157 live Production history records as empty temporary placeholders
+  and confirmed only the two approved Umpire Portal migrations are pending. This prevents older
+  filename drift from replaying historical migrations.
+- Vercel access remains pending because Aaron must complete the provider's browser authentication.
+  After that login, create the scoped team token, finish the encrypted access file and run the
+  read-only Production preflight.
 - The public Umpire Portal frontend remains on `dev` and `main` only. Production Supabase, Vercel
   settings and `prod` remain unchanged pending the access preflight and approved release execution.
 - The fault-tolerant fixture scraper and match-duration package was promoted through `dev`, `main`
@@ -69,8 +76,8 @@ Future agents should start by reading these files in order:
 
 ## Best next owner test
 
-1. Confirm creation of the scoped Vercel and Supabase CLI tokens, configure the encrypted local
-   access file and run the read-only Production preflight.
+1. Complete Vercel browser authentication, create the scoped Vercel token, finish the encrypted
+   local access file and run the read-only Production preflight.
 2. Complete the approved Umpire Portal Production release, then smoke-test both Umpire Portal login
    choices and one clearly marked test ballot.
 3. Complete the wider signed-in Production smoke test for Dashboard, Communications, availability,

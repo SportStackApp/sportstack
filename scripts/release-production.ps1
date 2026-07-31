@@ -135,24 +135,12 @@ function Save-AccessConfiguration {
     $vercelProject = Read-TextWithDefault -Prompt "Vercel project name" -Default "sportstack"
     $vercelToken = Get-RequiredSecureValue -Prompt "Vercel team access token"
     $supabaseToken = Get-RequiredSecureValue -Prompt "Supabase Owner/Admin personal access token"
-    $databaseUrl = Get-RequiredSecureValue -Prompt "Production database URL without its password"
-    $databasePassword = Get-RequiredSecureValue -Prompt "Production database password"
     $turnstileSiteKey = Get-RequiredSecureValue -Prompt "Production Turnstile site key"
     $turnstileSecretKey = Get-RequiredSecureValue -Prompt "Production Turnstile secret key"
 
-    $databaseUrlText = ConvertTo-PlainText -SecureValue $databaseUrl
     $turnstileSiteKeyText = ConvertTo-PlainText -SecureValue $turnstileSiteKey
     $turnstileSecretKeyText = ConvertTo-PlainText -SecureValue $turnstileSecretKey
     try {
-        if (-not $databaseUrlText.Contains($ProductionProjectRef)) {
-            throw "The database URL is not for SportStack Production ($ProductionProjectRef)."
-        }
-        if ($databaseUrlText.Contains($DevelopmentProjectRef)) {
-            throw "The database URL points to SportStack Dev. Configuration was not saved."
-        }
-        if ($databaseUrlText -match "(?i)://[^/]*:[^/@]+@") {
-            throw "Use the database URL without its password. The password is stored separately."
-        }
         if ($turnstileSiteKeyText -match "^[123]x0{10,}" -or $turnstileSecretKeyText -match "^[123]x0{10,}") {
             throw "Cloudflare test keys cannot be saved for Production."
         }
@@ -161,7 +149,6 @@ function Save-AccessConfiguration {
         }
     }
     finally {
-        $databaseUrlText = $null
         $turnstileSiteKeyText = $null
         $turnstileSecretKeyText = $null
     }
@@ -178,8 +165,6 @@ function Save-AccessConfiguration {
         encrypted = [ordered]@{
             vercelToken = Protect-Value -SecureValue $vercelToken
             supabaseToken = Protect-Value -SecureValue $supabaseToken
-            databaseUrl = Protect-Value -SecureValue $databaseUrl
-            databasePassword = Protect-Value -SecureValue $databasePassword
             turnstileSiteKey = Protect-Value -SecureValue $turnstileSiteKey
             turnstileSecretKey = Protect-Value -SecureValue $turnstileSecretKey
         }
@@ -208,8 +193,6 @@ function Get-AccessConfiguration {
         VercelProject = [string]$configuration.vercelProject
         VercelToken = Unprotect-Value -EncryptedValue $configuration.encrypted.vercelToken
         SupabaseToken = Unprotect-Value -EncryptedValue $configuration.encrypted.supabaseToken
-        DatabaseUrl = Unprotect-Value -EncryptedValue $configuration.encrypted.databaseUrl
-        DatabasePassword = Unprotect-Value -EncryptedValue $configuration.encrypted.databasePassword
         TurnstileSiteKey = Unprotect-Value -EncryptedValue $configuration.encrypted.turnstileSiteKey
         TurnstileSecretKey = Unprotect-Value -EncryptedValue $configuration.encrypted.turnstileSecretKey
     }
@@ -332,27 +315,23 @@ function Assert-RemoteAccess {
 
     Write-Step "Validate scoped Vercel and Supabase access"
 
-    if (-not $Access.DatabaseUrl.Contains($ProductionProjectRef) -or $Access.DatabaseUrl.Contains($DevelopmentProjectRef)) {
-        throw "The saved database URL is not the pinned SportStack Production target."
-    }
-
     $oldSupabaseToken = $env:SUPABASE_ACCESS_TOKEN
     $oldVercelToken = $env:VERCEL_TOKEN
-    $oldDatabasePassword = $env:PGPASSWORD
     try {
         $env:SUPABASE_ACCESS_TOKEN = $Access.SupabaseToken
         $projectsJson = Invoke-NativeCommand -Command "supabase" -Arguments @(
             "projects", "list", "--output-format", "json"
         ) -Quiet
-        $projects = $projectsJson | ConvertFrom-Json
+        $projectsEnvelope = $projectsJson | ConvertFrom-Json
+        $projects = if ($projectsEnvelope.PSObject.Properties.Name -contains "projects") {
+            @($projectsEnvelope.projects)
+        }
+        else {
+            @($projectsEnvelope)
+        }
         if (-not ($projects | Where-Object { $_.id -eq $ProductionProjectRef })) {
             throw "The Supabase token cannot see SportStack Production. Use an Owner/Admin token."
         }
-
-        $env:PGPASSWORD = $Access.DatabasePassword
-        Invoke-NativeCommand -Command "supabase" -Arguments @(
-            "migration", "list", "--db-url", $Access.DatabaseUrl
-        ) -Quiet | Out-Null
 
         $env:VERCEL_TOKEN = $Access.VercelToken
         Invoke-NativeCommand -Command "vercel" -Arguments @(
@@ -364,28 +343,119 @@ function Assert-RemoteAccess {
     finally {
         $env:SUPABASE_ACCESS_TOKEN = $oldSupabaseToken
         $env:VERCEL_TOKEN = $oldVercelToken
-        $env:PGPASSWORD = $oldDatabasePassword
     }
 
     Write-Host "Vercel project and Supabase Production access are available." -ForegroundColor Green
 }
 
+function New-IsolatedProductionWorkdir {
+    param([System.Collections.IDictionary]$Access)
+
+    Write-Step "Create an isolated Production Supabase connection"
+
+    $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) ("sportstack-production-release-" + [guid]::NewGuid().ToString("N"))
+    $temporarySupabase = Join-Path $temporaryRoot "supabase"
+    New-Item -ItemType Directory -Path $temporarySupabase | Out-Null
+    $temporaryMigrations = Join-Path $temporarySupabase "migrations"
+    New-Item -ItemType Directory -Path $temporaryMigrations | Out-Null
+    Copy-Item -LiteralPath "supabase/config.toml" -Destination (Join-Path $temporarySupabase "config.toml")
+
+    $oldSupabaseToken = $env:SUPABASE_ACCESS_TOKEN
+    try {
+        $env:SUPABASE_ACCESS_TOKEN = $Access.SupabaseToken
+        Invoke-NativeCommand -Command "supabase" -Arguments @(
+            "link", "--project-ref", $ProductionProjectRef,
+            "--workdir", $temporaryRoot, "--yes"
+        ) -Quiet | Out-Null
+
+        $linkedRefPath = Join-Path $temporarySupabase ".temp/project-ref"
+        if (-not (Test-Path -LiteralPath $linkedRefPath)) {
+            throw "The isolated Supabase link did not record a project reference."
+        }
+        $linkedRef = (Get-Content -LiteralPath $linkedRefPath -Raw).Trim()
+        if ($linkedRef -ne $ProductionProjectRef) {
+            throw "The isolated Supabase work directory linked to the wrong project."
+        }
+
+        $remoteMigrationList = Invoke-NativeCommand -Command "supabase" -Arguments @(
+            "migration", "list", "--linked", "--workdir", $temporaryRoot
+        ) -Quiet
+
+        # Reconstruct the live history as empty temporary files. This avoids replaying repository
+        # migrations whose filenames drifted from the versions recorded in Production.
+        $remoteVersions = @(
+            [regex]::Matches($remoteMigrationList, "(?m)\b20\d{12}\b") |
+                ForEach-Object { $_.Value } |
+                Sort-Object -Unique
+        )
+        if ($remoteVersions.Count -eq 0) {
+            throw "No Production migration history was returned."
+        }
+
+        $requiredVersions = @($RequiredMigrations | ForEach-Object { $_.Substring(0, 14) })
+        foreach ($version in $remoteVersions) {
+            if ($requiredVersions -contains $version) {
+                continue
+            }
+            "-- Temporary placeholder for Production migration history $version." |
+                Set-Content -LiteralPath (Join-Path $temporaryMigrations "${version}_remote_history.sql") -Encoding utf8
+        }
+
+        foreach ($migration in $RequiredMigrations) {
+            $source = Join-Path "supabase/migrations" $migration
+            if (-not (Test-Path -LiteralPath $source)) {
+                throw "Approved migration file is missing: $migration"
+            }
+            Copy-Item -LiteralPath $source -Destination (Join-Path $temporaryMigrations $migration)
+        }
+    }
+    catch {
+        Remove-IsolatedProductionWorkdir -Path $temporaryRoot
+        throw
+    }
+    finally {
+        $env:SUPABASE_ACCESS_TOKEN = $oldSupabaseToken
+    }
+
+    Write-Host "Isolated Supabase link is pinned to Production with $($remoteVersions.Count) live history records; the repository link remains on Dev." -ForegroundColor Green
+    return $temporaryRoot
+}
+
+function Remove-IsolatedProductionWorkdir {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path)) {
+        return
+    }
+
+    $resolvedPath = [IO.Path]::GetFullPath($Path)
+    $temporaryRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+    $expectedPrefix = Join-Path $temporaryRoot "sportstack-production-release-"
+    if (-not $resolvedPath.StartsWith($expectedPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        Write-Warning "Refused to remove unexpected temporary path: $resolvedPath"
+        return
+    }
+
+    [IO.Directory]::Delete($resolvedPath, $true)
+}
+
 function Test-InstalledMigrations {
     param(
         [System.Collections.IDictionary]$Access,
+        [string]$SupabaseWorkdir,
         [string]$MigrationList = ""
     )
 
     if ([string]::IsNullOrWhiteSpace($MigrationList)) {
-        $oldPassword = $env:PGPASSWORD
+        $oldSupabaseToken = $env:SUPABASE_ACCESS_TOKEN
         try {
-            $env:PGPASSWORD = $Access.DatabasePassword
+            $env:SUPABASE_ACCESS_TOKEN = $Access.SupabaseToken
             $MigrationList = Invoke-NativeCommand -Command "supabase" -Arguments @(
-                "migration", "list", "--db-url", $Access.DatabaseUrl
+                "migration", "list", "--linked", "--workdir", $SupabaseWorkdir
             ) -Quiet
         }
         finally {
-            $env:PGPASSWORD = $oldPassword
+            $env:SUPABASE_ACCESS_TOKEN = $oldSupabaseToken
         }
     }
 
@@ -401,19 +471,22 @@ function Test-InstalledMigrations {
 }
 
 function Get-ProductionMigrationState {
-    param([System.Collections.IDictionary]$Access)
+    param(
+        [System.Collections.IDictionary]$Access,
+        [string]$SupabaseWorkdir
+    )
 
     Write-Step "Dry-run the exact Production migrations"
 
-    $oldPassword = $env:PGPASSWORD
+    $oldSupabaseToken = $env:SUPABASE_ACCESS_TOKEN
     try {
-        $env:PGPASSWORD = $Access.DatabasePassword
+        $env:SUPABASE_ACCESS_TOKEN = $Access.SupabaseToken
         $dryRun = Invoke-NativeCommand -Command "supabase" -Arguments @(
-            "db", "push", "--dry-run", "--db-url", $Access.DatabaseUrl
+            "db", "push", "--dry-run", "--linked", "--workdir", $SupabaseWorkdir
         ) -Quiet
     }
     finally {
-        $env:PGPASSWORD = $oldPassword
+        $env:SUPABASE_ACCESS_TOKEN = $oldSupabaseToken
     }
 
     $pendingMigrations = @(
@@ -427,7 +500,7 @@ function Get-ProductionMigrationState {
         return "Pending"
     }
 
-    if (Test-InstalledMigrations -Access $Access) {
+    if (Test-InstalledMigrations -Access $Access -SupabaseWorkdir $SupabaseWorkdir) {
         Write-Host "Both approved migrations are already applied; a guarded release can resume." -ForegroundColor Green
         return "Applied"
     }
@@ -438,6 +511,7 @@ function Get-ProductionMigrationState {
 function New-ProductionBackup {
     param(
         [System.Collections.IDictionary]$Access,
+        [string]$SupabaseWorkdir,
         [string]$ReleaseCommit
     )
 
@@ -448,24 +522,24 @@ function New-ProductionBackup {
     $backupRoot = Join-Path $env:LOCALAPPDATA "SportStack\backups\prod\$stamp-pre-umpire-portal-$commit"
     New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
 
-    $oldPassword = $env:PGPASSWORD
+    $oldSupabaseToken = $env:SUPABASE_ACCESS_TOKEN
     try {
-        $env:PGPASSWORD = $Access.DatabasePassword
+        $env:SUPABASE_ACCESS_TOKEN = $Access.SupabaseToken
         Invoke-NativeCommand -Command "supabase" -Arguments @(
-            "db", "dump", "--db-url", $Access.DatabaseUrl,
+            "db", "dump", "--linked", "--workdir", $SupabaseWorkdir,
             "--role-only", "--file", (Join-Path $backupRoot "roles.sql")
         ) -Quiet | Out-Null
         Invoke-NativeCommand -Command "supabase" -Arguments @(
-            "db", "dump", "--db-url", $Access.DatabaseUrl,
+            "db", "dump", "--linked", "--workdir", $SupabaseWorkdir,
             "--file", (Join-Path $backupRoot "schema.sql")
         ) -Quiet | Out-Null
         Invoke-NativeCommand -Command "supabase" -Arguments @(
-            "db", "dump", "--db-url", $Access.DatabaseUrl,
+            "db", "dump", "--linked", "--workdir", $SupabaseWorkdir,
             "--data-only", "--use-copy", "--file", (Join-Path $backupRoot "data.sql")
         ) -Quiet | Out-Null
     }
     finally {
-        $env:PGPASSWORD = $oldPassword
+        $env:SUPABASE_ACCESS_TOKEN = $oldSupabaseToken
     }
 
     $minimumBytes = @{
@@ -547,26 +621,29 @@ function Get-VerifiedExistingBackup {
 }
 
 function Invoke-DatabaseRelease {
-    param([System.Collections.IDictionary]$Access)
+    param(
+        [System.Collections.IDictionary]$Access,
+        [string]$SupabaseWorkdir
+    )
 
     Write-Step "Apply the approved Production migrations"
 
-    $oldPassword = $env:PGPASSWORD
+    $oldSupabaseToken = $env:SUPABASE_ACCESS_TOKEN
     try {
-        $env:PGPASSWORD = $Access.DatabasePassword
+        $env:SUPABASE_ACCESS_TOKEN = $Access.SupabaseToken
         Invoke-NativeCommand -Command "supabase" -Arguments @(
-            "db", "push", "--db-url", $Access.DatabaseUrl, "--yes"
+            "db", "push", "--linked", "--workdir", $SupabaseWorkdir, "--yes"
         ) -Quiet | Out-Null
 
         $migrationList = Invoke-NativeCommand -Command "supabase" -Arguments @(
-            "migration", "list", "--db-url", $Access.DatabaseUrl
+            "migration", "list", "--linked", "--workdir", $SupabaseWorkdir
         ) -Quiet
     }
     finally {
-        $env:PGPASSWORD = $oldPassword
+        $env:SUPABASE_ACCESS_TOKEN = $oldSupabaseToken
     }
 
-    if (-not (Test-InstalledMigrations -Access $Access -MigrationList $migrationList)) {
+    if (-not (Test-InstalledMigrations -Access $Access -SupabaseWorkdir $SupabaseWorkdir -MigrationList $migrationList)) {
         throw "The approved migrations could not be verified as installed. Stop before frontend promotion."
     }
 
@@ -578,7 +655,7 @@ function Set-ProductionFunctionConfiguration {
 
     Write-Step "Set Production Edge Function configuration"
 
-    $temporaryDirectory = Join-Path ([IO.Path]::GetTempPath()) ("sportstack-release-" + [guid]::NewGuid().ToString("N"))
+    $temporaryDirectory = Join-Path ([IO.Path]::GetTempPath()) ("sportstack-production-release-secrets-" + [guid]::NewGuid().ToString("N"))
     $temporaryEnvFile = Join-Path $temporaryDirectory "function.env"
     New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
 
@@ -599,9 +676,7 @@ function Set-ProductionFunctionConfiguration {
     }
     finally {
         $env:SUPABASE_ACCESS_TOKEN = $oldSupabaseToken
-        if (Test-Path -LiteralPath $temporaryDirectory) {
-            Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force
-        }
+        Remove-IsolatedProductionWorkdir -Path $temporaryDirectory
     }
 
     Write-Host "Production function settings were applied without logging their values." -ForegroundColor Green
@@ -775,11 +850,13 @@ if ($Mode -eq "Verify") {
 }
 
 $access = $null
+$supabaseWorkdir = $null
 try {
     $releaseCommit = Assert-LocalReleaseState
     $access = Get-AccessConfiguration
     Assert-RemoteAccess -Access $access
-    $migrationState = Get-ProductionMigrationState -Access $access
+    $supabaseWorkdir = New-IsolatedProductionWorkdir -Access $access
+    $migrationState = Get-ProductionMigrationState -Access $access -SupabaseWorkdir $supabaseWorkdir
 
     if ($Mode -eq "Preflight") {
         if ($migrationState -eq "Applied") {
@@ -799,8 +876,8 @@ try {
     Invoke-NativeCommand -Command "git" -Arguments @("log", "--oneline", "origin/prod..$releaseCommit")
 
     if ($migrationState -eq "Pending") {
-        $backupPath = New-ProductionBackup -Access $access -ReleaseCommit $releaseCommit
-        Invoke-DatabaseRelease -Access $access
+        $backupPath = New-ProductionBackup -Access $access -SupabaseWorkdir $supabaseWorkdir -ReleaseCommit $releaseCommit
+        Invoke-DatabaseRelease -Access $access -SupabaseWorkdir $supabaseWorkdir
     }
     else {
         $backupPath = Get-VerifiedExistingBackup -ReleaseCommit $releaseCommit
@@ -816,9 +893,11 @@ try {
     Write-Host "Verified backup: $backupPath"
 }
 finally {
+    Remove-IsolatedProductionWorkdir -Path $supabaseWorkdir
+
     # Remove plaintext credential references from this process as soon as possible.
     if ($null -ne $access) {
-        foreach ($key in @("VercelToken", "SupabaseToken", "DatabaseUrl", "DatabasePassword", "TurnstileSiteKey", "TurnstileSecretKey")) {
+        foreach ($key in @("VercelToken", "SupabaseToken", "TurnstileSiteKey", "TurnstileSecretKey")) {
             $access[$key] = $null
         }
     }
