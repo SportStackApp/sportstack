@@ -29,8 +29,8 @@ Future agents should start by reading these files in order:
 - The unfinished `scraper/fixture_import.py` worktree copy was proven to contain duplicated conflict
   text only, backed up outside the repository and restored exactly to the committed implementation.
   The full 94-test Python suite, TypeScript and production build passed afterward.
-- The Production preflight now stops at the branch-alignment gate. It found `dev` nine commits ahead of
-  `main`, and the reviewed package includes a workflow capable of selecting Production targets.
+- The Production preflight now stops at the branch-alignment gate. The development-plan package is
+  ahead of `main`, and the reviewed package includes a workflow capable of selecting Production targets.
   Explicit owner approval is required before that package can move to `main`. No Production action
   was attempted.
 - The public Umpire Portal frontend remains on `dev` and `main` only. Production Supabase, Vercel
@@ -127,6 +127,12 @@ Future agents should start by reading these files in order:
   Risk, BE SMART Action, QI, Bright Idea, committee-review, risk-review and permanent-link records
   atomically behind existing scoped RLS. Audit history remains append-only. Committee meeting
   decisions can link only to real Safety Hub records inside the committee's association/club scope.
+- Block 14 is implemented on Dev with ongoing monitoring. Dev Quality now checks focused plan lint,
+  TypeScript, the production build, 100 Python regression tests and all workflow definitions on
+  each `dev` push and relevant pull request. Remote run `30654055573` passed at `978737b`.
+- The 1 August read-only monitoring snapshot found the latest Dev scraper and five latest scheduled
+  Production scraper runs successful. Notification cron jobs reported successful latest runs, and
+  Production retained the expected 44 scraper backups using 60,176,404 bytes.
 - Do not merge or cherry-pick `chore/domain-structure` commit `3a7d6cc`; it contains the superseded
   assumption that `hb` belongs to the separate ignored Hockey Ballarat module. The corrected work
   is being landed directly on `dev`.

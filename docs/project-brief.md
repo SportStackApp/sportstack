@@ -229,7 +229,9 @@ After coding:
 npm install
 npm run dev
 npm run build
+npm run lint:dev-plan
 npm run lint
+python -m unittest discover -s tests
 ```
 
 ## Known Parked Items

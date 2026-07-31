@@ -69,12 +69,17 @@ App releases move from `dev` to `main`, then to `prod` after explicit production
 Run these checks before completing work:
 
 ```bash
+npm run lint:dev-plan
 npm run lint
 npx tsc --noEmit
 npm run build
+python -m unittest discover -s tests
 ```
 
-There is no automated test suite yet. Perform the relevant manual smoke test for any user-facing change.
+The Dev Quality workflow runs the focused development-plan lint, TypeScript, build, Python and
+workflow checks on every `dev` push and relevant pull request. Repository-wide lint still has a
+known legacy backlog, so run it and report the result rather than hiding it. Signed-in user flows
+still need the relevant manual smoke test.
 
 ## Future documentation
 

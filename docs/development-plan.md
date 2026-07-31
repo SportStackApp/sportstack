@@ -155,11 +155,19 @@ One RLS-protected transaction saves each record and its permanent links, while t
 append-only audit triggers record every change. Committee meeting decisions can link to accessible
 Risk or Quality records only when the record is real and inside the committee's organisation scope.
 
-## 14. Testing and reliability
+## 14. Testing and reliability — implemented on Dev, ongoing monitoring
 
 - Expand focused automated and browser workflow checks.
 - Monitor scrapers, notifications, backups and storage.
 - Keep current-state, handover and Obsidian notes accurate.
+
+The Dev-only quality workflow now runs on every `dev` push and relevant pull request. It checks the
+locked development-plan TypeScript package, TypeScript compilation, the production build, 100
+Python regression tests and every GitHub workflow with checksum-verified `actionlint` 1.7.12.
+The first complete remote run passed. Read-only monitoring also confirmed successful current Dev
+and Production scraper runs, successful notification schedules and the expected aggregate backup
+and Storage totals. Signed-in browser workflows remain an owner smoke-test step because they need a
+real user session and role context.
 
 ## Operating boundary
 

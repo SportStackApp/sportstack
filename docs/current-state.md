@@ -126,8 +126,9 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 - Edge Functions in the repo and deployed Edge Functions may be out of sync.
 - Supabase Storage Size is an organisation-wide GB-hour average. Check per-project object totals
   before assuming a dashboard warning reflects the current live byte count.
-- There is no formal automated browser suite yet. Focused Python tests cover scraper and Storage
-  safety tooling.
+- There is no formal authenticated browser suite yet. The Dev Quality workflow now covers focused
+  development-plan lint, TypeScript, the production build, 100 Python regression tests and all
+  GitHub workflow definitions; role-based browser flows still need owner smoke testing.
 - Umpire Portal staging is waiting at an explicit approval gate: the current `dev` package includes
   a GitHub workflow that can select Production targets, so it has not been promoted to `main`.
 - Formation/Lineup private-page browser smoke testing still needs an owner login. Signed-out local
@@ -171,9 +172,9 @@ What changed:
 - Completed Block 1. The unfinished `scraper/fixture_import.py` worktree copy contained 545 added
   lines of duplicated conflict text and no removed committed lines. It was backed up outside the
   repository, restored exactly to `HEAD`, and fully verified.
-- Advanced the Umpire Portal preflight to the branch-alignment gate. It found `dev` nine commits ahead of
-  `main`; the package includes a Production-capable workflow and therefore needs explicit approval
-  before staging promotion. Production, DNS and redirects remain unchanged.
+- Advanced the Umpire Portal preflight to the branch-alignment gate. The development-plan package
+  remains ahead of `main`; it includes a Production-capable workflow and therefore needs explicit
+  approval before staging promotion. Production, DNS and redirects remain unchanged.
 - Implemented the first complete Formation/Lineup reliability package: live reusable templates,
   persistent cropped custom icons, safer line-up replacement, team selection, team-scoped player
   preferences, formation-change protection and clearer mobile instructions.
@@ -279,10 +280,22 @@ What changed:
   Risk, Action or QI form. The existing append-only audit triggers remain authoritative.
 - Added scoped committee-decision links from each meeting agenda point to a Risk, Action, QI or
   Bright Idea. A database trigger rejects missing records and cross-association or cross-club links.
+- Completed Block 14 with a Dev-only quality workflow. Each `dev` push and relevant pull request now
+  runs the focused development-plan lint, TypeScript, production build, Python regression suite and
+  checksum-verified `actionlint` 1.7.12 without any Supabase secret or Production target.
+- Added six migration regression tests for current committee appointment permissions, private
+  grants, one-response polling, Safety Hub RLS-invoker writes and same-scope committee links. The
+  full Python suite now contains 100 tests.
+- Completed a read-only monitoring snapshot. The latest Dev scraper run and five latest scheduled
+  Production scraper runs succeeded. Dev notification dispatch and both Production notification
+  schedules reported successful latest runs; no delivery event was due in the preceding 24 hours.
+- Aggregate Storage remains stable: Dev has 124 scraper backups using 181,040,447 bytes; Production
+  has the intended 44 retained scraper backups using 60,176,404 bytes. No object was read, changed or
+  deleted.
 
 Checks run:
 
-- Full Python discovery passed: 94 tests.
+- Block 1 Python discovery passed: 94 tests.
 - Focused importer tests passed: 17 tests; Python compile checks passed.
 - Focused lint for all four changed React/TypeScript files passed with no warnings.
 - `npx tsc --noEmit` and `npm run build` passed. The existing large-bundle warning remains.
@@ -355,6 +368,15 @@ Checks run:
   fixed empty search path, is authenticated-only and produced no Supabase adviser security finding.
 - Safety Hub and Committee Meetings focused ESLint, TypeScript and production build passed. The
   existing large-bundle warning remains.
+- Final local verification passed all 100 Python tests, the 32-file development-plan lint,
+  `npx tsc --noEmit`, `npm run build`, `git diff --check` and all eight workflow files through
+  checksum-verified `actionlint` 1.7.12.
+- Dev Quality run `30654055573` passed every remote step at commit `978737b`. Vercel also reported a
+  successful deployment for that commit. `https://dev.sportstackapp.com.au` returned HTTP 200 and
+  its deployed bundle contained the committee and Safety Hub changes; staging remained unchanged.
+- The required full `npm run lint` still reports the established repository backlog of 442 problems
+  (366 errors and 76 warnings). The focused development-plan lint passes; its two documented
+  exclusions contain 25 older `no-explicit-any` errors in RevSports mapping/review pages.
 
 What Aaron should test next:
 
@@ -394,8 +416,9 @@ What Aaron should test next:
 Risk level:
 
 - Medium. This includes additive Dev-only schema/RLS/grant work, atomic ballot/admin/Safety Hub
-  writes, module route controls and private committee workflows. No committee data, explicit module override,
-  membership cleanup, Production database, deployment, DNS or redirect change was made.
+  writes, module route controls, private committee workflows and a Dev-only quality workflow. No
+  committee data, explicit module override, membership cleanup, Production database, deployment,
+  DNS or redirect change was made.
 
 ### Previous handoff entry
 
