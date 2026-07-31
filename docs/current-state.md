@@ -131,6 +131,59 @@ After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
 
+Date: 2026-07-31
+
+What changed:
+
+- Added `scripts/release-production.ps1`, a fail-closed Production release script pinned to the
+  approved public Umpire Portal package.
+- The script securely stores Vercel, Supabase, Production database and Turnstile access using
+  Windows user encryption outside the repository. It does not use a plain-text project `.env`
+  file and does not change the repository's normal SportStack Dev Supabase link.
+- Its read-only preflight checks the Git/GitHub identity, clean and linear `dev` -> `main` -> `prod`
+  history, exact Supabase and Vercel targets, database access, and the pending migration allow-list.
+- Release mode requires the exact owner confirmation phrase, creates and verifies a fresh
+  three-file Production logical backup, and refuses any migration or Edge Function outside the
+  approved Umpire Portal set.
+- An interrupted release can resume after the database step only when the script verifies both
+  approved migrations and the matching pre-migration backup; a separate read-only verification
+  mode handles interruption after the final `prod` push.
+- Added `docs/production-release-process.md` with the one-time access setup, preflight and approved
+  release commands.
+- Installed Vercel CLI 58.4.4 on this Windows profile so releases can use a scoped access token
+  instead of repeatedly entering the browser passkey flow.
+- No real access token or Production database credential has been created or stored yet. Creating
+  the Vercel and Supabase access tokens remains confirmation-gated at the provider action.
+- Production Supabase, Vercel settings, `prod`, DNS and live data remain unchanged by this setup.
+
+Checks run:
+
+- PowerShell syntax parsing passed for the release script.
+- A disposable test confirmed the credential file is DPAPI-encrypted and does not contain the test
+  token, database password or Turnstile keys in plain text.
+- A disposable resume test independently rechecked all three backup file sizes and SHA-256 hashes.
+- The fail-closed preflight correctly refused to continue while the new script and documentation
+  were uncommitted.
+- Vercel CLI installation and command help checks passed.
+- `npx tsc --noEmit` and `npm run build` passed. Repository-wide `npm run lint` still reports the
+  unchanged legacy baseline of 433 errors and 89 warnings outside this PowerShell/documentation
+  change.
+
+What Aaron should test next:
+
+- Approve creation of one scoped Vercel team token and one Supabase Owner/Admin personal access
+  token.
+- Complete the secure one-time credential prompts, then run the read-only Production preflight.
+- Only after the preflight passes, use the already approved Umpire Portal release mode and complete
+  the normal signed-in Production smoke test.
+
+Risk level:
+
+- Low for this setup. It adds local release tooling and documentation only. No database migration
+  or Production change is included until the separately gated release mode is run.
+
+### Previous handoff entry
+
 Date: 2026-07-30
 
 What changed:
@@ -210,7 +263,7 @@ What Aaron should test next:
 - Submit one clearly marked test ballot, then review it in `/admin/umpire-voting` and approve it
   only after linking/correcting each player.
 
-### Previous handoff entry
+### Earlier handoff entry
 
 Date: 2026-07-29
 

@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-07-30
+Last updated: 2026-07-31
 
 Future agents should start by reading these files in order:
 
@@ -12,6 +12,15 @@ Future agents should start by reading these files in order:
 
 ## Current release state
 
+- A guarded, backup-first Umpire Portal Production release script and runbook are prepared for
+  `dev` and `main` staging. The script is pinned to the exact Production Supabase project, two
+  approved migrations, one Edge Function and the Production Vercel setting. Vercel CLI 58.4.4 is
+  installed locally.
+- Production access has not been configured yet. The next confirmation-gated action is creating a
+  scoped Vercel team token and a Supabase Owner/Admin personal access token, then saving those plus
+  Production database and Turnstile values through the script's Windows-encrypted prompt.
+- The public Umpire Portal frontend remains on `dev` and `main` only. Production Supabase, Vercel
+  settings and `prod` remain unchanged pending the access preflight and approved release execution.
 - The fault-tolerant fixture scraper and match-duration package was promoted through `dev`, `main`
   and `prod` on 30 July 2026 at `398f386` after Aaron approved the Production release.
 - The follow-up release and storage records brought `dev`, `main` and `prod` to `682b8ea` on
@@ -60,9 +69,12 @@ Future agents should start by reading these files in order:
 
 ## Best next owner test
 
-1. Complete the signed-in Production smoke test for Dashboard, Communications, availability,
+1. Confirm creation of the scoped Vercel and Supabase CLI tokens, configure the encrypted local
+   access file and run the read-only Production preflight.
+2. Complete the approved Umpire Portal Production release, then smoke-test both Umpire Portal login
+   choices and one clearly marked test ballot.
+3. Complete the wider signed-in Production smoke test for Dashboard, Communications, availability,
    Profile, Player MVP administration, Umpire Match Voting administration and key admin pages.
-2. Allow the Supabase organisation-wide GB-hour Storage graph time to reflect the completed cleanup.
 
 Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace and Safety Hub write forms
 remain parked.
