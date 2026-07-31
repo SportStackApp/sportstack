@@ -137,6 +137,7 @@ const ADMIN_DROPDOWN_SECTIONS: NavSection[] = [
   {
     heading: "Modules",
     items: [
+      { path: "/committee", label: "Committee Management", icon: Users },
       { path: "/admin/safety-risk", label: "Safety Hub", icon: ShieldCheck },
       { path: "/admin/module-preview", label: "Module Preview", icon: ImagePlus },
     ],
@@ -164,6 +165,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
     {
       heading: "Safety",
       items: [
+        { path: "/committee", label: "Committee Management", icon: Users },
         { path: "/admin/safety-risk", label: "Safety Hub", icon: ShieldCheck },
       ],
     },
@@ -217,6 +219,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
     {
       heading: "Safety",
       items: [
+        { path: "/committee", label: "Committee Management", icon: Users },
         { path: "/admin/safety-risk", label: "Safety Hub", icon: ShieldCheck },
       ],
     },
@@ -252,6 +255,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
     {
       heading: "Safety",
       items: [
+        { path: "/committee", label: "Committee Management", icon: Users },
         { path: "/admin/safety-risk", label: "Safety Hub", icon: ShieldCheck },
       ],
     },
@@ -283,6 +287,12 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       ],
     },
     {
+      heading: "Governance",
+      items: [
+        { path: "/committee", label: "Committee Management", icon: Users },
+      ],
+    },
+    {
       heading: "Coaching",
       items: [
         { path: "/coaching", label: "Squad", icon: ClipboardCheck },
@@ -308,6 +318,12 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/umpire/vote", label: "Umpire Match Ballot", icon: ClipboardList },
       ],
     },
+    {
+      heading: "Governance",
+      items: [
+        { path: "/committee", label: "Committee Management", icon: Users },
+      ],
+    },
   ],
 };
 
@@ -326,6 +342,7 @@ const ASSOCIATION_ADMIN_DROPDOWN_PATHS = new Set([
   "/admin/umpire-voting",
   "/admin/analytics",
   "/admin/safety-risk",
+  "/committee",
   "/admin/roles-permissions",
 ]);
 
@@ -338,6 +355,7 @@ const CLUB_ADMIN_DROPDOWN_PATHS = new Set([
   "/admin/requests",
   "/admin/mvp-voting",
   "/admin/safety-risk",
+  "/committee",
   "/admin/roles-permissions",
 ]);
 
@@ -887,6 +905,7 @@ const AppLayout = () => {
     if (path === "/umpire/vote" || path === "/admin/umpire-voting") return moduleEnabled.umpire_match_voting;
     if (path === "/admin/analytics") return moduleEnabled.player_mvp || moduleEnabled.umpire_match_voting;
     if (path === "/admin/safety-risk") return moduleEnabled.safety_risk;
+    if (path === "/committee") return moduleEnabled.committee;
     if (path === "/coaching/trace") return moduleEnabled.hockey_trace;
     return true;
   };

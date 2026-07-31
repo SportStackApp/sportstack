@@ -114,6 +114,10 @@ Future agents should start by reading these files in order:
   inherited module controls at association, club, division and team scope. Scoped administrators
   can confirm an enable/disable override or restore inheritance; module routes and navigation use
   the effective setting. Existing modules default to enabled and Hockey Trace defaults to disabled.
+- Block 11 is implemented on Dev pending owner smoke testing. Association and club committees now
+  support custom positions, President designation, eight position permissions, dated appointments,
+  governance document links and qualification/expiry records. Committee data is private to scoped
+  administrators and current members; Dev contains no committee records yet.
 - Do not merge or cherry-pick `chore/domain-structure` commit `3a7d6cc`; it contains the superseded
   assumption that `hb` belongs to the separate ignored Hockey Ballarat module. The corrected work
   is being landed directly on `dev`.
@@ -140,6 +144,8 @@ Future agents should start by reading these files in order:
    name, then test one membership approval and one unused-venue deletion with disposable Dev data.
 7. In Dev Roles & modules, disable one non-critical module at a disposable child scope, confirm its
    menu and direct route are blocked, then select Use inherited and confirm access returns.
+8. Create one clearly marked Dev committee, add President and Member positions, appoint your test
+   user, then add one disposable governance link and qualification record.
 
 Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace and Safety Hub write forms
 remain parked.

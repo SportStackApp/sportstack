@@ -120,11 +120,16 @@ Club administrators can create confirmed child overrides only inside their manag
 inheritance and see the effective result. Signed-in routes and menus apply the closest team,
 division, club or association setting; the existing modules remain enabled by default.
 
-## 11. Committee setup
+## 11. Committee setup — implemented on Dev, owner smoke pending
 
 - Create association-level and club-level committees.
 - Add custom position titles and assign positions to users.
 - Add position permissions, appointment dates, governance documents and qualification records.
+
+Dev now has private association and club committees with custom position titles and eight explicit
+position permissions. Current appointments inherit their position permissions and carry start/end
+dates. Scoped administrators and authorised position holders can maintain appointments, governance
+document links and qualification/expiry records; anonymous users cannot read committee data.
 
 ## 12. Committee operations
 

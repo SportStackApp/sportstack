@@ -148,6 +148,8 @@ Treat these as current caution areas unless a newer live check proves otherwise:
   approval are required before any cleanup.
 - Scoped module controls need an owner smoke test across one parent and child scope. No explicit
   Dev overrides exist yet, so every current module retains its safe default behaviour.
+- Committee setup needs an owner smoke test. The Dev committee tables are empty, so no real
+  association/club committee, position, appointment, document or qualification has been created.
 
 ## Current Codex handoff template
 
@@ -245,6 +247,16 @@ What changed:
 - Added a shared module gate and navigation filtering. Player MVP Voting, Umpire Match Voting,
   Safety Hub and Hockey Trace signed-in routes use the effective organisation setting. Current
   modules default to enabled; the experimental Hockey Trace Lab defaults to disabled.
+- Completed Block 11 with the additive Dev migration `20260801060000_committee_setup.sql` and the
+  new Committee Management page. Association and club committees support custom positions,
+  President designation and eight permissions covering setup, members, documents, polls, voting,
+  meetings, minutes and chat.
+- Added dated committee appointments, governance document links and member qualification records
+  with optional evidence/expiry dates. Current appointments inherit their position permissions;
+  scoped administrators retain management access without needing a committee appointment.
+- Added Committee Management to signed-in navigation and protected the route with the inherited
+  committee module setting. RLS keeps setup records private to scoped administrators and current
+  committee members; anonymous table access is revoked.
 
 Checks run:
 
@@ -296,6 +308,13 @@ Checks run:
   reported; expected signed-in security-definer warnings are documented.
 - Focused ESLint, TypeScript and the production build passed for the module-control UI, route gate,
   navigation and generated Dev schema types. The existing large-bundle warning remains.
+- The committee setup migration passed a full rollback test covering committee, President position,
+  appointment, inherited chat permission, unknown-permission denial and anonymous table denial.
+- Post-apply checks found zero committee/setup rows, no anonymous read grant and fixed empty search
+  paths on all four committee access helpers. Supabase reports only the expected warnings for the
+  signed-in security-definer helpers used by RLS and the page permission summary.
+- Committee Management focused ESLint, TypeScript and the production build passed with no changed-
+  file warning. Full repository lint remains at 442 known legacy problems.
 
 What Aaron should test next:
 
@@ -325,12 +344,15 @@ What Aaron should test next:
 - In Roles & modules, choose a disposable child scope and disable Hockey Trace or another
   non-critical module. Confirm its menu and direct route are blocked, then select Use inherited and
   confirm its parent/default status returns.
+- Create one clearly marked Dev association or club committee. Add President and Member positions
+  with different permissions, appoint your test user, then record one disposable governance link
+  and qualification with an expiry date.
 
 Risk level:
 
-- Medium. This includes additive Dev-only schema/RLS/grant work, atomic ballot/admin writes and
-  module route controls. No explicit module override, existing membership cleanup, Production
-  database, deployment, DNS or redirect change was made.
+- Medium. This includes additive Dev-only schema/RLS/grant work, atomic ballot/admin writes, module
+  route controls and private committee setup. No committee data, explicit module override,
+  membership cleanup, Production database, deployment, DNS or redirect change was made.
 
 ### Previous handoff entry
 

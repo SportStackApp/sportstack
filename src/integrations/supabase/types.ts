@@ -400,6 +400,290 @@ export type Database = {
           },
         ]
       }
+      committee_documents: {
+        Row: {
+          committee_id: string
+          created_at: string
+          created_by: string | null
+          document_type: string
+          document_url: string
+          id: string
+          notes: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          committee_id: string
+          created_at?: string
+          created_by?: string | null
+          document_type?: string
+          document_url: string
+          id?: string
+          notes?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          committee_id?: string
+          created_at?: string
+          created_by?: string | null
+          document_type?: string
+          document_url?: string
+          id?: string
+          notes?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_documents_committee_id_fkey"
+            columns: ["committee_id"]
+            isOneToOne: false
+            referencedRelation: "committees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committee_member_qualifications: {
+        Row: {
+          committee_member_id: string
+          created_at: string
+          created_by: string | null
+          document_url: string | null
+          expiry_date: string | null
+          id: string
+          issuer: string | null
+          notes: string | null
+          obtained_date: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          committee_member_id: string
+          created_at?: string
+          created_by?: string | null
+          document_url?: string | null
+          expiry_date?: string | null
+          id?: string
+          issuer?: string | null
+          notes?: string | null
+          obtained_date?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          committee_member_id?: string
+          created_at?: string
+          created_by?: string | null
+          document_url?: string | null
+          expiry_date?: string | null
+          id?: string
+          issuer?: string | null
+          notes?: string | null
+          obtained_date?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_member_qualifications_committee_member_id_fkey"
+            columns: ["committee_member_id"]
+            isOneToOne: false
+            referencedRelation: "committee_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_member_qualifications_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committee_members: {
+        Row: {
+          appointed_by: string | null
+          appointment_notes: string | null
+          committee_id: string
+          created_at: string
+          end_date: string | null
+          id: string
+          position_id: string
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          appointed_by?: string | null
+          appointment_notes?: string | null
+          committee_id: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          position_id: string
+          start_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          appointed_by?: string | null
+          appointment_notes?: string | null
+          committee_id?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          position_id?: string
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_members_appointed_by_fkey"
+            columns: ["appointed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_members_committee_id_fkey"
+            columns: ["committee_id"]
+            isOneToOne: false
+            referencedRelation: "committees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_members_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "committee_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committee_positions: {
+        Row: {
+          committee_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_president: boolean
+          permissions: Json
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          committee_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_president?: boolean
+          permissions?: Json
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          committee_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_president?: boolean
+          permissions?: Json
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_positions_committee_id_fkey"
+            columns: ["committee_id"]
+            isOneToOne: false
+            referencedRelation: "committees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committees: {
+        Row: {
+          association_id: string
+          club_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          scope_type: string
+          updated_at: string
+        }
+        Insert: {
+          association_id: string
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          scope_type: string
+          updated_at?: string
+        }
+        Update: {
+          association_id?: string
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          scope_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committees_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committees_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committees_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communication_channels: {
         Row: {
           association_id: string | null
@@ -6609,8 +6893,20 @@ export type Database = {
         Args: { p_assign_team?: boolean; p_request_id: string }
         Returns: Json
       }
+      can_manage_committee_scope: {
+        Args: {
+          p_association_id: string
+          p_club_id?: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       can_manage_module_scope: {
         Args: { p_scope_id: string; p_scope_type: string; p_user_id: string }
+        Returns: boolean
+      }
+      can_view_committee: {
+        Args: { p_committee_id: string; p_user_id?: string }
         Returns: boolean
       }
       claim_placeholder_profile: {
@@ -6679,6 +6975,18 @@ export type Database = {
           profile_id: string
           vote_count: number
         }[]
+      }
+      has_committee_permission: {
+        Args: {
+          p_committee_id: string
+          p_permission_key: string
+          p_user_id?: string
+        }
+        Returns: boolean
+      }
+      is_active_committee_member: {
+        Args: { p_committee_id: string; p_user_id?: string }
+        Returns: boolean
       }
       is_super_admin: { Args: never; Returns: boolean }
       open_mvp_voting_session: {

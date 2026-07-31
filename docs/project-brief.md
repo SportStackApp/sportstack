@@ -233,12 +233,13 @@ npm run lint
 
 ## Known Parked Items
 
-- Duplicate team names in fixture import can cause the importer to pick the wrong team. A preview warning is the preferred short-term direction.
+- Duplicate team names in fixture import are blocked on Dev unless the exact Club - Division - Team label is used.
 - Push notification UI exists but is not wired.
-- Custom formation builder is parked until core features are stable.
+- Formation and saved field-template reliability is implemented on Dev pending owner smoke testing.
 - Multi-sport support is a future goal, not current scope.
 - Root `test_*.js` files may be old investigation scripts and should be reviewed before cleanup.
-- Permission re-scope: define Player MVP Voting submission/result visibility separately from Umpire Match Voting submission/result visibility, alongside committee access, committee president access, and module enable/disable by association, club, division, and team.
-- Permission re-scope: parent permissions should flow down, but child scopes need clear exclude/override rules with warning prompts.
+- Scoped module enable/disable and committee position access are implemented on Dev. Fine-grained
+  Player MVP Voting and Umpire Match Voting submission/result visibility remains parked.
+- Module settings now inherit from the closest parent and child overrides have warning prompts.
 - User profile address structure is parked for a later structured-address pass; keep current address changes small.
 - Formation/pitch rotation for mobile is parked for a later lineup/formation builder pass.

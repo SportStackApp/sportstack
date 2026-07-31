@@ -56,6 +56,7 @@ import MvpVotingAdmin from "./pages/admin/MvpVotingAdmin";
 import Analytics from "./pages/admin/Analytics";
 import FeedbackResponses from "./pages/admin/FeedbackResponses";
 import RolesPermissions from "./pages/admin/RolesPermissions";
+import CommitteeManagement from "./pages/CommitteeManagement";
 import { ModuleGate } from "./components/auth/ModuleGate";
 import ModuleLayoutPreview from "./pages/admin/ModuleLayoutPreview";
 import SafetyRiskModule from "./pages/admin/SafetyRiskModule";
@@ -156,6 +157,7 @@ const App = () => (
                       <Route path="/mvp-votes" element={<ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpVotes /></ModuleGate>} />
                       <Route path="/mvp-votes/:sessionId" element={<ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpVoteCastRoute /></ModuleGate>} />
                       <Route path="/profile" element={<Profile />} />
+                      <Route path="/committee" element={<ModuleGate moduleKey="committee" moduleLabel="Committee Management"><CommitteeManagement /></ModuleGate>} />
                       
                       {/* Admin Routes */}
                       <Route path="/admin" element={<AdminDashboard />} />
