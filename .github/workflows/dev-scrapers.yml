@@ -36,6 +36,11 @@ on:
         required: true
         default: false
         type: boolean
+      apply_fixture_import:
+        description: Apply fixture changes after the preview checks pass
+        required: true
+        default: false
+        type: boolean
       retention_expected_delete_count:
         description: Approved retention deletion object count (apply only)
         required: false
@@ -189,13 +194,14 @@ jobs:
             --source-dir data/hockey-ballarat \
             --source-name hockey-ballarat
 
-      - name: Import mapped V2 fixtures into Dev
+      - name: Preview or import mapped V2 fixtures into Dev
         if: env.UPLOAD_TO_SUPABASE == 'true'
         env:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
         run: >-
-          python scripts/import_revsports_fixtures_v2.py --apply
+          python scripts/import_revsports_fixtures_v2.py
+          ${{ (github.event_name == 'schedule' || inputs.apply_fixture_import) && '--apply' || '' }}
           --association "Hockey Ballarat"
 
   sunraysia:
@@ -243,13 +249,14 @@ jobs:
             --source-dir data/sunraysia \
             --source-name sunraysia
 
-      - name: Import mapped V2 fixtures into Dev
+      - name: Preview or import mapped V2 fixtures into Dev
         if: env.UPLOAD_TO_SUPABASE == 'true'
         env:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
         run: >-
-          python scripts/import_revsports_fixtures_v2.py --apply
+          python scripts/import_revsports_fixtures_v2.py
+          ${{ (github.event_name == 'schedule' || inputs.apply_fixture_import) && '--apply' || '' }}
           --association "Sunraysia Hockey Association"
 
   wimmera:
@@ -298,13 +305,14 @@ jobs:
             --source-dir data/wimmera \
             --source-name wimmera
 
-      - name: Import mapped V2 fixtures into Dev
+      - name: Preview or import mapped V2 fixtures into Dev
         if: env.UPLOAD_TO_SUPABASE == 'true'
         env:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
         run: >-
-          python scripts/import_revsports_fixtures_v2.py --apply
+          python scripts/import_revsports_fixtures_v2.py
+          ${{ (github.event_name == 'schedule' || inputs.apply_fixture_import) && '--apply' || '' }}
           --association "Wimmera Hockey Association"
 
   player-registry:

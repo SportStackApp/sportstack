@@ -93,8 +93,12 @@ class ScraperWorkflowRoutineTests(unittest.TestCase):
         for name in ("dev-scrapers.yml", "production-scrapers.yml"):
             with self.subTest(workflow=name):
                 text = (WORKFLOWS / name).read_text(encoding="utf-8")
-                self.assertIn("python scripts/import_revsports_fixtures_v2.py --apply", text)
+                self.assertIn("python scripts/import_revsports_fixtures_v2.py", text)
                 self.assertNotIn("python scraper/fixture_import.py --apply", text)
+
+        dev_text = (WORKFLOWS / "dev-scrapers.yml").read_text(encoding="utf-8")
+        self.assertIn("apply_fixture_import:", dev_text)
+        self.assertIn("inputs.apply_fixture_import", dev_text)
 
 
 if __name__ == "__main__":
