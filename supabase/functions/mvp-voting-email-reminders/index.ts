@@ -123,7 +123,7 @@ const jsonResponse = (body: Record<string, unknown>, status = 200) =>
 
 const getEnv = (name: string) => Deno.env.get(name)?.trim() || "";
 const normaliseSiteUrl = () =>
-  (getEnv("SPORTSTACK_APP_URL") || "https://sportstackapp.com").replace(/\/$/, "");
+  (getEnv("SPORTSTACK_APP_URL") || "https://sportstack.grampianshockey.com.au").replace(/\/$/, "");
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function eventTitle(eventType: ReminderEvent) {

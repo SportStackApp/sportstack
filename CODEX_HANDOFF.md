@@ -86,6 +86,13 @@ Future agents should start by reading these files in order:
   field templates linked to the four existing formations, scoped RLS and least-privilege grants.
   The app adds persistent cropped icons, safer line-up saves, team selection, formation-change
   protection and mobile tap instructions.
+- Block 4 repository preparation is complete. `hb.sportstackapp.com.au` is mapped to the public
+  Umpire Portal inside this SportStack app, with safe hostname routing, origin preparation and a
+  live-rollout checklist in `docs/domain-migration-plan.md`. Vercel, DNS, Supabase Auth, Turnstile,
+  redirects and Production are unchanged and approval-gated.
+- Do not merge or cherry-pick `chore/domain-structure` commit `3a7d6cc`; it contains the superseded
+  assumption that `hb` belongs to the separate ignored Hockey Ballarat module. The corrected work
+  is being landed directly on `dev`.
 
 ## Local repository cleanup
 

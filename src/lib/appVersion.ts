@@ -1,3 +1,5 @@
+import { UMPIRE_PORTAL_HOSTNAME } from "./domainConfig";
+
 declare const __APP_VERSION__: string;
 
 export const APP_VERSION = __APP_VERSION__;
@@ -5,11 +7,24 @@ export const APP_VERSION = __APP_VERSION__;
 export type AppEnvironment = "DEV" | "MAIN" | "PROD" | "LOCAL";
 
 export const getAppEnvironment = (): AppEnvironment => {
+  const configuredEnvironment = import.meta.env.VITE_APP_ENVIRONMENT?.trim().toUpperCase();
+  if (
+    configuredEnvironment === "DEV" ||
+    configuredEnvironment === "MAIN" ||
+    configuredEnvironment === "PROD" ||
+    configuredEnvironment === "LOCAL"
+  ) {
+    return configuredEnvironment;
+  }
+
   if (typeof window === "undefined") return "LOCAL";
   const hostname = window.location.hostname.toLowerCase();
   if (hostname === "dev.sportstackapp.com.au" || hostname.startsWith("dev.")) return "DEV";
   if (hostname === "main.sportstackapp.com.au" || hostname.startsWith("main.")) return "MAIN";
-  if (hostname === "sportstack.grampianshockey.com.au") return "PROD";
+  if (
+    hostname === "sportstack.grampianshockey.com.au" ||
+    hostname === UMPIRE_PORTAL_HOSTNAME
+  ) return "PROD";
   return "LOCAL";
 };
 

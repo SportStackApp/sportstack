@@ -28,6 +28,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "https://dev.sportstackapp.com.au",
   "https://main.sportstackapp.com.au",
   "https://sportstack.grampianshockey.com.au",
+  "https://hb.sportstackapp.com.au",
   "https://sportstackapp.com.au",
   "https://www.sportstackapp.com.au",
 ];

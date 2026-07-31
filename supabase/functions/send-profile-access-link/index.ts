@@ -40,8 +40,13 @@ type AuthUserSummary = {
 };
 
 const ADMIN_ROLES = ["SUPER_ADMIN", "ASSOCIATION_ADMIN", "CLUB_ADMIN", "TEAM_MANAGER", "COACH"];
+const DEFAULT_APP_URL = "https://sportstack.grampianshockey.com.au";
 
 const normaliseEmail = (value: string) => value.trim().toLowerCase();
+
+const getAppBaseUrl = (req: Request) =>
+  (req.headers.get("origin")?.trim() || Deno.env.get("SPORTSTACK_APP_URL")?.trim() || DEFAULT_APP_URL)
+    .replace(/\/+$/, "");
 
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
@@ -99,6 +104,8 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
+
+  const appBaseUrl = getAppBaseUrl(req);
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -208,7 +215,7 @@ Deno.serve(async (req) => {
       }
 
       const { error: resetError } = await serviceClient.auth.resetPasswordForEmail(accountEmail, {
-        redirectTo: `${req.headers.get("origin") || "https://sportstackapp.com"}/reset-password`,
+        redirectTo: `${appBaseUrl}/reset-password`,
       });
 
       if (resetError) {
@@ -247,8 +254,8 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "A claim link has already been sent for this placeholder profile." }, 409);
     }
 
-    const redirectTo = `${req.headers.get("origin") || "https://sportstackapp.com"}/`;
-    const passwordResetRedirectTo = `${req.headers.get("origin") || "https://sportstackapp.com"}/reset-password`;
+    const redirectTo = `${appBaseUrl}/`;
+    const passwordResetRedirectTo = `${appBaseUrl}/reset-password`;
 
     let existingAuthUser: AuthUserSummary | null = null;
     try {

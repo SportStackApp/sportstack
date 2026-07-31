@@ -78,8 +78,12 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { TestRoleProvider } from "./contexts/TestRoleContext";
 import { TeamProvider } from "./contexts/TeamContext";
 import { AppModeProvider } from "./contexts/AppModeContext";
+import { isUmpirePortalHostname } from "./lib/domainConfig";
 
 const queryClient = new QueryClient();
+
+const DomainHome = () =>
+  isUmpirePortalHostname(window.location.hostname) ? <UmpirePortalLanding /> : <Landing />;
 
 const RetiredMvpTokenRoute = () => (
   <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-12">
@@ -121,7 +125,7 @@ const App = () => (
                 <GlobalLoadingBar />
                 <Routes>
                   {/* Public Routes */}
-                  <Route path="/" element={<Landing />} />
+                  <Route path="/" element={<DomainHome />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />

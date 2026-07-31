@@ -40,11 +40,16 @@ scoped RLS policies and hardened grants. The app also has persistent custom icon
 line-up replacement, team-scoped position preferences, a two-team selector for authorised admins,
 formation-change protection and clearer mobile controls.
 
-## 4. New domain rollout
+## 4. New domain rollout — repository ready, live rollout approval-gated
 
 - Update the prepared domain work and keep all current URLs operating.
 - Add the new domains alongside the existing addresses.
 - Verify authentication and links before enabling redirects.
+
+The repository now maps `hb.sportstackapp.com.au` to the existing SportStack Umpire Portal and
+preserves the normal home page on every other hostname. Edge Function origin, email-link fallback
+and environment-label preparation is complete. Live Vercel, DNS, Supabase Auth, Turnstile,
+deployment and redirect work has not started and still needs explicit approval.
 
 ## 5. Navigation and menus
 

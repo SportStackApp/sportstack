@@ -158,6 +158,15 @@ What changed:
   transaction rollback test. Four templates were backfilled and linked to all four formations.
 - Added and applied `20260801013000_harden_field_template_grants.sql` to Dev. Anonymous table grants
   are removed; authenticated users have only SELECT, INSERT, UPDATE and DELETE behind scoped RLS.
+- Corrected the prepared domain architecture: `hb.sportstackapp.com.au` is the Umpire Portal inside
+  this SportStack app, not the separate ignored Hockey Ballarat module.
+- Added repository-only hostname routing so the future `hb` root shows the existing public Umpire
+  Portal while all current hostnames keep their normal landing behaviour.
+- Prepared the public Umpire Edge Function origin, environment labels and safe server-generated
+  link fallbacks. Added the current approval, verification and rollback checklist in
+  `docs/domain-migration-plan.md`.
+- Read-only checks confirmed current Production, Development, Main/staging and `www` return HTTP
+  200, root still returns HTTP 307 to `www`, and `hb` still has no DNS record.
 
 Checks run:
 
@@ -170,6 +179,9 @@ Checks run:
 - Dev migration rollback assertions, live row/link counts, RLS policy checks and grant checks passed.
 - Supabase's security adviser reports no finding for `field_templates`; unrelated existing findings
   remain outside this block.
+- Domain-package focused lint, TypeScript and build passed. Deno is not installed, so standalone
+  Edge Function type-checking was unavailable; focused ESLint passed for all three edited functions.
+- Full repository lint remained unchanged at 521 problems after a standalone rerun.
 
 What Aaron should test next:
 
@@ -178,6 +190,8 @@ What Aaron should test next:
 - Open one fixture line-up, change formation, verify selected players move to the bench, then save
   and reload the line-up.
 - If authorised for both teams, switch the line-up team and confirm each side loads independently.
+- No domain owner test is possible until the separately approved Vercel, DNS, Auth and Turnstile
+  rollout. Do not connect `hb` from this repository-only package.
 
 Risk level:
 
