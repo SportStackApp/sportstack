@@ -66,6 +66,7 @@ export type FormationIconRow = {
   image_url: string | null;
   lucide_icon: string | null;
   is_custom: boolean;
+  uploaded_by?: string | null;
 };
 
 export type BoundaryBox = {

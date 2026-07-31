@@ -26,8 +26,12 @@ Future agents should start by reading these files in order:
 - Vercel browser authentication is complete. A verified 30-day SportStack team token is stored in
   the existing Windows-encrypted Production access file outside the repository. Direct Vercel API
   and CLI project checks both passed without exposing the token.
-- The complete Production preflight currently stops at its first safety gate because
-  `scraper/fixture_import.py` contains unfinished local merge-conflict text. No Production action
+- The unfinished `scraper/fixture_import.py` worktree copy was proven to contain duplicated conflict
+  text only, backed up outside the repository and restored exactly to the committed implementation.
+  The full 94-test Python suite, TypeScript and production build passed afterward.
+- The Production preflight now stops at the branch-alignment gate. It found `dev` nine commits ahead of
+  `main`, and the reviewed package includes a workflow capable of selecting Production targets.
+  Explicit owner approval is required before that package can move to `main`. No Production action
   was attempted.
 - The public Umpire Portal frontend remains on `dev` and `main` only. Production Supabase, Vercel
   settings and `prod` remain unchanged pending the access preflight and approved release execution.
@@ -74,10 +78,14 @@ Future agents should start by reading these files in order:
 ## Active development order
 
 - The locked 14-block order is recorded in `docs/development-plan.md`.
-- Block 1 is the safe recovery and verification of the unfinished RevSports importer.
-- Block 2 is the prepared Umpire Portal release. Its future address is
+- Block 1 is complete: the unfinished RevSports importer was safely recovered and verified.
+- Block 2 is at its staging approval gate. Its future address is
   `hb.sportstackapp.com.au`, but connecting the domain, changing DNS and promoting Production remain
   separately approval-gated.
+- Block 3 is implemented on Dev pending owner smoke testing. The Dev database now has four reusable
+  field templates linked to the four existing formations, scoped RLS and least-privilege grants.
+  The app adds persistent cropped icons, safer line-up saves, team selection, formation-change
+  protection and mobile tap instructions.
 
 ## Local repository cleanup
 
@@ -87,11 +95,13 @@ Future agents should start by reading these files in order:
 
 ## Best next owner test
 
-1. Resolve and verify the unfinished RevSports importer without discarding valid local work, then
-   rerun the read-only Production preflight.
-2. After the required Production approval, complete the Umpire Portal release and smoke-test both login
+1. Approve or decline the reviewed `dev` to `main` staging package that includes the
+   Production-capable scraper workflow.
+2. Sign in to Dev and smoke-test one custom icon, one saved field template and one fixture line-up
+   formation change/save/reload.
+3. After the required Production approval, complete the Umpire Portal release and smoke-test both login
    choices and one clearly marked test ballot.
-3. Complete the wider signed-in Production smoke test for Dashboard, Communications, availability,
+4. Complete the wider signed-in Production smoke test for Dashboard, Communications, availability,
    Profile, Player MVP administration, Umpire Match Voting administration and key admin pages.
 
 Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace and Safety Hub write forms

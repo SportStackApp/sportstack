@@ -6,13 +6,17 @@ The blocks below are completed in order where practical. Work starts on `dev`, i
 documented, then moves to `main` for staging. Production, DNS, redirects and destructive changes
 remain separately approval-gated.
 
-## 1. Finish RevSports work — in progress
+## 1. Finish RevSports work — complete 1 August 2026
 
 - Repair the unfinished fixture importer file without losing valid work.
 - Complete fixture matching and import safety checks.
 - Test, document, commit and push the completed package.
 
-## 2. Complete Umpire Portal release — access ready
+The unfinished importer was proven to contain duplicated conflict text only, backed up outside the
+repository, restored to the committed implementation and verified with 94 Python tests plus the
+frontend TypeScript and build gates.
+
+## 2. Complete Umpire Portal release — approval-gated
 
 - Run the read-only Production preflight using the encrypted Vercel and Supabase access.
 - Release the prepared Umpire Portal package after the required Production approval.
@@ -21,11 +25,20 @@ remain separately approval-gated.
 The future Umpire Portal address is `hb.sportstackapp.com.au`. Connecting it remains part of the
 separately approval-gated domain rollout.
 
-## 3. Formation and Lineup Planner
+The read-only release preflight now reaches the branch-alignment gate. Promoting the current
+`dev` package to `main` needs Aaron's explicit approval because that package includes a GitHub
+workflow capable of selecting Production targets. No Production action has been taken.
+
+## 3. Formation and Lineup Planner — implemented on Dev, owner smoke pending
 
 - Finish Formation Builder reliability and saved-template behaviour.
 - Improve fixture lineup selection and player eligibility.
 - Improve mobile formation and pitch controls.
+
+Dev now has reusable field-template persistence with four existing formations safely backfilled,
+scoped RLS policies and hardened grants. The app also has persistent custom icon uploads, safer
+line-up replacement, team-scoped position preferences, a two-team selector for authorised admins,
+formation-change protection and clearer mobile controls.
 
 ## 4. New domain rollout
 

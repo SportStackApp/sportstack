@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase as typedSupabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -98,19 +98,6 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
   const [fillInFinderOpen, setFillInFinderOpen] = useState(false);
 
-  useEffect(() => {
-    if (!teamId || !gameId) return;
-    loadLineupData();
-  }, [teamId, gameId]);
-
-  useEffect(() => {
-    if (selectedFormationId === "__none__") {
-      setPositions([]);
-      return;
-    }
-    loadFormationPositions(selectedFormationId);
-  }, [selectedFormationId]);
-
   const selectedFormation = formations.find((formation) => formation.id === selectedFormationId) || null;
 
   const assignedPlayerIds = useMemo(() => {
@@ -134,7 +121,7 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
   const startersCount = Object.values(assignments).filter(Boolean).length;
   const selectedFieldSource = getFormationFieldSource(selectedFormation);
 
-  const loadFormationRows = async () => {
+  const loadFormationRows = useCallback(async () => {
     const [fieldTemplateIdRes, fieldTemplatesRes] = await Promise.all([
       supabase.from("formations").select("id, field_template_id").limit(1),
       supabase.from("field_templates").select("id").limit(1),
@@ -160,9 +147,34 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
     }
 
     return supabase.from("formations").select("*").order("is_default", { ascending: false }).order("name");
-  };
+  }, []);
 
-  const loadLineupData = async () => {
+  const loadSavedAssignments = useCallback(async (lineupId: string) => {
+    const { data, error } = await supabase
+      .from("fixture_lineup_assignments")
+      .select("player_id, formation_position_id, is_starting, sort_order")
+      .eq("fixture_lineup_id", lineupId)
+      .order("sort_order");
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    const nextAssignments: Record<string, string> = {};
+    const nextBench: string[] = [];
+    ((data || []) as FixtureLineupAssignment[]).forEach((row) => {
+      if (row.is_starting && row.formation_position_id) {
+        nextAssignments[row.formation_position_id] = row.player_id;
+      } else {
+        nextBench.push(row.player_id);
+      }
+    });
+    setAssignments(nextAssignments);
+    setBenchIds(nextBench);
+  }, []);
+
+  const loadLineupData = useCallback(async () => {
     setLoading(true);
     const formationsPromise = loadFormationRows();
     const [formationsRes, iconsRes, rosterRes, fillInsRes, availabilityRes, prefsRes, lineupRes] = await Promise.all([
@@ -180,7 +192,10 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
         .eq("team_id", teamId)
         .eq("status", "SELECTED"),
       supabase.from("fixture_availability").select("user_id, status").eq("fixture_id", gameId),
-      supabase.from("player_position_preferences").select("player_id, position_code, preference"),
+      supabase
+        .from("player_position_preferences")
+        .select("player_id, position_code, preference")
+        .or(`team_id.eq.${teamId},team_id.is.null`),
       supabase
         .from("fixture_lineups")
         .select("id, formation_id")
@@ -265,9 +280,9 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
     }
 
     setLoading(false);
-  };
+  }, [gameId, loadFormationRows, loadSavedAssignments, teamId]);
 
-  const loadFormationPositions = async (formationId: string) => {
+  const loadFormationPositions = useCallback(async (formationId: string) => {
     const { data, error } = await supabase
       .from("formation_positions")
       .select("*")
@@ -280,32 +295,20 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
       return;
     }
     setPositions((data || []) as FormationPositionRow[]);
-  };
+  }, []);
 
-  const loadSavedAssignments = async (lineupId: string) => {
-    const { data, error } = await supabase
-      .from("fixture_lineup_assignments")
-      .select("player_id, formation_position_id, is_starting, sort_order")
-      .eq("fixture_lineup_id", lineupId)
-      .order("sort_order");
+  useEffect(() => {
+    if (!teamId || !gameId) return;
+    void loadLineupData();
+  }, [gameId, loadLineupData, teamId]);
 
-    if (error) {
-      toast.error(error.message);
+  useEffect(() => {
+    if (selectedFormationId === "__none__") {
+      setPositions([]);
       return;
     }
-
-    const nextAssignments: Record<string, string> = {};
-    const nextBench: string[] = [];
-    ((data || []) as FixtureLineupAssignment[]).forEach((row) => {
-      if (row.is_starting && row.formation_position_id) {
-        nextAssignments[row.formation_position_id] = row.player_id;
-      } else {
-        nextBench.push(row.player_id);
-      }
-    });
-    setAssignments(nextAssignments);
-    setBenchIds(nextBench);
-  };
+    void loadFormationPositions(selectedFormationId);
+  }, [loadFormationPositions, selectedFormationId]);
 
   const assignPlayer = (playerId: string) => {
     if (!selectedPositionId) {
@@ -365,6 +368,18 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
     toast.success("Suggested line-up created. Review it before saving.");
   };
 
+  const changeFormation = (formationId: string) => {
+    if (!isCoach || formationId === selectedFormationId) return;
+    const selectedPlayerIds = Array.from(new Set([...Object.values(assignments), ...benchIds]));
+    setAssignments({});
+    setBenchIds(selectedPlayerIds);
+    setSelectedPositionId(null);
+    setSelectedFormationId(formationId);
+    if (selectedPlayerIds.length > 0) {
+      toast.info("Selected players were moved to the bench. Place them into the new formation before saving.");
+    }
+  };
+
   const saveLineup = async () => {
     if (!user || selectedFormationId === "__none__") {
       toast.error("Choose a formation before saving.");
@@ -377,7 +392,6 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
       team_id: teamId,
       formation_id: selectedFormationId,
       created_by: user.id,
-      published_at: new Date().toISOString(),
     };
 
     const lineupRes = await supabase
@@ -394,7 +408,6 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
 
     const lineupId = lineupRes.data.id as string;
     setFixtureLineupId(lineupId);
-    await supabase.from("fixture_lineup_assignments").delete().eq("fixture_lineup_id", lineupId);
 
     const starterRows = Object.entries(assignments).map(([positionId, playerId], index) => ({
       fixture_lineup_id: lineupId,
@@ -412,13 +425,53 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
     }));
 
     const assignmentRows = [...starterRows, ...benchRows];
+    const existingAssignmentsRes = await supabase
+      .from("fixture_lineup_assignments")
+      .select("player_id")
+      .eq("fixture_lineup_id", lineupId);
+    if (existingAssignmentsRes.error) {
+      setSaving(false);
+      toast.error(existingAssignmentsRes.error.message);
+      return;
+    }
+
     if (assignmentRows.length > 0) {
-      const assignmentRes = await supabase.from("fixture_lineup_assignments").insert(assignmentRows);
+      const assignmentRes = await supabase
+        .from("fixture_lineup_assignments")
+        .upsert(assignmentRows, { onConflict: "fixture_lineup_id,player_id" });
       if (assignmentRes.error) {
         setSaving(false);
         toast.error(assignmentRes.error.message);
         return;
       }
+    }
+
+    const desiredPlayerIds = new Set(assignmentRows.map((row) => row.player_id));
+    const removedPlayerIds = (existingAssignmentsRes.data || [])
+      .map((row: any) => row.player_id as string)
+      .filter((playerId: string) => !desiredPlayerIds.has(playerId));
+    if (removedPlayerIds.length > 0) {
+      const removeResult = await supabase
+        .from("fixture_lineup_assignments")
+        .delete()
+        .eq("fixture_lineup_id", lineupId)
+        .in("player_id", removedPlayerIds);
+      if (removeResult.error) {
+        await loadSavedAssignments(lineupId);
+        setSaving(false);
+        toast.error(`The line-up could not be fully updated: ${removeResult.error.message}`);
+        return;
+      }
+    }
+
+    const publishResult = await supabase
+      .from("fixture_lineups")
+      .update({ published_at: new Date().toISOString() })
+      .eq("id", lineupId);
+    if (publishResult.error) {
+      setSaving(false);
+      toast.error(`The line-up was saved but could not be published: ${publishResult.error.message}`);
+      return;
     }
 
     await mirrorLegacyLineups();
@@ -427,7 +480,6 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
   };
 
   const mirrorLegacyLineups = async () => {
-    await supabase.from("lineups").delete().eq("fixture_id", gameId).eq("team_id", teamId);
     const starterRows = Object.entries(assignments).map(([positionId, playerId]) => {
       const position = positions.find((item) => item.id === positionId);
       return {
@@ -446,10 +498,28 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
       is_starting: false,
     }));
     const rows = [...starterRows, ...benchRows];
+    const existingResult = await supabase.from("lineups").select("id").eq("fixture_id", gameId).eq("team_id", teamId);
+    if (existingResult.error) {
+      toast.warning(`Saved new line-up, but legacy lineups could not be checked: ${existingResult.error.message}`);
+      return;
+    }
+
+    let insertedIds: string[] = [];
     if (rows.length > 0) {
-      const { error } = await supabase.from("lineups").insert(rows);
-      if (error) {
-        toast.warning(`Saved new line-up, but legacy lineups sync failed: ${error.message}`);
+      const insertResult = await supabase.from("lineups").insert(rows).select("id");
+      if (insertResult.error) {
+        toast.warning(`Saved new line-up, but legacy lineups sync failed: ${insertResult.error.message}`);
+        return;
+      }
+      insertedIds = (insertResult.data || []).map((row: any) => row.id as string);
+    }
+
+    const existingIds = (existingResult.data || []).map((row: any) => row.id as string);
+    if (existingIds.length > 0) {
+      const deleteResult = await supabase.from("lineups").delete().in("id", existingIds);
+      if (deleteResult.error) {
+        if (insertedIds.length > 0) await supabase.from("lineups").delete().in("id", insertedIds);
+        toast.warning(`Saved new line-up, but legacy lineups sync failed: ${deleteResult.error.message}`);
       }
     }
   };
@@ -503,7 +573,7 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
-            <Select value={selectedFormationId} onValueChange={(value) => isCoach && setSelectedFormationId(value)} disabled={!isCoach}>
+            <Select value={selectedFormationId} onValueChange={changeFormation} disabled={!isCoach}>
               <SelectTrigger>
                 <SelectValue placeholder="Choose formation" />
               </SelectTrigger>
@@ -551,6 +621,7 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
                 <button
                   key={position.id}
                   type="button"
+                  aria-label={`${position.name}: ${player?.name || "unassigned"}`}
                   className={cn(
                     "absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg transition-transform",
                     selected ? "scale-110 bg-accent text-accent-foreground" : player ? "bg-primary text-primary-foreground" : "bg-background/80 text-foreground",

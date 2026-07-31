@@ -128,6 +128,10 @@ Treat these as current caution areas unless a newer live check proves otherwise:
   before assuming a dashboard warning reflects the current live byte count.
 - There is no formal automated browser suite yet. Focused Python tests cover scraper and Storage
   safety tooling.
+- Umpire Portal staging is waiting at an explicit approval gate: the current `dev` package includes
+  a GitHub workflow that can select Production targets, so it has not been promoted to `main`.
+- Formation/Lineup private-page browser smoke testing still needs an owner login. Signed-out local
+  browser checks passed with no Vite overlay or console errors.
 
 ## Current Codex handoff template
 
@@ -141,32 +145,44 @@ What changed:
 
 - Recovered and locked the 14-block development order in `docs/development-plan.md` so the same
   order is available in the repository and generated Obsidian mirror.
-- Confirmed `hb.sportstackapp.com.au` is the future SportStack Umpire Portal address. No domain,
-  DNS, redirect or Production change has been made.
-- Completed Vercel browser authentication and securely stored a verified 30-day SportStack team
-  token in the Windows-encrypted access file outside the repository.
-- Direct read-only Vercel API and CLI checks both confirmed access to the `sportstack` project.
-- The full Umpire Portal preflight correctly stopped at the dirty-working-tree gate because
-  `scraper/fixture_import.py` still contains unfinished local merge-conflict text.
+- Completed Block 1. The unfinished `scraper/fixture_import.py` worktree copy contained 545 added
+  lines of duplicated conflict text and no removed committed lines. It was backed up outside the
+  repository, restored exactly to `HEAD`, and fully verified.
+- Advanced the Umpire Portal preflight to the branch-alignment gate. It found `dev` nine commits ahead of
+  `main`; the package includes a Production-capable workflow and therefore needs explicit approval
+  before staging promotion. Production, DNS and redirects remain unchanged.
+- Implemented the first complete Formation/Lineup reliability package: live reusable templates,
+  persistent cropped custom icons, safer line-up replacement, team selection, team-scoped player
+  preferences, formation-change protection and clearer mobile instructions.
+- Applied the two already-committed Formation migrations to SportStack Dev after a successful
+  transaction rollback test. Four templates were backfilled and linked to all four formations.
+- Added and applied `20260801013000_harden_field_template_grants.sql` to Dev. Anonymous table grants
+  are removed; authenticated users have only SELECT, INSERT, UPDATE and DELETE behind scoped RLS.
 
 Checks run:
 
-- Vercel project API access passed for the exact SportStack team and project IDs.
-- `vercel project inspect` passed with the encrypted team token.
-- The Production release preflight made no Production change and stopped before provider checks
-  when it detected the dirty working tree.
-- Obsidian start-of-work sync completed successfully from `origin/dev` at `9cd5a87`.
+- Full Python discovery passed: 94 tests.
+- Focused importer tests passed: 17 tests; Python compile checks passed.
+- Focused lint for all four changed React/TypeScript files passed with no warnings.
+- `npx tsc --noEmit` and `npm run build` passed. The existing large-bundle warning remains.
+- Full repository lint still reports the known legacy backlog: 521 problems (433 errors and 88
+  warnings), down from 522 before this package.
+- Dev migration rollback assertions, live row/link counts, RLS policy checks and grant checks passed.
+- Supabase's security adviser reports no finding for `field_templates`; unrelated existing findings
+  remain outside this block.
 
 What Aaron should test next:
 
-- No owner test is required for the documentation or encrypted authentication setup.
-- After the RevSports importer is safely recovered, rerun the complete read-only Umpire Portal
-  Production preflight.
+- Sign in to Dev and create one custom icon from Formation Library, then create and save one field
+  template using that icon.
+- Open one fixture line-up, change formation, verify selected players move to the bench, then save
+  and reload the line-up.
+- If authorised for both teams, switch the line-up team and confirm each side loads independently.
 
 Risk level:
 
-- Low. Documentation and encrypted local authentication only. No migration, database write,
-  deployment, DNS change or Production change is included.
+- Medium. This includes additive Dev-only schema/RLS/grant work and line-up save changes. No
+  Production database, deployment, DNS or redirect change was made.
 
 ### Previous handoff entry
 

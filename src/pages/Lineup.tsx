@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Calendar, Clock } from "lucide-react";
 import { LineupView } from "@/components/lineup/LineupView";
 import { useState, useEffect } from "react";
@@ -34,6 +35,7 @@ const Lineup = () => {
   const [access, setAccess] = useState<LineupAccess | null>(null);
   const [loading, setLoading] = useState(true);
   const [isCoachView, setIsCoachView] = useState(false);
+  const [lineupTeamId, setLineupTeamId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchGame = async () => {
@@ -44,15 +46,21 @@ const Lineup = () => {
       setGame(fixture);
       if (fixture) {
         const accessResult = await getLineupAccess(user?.id, fixture);
+        const preferredTeamId =
+          selectedTeam?.id && accessResult.visibleTeamIds.includes(selectedTeam.id)
+            ? selectedTeam.id
+            : accessResult.visibleTeamIds[0] || fixture.home_team_id;
         setAccess(accessResult);
-        setIsCoachView(accessResult.canEdit);
+        setLineupTeamId(preferredTeamId);
+        setIsCoachView(accessResult.editableTeamIds.includes(preferredTeamId));
       } else {
         setAccess(null);
+        setLineupTeamId(null);
       }
       setLoading(false);
     };
     fetchGame();
-  }, [id, user?.id]);
+  }, [id, selectedTeam?.id, user?.id]);
 
   if (loading) {
     return (
@@ -97,14 +105,15 @@ const Lineup = () => {
   const homeTeam = game.home_team?.name ?? "Unknown";
   const awayTeam = game.away_team?.name ?? "Unknown";
   const fallbackTeamId = access.visibleTeamIds[0] || game.home_team_id;
-  const lineupTeamId =
-    selectedTeam?.id && access.visibleTeamIds.includes(selectedTeam.id)
-      ? selectedTeam.id
-      : fallbackTeamId;
-  const isEditableLineup = access.editableTeamIds.includes(lineupTeamId);
-  const teamName = selectedTeam?.id === lineupTeamId ? getTeamDisplayName(selectedTeam) : lineupTeamId === game.away_team_id ? awayTeam : homeTeam;
-  const opponentName = lineupTeamId === game.away_team_id ? homeTeam : awayTeam;
+  const activeLineupTeamId = lineupTeamId && access.visibleTeamIds.includes(lineupTeamId) ? lineupTeamId : fallbackTeamId;
+  const isEditableLineup = access.editableTeamIds.includes(activeLineupTeamId);
+  const teamName = selectedTeam?.id === activeLineupTeamId ? getTeamDisplayName(selectedTeam) : activeLineupTeamId === game.away_team_id ? awayTeam : homeTeam;
+  const opponentName = activeLineupTeamId === game.away_team_id ? homeTeam : awayTeam;
   const gameDate = new Date(game.fixture_date);
+  const changeLineupTeam = (teamId: string) => {
+    setLineupTeamId(teamId);
+    setIsCoachView(access.editableTeamIds.includes(teamId));
+  };
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -144,7 +153,7 @@ const Lineup = () => {
         )}
       </div>
 
-      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/50 p-3">
         <div>
           <p className="font-semibold text-sm">
             {homeTeam} vs {awayTeam}
@@ -152,7 +161,7 @@ const Lineup = () => {
           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              {gameDate.toLocaleDateString("en-AU", { weekday: "short", month: "short", day: "numeric" })}
+              {gameDate.toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" })}
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -160,12 +169,28 @@ const Lineup = () => {
             </span>
           </div>
         </div>
-        <Badge variant="default">{game.status}</Badge>
+        <div className="flex items-center gap-2">
+          {access.visibleTeamIds.length > 1 && (
+            <Select value={activeLineupTeamId} onValueChange={changeLineupTeam}>
+              <SelectTrigger className="w-48" aria-label="Line-up team">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {access.visibleTeamIds.map((teamId) => (
+                  <SelectItem key={teamId} value={teamId}>
+                    {teamId === game.away_team_id ? awayTeam : homeTeam}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Badge variant="default">{game.status}</Badge>
+        </div>
       </div>
 
       <LineupView
         gameId={game.id}
-        teamId={lineupTeamId}
+        teamId={activeLineupTeamId}
         teamName={teamName}
         opponentName={opponentName}
         isCoach={isCoachView && isEditableLineup}
@@ -173,8 +198,8 @@ const Lineup = () => {
 
       {isCoachView && isEditableLineup && (
         <div className="text-center text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
-          <p className="font-medium mb-1">Drag & Drop Instructions</p>
-          <p>Drag players from the bench onto positions, or swap players by dragging between positions.</p>
+          <p className="mb-1 font-medium">Line-up instructions</p>
+          <p>On mobile, tap a position and then tap Add beside a player. On desktop, you can also drag players between positions and the bench.</p>
         </div>
       )}
     </div>

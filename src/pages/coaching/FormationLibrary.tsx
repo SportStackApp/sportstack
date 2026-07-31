@@ -68,6 +68,8 @@ const OWNER_FILTERS = ["__all__", "SUPER_ADMIN", "ASSOCIATION", "CLUB", "TEAM"] 
 const STATUS_FILTERS = ["active", "hidden"] as const;
 const ASSET_TYPE_FILTERS = ["all", "surface", "icons", "symbols"] as const;
 const ASSET_OWNER_FILTERS = ["all", "mine", "shared", "hidden"] as const;
+const MAX_ICON_FILE_SIZE = 5 * 1024 * 1024;
+const SUPPORTED_ICON_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 type PendingDelete =
   | { type: "formation"; id: string; name: string }
@@ -82,6 +84,35 @@ function ownerText(scope: FormationOwnerScope) {
 function formatDate(value?: string | null) {
   if (!value) return "Not recorded";
   return new Intl.DateTimeFormat("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+}
+
+async function createCroppedIcon(file: File, focusX: number, focusY: number, zoom: number) {
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const nextImage = new Image();
+      nextImage.onload = () => resolve(nextImage);
+      nextImage.onerror = () => reject(new Error("The selected image could not be read."));
+      nextImage.src = sourceUrl;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("The image crop could not be prepared.");
+
+    const scale = Math.max(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight) * (zoom / 100);
+    context.translate(canvas.width / 2, canvas.height / 2);
+    context.scale(scale, scale);
+    context.drawImage(image, -(focusX / 100) * image.naturalWidth, -(focusY / 100) * image.naturalHeight);
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("The image crop could not be saved."))), "image/png");
+    });
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
 }
 
 function MiniPitch({
@@ -131,12 +162,14 @@ export default function FormationLibrary() {
   const [assetTypeFilter, setAssetTypeFilter] = useState<(typeof ASSET_TYPE_FILTERS)[number]>("all");
   const [assetOwnerFilter, setAssetOwnerFilter] = useState<(typeof ASSET_OWNER_FILTERS)[number]>("all");
   const [assetDialogOpen, setAssetDialogOpen] = useState(false);
-  const [assetDraftType, setAssetDraftType] = useState<"surface" | "icon" | "symbol">("surface");
+  const [assetDraftType, setAssetDraftType] = useState<"surface" | "icon" | "symbol">("icon");
   const [assetDraftName, setAssetDraftName] = useState("");
+  const [assetDraftFile, setAssetDraftFile] = useState<File | null>(null);
   const [assetDraftPreview, setAssetDraftPreview] = useState<string | null>(null);
   const [assetFocusX, setAssetFocusX] = useState(50);
   const [assetFocusY, setAssetFocusY] = useState(50);
   const [assetZoom, setAssetZoom] = useState(100);
+  const [assetSaving, setAssetSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
 
   const loadLibrary = useCallback(async () => {
@@ -280,9 +313,9 @@ export default function FormationLibrary() {
       type: "icon" as const,
       name: icon.name,
       url: icon.image_url,
-      ownerText: (icon as any).uploaded_by === userId || icon.is_custom ? "Mine" : "Shared",
+      ownerText: icon.uploaded_by === userId ? "Mine" : "Shared",
       meta: `${icon.is_custom ? "Custom" : "Standard"} - used by ${iconUseCount[icon.id] || 0} positions`,
-      createdBy: (icon as any).uploaded_by || null,
+      createdBy: icon.uploaded_by || null,
       hidden: false,
     }));
     const symbolAssets = [
@@ -319,19 +352,90 @@ export default function FormationLibrary() {
     toast.info("Delete needs backend usage checks before it can remove live data. Use hide for now.");
     setPendingDelete(null);
   };
-  const handleAssetFile = (file?: File) => {
-    if (!file) return;
-    setAssetDraftName((current) => current || file.name.replace(/\.[^.]+$/, ""));
-    setAssetDraftPreview(URL.createObjectURL(file));
-  };
-  const saveAssetDraft = () => {
-    toast.info("Asset saving needs backend support before it can be added to the shared library.");
-    setAssetDialogOpen(false);
+  const resetAssetDraft = () => {
+    if (assetDraftPreview) URL.revokeObjectURL(assetDraftPreview);
+    setAssetDraftType("icon");
     setAssetDraftName("");
+    setAssetDraftFile(null);
     setAssetDraftPreview(null);
     setAssetFocusX(50);
     setAssetFocusY(50);
     setAssetZoom(100);
+  };
+  const handleAssetFile = (file?: File) => {
+    if (!file) return;
+    if (!SUPPORTED_ICON_TYPES.has(file.type)) {
+      toast.error("Choose a PNG, JPG or WebP image.");
+      return;
+    }
+    if (file.size > MAX_ICON_FILE_SIZE) {
+      toast.error("Choose an image smaller than 5 MB.");
+      return;
+    }
+    if (assetDraftPreview) URL.revokeObjectURL(assetDraftPreview);
+    setAssetDraftFile(file);
+    setAssetDraftName((current) => current || file.name.replace(/\.[^.]+$/, ""));
+    setAssetDraftPreview(URL.createObjectURL(file));
+  };
+  const saveAssetDraft = async () => {
+    if (assetDraftType === "surface") {
+      setAssetDialogOpen(false);
+      resetAssetDraft();
+      createTemplate();
+      return;
+    }
+    if (!userId) {
+      toast.error("Sign in before adding an icon.");
+      return;
+    }
+    if (!assetDraftName.trim()) {
+      toast.error("Add an icon name.");
+      return;
+    }
+    if (!assetDraftFile) {
+      toast.error("Choose an icon image.");
+      return;
+    }
+
+    setAssetSaving(true);
+    let uploadedPath: string | null = null;
+    try {
+      const safeFocusX = Number.isFinite(assetFocusX) ? Math.max(0, Math.min(100, assetFocusX)) : 50;
+      const safeFocusY = Number.isFinite(assetFocusY) ? Math.max(0, Math.min(100, assetFocusY)) : 50;
+      const safeZoom = Number.isFinite(assetZoom) ? Math.max(50, Math.min(200, assetZoom)) : 100;
+      const croppedIcon = await createCroppedIcon(assetDraftFile, safeFocusX, safeFocusY, safeZoom);
+      const safeName = assetDraftName.trim().replace(/[^a-zA-Z0-9._-]/g, "-").replace(/-+/g, "-") || "custom-icon";
+      uploadedPath = `${userId}/icons/${Date.now()}-${safeName}.png`;
+      const uploadResult = await supabase.storage.from("formation-assets").upload(uploadedPath, croppedIcon, {
+        contentType: "image/png",
+        upsert: false,
+      });
+      if (uploadResult.error) throw uploadResult.error;
+
+      const { data: publicUrlData } = supabase.storage.from("formation-assets").getPublicUrl(uploadedPath);
+      const insertResult = await supabase
+        .from("formation_icons")
+        .insert({
+          name: assetDraftName.trim(),
+          image_url: publicUrlData.publicUrl,
+          lucide_icon: null,
+          is_custom: true,
+          uploaded_by: userId,
+        })
+        .select("*")
+        .single();
+      if (insertResult.error) throw insertResult.error;
+
+      toast.success("Custom icon saved.");
+      setAssetDialogOpen(false);
+      resetAssetDraft();
+      await loadLibrary();
+    } catch (error: any) {
+      if (uploadedPath) await supabase.storage.from("formation-assets").remove([uploadedPath]);
+      toast.error(error?.message || "The custom icon could not be saved.");
+    } finally {
+      setAssetSaving(false);
+    }
   };
 
   if (loading) {
@@ -582,11 +686,17 @@ export default function FormationLibrary() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={assetDialogOpen} onOpenChange={setAssetDialogOpen}>
+      <Dialog
+        open={assetDialogOpen}
+        onOpenChange={(open) => {
+          setAssetDialogOpen(open);
+          if (!open && !assetSaving) resetAssetDraft();
+        }}
+      >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add asset</DialogTitle>
-            <DialogDescription>Choose an asset type, upload a file, and preview how an icon crop will look.</DialogDescription>
+            <DialogDescription>Add a reusable custom icon, or continue to Template Builder for a surface image.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
             <div className="space-y-3">
@@ -597,24 +707,35 @@ export default function FormationLibrary() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="surface">Surface image</SelectItem>
                     <SelectItem value="icon">Icon</SelectItem>
-                    <SelectItem value="symbol">Symbol</SelectItem>
+                    <SelectItem value="surface">Surface image</SelectItem>
+                    <SelectItem value="symbol" disabled>
+                      Symbol - coming later
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Name</Label>
-                <Input value={assetDraftName} onChange={(event) => setAssetDraftName(event.target.value)} placeholder="Asset name" />
-              </div>
-              <div>
-                <Label htmlFor="asset-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
-                  <Upload className="h-4 w-4" />
-                  Upload file
-                </Label>
-                <Input id="asset-upload" type="file" accept="image/*" className="hidden" onChange={(event) => handleAssetFile(event.target.files?.[0])} />
-              </div>
-              {(assetDraftType === "icon" || assetDraftType === "symbol") && (
+              {assetDraftType === "icon" ? (
+                <>
+                  <div>
+                    <Label>Name</Label>
+                    <Input value={assetDraftName} onChange={(event) => setAssetDraftName(event.target.value)} placeholder="Icon name" />
+                  </div>
+                  <div>
+                    <Label htmlFor="asset-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                      <Upload className="h-4 w-4" />
+                      Upload image
+                    </Label>
+                    <Input id="asset-upload" type="file" accept="image/*" className="hidden" onChange={(event) => handleAssetFile(event.target.files?.[0])} />
+                    <p className="mt-1 text-xs text-muted-foreground">PNG, JPG or WebP, up to 5 MB.</p>
+                  </div>
+                </>
+              ) : (
+                <p className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
+                  Surface images are saved as part of a reusable template. Continue to Template Builder to upload and position the image.
+                </p>
+              )}
+              {assetDraftType === "icon" && (
                 <div className="space-y-2 rounded-md border p-3">
                   <p className="text-sm font-medium">Focus point</p>
                   <div>
@@ -633,10 +754,7 @@ export default function FormationLibrary() {
               )}
             </div>
             <div className="flex min-h-[300px] items-center justify-center rounded-md border bg-muted/30 p-4">
-              {assetDraftPreview ? (
-                assetDraftType === "surface" ? (
-                  <img src={assetDraftPreview} alt="" className="aspect-video w-full rounded-md border object-cover" />
-                ) : (
+              {assetDraftType === "icon" && assetDraftPreview ? (
                   <div className="relative flex h-56 w-56 items-center justify-center rounded-md border bg-background">
                     <img
                       src={assetDraftPreview}
@@ -649,17 +767,20 @@ export default function FormationLibrary() {
                     />
                     <span className="pointer-events-none absolute h-44 w-44 rounded-full border-2 border-dashed border-white/90" />
                   </div>
-                )
+              ) : assetDraftType === "surface" ? (
+                <p className="max-w-sm text-center text-sm text-muted-foreground">Template Builder includes the surface upload, grid and pitch-boundary controls.</p>
               ) : (
                 <p className="text-sm text-muted-foreground">Upload an image to preview it here.</p>
               )}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAssetDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setAssetDialogOpen(false)} disabled={assetSaving}>
               Cancel
             </Button>
-            <Button onClick={saveAssetDraft}>Save asset</Button>
+            <Button onClick={saveAssetDraft} disabled={assetSaving}>
+              {assetSaving ? "Saving..." : assetDraftType === "surface" ? "Open Template Builder" : "Save icon"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
