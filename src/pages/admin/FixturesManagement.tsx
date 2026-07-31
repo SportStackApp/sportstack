@@ -119,6 +119,19 @@ const emptyFixtureTeamScope: FixtureTeamScope = {
 const FIXTURE_SELECT =
   "id, fixture_date, scheduled_end_at, status, home_score, away_score, notes, round_number, venue_id, pitch_id, home_team_id, away_team_id, revsports_match_url, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
 
+const isByeFixture = (fixture: FixtureRow) =>
+  fixture.away_team_id === null && fixture.revsports_match_url?.startsWith("revsports-bye|");
+
+const getByeRoundLocations = (fixture: FixtureRow) => {
+  if (!isByeFixture(fixture)) return "";
+  const marker = "BYE — Round locations: ";
+  return fixture.notes?.startsWith(marker) ? fixture.notes.slice(marker.length) : "";
+};
+
+const getFixtureLocationLabel = (fixture: FixtureRow) =>
+  (fixture.venue?.name ?? getByeRoundLocations(fixture)) ||
+  (isByeFixture(fixture) ? "No match venue — bye" : "TBD");
+
 const splitDateTime = (value: string | null) => {
   if (!value) return { fixture_date: "", game_time: "" };
   const date = new Date(value);
@@ -383,13 +396,14 @@ const FixturesManagement = () => {
     if (displayFixtures.length === 0) return;
     const rows = displayFixtures.map((fixture) => {
       const date = fixture.fixture_date ? new Date(fixture.fixture_date) : null;
+      const isBye = isByeFixture(fixture);
       return {
         Date: date ? date.toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" }) : "",
         Day: date ? date.toLocaleDateString("en-AU", { weekday: "short" }) : "",
-        Time: date ? date.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }) : "",
+        Time: date && !isBye ? date.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }) : "",
         "Home Team": getTeamLabel(fixture.home_team_id, fixture.home_team?.name ?? "Unknown"),
         "Away Team": getTeamLabel(fixture.away_team_id, fixture.away_team?.name ?? "BYE"),
-        Venue: fixture.venue?.name ?? "TBD",
+        Venue: getFixtureLocationLabel(fixture),
         Round: fixture.round_number ?? "",
         Status: fixture.status,
         "Home Score": fixture.home_score ?? "",
@@ -815,7 +829,8 @@ const FixturesManagement = () => {
                   {displayFixtures.map((fixture) => {
                     const date = fixture.fixture_date ? new Date(fixture.fixture_date) : null;
                     const tz = "Australia/Melbourne";
-                    const venueName = fixture.venue?.name ?? "TBD";
+                    const isBye = isByeFixture(fixture);
+                    const venueName = getFixtureLocationLabel(fixture);
                     const statusLabel = formatStatusLabel(fixture.status);
 
                     return (
@@ -825,7 +840,7 @@ const FixturesManagement = () => {
                             <div className="flex flex-col">
                               <span>{date.toLocaleDateString("en-AU", { day: "2-digit", month: "short", timeZone: tz })}</span>
                               <span className="text-xs text-muted-foreground">
-                                {date.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: tz })}
+                                {isBye ? "Round date" : date.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: tz })}
                               </span>
                             </div>
                           ) : "TBD"}
@@ -1203,7 +1218,7 @@ const FixturesManagement = () => {
                         })
                       : "TBD"}
                   </span>
-                  <span>{detailsFixture?.venue?.name ?? "TBD"}</span>
+                  <span>{detailsFixture ? getFixtureLocationLabel(detailsFixture) : "TBD"}</span>
                 </div>
                 <div className="flex items-center justify-between font-display text-lg">
                   <span className="font-semibold">{detailsFixture?.home_team?.name ?? "Unknown"}</span>

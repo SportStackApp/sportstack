@@ -76,6 +76,15 @@ def is_bye_match(match: dict) -> bool:
     )
 
 
+def bye_fixture_notes(match: dict) -> str:
+    """Describe a bye without pretending it has a match venue or start time."""
+    raw_data = match.get("raw_data") or {}
+    locations = clean(raw_data.get("bye_round_locations"))
+    if locations:
+        return f"BYE — Round locations: {locations}"
+    return "BYE"
+
+
 def load_mappings(client: Any) -> dict[str, Any]:
     entities = fetch_all(
         client,
@@ -230,6 +239,12 @@ def build_rows(matches: list[dict], mappings: dict[str, Any]) -> tuple[list[dict
         season_id = mappings["season_by_competition"].get(competition_id)
         resolved_fixture_date = fixture_datetime(match)
 
+        if is_bye:
+            if resolved_fixture_date:
+                stats["bye_date_resolved"] += 1
+            if clean((match.get("raw_data") or {}).get("bye_round_locations")):
+                stats["bye_locations_recorded"] += 1
+
         if competition_id:
             stats["competition_resolved"] += 1
         else:
@@ -288,7 +303,7 @@ def build_rows(matches: list[dict], mappings: dict[str, Any]) -> tuple[list[dict
         home_score = int_or_none(match.get("home_score"))
         away_score = int_or_none(match.get("away_score"))
 
-        rows.append({
+        fixture_row = {
             "home_team_id": home_team_id,
             "away_team_id": away_team_id,
             "venue_id": venue_id,
@@ -303,7 +318,10 @@ def build_rows(matches: list[dict], mappings: dict[str, Any]) -> tuple[list[dict
             "round_name": match.get("round_name"),
             "revsports_match_url": match.get("match_url"),
             "updated_at": datetime.now(UTC).isoformat(),
-        })
+        }
+        if is_bye:
+            fixture_row["notes"] = bye_fixture_notes(match)
+        rows.append(fixture_row)
         if is_bye:
             stats["byes"] += 1
         stats["resolved"] += 1

@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import unittest
 
-from scraper.scraper import build_external_entity_rows
+from bs4 import BeautifulSoup
+
+from scraper.scraper import (
+    build_external_entity_rows,
+    extract_round_card_details,
+    infer_bye_round_context,
+)
 from scripts.import_revsports_fixtures_v2 import build_rows
 
 
@@ -98,6 +104,87 @@ class RevSportsFixtureV2Tests(unittest.TestCase):
         self.assertEqual(1, stats["venue_from_pitch_field"])
         self.assertEqual(0, stats["missing_venue"])
         self.assertEqual(0, stats["missing_pitch"])
+
+    def test_round_card_uses_the_linked_venue_name_over_malformed_text(self) -> None:
+        card = BeautifulSoup(
+            """
+            <div>
+              <span>Sun 28 Jun 2026</span><span>15:30</span>
+              <span>In8n</span>
+              <a href="/hockeyballarat/venues/26298/18277">Prince of Wales Park</a>
+              <a href="/hockeyballarat/games/team/26298/417795">Bobcats Women</a>
+            </div>
+            """,
+            "html.parser",
+        ).div
+
+        details = extract_round_card_details(
+            card,
+            "https://www.revolutionise.com.au/hockeyballarat/games/26298/14931",
+        )
+
+        self.assertEqual("Prince of Wales Park", details["round_venue"])
+        self.assertEqual("", details["round_pitch"])
+
+    def test_bye_context_infers_unique_date_and_location(self) -> None:
+        context = infer_bye_round_context([
+            {
+                "round_date": "2026-08-01",
+                "round_venue": "Test Venue",
+                "round_pitch": "Pitch 1",
+                "round_venue_url": "https://example.test/venue/1",
+                "round_venue_id": "venue-source-1",
+            },
+            {
+                "round_date": "2026-08-01",
+                "round_venue": "Test Venue",
+                "round_pitch": "Pitch 1",
+                "round_venue_url": "https://example.test/venue/1",
+                "round_venue_id": "venue-source-1",
+            },
+        ])
+
+        self.assertEqual("2026-08-01", context["round_date"])
+        self.assertEqual("Test Venue", context["round_venue"])
+        self.assertEqual("Pitch 1", context["round_pitch"])
+        self.assertEqual("Test Venue — Pitch 1", context["bye_round_locations"])
+        self.assertTrue(context["bye_context_inferred"])
+
+    def test_bye_context_records_ambiguous_locations_without_inventing_one(self) -> None:
+        context = infer_bye_round_context([
+            {"round_date": "2026-08-01", "round_venue": "Venue A", "round_pitch": "Pitch 1"},
+            {"round_date": "2026-08-01", "round_venue": "Venue B", "round_pitch": "Pitch 2"},
+        ])
+
+        self.assertEqual("2026-08-01", context["round_date"])
+        self.assertEqual("", context["round_venue"])
+        self.assertEqual("", context["round_pitch"])
+        self.assertEqual("Venue A — Pitch 1; Venue B — Pitch 2", context["bye_round_locations"])
+
+    def test_bye_imports_inferred_date_location_and_round_location_notes(self) -> None:
+        rows, skipped, stats = build_rows([
+            match_row(
+                match_url="revsports-bye|test|round-5",
+                game_time=None,
+                away_team_name=None,
+                away_revsports_team_id=None,
+                home_score=None,
+                away_score=None,
+                raw_data={
+                    "is_bye": True,
+                    "bye_round_locations": "Test Venue — Pitch 1",
+                    "bye_context_inferred": True,
+                },
+            )
+        ], complete_mappings())
+
+        self.assertEqual([], skipped)
+        self.assertIsNotNone(rows[0]["fixture_date"])
+        self.assertEqual("venue-id", rows[0]["venue_id"])
+        self.assertEqual("pitch-id", rows[0]["pitch_id"])
+        self.assertEqual("BYE — Round locations: Test Venue — Pitch 1", rows[0]["notes"])
+        self.assertEqual(1, stats["bye_date_resolved"])
+        self.assertEqual(1, stats["bye_locations_recorded"])
 
     def test_bye_keeps_home_team_and_allows_no_date_or_away_team(self) -> None:
         rows, skipped, stats = build_rows([

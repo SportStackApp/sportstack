@@ -93,6 +93,8 @@ OUTPUT_COLUMNS = [
     "home_score",
     "away_score",
     "is_bye",
+    "bye_round_locations",
+    "bye_context_inferred",
     "umpire_1",
     "umpire_2",
     "team_side",
@@ -1336,6 +1338,7 @@ def extract_round_card_details(card, round_url: str) -> dict:
     if card is None:
         return details
 
+    linked_venue_name = ""
     for hidden in card.select(".d-none, .d-lg-none"):
         hidden.decompose()
 
@@ -1348,6 +1351,7 @@ def extract_round_card_details(card, round_url: str) -> dict:
                 details["team_labels"].append(label)
         elif path_matches(href, r"/venues/\d+/\d+$"):
             details["round_venue_url"] = href
+            linked_venue_name = clean_text(a.get_text(" ", strip=True))
             venue_match = re.search(r"/venues/\d+/(\d+)$", urlparse(href).path)
             if venue_match:
                 details["round_venue_id"] = venue_match.group(1)
@@ -1418,6 +1422,13 @@ def extract_round_card_details(card, round_url: str) -> dict:
             cleaned_location[0], cleaned_location[1] if len(cleaned_location) > 1 else None
         )
 
+    # The venue link is more reliable than surrounding display text. Some
+    # RevSports cards contain a malformed label before the actual venue name.
+    if linked_venue_name:
+        if clean_text(details["round_pitch"]).casefold() == clean_text(linked_venue_name).casefold():
+            details["round_pitch"] = ""
+        details["round_venue"] = linked_venue_name
+
     return details
 
 
@@ -1487,6 +1498,50 @@ def extract_bye_entries(soup: BeautifulSoup, round_url: str) -> list[dict]:
     return entries
 
 
+def infer_bye_round_context(games: list[dict]) -> dict:
+    """Infer only round context shared by the normal games beside a bye."""
+    normal_games = [game for game in games if not game.get("is_bye")]
+
+    def unique_values(field: str) -> list[str]:
+        values: list[str] = []
+        seen: set[str] = set()
+        for game in normal_games:
+            value = clean_text(game.get(field))
+            key = value.casefold()
+            if value and key not in seen:
+                seen.add(key)
+                values.append(value)
+        return values
+
+    dates = unique_values("round_date")
+    venues = unique_values("round_venue")
+    pitches = unique_values("round_pitch")
+    venue_urls = unique_values("round_venue_url")
+    venue_ids = unique_values("round_venue_id")
+
+    locations: list[str] = []
+    seen_locations: set[str] = set()
+    for game in normal_games:
+        venue = clean_text(game.get("round_venue"))
+        pitch = clean_text(game.get("round_pitch"))
+        location = " — ".join(part for part in (venue, pitch) if part)
+        key = location.casefold()
+        if location and key not in seen_locations:
+            seen_locations.add(key)
+            locations.append(location)
+
+    return {
+        "round_date": dates[0] if len(dates) == 1 else "",
+        "round_time": "",
+        "round_venue": venues[0] if len(venues) == 1 else "",
+        "round_pitch": pitches[0] if len(venues) == 1 and len(pitches) == 1 else "",
+        "round_venue_url": venue_urls[0] if len(venue_urls) == 1 else "",
+        "round_venue_id": venue_ids[0] if len(venue_ids) == 1 else "",
+        "bye_round_locations": "; ".join(locations),
+        "bye_context_inferred": bool(dates or locations),
+    }
+
+
 def get_game_links(session: requests.Session, round_url: str) -> list[dict]:
     try:
         soup = get_soup(session, round_url)
@@ -1508,8 +1563,9 @@ def get_game_links(session: requests.Session, round_url: str) -> list[dict]:
             card_details = extract_round_card_details(fixture_card, round_url)
             games.append({"game_url": href, **card_details})
 
+    bye_round_context = infer_bye_round_context(games)
     for bye in extract_bye_entries(soup, round_url):
-        games.append({"is_bye": True, **bye})
+        games.append({"is_bye": True, **bye_round_context, **bye})
 
     return games
 
@@ -1778,12 +1834,14 @@ def scrape_bye_match(session: requests.Session, game_info: dict, grade: dict, rn
 
     return {
         "url": match_url,
-        "date": "",
+        "date": clean_text(game_info.get("round_date")),
         "time": "",
-        "venue": "",
-        "pitch": "",
-        "round_venue_url": "",
-        "round_venue_id": "",
+        "venue": clean_text(game_info.get("round_venue")),
+        "pitch": clean_text(game_info.get("round_pitch")),
+        "round_venue_url": clean_text(game_info.get("round_venue_url")),
+        "round_venue_id": clean_text(game_info.get("round_venue_id")),
+        "bye_round_locations": clean_text(game_info.get("bye_round_locations")),
+        "bye_context_inferred": bool(game_info.get("bye_context_inferred")),
         "home_club_name": team["club_name"],
         "home_team": team["team_name"],
         "home_team_label": team["team_label"],
@@ -1835,6 +1893,8 @@ def base_fixture_row(association: str, grade: dict, rnd: dict, match: dict, game
         "home_score": match.get("home_score", ""),
         "away_score": match.get("away_score", ""),
         "is_bye": bool_text(match.get("is_bye", False)),
+        "bye_round_locations": match.get("bye_round_locations", ""),
+        "bye_context_inferred": bool_text(match.get("bye_context_inferred", False)),
         "umpire_1": match.get("umpires", [""])[0] if len(match.get("umpires", [])) > 0 else "",
         "umpire_2": match.get("umpires", ["", ""])[1] if len(match.get("umpires", [])) > 1 else "",
         "match_url": game_url,
