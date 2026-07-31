@@ -163,26 +163,27 @@ class RevSportsFixtureV2Tests(unittest.TestCase):
 
     def test_bye_imports_inferred_date_location_and_round_location_notes(self) -> None:
         rows, skipped, stats = build_rows([
+            match_row(match_url="https://example.test/match/normal"),
             match_row(
                 match_url="revsports-bye|test|round-5",
+                game_date=None,
                 game_time=None,
+                venue_name=None,
+                pitch_name=None,
                 away_team_name=None,
                 away_revsports_team_id=None,
                 home_score=None,
                 away_score=None,
-                raw_data={
-                    "is_bye": True,
-                    "bye_round_locations": "Test Venue — Pitch 1",
-                    "bye_context_inferred": True,
-                },
+                raw_data={"is_bye": True},
             )
         ], complete_mappings())
 
         self.assertEqual([], skipped)
-        self.assertIsNotNone(rows[0]["fixture_date"])
-        self.assertEqual("venue-id", rows[0]["venue_id"])
-        self.assertEqual("pitch-id", rows[0]["pitch_id"])
-        self.assertEqual("BYE — Round locations: Test Venue — Pitch 1", rows[0]["notes"])
+        bye_row = next(row for row in rows if row["revsports_match_url"].startswith("revsports-bye|"))
+        self.assertIsNotNone(bye_row["fixture_date"])
+        self.assertEqual("venue-id", bye_row["venue_id"])
+        self.assertEqual("pitch-id", bye_row["pitch_id"])
+        self.assertEqual("BYE — Round locations: Test Venue — Pitch 1", bye_row["notes"])
         self.assertEqual(1, stats["bye_date_resolved"])
         self.assertEqual(1, stats["bye_locations_recorded"])
 

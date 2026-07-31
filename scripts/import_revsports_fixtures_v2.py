@@ -85,6 +85,81 @@ def bye_fixture_notes(match: dict) -> str:
     return "BYE"
 
 
+def enrich_bye_round_context(matches: list[dict]) -> list[dict]:
+    """Fill bye context from normal games in the same grade and round."""
+    games_by_round: dict[tuple[str, str, str, str], list[dict]] = {}
+    for match in matches:
+        if is_bye_match(match):
+            continue
+        key = (
+            normalise(match.get("association_name")),
+            normalise(match.get("competition_name")),
+            normalise(match.get("grade")),
+            normalise(match.get("round_name")),
+        )
+        games_by_round.setdefault(key, []).append(match)
+
+    def unique_values(rows: list[dict], field: str) -> list[str]:
+        values: list[str] = []
+        seen: set[str] = set()
+        for row in rows:
+            value = clean(row.get(field))
+            key = normalise(value)
+            if value and key not in seen:
+                seen.add(key)
+                values.append(value)
+        return values
+
+    enriched: list[dict] = []
+    for match in matches:
+        if not is_bye_match(match):
+            enriched.append(match)
+            continue
+
+        key = (
+            normalise(match.get("association_name")),
+            normalise(match.get("competition_name")),
+            normalise(match.get("grade")),
+            normalise(match.get("round_name")),
+        )
+        round_games = games_by_round.get(key, [])
+        dates = unique_values(round_games, "game_date")
+        venues = unique_values(round_games, "venue_name")
+        pitches = unique_values(round_games, "pitch_name")
+
+        locations: list[str] = []
+        seen_locations: set[str] = set()
+        for game in round_games:
+            venue = clean(game.get("venue_name"))
+            pitch = clean(game.get("pitch_name"))
+            location = " — ".join(part for part in (venue, pitch) if part)
+            location_key = normalise(location)
+            if location and location_key not in seen_locations:
+                seen_locations.add(location_key)
+                locations.append(location)
+
+        resolved = dict(match)
+        if not clean(resolved.get("game_date")) and len(dates) == 1:
+            resolved["game_date"] = dates[0]
+        if not clean(resolved.get("venue_name")) and len(venues) == 1:
+            resolved["venue_name"] = venues[0]
+        if (
+            not clean(resolved.get("pitch_name"))
+            and len(venues) == 1
+            and len(pitches) == 1
+        ):
+            resolved["pitch_name"] = pitches[0]
+
+        raw_data = dict(resolved.get("raw_data") or {})
+        if locations:
+            raw_data["bye_round_locations"] = "; ".join(locations)
+            raw_data["bye_context_inferred"] = True
+        resolved["raw_data"] = raw_data
+        enriched.append(resolved)
+
+    return enriched
+
+
 def load_mappings(client: Any) -> dict[str, Any]:
     entities = fetch_all(
         client,
@@ -221,6 +296,7 @@ def resolve_venue_and_pitch(match: dict, mappings: dict[str, Any]) -> tuple[str 
 
 
 def build_rows(matches: list[dict], mappings: dict[str, Any]) -> tuple[list[dict], list[dict], Counter]:
+    matches = enrich_bye_round_context(matches)
     rows: list[dict] = []
     skipped: list[dict] = []
     stats: Counter = Counter(scanned=len(matches))
