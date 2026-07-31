@@ -87,6 +87,18 @@ class RevSportsFixtureV2Tests(unittest.TestCase):
         self.assertIn("missing_season_mapping", skipped[0]["reason"])
         self.assertEqual(1, stats["skipped_missing_season_mapping"])
 
+    def test_known_venue_in_pitch_field_recovers_malformed_location(self) -> None:
+        rows, skipped, stats = build_rows([
+            match_row(venue_name="Malformed value", pitch_name="Test Venue")
+        ], complete_mappings())
+
+        self.assertEqual([], skipped)
+        self.assertEqual("venue-id", rows[0]["venue_id"])
+        self.assertIsNone(rows[0]["pitch_id"])
+        self.assertEqual(1, stats["venue_from_pitch_field"])
+        self.assertEqual(0, stats["missing_venue"])
+        self.assertEqual(0, stats["missing_pitch"])
+
     def test_bye_keeps_home_team_and_allows_no_date_or_away_team(self) -> None:
         rows, skipped, stats = build_rows([
             match_row(

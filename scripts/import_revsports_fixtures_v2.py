@@ -189,6 +189,28 @@ def team_is_in_division(team_id: str | None, division_id: str | None, mappings: 
     return division_id in mappings["division_ids_by_team"].get(team_id, set())
 
 
+def resolve_venue_and_pitch(match: dict, mappings: dict[str, Any]) -> tuple[str | None, str | None, bool]:
+    """Resolve location fields, including RevSports rows with the venue in the pitch field."""
+    association = normalise(match.get("association_name"))
+    venue_name = normalise(match.get("venue_name"))
+    pitch_name = normalise(match.get("pitch_name"))
+
+    venue_id = mappings["venues_by_context"].get((association, venue_name))
+    pitch_id = mappings["pitches_by_context"].get((association, venue_name, pitch_name))
+    used_pitch_as_venue = False
+
+    # Some RevSports pages put a valid venue name in the pitch field and a
+    # malformed display value in the venue field. Only use this fallback when
+    # the pitch value exactly matches a known venue for the same association.
+    if not venue_id and pitch_name:
+        venue_id = mappings["venues_by_context"].get((association, pitch_name))
+        if venue_id:
+            pitch_id = None
+            used_pitch_as_venue = True
+
+    return venue_id, pitch_id, used_pitch_as_venue
+
+
 def build_rows(matches: list[dict], mappings: dict[str, Any]) -> tuple[list[dict], list[dict], Counter]:
     rows: list[dict] = []
     skipped: list[dict] = []
@@ -204,12 +226,7 @@ def build_rows(matches: list[dict], mappings: dict[str, Any]) -> tuple[list[dict
         grade = normalise(match.get("grade"))
         competition_id = mappings["competitions_by_context"].get((association, competition))
         division_id = mappings["divisions_by_context"].get((association, competition, grade))
-        venue_id = mappings["venues_by_context"].get((association, normalise(match.get("venue_name"))))
-        pitch_id = mappings["pitches_by_context"].get((
-            association,
-            normalise(match.get("venue_name")),
-            normalise(match.get("pitch_name")),
-        ))
+        venue_id, pitch_id, used_pitch_as_venue = resolve_venue_and_pitch(match, mappings)
         season_id = mappings["season_by_competition"].get(competition_id)
         resolved_fixture_date = fixture_datetime(match)
 
@@ -223,11 +240,13 @@ def build_rows(matches: list[dict], mappings: dict[str, Any]) -> tuple[list[dict
             stats["missing_division"] += 1
         if venue_id:
             stats["venue_resolved"] += 1
+            if used_pitch_as_venue:
+                stats["venue_from_pitch_field"] += 1
         else:
             stats["missing_venue"] += 1
         if pitch_id:
             stats["pitch_resolved"] += 1
-        elif clean(match.get("pitch_name")):
+        elif clean(match.get("pitch_name")) and not used_pitch_as_venue:
             stats["missing_pitch"] += 1
         if season_id:
             stats["season_resolved"] += 1
