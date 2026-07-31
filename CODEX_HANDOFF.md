@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-07-31
+Last updated: 2026-08-01
 
 Future agents should start by reading these files in order:
 
@@ -23,9 +23,12 @@ Future agents should start by reading these files in order:
 - The isolated dry-run rebuilt 157 live Production history records as empty temporary placeholders
   and confirmed only the two approved Umpire Portal migrations are pending. This prevents older
   filename drift from replaying historical migrations.
-- Vercel access remains pending because Aaron must complete the provider's browser authentication.
-  After that login, create the scoped team token, finish the encrypted access file and run the
-  read-only Production preflight.
+- Vercel browser authentication is complete. A verified 30-day SportStack team token is stored in
+  the existing Windows-encrypted Production access file outside the repository. Direct Vercel API
+  and CLI project checks both passed without exposing the token.
+- The complete Production preflight currently stops at its first safety gate because
+  `scraper/fixture_import.py` contains unfinished local merge-conflict text. No Production action
+  was attempted.
 - The public Umpire Portal frontend remains on `dev` and `main` only. Production Supabase, Vercel
   settings and `prod` remain unchanged pending the access preflight and approved release execution.
 - The fault-tolerant fixture scraper and match-duration package was promoted through `dev`, `main`
@@ -68,6 +71,14 @@ Future agents should start by reading these files in order:
   catches up after missed runs. It reads `origin/dev`, so feature branches and uncommitted files
   cannot become the published record.
 
+## Active development order
+
+- The locked 14-block order is recorded in `docs/development-plan.md`.
+- Block 1 is the safe recovery and verification of the unfinished RevSports importer.
+- Block 2 is the prepared Umpire Portal release. Its future address is
+  `hb.sportstackapp.com.au`, but connecting the domain, changing DNS and promoting Production remain
+  separately approval-gated.
+
 ## Local repository cleanup
 
 - The previous eight local stashes were preserved in the verified bundle
@@ -76,9 +87,9 @@ Future agents should start by reading these files in order:
 
 ## Best next owner test
 
-1. Complete Vercel browser authentication, create the scoped Vercel token, finish the encrypted
-   local access file and run the read-only Production preflight.
-2. Complete the approved Umpire Portal Production release, then smoke-test both Umpire Portal login
+1. Resolve and verify the unfinished RevSports importer without discarding valid local work, then
+   rerun the read-only Production preflight.
+2. After the required Production approval, complete the Umpire Portal release and smoke-test both login
    choices and one clearly marked test ballot.
 3. Complete the wider signed-in Production smoke test for Dashboard, Communications, availability,
    Profile, Player MVP administration, Umpire Match Voting administration and key admin pages.

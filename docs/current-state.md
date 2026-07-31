@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-07-30
+Last updated: 2026-08-01
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -134,6 +134,41 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 After each Codex task, update this section or append a dated entry below.
 
 ### Latest handoff entry
+
+Date: 2026-08-01
+
+What changed:
+
+- Recovered and locked the 14-block development order in `docs/development-plan.md` so the same
+  order is available in the repository and generated Obsidian mirror.
+- Confirmed `hb.sportstackapp.com.au` is the future SportStack Umpire Portal address. No domain,
+  DNS, redirect or Production change has been made.
+- Completed Vercel browser authentication and securely stored a verified 30-day SportStack team
+  token in the Windows-encrypted access file outside the repository.
+- Direct read-only Vercel API and CLI checks both confirmed access to the `sportstack` project.
+- The full Umpire Portal preflight correctly stopped at the dirty-working-tree gate because
+  `scraper/fixture_import.py` still contains unfinished local merge-conflict text.
+
+Checks run:
+
+- Vercel project API access passed for the exact SportStack team and project IDs.
+- `vercel project inspect` passed with the encrypted team token.
+- The Production release preflight made no Production change and stopped before provider checks
+  when it detected the dirty working tree.
+- Obsidian start-of-work sync completed successfully from `origin/dev` at `9cd5a87`.
+
+What Aaron should test next:
+
+- No owner test is required for the documentation or encrypted authentication setup.
+- After the RevSports importer is safely recovered, rerun the complete read-only Umpire Portal
+  Production preflight.
+
+Risk level:
+
+- Low. Documentation and encrypted local authentication only. No migration, database write,
+  deployment, DNS change or Production change is included.
+
+### Previous handoff entry
 
 Date: 2026-07-31
 
