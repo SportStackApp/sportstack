@@ -83,24 +83,37 @@ interface NavSection {
 
 const ADMIN_DROPDOWN_SECTIONS: NavSection[] = [
   {
-    heading: "Core Admin",
+    heading: "Overview",
     items: [
-      { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
+      { path: "/admin", label: "Admin Dashboard", icon: LayoutDashboard },
+      { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
+    ],
+  },
+  {
+    heading: "Organisation",
+    items: [
       { path: "/admin/associations", label: "Associations", icon: Globe },
+      { path: "/admin/competitions", label: "Competitions", icon: Trophy },
       { path: "/admin/clubs", label: "Clubs", icon: Building2 },
       { path: "/admin/divisions", label: "Divisions", icon: Layers },
-      { path: "/admin/users", label: "Users", icon: UserCog },
       { path: "/admin/teams", label: "Teams", icon: Shield },
-      { path: "/admin/requests", label: "Requests", icon: ClipboardList },
-      { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
       { path: "/admin/venues", label: "Venues", icon: MapPin },
+    ],
+  },
+  {
+    heading: "People & Access",
+    items: [
+      { path: "/admin/users", label: "Users", icon: UserCog },
+      { path: "/admin/requests", label: "Requests", icon: ClipboardList },
       { path: "/admin/roles-permissions", label: "Roles & permissions", icon: Shield },
     ],
   },
   {
     heading: "Data Quality",
     items: [
-      { path: "/admin/revsports-entities", label: "RevSports Mapping Review", icon: GitMerge },
+      { path: "/admin/bulk-import", label: "Bulk Import", icon: GitMerge },
+      { path: "/admin/fixture-import", label: "Fixture Import", icon: Calendar },
+      { path: "/admin/revsports-entities", label: "RevSports Review", icon: GitMerge },
       { path: "/admin/revsports-mappings", label: "Legacy Direct Mappings", icon: GitMerge },
       { path: "/admin/revsports-unmatched", label: "Legacy Unmatched Queue", icon: AlertTriangle },
     ],
@@ -115,9 +128,9 @@ const ADMIN_DROPDOWN_SECTIONS: NavSection[] = [
   {
     heading: "Voting",
     items: [
-      { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
-      { path: "/admin/umpire-voting", label: "Umpire Voting", icon: Vote },
-      { path: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+      { path: "/admin/mvp-voting", label: "Player MVP Voting", icon: Trophy },
+      { path: "/admin/umpire-voting", label: "Umpire Match Voting", icon: Vote },
+      { path: "/admin/analytics", label: "Voting Analytics", icon: BarChart3 },
     ],
   },
   {
@@ -134,17 +147,17 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
     {
       heading: "Core",
       items: [
-        { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/admin", label: "Admin Dashboard", icon: LayoutDashboard },
         { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
         { path: "/chat", label: "Communications", icon: MessageCircle },
       ],
     },
     {
-      heading: "MVP Voting",
+      heading: "Voting",
       items: [
-        { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
-        { path: "/admin/umpire-voting", label: "Umpire Voting", icon: Vote },
-        { path: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+        { path: "/admin/mvp-voting", label: "Player MVP Voting", icon: Trophy },
+        { path: "/admin/umpire-voting", label: "Umpire Match Voting", icon: Vote },
+        { path: "/admin/analytics", label: "Voting Analytics", icon: BarChart3 },
       ],
     },
     {
@@ -157,15 +170,15 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Coaching",
       items: [
         { path: "/coaching", label: "Squad", icon: ClipboardCheck },
-        { path: "/coaching/formations", label: "Formations", icon: LayoutGrid },
-        { path: "/coaching/trace", label: "Trace Lab", icon: Radar },
+        { path: "/coaching/formations", label: "Formation Library", icon: LayoutGrid },
         { path: "/roster", label: "Roster", icon: Users },
+        { path: "/coaching/trace", label: "Hockey Trace Lab", icon: Radar },
       ],
     },
     {
       heading: "Umpiring",
       items: [
-        { path: "/umpire/vote", label: "Vote Submission", icon: ClipboardList },
+        { path: "/umpire/vote", label: "Umpire Match Ballot", icon: ClipboardList },
       ],
     },
     {
@@ -186,16 +199,17 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
     {
       heading: "Core",
       items: [
-        { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/admin", label: "Admin Dashboard", icon: LayoutDashboard },
         { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
+        { path: "/chat", label: "Communications", icon: MessageCircle },
       ],
     },
     {
-      heading: "MVP Voting",
+      heading: "Voting",
       items: [
-        { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
-        { path: "/admin/umpire-voting", label: "Umpire Voting", icon: Vote },
-        { path: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+        { path: "/admin/mvp-voting", label: "Player MVP Voting", icon: Trophy },
+        { path: "/admin/umpire-voting", label: "Umpire Match Voting", icon: Vote },
+        { path: "/admin/analytics", label: "Voting Analytics", icon: BarChart3 },
       ],
     },
     {
@@ -221,14 +235,15 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
     {
       heading: "Core",
       items: [
-        { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/admin", label: "Admin Dashboard", icon: LayoutDashboard },
         { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
+        { path: "/chat", label: "Communications", icon: MessageCircle },
       ],
     },
     {
-      heading: "MVP Voting",
+      heading: "Voting",
       items: [
-        { path: "/admin/mvp-voting", label: "Voting Sessions", icon: Trophy },
+        { path: "/admin/mvp-voting", label: "Player MVP Voting", icon: Trophy },
       ],
     },
     {
@@ -252,24 +267,24 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Core",
       items: [
         { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { path: "/mvp-votes", label: "MVP Votes", icon: Vote },
         { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/chat", label: "Communications", icon: MessageCircle },
+        { path: "/mvp-votes", label: "Player MVP", icon: Vote },
       ],
     },
     {
-      heading: "MVP Voting",
+      heading: "Voting",
       items: [
-        { path: "/admin/mvp-voting", label: "Manage Voting", icon: Trophy },
+        { path: "/admin/mvp-voting", label: "Manage Player MVP", icon: Trophy },
       ],
     },
     {
       heading: "Coaching",
       items: [
+        { path: "/coaching", label: "Squad", icon: ClipboardCheck },
+        { path: "/coaching/formations", label: "Formation Library", icon: LayoutGrid },
         { path: "/roster", label: "Roster", icon: Users },
-        { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
-        { path: "/coaching/formations", label: "Formations", icon: LayoutGrid },
-        { path: "/coaching/trace", label: "Trace Lab", icon: Radar },
+        { path: "/coaching/trace", label: "Hockey Trace Lab", icon: Radar },
       ],
     },
   ],
@@ -278,13 +293,47 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Core",
       items: [
         { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { path: "/mvp-votes", label: "MVP Votes", icon: Vote },
         { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/chat", label: "Communications", icon: MessageCircle },
+        { path: "/mvp-votes", label: "Player MVP", icon: Vote },
+      ],
+    },
+    {
+      heading: "Umpiring",
+      items: [
+        { path: "/umpire/vote", label: "Umpire Match Ballot", icon: ClipboardList },
       ],
     },
   ],
 };
+
+const ASSOCIATION_ADMIN_DROPDOWN_PATHS = new Set([
+  "/admin",
+  "/admin/competitions",
+  "/admin/clubs",
+  "/admin/divisions",
+  "/admin/teams",
+  "/admin/fixtures",
+  "/admin/venues",
+  "/admin/users",
+  "/admin/requests",
+  "/admin/feedback",
+  "/admin/mvp-voting",
+  "/admin/umpire-voting",
+  "/admin/analytics",
+  "/admin/safety-risk",
+]);
+
+const CLUB_ADMIN_DROPDOWN_PATHS = new Set([
+  "/admin",
+  "/admin/divisions",
+  "/admin/teams",
+  "/admin/fixtures",
+  "/admin/users",
+  "/admin/requests",
+  "/admin/mvp-voting",
+  "/admin/safety-risk",
+]);
 
 const MOBILE_NAV: Record<AppMode, NavItem[]> = {
   super_admin: NAV_SETS.super_admin[0].items.slice(0, 4),
@@ -824,6 +873,7 @@ const AppLayout = () => {
     items: section.items.filter((item) => {
       if (isVoterOnly && !["/dashboard", "/mvp-votes"].includes(item.path)) return false;
       if (isBrandNewUser && item.path !== "/dashboard") return false;
+      if (item.path === "/umpire/vote" && !roles.some((role) => role === "UMPIRE" || role === "SUPER_ADMIN")) return false;
       if (selectedAssociationId && item.path === "/admin/associations") return false;
       if (selectedClubId && item.path === "/admin/clubs") return false;
       if (selectedTeamId && item.path === "/admin/teams") return false;
@@ -868,11 +918,8 @@ const AppLayout = () => {
     ...section,
     items: section.items.filter((item) => {
       if (!showAdminDropdown) return false;
-      if (item.path === "/admin/error-logs" && mode !== "super_admin") return false;
-      if (item.path === "/admin/roles-permissions" && mode !== "super_admin") return false;
-      if (item.path === "/admin/feedback" && mode === "club") return false;
-      if (section.heading === "Data Quality" && mode !== "super_admin") return false;
-      if (section.heading === "Voting" && mode === "club") return false;
+      if (mode === "association" && !ASSOCIATION_ADMIN_DROPDOWN_PATHS.has(item.path)) return false;
+      if (mode === "club" && !CLUB_ADMIN_DROPDOWN_PATHS.has(item.path)) return false;
       return true;
     }),
   })).filter((section) => section.items.length > 0);

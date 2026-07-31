@@ -90,6 +90,10 @@ Future agents should start by reading these files in order:
   Umpire Portal inside this SportStack app, with safe hostname routing, origin preparation and a
   live-rollout checklist in `docs/domain-migration-plan.md`. Vercel, DNS, Supabase Auth, Turnstile,
   redirects and Production are unchanged and approval-gated.
+- Block 5 is implemented on Dev pending owner smoke testing. Signed-in menus now follow a consistent
+  everyday workflow, expose existing competition and import pages to Super Admin, explicitly scope
+  association and club admin choices, and use separate Player MVP Voting and Umpire Match Voting
+  names. The route inventory and contextual-page decisions are in `docs/navigation-audit.md`.
 - Do not merge or cherry-pick `chore/domain-structure` commit `3a7d6cc`; it contains the superseded
   assumption that `hb` belongs to the separate ignored Hockey Ballarat module. The corrected work
   is being landed directly on `dev`.

@@ -51,11 +51,16 @@ preserves the normal home page on every other hostname. Edge Function origin, em
 and environment-label preparation is complete. Live Vercel, DNS, Supabase Auth, Turnstile,
 deployment and redirect work has not started and still needs explicit approval.
 
-## 5. Navigation and menus
+## 5. Navigation and menus — implemented on Dev, owner smoke pending
 
 - Review every route, menu item and permission.
 - Put everyday tasks first and group related tools logically.
 - Keep desktop and mobile navigation clean, current and consistent.
+
+The signed-in menus now use a consistent everyday workflow, separate Player MVP Voting from
+Umpire Match Voting, expose the existing competition and import pages to the correct administrators,
+and keep detail/build screens contextual. Association and club menu choices are explicitly scoped;
+page checks, RLS and Edge Functions remain the security boundary.
 
 ## 6. Dashboard and availability
 

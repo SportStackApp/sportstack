@@ -132,6 +132,8 @@ Treat these as current caution areas unless a newer live check proves otherwise:
   a GitHub workflow that can select Production targets, so it has not been promoted to `main`.
 - Formation/Lineup private-page browser smoke testing still needs an owner login. Signed-out local
   browser checks passed with no Vite overlay or console errors.
+- The reorganised signed-in navigation still needs an owner smoke test in Super Admin, Association
+  Admin, Club Admin, Team Manager, Player and Umpire modes.
 
 ## Current Codex handoff template
 
@@ -167,6 +169,13 @@ What changed:
   `docs/domain-migration-plan.md`.
 - Read-only checks confirmed current Production, Development, Main/staging and `www` return HTTP
   200, root still returns HTTP 307 to `www`, and `hb` still has no DNS record.
+- Reorganised signed-in navigation around everyday tasks and explicit role scope. Existing
+  competition, bulk-import and fixture-import pages are now reachable from Super Admin navigation;
+  association and club choices are deliberately restricted to their supported scope.
+- Standardised navigation names for Player MVP Voting, Umpire Match Voting and Formation Library,
+  added Communications to association and club menus, and added an Umpire-role ballot link.
+- Recorded direct and contextual route decisions in `docs/navigation-audit.md`. Menu visibility is
+  documented as a usability layer; route checks, RLS and Edge Functions remain authoritative.
 
 Checks run:
 
@@ -182,6 +191,8 @@ Checks run:
 - Domain-package focused lint, TypeScript and build passed. Deno is not installed, so standalone
   Edge Function type-checking was unavailable; focused ESLint passed for all three edited functions.
 - Full repository lint remained unchanged at 521 problems after a standalone rerun.
+- Navigation focused lint, TypeScript and production build passed. Full repository lint remained at
+  the known 521-problem legacy backlog and added no changed-file finding.
 
 What Aaron should test next:
 
@@ -192,6 +203,8 @@ What Aaron should test next:
 - If authorised for both teams, switch the line-up team and confirm each side loads independently.
 - No domain owner test is possible until the separately approved Vercel, DNS, Auth and Turnstile
   rollout. Do not connect `hb` from this repository-only package.
+- Check the desktop menu and mobile drawer in each role mode available to your account. Confirm the
+  page groups and labels are logical, then open one item from each visible group.
 
 Risk level:
 
