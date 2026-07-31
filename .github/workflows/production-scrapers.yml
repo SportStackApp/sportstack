@@ -242,7 +242,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: >-
-          python scraper/fixture_import.py --apply
+          python scripts/import_revsports_fixtures_v2.py --apply
           --association "${{ matrix.association_name }}"
           --match-url "${{ matrix.match_url }}"
 
@@ -325,12 +325,14 @@ jobs:
           python scripts/upload_scrape_backups_to_storage.py
           --source-dir "${{ matrix.output_dir }}"
           --source-name "${{ matrix.source_name }}"
-      - name: Import staged fixtures into Production
+      - name: Import mapped V2 fixtures into Production
         if: env.SOURCE_SELECTED == 'true' && env.UPLOAD_TO_SUPABASE == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: python scraper/fixture_import.py --apply
+        run: >-
+          python scripts/import_revsports_fixtures_v2.py --apply
+          --association "${{ matrix.association }}"
 
   player-registry:
     name: Player registry to Production

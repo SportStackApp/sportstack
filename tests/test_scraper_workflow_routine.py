@@ -89,6 +89,13 @@ class ScraperWorkflowRoutineTests(unittest.TestCase):
                 self.assertNotIn("pip install requests beautifulsoup4 supabase", text)
                 self.assertNotIn("pip install playwright beautifulsoup4 supabase", text)
 
+    def test_active_workflows_use_the_v2_fixture_importer(self) -> None:
+        for name in ("dev-scrapers.yml", "production-scrapers.yml"):
+            with self.subTest(workflow=name):
+                text = (WORKFLOWS / name).read_text(encoding="utf-8")
+                self.assertIn("python scripts/import_revsports_fixtures_v2.py --apply", text)
+                self.assertNotIn("python scraper/fixture_import.py --apply", text)
+
 
 if __name__ == "__main__":
     unittest.main()

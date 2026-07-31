@@ -189,12 +189,14 @@ jobs:
             --source-dir data/hockey-ballarat \
             --source-name hockey-ballarat
 
-      - name: Import staged fixtures into Dev
+      - name: Import mapped V2 fixtures into Dev
         if: env.UPLOAD_TO_SUPABASE == 'true'
         env:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
-        run: python scraper/fixture_import.py --apply
+        run: >-
+          python scripts/import_revsports_fixtures_v2.py --apply
+          --association "Hockey Ballarat"
 
   sunraysia:
     name: Sunraysia Hockey Association to Dev
@@ -241,12 +243,14 @@ jobs:
             --source-dir data/sunraysia \
             --source-name sunraysia
 
-      - name: Import staged fixtures into Dev
+      - name: Import mapped V2 fixtures into Dev
         if: env.UPLOAD_TO_SUPABASE == 'true'
         env:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
-        run: python scraper/fixture_import.py --apply
+        run: >-
+          python scripts/import_revsports_fixtures_v2.py --apply
+          --association "Sunraysia Hockey Association"
 
   wimmera:
     name: Wimmera Hockey Association to Dev
@@ -294,12 +298,14 @@ jobs:
             --source-dir data/wimmera \
             --source-name wimmera
 
-      - name: Import staged fixtures into Dev
+      - name: Import mapped V2 fixtures into Dev
         if: env.UPLOAD_TO_SUPABASE == 'true'
         env:
           SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
-        run: python scraper/fixture_import.py --apply
+        run: >-
+          python scripts/import_revsports_fixtures_v2.py --apply
+          --association "Wimmera Hockey Association"
 
   player-registry:
     name: Player registry to Dev

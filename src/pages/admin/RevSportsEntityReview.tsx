@@ -1726,12 +1726,21 @@ export default function RevSportsEntityReview() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">RevSports Entity Review</h1>
+          <h1 className="text-3xl font-bold tracking-tight">RevSports Mapping Review</h1>
           <p className="text-muted-foreground">
             Match scraped RevSports competitions, clubs, teams, players, divisions, venues, and pitches to SportStack records.
           </p>
         </div>
       </div>
+
+      <Card className="border-primary/30 bg-primary/5">
+        <CardHeader className="py-4">
+          <CardTitle className="text-base">Current RevSports mapping page</CardTitle>
+          <CardDescription>
+            Fixture imports use these mappings. Competition mappings also supply the season; player mappings are optional and do not block fixtures or results.
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as EntityType)}>
         <TabsList className="flex h-auto flex-wrap justify-start">

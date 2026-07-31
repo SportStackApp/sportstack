@@ -76,7 +76,7 @@ def is_bye_match(match: dict) -> bool:
     )
 
 
-def load_mappings(client: Any) -> dict[str, dict]:
+def load_mappings(client: Any) -> dict[str, Any]:
     entities = fetch_all(
         client,
         "external_entities",
@@ -147,6 +147,16 @@ def load_mappings(client: Any) -> dict[str, dict]:
     competitions = fetch_all(client, "competitions", "id,season_id")
     season_by_competition = {row["id"]: row.get("season_id") for row in competitions}
 
+    teams = fetch_all(client, "teams", "id,division_id")
+    team_divisions = fetch_all(client, "team_divisions", "team_id,division_id")
+    division_ids_by_team: dict[str, set[str]] = {}
+    for team in teams:
+        if team.get("id") and team.get("division_id"):
+            division_ids_by_team.setdefault(team["id"], set()).add(team["division_id"])
+    for relation in team_divisions:
+        if relation.get("team_id") and relation.get("division_id"):
+            division_ids_by_team.setdefault(relation["team_id"], set()).add(relation["division_id"])
+
     return {
         "teams_by_revsports_id": teams_by_revsports_id,
         "teams_by_context": teams_by_context,
@@ -155,10 +165,11 @@ def load_mappings(client: Any) -> dict[str, dict]:
         "venues_by_context": venues_by_context,
         "pitches_by_context": pitches_by_context,
         "season_by_competition": season_by_competition,
+        "division_ids_by_team": division_ids_by_team,
     }
 
 
-def resolve_team(match: dict, side: str, mappings: dict[str, dict]) -> str | None:
+def resolve_team(match: dict, side: str, mappings: dict[str, Any]) -> str | None:
     revsports_id = clean(match.get(f"{side}_revsports_team_id"))
     if revsports_id and revsports_id in mappings["teams_by_revsports_id"]:
         return mappings["teams_by_revsports_id"][revsports_id]
@@ -172,7 +183,13 @@ def resolve_team(match: dict, side: str, mappings: dict[str, dict]) -> str | Non
     ))
 
 
-def build_rows(matches: list[dict], mappings: dict[str, dict]) -> tuple[list[dict], list[dict], Counter]:
+def team_is_in_division(team_id: str | None, division_id: str | None, mappings: dict[str, Any]) -> bool:
+    if not team_id or not division_id:
+        return False
+    return division_id in mappings["division_ids_by_team"].get(team_id, set())
+
+
+def build_rows(matches: list[dict], mappings: dict[str, Any]) -> tuple[list[dict], list[dict], Counter]:
     rows: list[dict] = []
     skipped: list[dict] = []
     stats: Counter = Counter(scanned=len(matches))
@@ -181,20 +198,6 @@ def build_rows(matches: list[dict], mappings: dict[str, dict]) -> tuple[list[dic
         is_bye = is_bye_match(match)
         home_team_id = resolve_team(match, "home", mappings)
         away_team_id = None if is_bye else resolve_team(match, "away", mappings)
-
-        if not home_team_id or (not is_bye and not away_team_id):
-            skipped.append({
-                "match_url": match.get("match_url"),
-                "reason": "missing_team_mapping",
-                "home_team": match.get("home_team_name"),
-                "home_revsports_team_id": match.get("home_revsports_team_id"),
-                "away_team": match.get("away_team_name"),
-                "away_revsports_team_id": match.get("away_revsports_team_id"),
-                "grade": match.get("grade"),
-                "association": match.get("association_name"),
-            })
-            stats["skipped_missing_team"] += 1
-            continue
 
         association = normalise(match.get("association_name"))
         competition = normalise(match.get("competition_name"))
@@ -208,6 +211,7 @@ def build_rows(matches: list[dict], mappings: dict[str, dict]) -> tuple[list[dic
             normalise(match.get("pitch_name")),
         ))
         season_id = mappings["season_by_competition"].get(competition_id)
+        resolved_fixture_date = fixture_datetime(match)
 
         if competition_id:
             stats["competition_resolved"] += 1
@@ -230,6 +234,38 @@ def build_rows(matches: list[dict], mappings: dict[str, dict]) -> tuple[list[dic
         else:
             stats["missing_season"] += 1
 
+        blockers: list[str] = []
+        if not home_team_id or (not is_bye and not away_team_id):
+            blockers.append("missing_team_mapping")
+        if not competition_id:
+            blockers.append("missing_competition_mapping")
+        if not division_id:
+            blockers.append("missing_division_mapping")
+        if not season_id:
+            blockers.append("missing_season_mapping")
+        if not is_bye and not resolved_fixture_date:
+            blockers.append("missing_fixture_date")
+        if home_team_id and division_id and not team_is_in_division(home_team_id, division_id, mappings):
+            blockers.append("home_team_outside_division")
+        if not is_bye and away_team_id and division_id and not team_is_in_division(away_team_id, division_id, mappings):
+            blockers.append("away_team_outside_division")
+
+        if blockers:
+            for blocker in blockers:
+                stats[f"skipped_{blocker}"] += 1
+            skipped.append({
+                "match_url": match.get("match_url"),
+                "reason": ",".join(blockers),
+                "home_team": match.get("home_team_name"),
+                "home_revsports_team_id": match.get("home_revsports_team_id"),
+                "away_team": match.get("away_team_name"),
+                "away_revsports_team_id": match.get("away_revsports_team_id"),
+                "competition": match.get("competition_name"),
+                "grade": match.get("grade"),
+                "association": match.get("association_name"),
+            })
+            continue
+
         home_score = int_or_none(match.get("home_score"))
         away_score = int_or_none(match.get("away_score"))
 
@@ -240,7 +276,7 @@ def build_rows(matches: list[dict], mappings: dict[str, dict]) -> tuple[list[dic
             "pitch_id": pitch_id,
             "division_id": division_id,
             "season_id": season_id,
-            "fixture_date": fixture_datetime(match),
+            "fixture_date": resolved_fixture_date,
             "status": "SCHEDULED" if is_bye else ("COMPLETED" if home_score is not None and away_score is not None else "SCHEDULED"),
             "home_score": home_score,
             "away_score": away_score,
@@ -268,6 +304,8 @@ def upsert_fixtures(client: Any, rows: list[dict]) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--apply", action="store_true", help="Write resolved fixtures to the fixtures table.")
+    parser.add_argument("--association", help="Limit the import to one exact association name.")
+    parser.add_argument("--match-url", help="Limit the import to one exact RevSports match URL.")
     args = parser.parse_args()
 
     url = os.environ.get("SUPABASE_URL")
@@ -277,6 +315,16 @@ def main() -> None:
 
     client = create_client(url, key)
     matches = fetch_all(client, "source_revsports_matches")
+    if args.association:
+        matches = [
+            match for match in matches
+            if normalise(match.get("association_name")) == normalise(args.association)
+        ]
+    if args.match_url:
+        matches = [match for match in matches if clean(match.get("match_url")) == clean(args.match_url)]
+    if (args.association or args.match_url) and not matches:
+        raise SystemExit("No staged RevSports matches matched the requested filter.")
+
     mappings = load_mappings(client)
     rows, skipped, stats = build_rows(matches, mappings)
 
@@ -291,6 +339,10 @@ def main() -> None:
             print(sample)
 
     if args.apply:
+        if skipped:
+            raise SystemExit(
+                f"Refusing a partial fixture import: {len(skipped)} row(s) are blocked by required mappings."
+            )
         total = upsert_fixtures(client, rows)
         print("Upserted fixtures:", total)
     else:

@@ -100,9 +100,9 @@ const ADMIN_DROPDOWN_SECTIONS: NavSection[] = [
   {
     heading: "Data Quality",
     items: [
-      { path: "/admin/revsports-mappings", label: "RevSports Mappings", icon: GitMerge },
-      { path: "/admin/revsports-entities", label: "RevSports Review", icon: GitMerge },
-      { path: "/admin/revsports-unmatched", label: "Unmatched RevSports", icon: AlertTriangle },
+      { path: "/admin/revsports-entities", label: "RevSports Mapping Review", icon: GitMerge },
+      { path: "/admin/revsports-mappings", label: "Legacy Direct Mappings", icon: GitMerge },
+      { path: "/admin/revsports-unmatched", label: "Legacy Unmatched Queue", icon: AlertTriangle },
     ],
   },
   {

@@ -120,9 +120,14 @@ const RevSportsUnmatched = () => {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">RevSports — Unmatched Items</h1>
-          <p className="text-muted-foreground">Review teams or grades found by the scraper with no SportStack match yet</p>
+          <h1 className="text-3xl font-bold tracking-tight">Legacy RevSports — Unmatched Queue</h1>
+          <p className="text-muted-foreground">
+            This older queue is no longer populated. Use Mapping Review for current unmatched and ignored items.
+          </p>
         </div>
+        <Button variant="outline" asChild>
+          <Link to="/admin/revsports-entities">Open Mapping Review</Link>
+        </Button>
       </div>
 
       {items.length === 0 ? (

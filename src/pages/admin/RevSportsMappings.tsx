@@ -1250,14 +1250,21 @@ export default function RevSportsMappings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">RevSports Mappings</h1>
-          <p className="text-muted-foreground mt-1">Map scraped revsports data to SportStack system records.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Legacy Direct Mappings</h1>
+          <p className="text-muted-foreground mt-1">
+            Kept temporarily for older player and umpire tools. Use Mapping Review for current fixture mappings, including competitions and seasons.
+          </p>
         </div>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : "Save All Mappings"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/admin/revsports-entities">Open Mapping Review</Link>
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Legacy Mappings"}
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="teams" value={activeTab} onValueChange={setActiveTab} className="w-full">

@@ -803,6 +803,20 @@ def build_external_entity_rows(csv_rows: list[dict]) -> list[dict]:
         pitch = nullable_text(row.get("pitch"))
         match_url = clean_text(row.get("match_url"))
 
+        if competition:
+            competition_id = stable_external_id(association, "competition", competition)
+            entities[("competition", competition_id, competition)] = {
+                "source": "revsports",
+                "entity_type": "competition",
+                "external_id": competition_id,
+                "external_name": competition,
+                "association_name": association,
+                "competition_name": competition,
+                "source_url": match_url or None,
+                "raw_data": {"synthetic_external_id": True},
+                "last_seen_at": utc_now_iso(),
+            }
+
         if grade:
             grade_id = stable_external_id(association, competition or "", "grade", grade)
             entities[("grade", grade_id, grade)] = {
