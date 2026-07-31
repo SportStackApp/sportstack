@@ -102,6 +102,10 @@ Future agents should start by reading these files in order:
   selected audience, confirms Club and Association broadcasts before publishing, preserves older
   message deep links, resets permission/reminder state between scopes and reports load/save errors
   without showing stale or false-empty data.
+- Block 8 is implemented on Dev pending owner smoke testing. Player MVP Voting's existing atomic
+  3-2-1 path passed a live integrity audit. Signed-in Umpire Match Voting now lists completed fixtures
+  only, validates the full ballot and writes its header plus lines atomically through the new
+  `submit_umpire_match_vote` function. Browser direct inserts are revoked; Production is unchanged.
 - Do not merge or cherry-pick `chore/domain-structure` commit `3a7d6cc`; it contains the superseded
   assumption that `hb` belongs to the separate ignored Hockey Ballarat module. The corrected work
   is being landed directly on `dev`.
@@ -122,6 +126,8 @@ Future agents should start by reading these files in order:
    choices and one clearly marked test ballot.
 4. Complete the wider signed-in Production smoke test for Dashboard, Communications, availability,
    Profile, Player MVP administration, Umpire Match Voting administration and key admin pages.
+5. On Dev, submit one clearly marked signed-in Umpire Match Voting test ballot and confirm a repeat
+   submission is blocked.
 
 Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace and Safety Hub write forms
 remain parked.

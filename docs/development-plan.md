@@ -84,11 +84,17 @@ pass adds a visible audience summary, requires confirmation before an official u
 keeps Enter-to-send limited to Team Chat, preserves deep links to older messages, resets scope
 permission/settings state safely and distinguishes load failures from empty conversations.
 
-## 8. Voting reliability
+## 8. Voting reliability — implemented on Dev, owner smoke pending
 
 - Improve Player MVP Voting reliability and administration.
 - Improve Umpire Match Voting administration and audit history.
 - Keep the two voting modules clearly separated.
+
+Player MVP Voting already saves each 3-2-1 ballot through one locked database function and its
+live Dev integrity audit is clean. Signed-in Umpire Match Voting now shows completed fixtures only,
+validates the full ballot and saves its header plus every vote line through one atomic database
+function. Direct browser inserts are blocked, duplicate ballots are serialised and blocked, Super
+Admin access is consistent with navigation, and the two modules use explicit names throughout.
 
 ## 9. Core administration
 

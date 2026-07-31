@@ -138,6 +138,9 @@ Treat these as current caution areas unless a newer live check proves otherwise:
   Secondary and, where available, Fill-in fixture.
 - The communications reliability pass still needs an owner smoke test for Team Chat plus one clearly
   marked Dev-only Club or Association Update.
+- The voting reliability pass still needs an owner smoke test of one signed-in Umpire Match Voting
+  ballot on Dev. The Dev database function and existing Player MVP Voting integrity have been
+  transaction-tested and audited; Production is unchanged.
 
 ## Current Codex handoff template
 
@@ -196,6 +199,18 @@ What changed:
   instead of stale values, and reminder toggles are locked while saving.
 - Added visible message-load retry behaviour and reaction-save errors. The React review also replaced
   repeated reply/reaction scans with indexed maps for the 150-message view.
+- Completed the Block 8 reliability pass for both voting modules. Player MVP Voting already uses the
+  locked `submit_mvp_ballot` transaction; the live Dev audit found all 165 submission markers have
+  exactly one valid 3-2-1 ballot and no duplicate voter/session pair.
+- Changed signed-in Umpire Match Voting to show completed fixtures only, validate jersey numbers,
+  fixture teams and duplicate people, support the Super Admin route consistently, and use explicit
+  ballot wording and error states.
+- Added and applied `20260801030000_atomic_umpire_match_vote_submit.sql` to SportStack Dev. It derives
+  fixture scope server-side, validates role and scheme, serialises duplicate checks and saves the
+  submission header plus every vote line in one transaction. Authenticated direct table inserts are
+  revoked; the existing service-role public portal path is unaffected.
+- Regenerated `src/integrations/supabase/types.ts` from the live Dev schema and changed the page to use
+  the generated `submit_umpire_match_vote` type directly.
 
 Checks run:
 
@@ -217,6 +232,20 @@ Checks run:
   the same known 521-problem legacy backlog.
 - Communications focused lint, TypeScript and production build passed. Full repository lint remained
   at the same known 521-problem legacy backlog.
+- The Umpire Match Voting migration passed a rollback-only functional test: one complete classic
+  ballot was created, a second ballot was rejected, grants were asserted and all test data/schema
+  changes were rolled back before the exact migration was applied to Dev.
+- Post-apply checks confirmed the function has a fixed empty search path, is executable by
+  `authenticated` but not `anon`, and browser roles cannot directly insert submission headers or
+  lines. No rollback-test rows or active submissions without lines exist.
+- Live Dev integrity checks found 165 Player MVP submissions and 79 active Umpire Match Voting
+  submissions, with zero duplicate ballot keys, missing lines, duplicate voted people or invalid
+  scheme line counts. Supabase advisers reported no error; the expected warning for the intentionally
+  authenticated security-definer submission function is documented.
+- Umpire Match Voting focused ESLint and `npx tsc --noEmit` passed.
+- The production build passed with the existing large-bundle warning. Full repository lint now
+  reports 489 known legacy problems (405 errors and 84 warnings), down from 521 because this pass
+  removed the Umpire Match Voting page's old loose typing.
 
 What Aaron should test next:
 
@@ -235,11 +264,13 @@ What Aaron should test next:
 - In Dev Communications, send and reply to one Team Chat message, open an older message from a
   dashboard link, then publish one clearly marked test Club or Association Update and verify the
   audience confirmation names the correct scope.
+- In Dev Umpire mode, open Umpire Match Voting, confirm only completed fixtures are listed, enter one
+  clearly marked test ballot, review it, submit once and confirm a repeat submission is blocked.
 
 Risk level:
 
-- Medium. This includes additive Dev-only schema/RLS/grant work and line-up save changes. No
-  Production database, deployment, DNS or redirect change was made.
+- Medium. This includes additive Dev-only schema/RLS/grant work, atomic ballot writes and line-up
+  save changes. No Production database, deployment, DNS or redirect change was made.
 
 ### Previous handoff entry
 

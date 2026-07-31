@@ -1073,6 +1073,114 @@ export type Database = {
           },
         ]
       }
+      field_templates: {
+        Row: {
+          association_id: string | null
+          background_image_url: string | null
+          club_id: string | null
+          code: string | null
+          created_at: string
+          created_by: string | null
+          default_icon_id: string | null
+          grid_columns: number
+          grid_rows: number
+          id: string
+          is_active: boolean
+          name: string
+          owner_scope: Database["public"]["Enums"]["formation_owner_scope"]
+          pitch_boundary_height: number
+          pitch_boundary_width: number
+          pitch_boundary_x: number
+          pitch_boundary_y: number
+          position_icon_size: number
+          sport: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          association_id?: string | null
+          background_image_url?: string | null
+          club_id?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_icon_id?: string | null
+          grid_columns?: number
+          grid_rows?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          owner_scope: Database["public"]["Enums"]["formation_owner_scope"]
+          pitch_boundary_height?: number
+          pitch_boundary_width?: number
+          pitch_boundary_x?: number
+          pitch_boundary_y?: number
+          position_icon_size?: number
+          sport?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          association_id?: string | null
+          background_image_url?: string | null
+          club_id?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_icon_id?: string | null
+          grid_columns?: number
+          grid_rows?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          owner_scope?: Database["public"]["Enums"]["formation_owner_scope"]
+          pitch_boundary_height?: number
+          pitch_boundary_width?: number
+          pitch_boundary_x?: number
+          pitch_boundary_y?: number
+          position_icon_size?: number
+          sport?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_templates_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_templates_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_templates_default_icon_id_fkey"
+            columns: ["default_icon_id"]
+            isOneToOne: false
+            referencedRelation: "formation_icons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_templates_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fixture_availability: {
         Row: {
           fixture_id: string
@@ -1595,6 +1703,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          field_template_id: string | null
           grid_columns: number
           grid_rows: number
           id: string
@@ -1605,6 +1714,7 @@ export type Database = {
           pitch_boundary_width: number
           pitch_boundary_x: number
           pitch_boundary_y: number
+          position_icon_size: number
           team_id: string | null
           updated_at: string
         }
@@ -1616,6 +1726,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          field_template_id?: string | null
           grid_columns: number
           grid_rows: number
           id?: string
@@ -1626,6 +1737,7 @@ export type Database = {
           pitch_boundary_width?: number
           pitch_boundary_x?: number
           pitch_boundary_y?: number
+          position_icon_size?: number
           team_id?: string | null
           updated_at?: string
         }
@@ -1637,6 +1749,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          field_template_id?: string | null
           grid_columns?: number
           grid_rows?: number
           id?: string
@@ -1647,6 +1760,7 @@ export type Database = {
           pitch_boundary_width?: number
           pitch_boundary_x?: number
           pitch_boundary_y?: number
+          position_icon_size?: number
           team_id?: string | null
           updated_at?: string
         }
@@ -1670,6 +1784,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formations_field_template_id_fkey"
+            columns: ["field_template_id"]
+            isOneToOne: false
+            referencedRelation: "field_templates"
             referencedColumns: ["id"]
           },
           {
@@ -2632,6 +2753,7 @@ export type Database = {
           player_name: string
           player_number: number | null
           profile_id: string | null
+          scheme_line_key: string | null
           submission_id: string
           team_id: string | null
           votes: number
@@ -2643,6 +2765,7 @@ export type Database = {
           player_name?: string
           player_number?: number | null
           profile_id?: string | null
+          scheme_line_key?: string | null
           submission_id: string
           team_id?: string | null
           votes: number
@@ -2654,6 +2777,7 @@ export type Database = {
           player_name?: string
           player_number?: number | null
           profile_id?: string | null
+          scheme_line_key?: string | null
           submission_id?: string
           team_id?: string | null
           votes?: number
@@ -2699,17 +2823,25 @@ export type Database = {
           is_approved: boolean
           is_deleted: boolean
           is_locked: boolean
+          is_public_submission: boolean
           legacy_umpire_email: string | null
           proxy_reason: string | null
           proxy_submitter_id: string | null
           proxy_submitter_name: string | null
           proxy_umpire_name: string | null
+          public_duplicate_key: string | null
+          public_idempotency_key: string | null
+          public_identity_status: string | null
+          public_submission_reference: string | null
+          public_submitter_email: string | null
+          public_submitter_name: string | null
           round_number: number | null
           submitted_at: string
           submitted_by_admin_id: string | null
           submitted_by_admin_name: string | null
           umpire_user_id: string | null
           updated_at: string
+          vote_scheme_key: string | null
         }
         Insert: {
           association_id?: string | null
@@ -2727,17 +2859,25 @@ export type Database = {
           is_approved?: boolean
           is_deleted?: boolean
           is_locked?: boolean
+          is_public_submission?: boolean
           legacy_umpire_email?: string | null
           proxy_reason?: string | null
           proxy_submitter_id?: string | null
           proxy_submitter_name?: string | null
           proxy_umpire_name?: string | null
+          public_duplicate_key?: string | null
+          public_idempotency_key?: string | null
+          public_identity_status?: string | null
+          public_submission_reference?: string | null
+          public_submitter_email?: string | null
+          public_submitter_name?: string | null
           round_number?: number | null
           submitted_at?: string
           submitted_by_admin_id?: string | null
           submitted_by_admin_name?: string | null
           umpire_user_id?: string | null
           updated_at?: string
+          vote_scheme_key?: string | null
         }
         Update: {
           association_id?: string | null
@@ -2755,17 +2895,25 @@ export type Database = {
           is_approved?: boolean
           is_deleted?: boolean
           is_locked?: boolean
+          is_public_submission?: boolean
           legacy_umpire_email?: string | null
           proxy_reason?: string | null
           proxy_submitter_id?: string | null
           proxy_submitter_name?: string | null
           proxy_umpire_name?: string | null
+          public_duplicate_key?: string | null
+          public_idempotency_key?: string | null
+          public_identity_status?: string | null
+          public_submission_reference?: string | null
+          public_submitter_email?: string | null
+          public_submitter_name?: string | null
           round_number?: number | null
           submitted_at?: string
           submitted_by_admin_id?: string | null
           submitted_by_admin_name?: string | null
           umpire_user_id?: string | null
           updated_at?: string
+          vote_scheme_key?: string | null
         }
         Relationships: [
           {
@@ -3078,6 +3226,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      public_umpire_portal_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          key_hash: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: never
+          key_hash: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: never
+          key_hash?: string
+        }
+        Relationships: []
       }
       requests: {
         Row: {
@@ -6383,6 +6552,13 @@ export type Database = {
         Args: { p_project_url: string }
         Returns: undefined
       }
+      create_public_umpire_vote: {
+        Args: { p_lines: Json; p_submission: Json }
+        Returns: {
+          submission_id: string
+          submission_reference: string
+        }[]
+      }
       get_mvp_result_check_state: {
         Args: { p_session_id: string }
         Returns: Json
@@ -6439,6 +6615,16 @@ export type Database = {
           p_two_point_player_id: string
         }
         Returns: Json
+      }
+      submit_umpire_match_vote: {
+        Args: {
+          p_fixture_id: string
+          p_lines: Json
+          p_proxy_reason?: string
+          p_proxy_umpire_name?: string
+          p_vote_scheme_key: string
+        }
+        Returns: string
       }
       verify_sportstack_notification_cron: {
         Args: { p_secret: string }

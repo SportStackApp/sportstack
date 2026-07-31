@@ -63,6 +63,37 @@ interface SelectedFixtureInfo {
   round_number: number;
 }
 
+type FixtureOption = SelectedFixtureInfo;
+
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error
+    ? error.message
+    : typeof error === "object" && error !== null && "message" in error && typeof error.message === "string"
+      ? error.message
+      : fallback;
+
+const voteCardIdentity = (card: VoteCard) => card.profileId
+  ? `profile:${card.profileId}`
+  : [card.teamId, card.playerName.trim().toLocaleLowerCase("en-AU"), card.playerNumber.trim()].join("|");
+
+const validateVoteCards = (cards: VoteCard[], fixture: SelectedFixtureInfo | null) => {
+  if (!fixture || cards.length === 0) return "Select a completed fixture and voting scheme.";
+  if (cards.some((card) => !card.playerName.trim() && !card.playerNumber.trim())) {
+    return "Every vote line needs a player name or jersey number.";
+  }
+  if (cards.some((card) => card.playerNumber.trim() && !/^\d{1,3}$/.test(card.playerNumber.trim()))) {
+    return "Jersey numbers must contain one to three digits.";
+  }
+  if (cards.some((card) => ![fixture.home_team_id, fixture.away_team_id].includes(card.teamId))) {
+    return "Choose the correct fixture team for every voted person.";
+  }
+  const identities = cards.map(voteCardIdentity);
+  if (new Set(identities).size !== identities.length) {
+    return "The same person cannot receive more than one vote line.";
+  }
+  return null;
+};
+
 export default function UmpireVoteSubmit() {
   const { user } = useAuth();
   const { roles, loading: rolesLoading } = useUserRole();
@@ -89,7 +120,7 @@ export default function UmpireVoteSubmit() {
   // Step 1 - Selection lists
   const [rounds, setRounds] = useState<number[]>([]);
   const [divisions, setDivisions] = useState<{ id: string; name: string }[]>([]);
-  const [fixtures, setFixtures] = useState<any[]>([]);
+  const [fixtures, setFixtures] = useState<FixtureOption[]>([]);
   const [teamsMap, setTeamsMap] = useState<Map<string, string>>(new Map());
 
   // Step 1 - Current selections
@@ -116,7 +147,7 @@ export default function UmpireVoteSubmit() {
 
   // Role Access Protection check
   const isUmpire =
-    (roles as string[]).includes("UMPIRE") || (roles as string[]).includes("UMPIRE_ADMIN");
+    (roles as string[]).some((role) => ["UMPIRE", "UMPIRE_ADMIN", "SUPER_ADMIN"].includes(role));
 
   // Load user's associations
   useEffect(() => {
@@ -130,7 +161,7 @@ export default function UmpireVoteSubmit() {
 
         if (isSuperAdmin) {
           // Fetch ALL associations for Super Admin
-          const { data: allData, error: allError } = await (supabase as any)
+          const { data: allData, error: allError } = await supabase
             .from("associations")
             .select("id, name")
             .order("name");
@@ -142,7 +173,7 @@ export default function UmpireVoteSubmit() {
           // Do NOT auto-select for Super Admin
         } else {
           // Query user's roles for any association_id link
-          const { data: rolesData, error: rolesError } = await (supabase as any)
+          const { data: rolesData, error: rolesError } = await supabase
             .from("user_roles")
             .select("association_id")
             .eq("user_id", user.id)
@@ -152,13 +183,13 @@ export default function UmpireVoteSubmit() {
 
           const assocIds = Array.from(
             new Set(
-              rolesData?.map((r: any) => r.association_id).filter(Boolean) || []
+              rolesData?.map((roleRow) => roleRow.association_id).filter((id): id is string => Boolean(id)) || []
             )
           ) as string[];
 
           if (assocIds.length > 0) {
             // Fetch resolved names for the user's specific associations
-            const { data: namesData, error: namesError } = await (supabase as any)
+            const { data: namesData, error: namesError } = await supabase
               .from("associations")
               .select("id, name")
               .in("id", assocIds)
@@ -168,7 +199,7 @@ export default function UmpireVoteSubmit() {
             resolvedAssocs = namesData || [];
           } else {
             // Fallback: Fetch ALL associations
-            const { data: allData, error: allError } = await (supabase as any)
+            const { data: allData, error: allError } = await supabase
               .from("associations")
               .select("id, name")
               .order("name");
@@ -184,11 +215,12 @@ export default function UmpireVoteSubmit() {
             setSelectedAssociationId(resolvedAssocs[0].id);
           }
         }
-      } catch (err: any) {
-        console.error("Error fetching associations:", err);
+      } catch (error: unknown) {
+        const message = errorMessage(error, "Failed to load associations.");
+        console.error("Error fetching associations:", error);
         toast({
           title: "Error",
-          description: "Failed to load associations.",
+          description: message,
           variant: "destructive",
         });
       } finally {
@@ -197,7 +229,7 @@ export default function UmpireVoteSubmit() {
     };
 
     fetchUserAssociations();
-  }, [isUmpire, user?.id, roles]);
+  }, [isUmpire, roles, toast, user]);
 
   // Step 1 - Load unique rounds filtered by association
   useEffect(() => {
@@ -210,27 +242,28 @@ export default function UmpireVoteSubmit() {
     const fetchRounds = async () => {
       setRoundsLoading(true);
       try {
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from("fixtures")
           .select("round_number, divisions!inner(association_id)")
-          .eq("divisions.association_id", selectedAssociationId);
+          .eq("divisions.association_id", selectedAssociationId)
+          .eq("status", "COMPLETED");
 
         if (error) throw error;
 
         const uniqueRounds = Array.from(
           new Set(
             data
-              ?.map((f: any) => f.round_number)
-              .filter((r: any): r is number => r !== null) || []
+              ?.map((fixture) => fixture.round_number)
+              .filter((round): round is number => round !== null) || []
           )
-        ).sort((a: any, b: any) => a - b) as number[];
+        ).sort((a, b) => a - b) as number[];
 
         setRounds(uniqueRounds);
-      } catch (err: any) {
-        console.error("Error fetching rounds:", err);
+      } catch (error: unknown) {
+        console.error("Error fetching rounds:", error);
         toast({
           title: "Error",
-          description: "Failed to load rounds from fixtures.",
+          description: errorMessage(error, "Failed to load completed fixture rounds."),
           variant: "destructive",
         });
       } finally {
@@ -239,7 +272,7 @@ export default function UmpireVoteSubmit() {
     };
 
     fetchRounds();
-  }, [isUmpire, selectedAssociationId]);
+  }, [isUmpire, selectedAssociationId, toast]);
 
   // Step 1 - Fetch divisions when round is chosen, filtered by association
   useEffect(() => {
@@ -252,19 +285,20 @@ export default function UmpireVoteSubmit() {
     const fetchDivisions = async () => {
       setDivisionsLoading(true);
       try {
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from("fixtures")
           .select("division_id, divisions!inner(association_id)")
           .eq("round_number", parseInt(selectedRound, 10))
-          .eq("divisions.association_id", selectedAssociationId);
+          .eq("divisions.association_id", selectedAssociationId)
+          .eq("status", "COMPLETED");
 
         if (error) throw error;
 
         const uniqueDivisionIds = Array.from(
           new Set(
             data
-              ?.map((f: any) => f.division_id)
-              .filter((d: any): d is string => d !== null) || []
+              ?.map((fixture) => fixture.division_id)
+              .filter((divisionId): divisionId is string => divisionId !== null) || []
           )
         );
 
@@ -273,7 +307,7 @@ export default function UmpireVoteSubmit() {
           return;
         }
 
-        const { data: divData, error: divError } = await (supabase as any)
+        const { data: divData, error: divError } = await supabase
           .from("divisions")
           .select("id, name")
           .in("id", uniqueDivisionIds)
@@ -282,11 +316,11 @@ export default function UmpireVoteSubmit() {
         if (divError) throw divError;
 
         setDivisions(divData || []);
-      } catch (err: any) {
-        console.error("Error fetching divisions:", err);
+      } catch (error: unknown) {
+        console.error("Error fetching divisions:", error);
         toast({
           title: "Error",
-          description: "Failed to load divisions.",
+          description: errorMessage(error, "Failed to load divisions with completed fixtures."),
           variant: "destructive",
         });
       } finally {
@@ -295,7 +329,7 @@ export default function UmpireVoteSubmit() {
     };
 
     fetchDivisions();
-  }, [selectedRound, selectedAssociationId]);
+  }, [selectedAssociationId, selectedRound, toast]);
 
   // Step 1 - Fetch fixtures & teams when division and round are chosen, filtered by association
   useEffect(() => {
@@ -309,12 +343,13 @@ export default function UmpireVoteSubmit() {
       setFixturesLoading(true);
       try {
         // Query fixtures for this round and division, filtering out byes (away_team_id not null)
-        const { data: fixturesData, error: fixturesError } = await (supabase as any)
+        const { data: fixturesData, error: fixturesError } = await supabase
           .from("fixtures")
           .select("id, home_team_id, away_team_id, division_id, round_number, divisions!inner(association_id)")
           .eq("round_number", parseInt(selectedRound, 10))
           .eq("division_id", selectedDivisionId)
           .eq("divisions.association_id", selectedAssociationId)
+          .eq("status", "COMPLETED")
           .not("away_team_id", "is", null);
 
         if (fixturesError) throw fixturesError;
@@ -327,13 +362,13 @@ export default function UmpireVoteSubmit() {
         // Fetch all teams in a separate query to build ID -> name map
         const teamIds = Array.from(
           new Set(
-            fixturesData.flatMap((f: any) =>
-              [f.home_team_id, f.away_team_id].filter((t): t is string => t !== null)
+            fixturesData.flatMap((fixture) =>
+              [fixture.home_team_id, fixture.away_team_id].filter((teamId): teamId is string => teamId !== null)
             )
           )
         );
 
-        const { data: teamsData, error: teamsError } = await (supabase as any)
+        const { data: teamsData, error: teamsError } = await supabase
           .from("teams")
           .select("id, name")
           .in("id", teamIds);
@@ -341,24 +376,32 @@ export default function UmpireVoteSubmit() {
         if (teamsError) throw teamsError;
 
         const newTeamsMap = new Map<string, string>();
-        teamsData?.forEach((team: any) => {
+        teamsData?.forEach((team) => {
           newTeamsMap.set(team.id, team.name);
         });
         setTeamsMap(newTeamsMap);
 
         // Map fixtures with home/away team names
-        const enrichedFixtures = fixturesData.map((f: any) => ({
-          ...f,
-          homeTeamName: newTeamsMap.get(f.home_team_id) || "Unknown Home Team",
-          awayTeamName: newTeamsMap.get(f.away_team_id || "") || "Unknown Away Team",
-        }));
+        const enrichedFixtures = fixturesData.flatMap((fixture) => {
+          if (!fixture.home_team_id || !fixture.away_team_id || !fixture.division_id || fixture.round_number === null) return [];
+          return [{
+            id: fixture.id,
+            home_team_id: fixture.home_team_id,
+            away_team_id: fixture.away_team_id,
+            division_id: fixture.division_id,
+            divisionName: divisions.find((division) => division.id === fixture.division_id)?.name || "",
+            homeTeamName: newTeamsMap.get(fixture.home_team_id) || "Unknown Home Team",
+            awayTeamName: newTeamsMap.get(fixture.away_team_id) || "Unknown Away Team",
+            round_number: fixture.round_number,
+          } satisfies FixtureOption];
+        });
 
         setFixtures(enrichedFixtures);
-      } catch (err: any) {
-        console.error("Error fetching fixtures/teams:", err);
+      } catch (error: unknown) {
+        console.error("Error fetching fixtures/teams:", error);
         toast({
           title: "Error",
-          description: "Failed to load fixtures.",
+          description: errorMessage(error, "Failed to load completed fixtures."),
           variant: "destructive",
         });
       } finally {
@@ -367,7 +410,7 @@ export default function UmpireVoteSubmit() {
     };
 
     fetchFixturesAndTeams();
-  }, [selectedRound, selectedDivisionId, selectedAssociationId]);
+  }, [divisions, selectedAssociationId, selectedDivisionId, selectedRound, toast]);
 
   // Step 1 - When a fixture is selected, resolve its details for subsequent steps
   useEffect(() => {
@@ -470,7 +513,7 @@ export default function UmpireVoteSubmit() {
     if (!selectedFixture) {
       toast({
         title: "Validation Error",
-        description: "Please select a fixture.",
+        description: "Please select a completed fixture.",
         variant: "destructive",
       });
       return;
@@ -481,16 +524,11 @@ export default function UmpireVoteSubmit() {
   };
 
   const handleNextStep2 = () => {
-    // Validate Step 2 inputs
-    // Each card is valid if it has EITHER player name OR player number filled in (or both).
-    const allValid = voteCards.every(
-      (card) => card.playerName.trim() !== "" || card.playerNumber.trim() !== ""
-    );
-
-    if (!allValid) {
+    const validationError = validateVoteCards(voteCards, selectedFixture);
+    if (validationError) {
       toast({
-        title: "Validation Error",
-        description: "All vote cards must have at least a player name or jersey number entered.",
+        title: "Check the ballot",
+        description: validationError,
         variant: "destructive",
       });
       return;
@@ -501,7 +539,7 @@ export default function UmpireVoteSubmit() {
 
   const handleBack = () => {
     if (step > 1) {
-      setStep((prev) => (prev - 1) as any);
+      setStep((previous) => previous === 3 ? 2 : 1);
     }
   };
 
@@ -526,65 +564,56 @@ export default function UmpireVoteSubmit() {
 
   // Submit Submission
   const handleSubmit = async () => {
-    if (!selectedFixture || !user) return;
+    if (!selectedFixture || !user || submitting) return;
+
+    const validationError = validateVoteCards(voteCards, selectedFixture);
+    if (validationError) {
+      setSubmitError(validationError);
+      toast({ title: "Check the ballot", description: validationError, variant: "destructive" });
+      return;
+    }
 
     setSubmitting(true);
     setSubmitError(null);
 
     try {
-      // 1. Insert into public.player_vote_submissions
-      const { data: subData, error: subError } = await (supabase as any)
-        .from("player_vote_submissions")
-        .insert({
-          fixture_id: selectedFixture.id,
-          association_id: selectedAssociationId,
-          division_id: selectedFixture.division_id,
-          round_number: selectedFixture.round_number,
-          home_team_id: selectedFixture.home_team_id,
-          away_team_id: selectedFixture.away_team_id,
-          umpire_user_id: user.id,
-          legacy_umpire_email: null,
-          is_approved: false,
-          submitted_at: new Date().toISOString(),
-          proxy_umpire_name: isProxy ? proxyUmpireName.trim() : null,
-          proxy_reason: isProxy ? proxyReason.trim() : null,
-        })
-        .select("id")
-        .single();
-
-      if (subError) throw subError;
-      if (!subData) throw new Error("No submission ID returned");
-
-      const submissionId = subData.id;
-
-      // 2. Insert into public.player_vote_lines
-      const linesToInsert = voteCards.map((card) => ({
-        submission_id: submissionId,
+      const ballotLines = voteCards.map((card) => ({
+        scheme_line_key: card.schemeLineKey,
         profile_id: card.profileId,
         player_name: card.playerName.trim(),
-        player_number: card.playerNumber.trim() ? parseInt(card.playerNumber, 10) : null,
-        team_id: card.teamId === "__none__" || !card.teamId ? null : card.teamId,
+        player_number: card.playerNumber.trim() || null,
+        team_id: card.teamId,
         votes: card.points,
       }));
 
-      const { error: linesError } = await (supabase as any)
-        .from("player_vote_lines")
-        .insert(linesToInsert);
+      const { data: submissionId, error } = await supabase.rpc("submit_umpire_match_vote", {
+        p_fixture_id: selectedFixture.id,
+        p_vote_scheme_key: selectedSchemeKey,
+        p_lines: ballotLines,
+        ...(isProxy
+          ? {
+              p_proxy_umpire_name: proxyUmpireName.trim(),
+              p_proxy_reason: proxyReason.trim(),
+            }
+          : {}),
+      });
 
-      if (linesError) throw linesError;
+      if (error) throw error;
+      if (!submissionId) throw new Error("The ballot was not recorded. Please try again.");
 
       // Success
       setSubmitSuccess(true);
       toast({
-        title: "Success",
-        description: "Votes submitted successfully!",
+        title: "Ballot submitted",
+        description: "The Umpire Match Voting ballot is ready for administrator review.",
       });
-    } catch (err: any) {
-      console.error("Submission error:", err);
-      setSubmitError(err?.message || "An error occurred during submission.");
+    } catch (error: unknown) {
+      console.error("Submission error:", error);
+      const message = errorMessage(error, "The ballot could not be submitted.");
+      setSubmitError(message);
       toast({
-        title: "Submission Failed",
-        description: err?.message || "An error occurred during submission.",
+        title: "Ballot not submitted",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -611,9 +640,7 @@ export default function UmpireVoteSubmit() {
     (!isProxy || (proxyUmpireName.trim() !== "" && proxyReason.trim() !== ""));
 
   // Check validity for Step 2
-  const isStep2Valid =
-    voteCards.length > 0 &&
-    voteCards.every((card) => card.playerName.trim() !== "" || card.playerNumber.trim() !== "");
+  const isStep2Valid = validateVoteCards(voteCards, selectedFixture) === null;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
@@ -622,7 +649,7 @@ export default function UmpireVoteSubmit() {
         <Trophy className="h-8 w-8 text-primary" />
         <div>
           <h1 className="font-display text-2xl md:text-3xl text-foreground font-bold tracking-tight">
-            UMPIRE VOTE PORTAL
+            UMPIRE MATCH VOTING
           </h1>
           <p className="text-muted-foreground text-sm">
             Record best-player votes for matches in SportStack
@@ -671,7 +698,7 @@ export default function UmpireVoteSubmit() {
                 2
               </div>
               <span className={`text-xs mt-2 font-medium ${step >= 2 ? "text-primary" : "text-muted-foreground"}`}>
-                Player Votes
+                Ballot
               </span>
             </div>
 
@@ -703,10 +730,10 @@ export default function UmpireVoteSubmit() {
             </div>
             <div className="space-y-2">
               <CardTitle className="text-2xl font-bold text-foreground">
-                Vote Submitted Successfully!
+                Ballot submitted
               </CardTitle>
               <CardDescription className="max-w-md mx-auto">
-                Thank you. The votes have been recorded in the SportStack system and will be verified by the administrator.
+                Thank you. The ballot was recorded as one complete transaction and is ready for administrator review.
               </CardDescription>
             </div>
             <Button onClick={handleReset} size="lg" className="px-8">
@@ -779,7 +806,7 @@ export default function UmpireVoteSubmit() {
                 {/* Match Selection Cascade */}
                 <div className="space-y-4 pt-2">
                   <div className="rounded-lg border border-border/70 bg-muted/25 p-3 text-xs text-muted-foreground">
-                    Select in order. Each choice narrows the next list so umpires only see fixtures that match the selected round and division.
+                    Select in order. Only completed fixtures are available for Umpire Match Voting.
                   </div>
 
                   {/* Association Select (only show if 2 or more available) */}
@@ -890,11 +917,11 @@ export default function UmpireVoteSubmit() {
                         disabled={fixturesLoading}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder={fixturesLoading ? "Loading fixtures..." : "Select Fixture"} />
+                          <SelectValue placeholder={fixturesLoading ? "Loading completed fixtures..." : "Select completed fixture"} />
                         </SelectTrigger>
                         <SelectContent>
                           {fixtures.length === 0 ? (
-                            <SelectItem value="__none__" disabled>No fixtures found</SelectItem>
+                            <SelectItem value="__none__" disabled>No completed fixtures found</SelectItem>
                           ) : (
                             fixtures.map((fix) => (
                               <SelectItem key={fix.id} value={fix.id}>
@@ -935,13 +962,13 @@ export default function UmpireVoteSubmit() {
             </>
           )}
 
-          {/* STEP 2: Player Votes */}
+          {/* STEP 2: Match ballot */}
           {step === 2 && selectedFixture && (
             <>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-xl">Player Votes</CardTitle>
+                    <CardTitle className="text-xl">Match Ballot</CardTitle>
                     <CardDescription>
                       Assign points to best performing players in the match
                     </CardDescription>
@@ -1192,7 +1219,7 @@ export default function UmpireVoteSubmit() {
                   {/* Vote Lines display */}
                   <div className="p-4 space-y-3">
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                      Allocated Player Votes
+                      Allocated Match Votes
                     </p>
                     {voteCards.map((card, idx) => {
                       const teamName =
@@ -1259,7 +1286,7 @@ export default function UmpireVoteSubmit() {
                     ) : (
                       <>
                         <Check className="h-4 w-4" />
-                        Submit Votes
+                        Submit Ballot
                       </>
                     )}
                   </Button>
