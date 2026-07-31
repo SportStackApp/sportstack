@@ -150,6 +150,9 @@ Treat these as current caution areas unless a newer live check proves otherwise:
   Dev overrides exist yet, so every current module retains its safe default behaviour.
 - Committee setup needs an owner smoke test. The Dev committee tables are empty, so no real
   association/club committee, position, appointment, document or qualification has been created.
+- Committee operations need an owner smoke test with appointed users. Dev has no polls, meetings,
+  chat messages or operation history. Voting and chat deliberately require a current appointment
+  with the matching position permission, including for scoped administrators.
 
 ## Current Codex handoff template
 
@@ -257,6 +260,15 @@ What changed:
 - Added Committee Management to signed-in navigation and protected the route with the inherited
   committee module setting. RLS keeps setup records private to scoped administrators and current
   committee members; anonymous table access is revoked.
+- Completed Block 12 with `20260801070000_committee_operations.sql`. Committee Management now
+  includes polls, reusable agenda templates, meetings, per-point minutes and decisions, assigned
+  actions, current-member-only chat and append-only activity history.
+- Poll creation and submission are atomic database functions. The four supported question styles
+  are free text, choose one, choose multiple and Yes / No / Abstain; one user can submit only one
+  complete response per poll.
+- Added Dev hardening migrations to remove public API access to internal committee trigger helpers
+  and cover the new foreign-key joins with indexes. Anonymous chat access remains denied and voting
+  and chat require a current appointment with the explicit position permission.
 
 Checks run:
 
@@ -315,6 +327,15 @@ Checks run:
   signed-in security-definer helpers used by RLS and the page permission summary.
 - Committee Management focused ESLint, TypeScript and the production build passed with no changed-
   file warning. Full repository lint remains at 442 known legacy problems.
+- The committee-operations migration passed a rollback-only workflow test covering all four poll
+  question styles, duplicate-response blocking, template-to-meeting cloning, chat, activity history
+  and anonymous chat denial before exact Dev apply.
+- Post-apply checks found zero live operation rows, denied anonymous chat grants, enabled authorised
+  RPC execution and confirmed Realtime publication for private committee messages. The adviser-
+  identified internal audit trigger exposure was removed; expected warnings remain for deliberately
+  authenticated permission and workflow functions.
+- Committee operations focused ESLint, TypeScript and production build passed. The React review kept
+  related reads parallel and resets operation screens when the selected committee changes.
 
 What Aaron should test next:
 

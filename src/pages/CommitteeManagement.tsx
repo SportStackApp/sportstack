@@ -18,6 +18,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { CommitteeActivity } from "@/components/committee/CommitteeActivity";
+import { CommitteeChat } from "@/components/committee/CommitteeChat";
+import { CommitteeMeetings } from "@/components/committee/CommitteeMeetings";
+import { CommitteePolls } from "@/components/committee/CommitteePolls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useAdminScope } from "@/hooks/useAdminScope";
@@ -462,6 +466,47 @@ export default function CommitteeManagement() {
                   })}
                 </CardContent>
               </Card>
+            </TabsContent>
+          </Tabs>
+
+          <Tabs defaultValue="polls" className="space-y-4">
+            <TabsList className="grid h-auto w-full grid-cols-2 md:grid-cols-4">
+              <TabsTrigger value="polls">Polls</TabsTrigger>
+              <TabsTrigger value="meetings">Meetings</TabsTrigger>
+              <TabsTrigger value="chat">Chat</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
+            </TabsList>
+            <TabsContent value="polls">
+              <CommitteePolls
+                key={`polls-${selectedCommitteeId}`}
+                committeeId={selectedCommitteeId}
+                canManage={permissions.manage_polls}
+                canVote={permissions.vote}
+              />
+            </TabsContent>
+            <TabsContent value="meetings">
+              <CommitteeMeetings
+                key={`meetings-${selectedCommitteeId}`}
+                committeeId={selectedCommitteeId}
+                canManage={permissions.manage_meetings}
+                canRecordMinutes={permissions.record_minutes}
+                profiles={profiles}
+              />
+            </TabsContent>
+            <TabsContent value="chat">
+              <CommitteeChat
+                key={`chat-${selectedCommitteeId}`}
+                committeeId={selectedCommitteeId}
+                canChat={permissions.chat}
+                profiles={profiles}
+              />
+            </TabsContent>
+            <TabsContent value="activity">
+              <CommitteeActivity
+                key={`activity-${selectedCommitteeId}`}
+                committeeId={selectedCommitteeId}
+                profiles={profiles}
+              />
             </TabsContent>
           </Tabs>
         </>

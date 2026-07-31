@@ -118,6 +118,11 @@ Future agents should start by reading these files in order:
   support custom positions, President designation, eight position permissions, dated appointments,
   governance document links and qualification/expiry records. Committee data is private to scoped
   administrators and current members; Dev contains no committee records yet.
+- Block 12 is implemented on Dev pending owner smoke testing. Committees now have atomic polls with
+  free-text, choose-one, choose-multiple and Yes / No / Abstain questions; reusable agenda templates;
+  meetings with minutes, decisions and assigned actions; current-member-only chat; and append-only
+  activity history. Voting and chat require an active appointment with the explicit position
+  permission, including for administrators.
 - Do not merge or cherry-pick `chore/domain-structure` commit `3a7d6cc`; it contains the superseded
   assumption that `hb` belongs to the separate ignored Hockey Ballarat module. The corrected work
   is being landed directly on `dev`.
@@ -145,7 +150,9 @@ Future agents should start by reading these files in order:
 7. In Dev Roles & modules, disable one non-critical module at a disposable child scope, confirm its
    menu and direct route are blocked, then select Use inherited and confirm access returns.
 8. Create one clearly marked Dev committee, add President and Member positions, appoint your test
-   user, then add one disposable governance link and qualification record.
+   user, then add one disposable governance link and qualification record. Create a poll containing
+   all four question types, submit it once as an appointed voter, create a meeting from a two-point
+   template, save minutes and send one private chat message.
 
 Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace and Safety Hub write forms
 remain parked.

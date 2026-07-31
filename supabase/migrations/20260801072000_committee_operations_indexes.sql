@@ -1,0 +1,23 @@
+-- Cover committee foreign keys used by joins, permission checks and filters.
+create index if not exists committees_club_idx on public.committees (club_id);
+create index if not exists committees_created_by_idx on public.committees (created_by);
+create index if not exists committee_members_position_idx on public.committee_members (position_id);
+create index if not exists committee_members_appointed_by_idx on public.committee_members (appointed_by);
+create index if not exists committee_qualifications_member_idx on public.committee_member_qualifications (committee_member_id);
+create index if not exists committee_qualifications_created_by_idx on public.committee_member_qualifications (created_by);
+create index if not exists committee_documents_committee_idx on public.committee_documents (committee_id);
+create index if not exists committee_documents_created_by_idx on public.committee_documents (created_by);
+create index if not exists committee_polls_committee_idx on public.committee_polls (committee_id);
+create index if not exists committee_polls_created_by_idx on public.committee_polls (created_by);
+create index if not exists committee_poll_responses_user_idx on public.committee_poll_responses (user_id);
+create index if not exists committee_poll_answers_question_idx on public.committee_poll_answers (question_id);
+create index if not exists committee_templates_committee_idx on public.committee_agenda_templates (committee_id);
+create index if not exists committee_templates_created_by_idx on public.committee_agenda_templates (created_by);
+create index if not exists committee_template_items_template_idx on public.committee_agenda_template_items (template_id);
+create index if not exists committee_meetings_committee_idx on public.committee_meetings (committee_id);
+create index if not exists committee_meetings_template_idx on public.committee_meetings (agenda_template_id);
+create index if not exists committee_meetings_created_by_idx on public.committee_meetings (created_by);
+create index if not exists committee_meeting_items_action_owner_idx on public.committee_meeting_items (action_owner_id);
+create index if not exists committee_messages_reply_to_idx on public.committee_messages (reply_to_id);
+create index if not exists committee_messages_user_idx on public.committee_messages (user_id);
+create index if not exists committee_activity_log_actor_idx on public.committee_activity_log (actor_id);

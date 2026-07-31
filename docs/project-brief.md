@@ -158,6 +158,7 @@ Protected app:
 - `/mvp-votes` (Player MVP Voting)
 - `/mvp-votes/:sessionId` (Player MVP Voting submission/result flow)
 - `/umpire/vote` (Umpire Match Voting submission)
+- `/committee` (private committee setup, polls, meetings, minutes, chat and activity)
 
 Admin:
 
@@ -238,7 +239,7 @@ npm run lint
 - Formation and saved field-template reliability is implemented on Dev pending owner smoke testing.
 - Multi-sport support is a future goal, not current scope.
 - Root `test_*.js` files may be old investigation scripts and should be reviewed before cleanup.
-- Scoped module enable/disable and committee position access are implemented on Dev. Fine-grained
+- Scoped module controls and committee setup/operations are implemented on Dev. Fine-grained
   Player MVP Voting and Umpire Match Voting submission/result visibility remains parked.
 - Module settings now inherit from the closest parent and child overrides have warning prompts.
 - User profile address structure is parked for a later structured-address pass; keep current address changes small.

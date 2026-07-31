@@ -131,11 +131,17 @@ position permissions. Current appointments inherit their position permissions an
 dates. Scoped administrators and authorised position holders can maintain appointments, governance
 document links and qualification/expiry records; anonymous users cannot read committee data.
 
-## 12. Committee operations
+## 12. Committee operations — implemented on Dev, owner smoke pending
 
 - Add polls with free-text, choose-one, choose-multiple and Yes/No/Abstain questions.
 - Add reusable meeting templates, agendas, minutes, decisions and assigned actions.
 - Add private committee chat with access limited to current committee members.
+
+Dev now has atomic committee poll creation and one-response-per-member submission, including all
+four planned question styles. Reusable agenda templates create meeting agendas with separate
+minutes, decisions and assigned actions beside every point. Current members can read private chat;
+posting and voting require explicit position permissions. An append-only activity view records
+committee setup, poll, meeting, minutes and chat changes.
 
 ## 13. Risk and Quality Improvement
 

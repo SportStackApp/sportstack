@@ -400,6 +400,143 @@ export type Database = {
           },
         ]
       }
+      committee_activity_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          committee_id: string
+          created_at: string
+          details: Json
+          id: number
+          record_id: string | null
+          record_title: string | null
+          record_type: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          committee_id: string
+          created_at?: string
+          details?: Json
+          id?: never
+          record_id?: string | null
+          record_title?: string | null
+          record_type: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          committee_id?: string
+          created_at?: string
+          details?: Json
+          id?: never
+          record_id?: string | null
+          record_title?: string | null
+          record_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_activity_log_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_activity_log_committee_id_fkey"
+            columns: ["committee_id"]
+            isOneToOne: false
+            referencedRelation: "committees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committee_agenda_template_items: {
+        Row: {
+          created_at: string
+          id: string
+          notes_prompt: string | null
+          presenter: string | null
+          sort_order: number
+          template_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes_prompt?: string | null
+          presenter?: string | null
+          sort_order?: number
+          template_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes_prompt?: string | null
+          presenter?: string | null
+          sort_order?: number
+          template_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_agenda_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "committee_agenda_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committee_agenda_templates: {
+        Row: {
+          committee_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          committee_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          committee_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_agenda_templates_committee_id_fkey"
+            columns: ["committee_id"]
+            isOneToOne: false
+            referencedRelation: "committees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_agenda_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       committee_documents: {
         Row: {
           committee_id: string
@@ -444,6 +581,136 @@ export type Database = {
           },
           {
             foreignKeyName: "committee_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committee_meeting_items: {
+        Row: {
+          action_due_date: string | null
+          action_owner_id: string | null
+          action_text: string | null
+          agenda_notes: string | null
+          created_at: string
+          decision: string | null
+          id: string
+          linked_record_id: string | null
+          linked_record_type: string | null
+          meeting_id: string
+          minutes: string | null
+          presenter: string | null
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          action_due_date?: string | null
+          action_owner_id?: string | null
+          action_text?: string | null
+          agenda_notes?: string | null
+          created_at?: string
+          decision?: string | null
+          id?: string
+          linked_record_id?: string | null
+          linked_record_type?: string | null
+          meeting_id: string
+          minutes?: string | null
+          presenter?: string | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          action_due_date?: string | null
+          action_owner_id?: string | null
+          action_text?: string | null
+          agenda_notes?: string | null
+          created_at?: string
+          decision?: string | null
+          id?: string
+          linked_record_id?: string | null
+          linked_record_type?: string | null
+          meeting_id?: string
+          minutes?: string | null
+          presenter?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_meeting_items_action_owner_id_fkey"
+            columns: ["action_owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_meeting_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "committee_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committee_meetings: {
+        Row: {
+          agenda_template_id: string | null
+          committee_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          location: string | null
+          scheduled_at: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agenda_template_id?: string | null
+          committee_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          location?: string | null
+          scheduled_at: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agenda_template_id?: string | null
+          committee_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          location?: string | null
+          scheduled_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_meetings_agenda_template_id_fkey"
+            columns: ["agenda_template_id"]
+            isOneToOne: false
+            referencedRelation: "committee_agenda_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_meetings_committee_id_fkey"
+            columns: ["committee_id"]
+            isOneToOne: false
+            referencedRelation: "committees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_meetings_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -570,6 +837,222 @@ export type Database = {
           {
             foreignKeyName: "committee_members_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committee_messages: {
+        Row: {
+          body: string
+          committee_id: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          reply_to_id: string | null
+          user_id: string
+        }
+        Insert: {
+          body: string
+          committee_id: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          reply_to_id?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          committee_id?: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          reply_to_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_messages_committee_id_fkey"
+            columns: ["committee_id"]
+            isOneToOne: false
+            referencedRelation: "committees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "committee_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committee_poll_answers: {
+        Row: {
+          free_text: string | null
+          id: string
+          question_id: string
+          response_id: string
+          selected_options: Json
+        }
+        Insert: {
+          free_text?: string | null
+          id?: string
+          question_id: string
+          response_id: string
+          selected_options?: Json
+        }
+        Update: {
+          free_text?: string | null
+          id?: string
+          question_id?: string
+          response_id?: string
+          selected_options?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_poll_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "committee_poll_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_poll_answers_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "committee_poll_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committee_poll_questions: {
+        Row: {
+          created_at: string
+          id: string
+          options: Json
+          poll_id: string
+          prompt: string
+          question_type: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          options?: Json
+          poll_id: string
+          prompt: string
+          question_type: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          options?: Json
+          poll_id?: string
+          prompt?: string
+          question_type?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_poll_questions_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "committee_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committee_poll_responses: {
+        Row: {
+          id: string
+          poll_id: string
+          submitted_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          poll_id: string
+          submitted_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          poll_id?: string
+          submitted_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_poll_responses_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "committee_polls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_poll_responses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      committee_polls: {
+        Row: {
+          closes_at: string | null
+          committee_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          closes_at?: string | null
+          committee_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          closes_at?: string | null
+          committee_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "committee_polls_committee_id_fkey"
+            columns: ["committee_id"]
+            isOneToOne: false
+            referencedRelation: "committees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_polls_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -6954,6 +7437,36 @@ export type Database = {
         Args: { p_project_url: string }
         Returns: undefined
       }
+      create_committee_agenda_template: {
+        Args: {
+          p_committee_id: string
+          p_description: string
+          p_items: Json
+          p_title: string
+        }
+        Returns: string
+      }
+      create_committee_meeting_from_template: {
+        Args: {
+          p_committee_id: string
+          p_location: string
+          p_scheduled_at: string
+          p_template_id: string
+          p_title: string
+        }
+        Returns: string
+      }
+      create_committee_poll: {
+        Args: {
+          p_closes_at: string
+          p_committee_id: string
+          p_description: string
+          p_questions: Json
+          p_status: string
+          p_title: string
+        }
+        Returns: string
+      }
       create_public_umpire_vote: {
         Args: { p_lines: Json; p_submission: Json }
         Returns: {
@@ -7040,6 +7553,10 @@ export type Database = {
       set_team_mvp_notifications_enabled: {
         Args: { p_enabled: boolean; p_team_id: string }
         Returns: Json
+      }
+      submit_committee_poll_response: {
+        Args: { p_answers: Json; p_poll_id: string }
+        Returns: string
       }
       submit_mvp_ballot: {
         Args: {
