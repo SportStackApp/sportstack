@@ -1423,9 +1423,13 @@ def extract_round_card_details(card, round_url: str) -> dict:
     # The venue link is more reliable than surrounding display text. Some
     # RevSports cards contain a malformed label before the actual venue name.
     if linked_venue_name:
-        if clean_text(details["round_pitch"]).casefold() == clean_text(linked_venue_name).casefold():
+        if " - " in linked_venue_name:
+            details["round_venue"], details["round_pitch"] = split_venue_and_pitch(linked_venue_name)
+        elif clean_text(details["round_pitch"]).casefold() == clean_text(linked_venue_name).casefold():
             details["round_pitch"] = ""
-        details["round_venue"] = linked_venue_name
+            details["round_venue"] = linked_venue_name
+        else:
+            details["round_venue"] = linked_venue_name
 
     return details
 

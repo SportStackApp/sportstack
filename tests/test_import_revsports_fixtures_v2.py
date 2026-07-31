@@ -126,6 +126,27 @@ class RevSportsFixtureV2Tests(unittest.TestCase):
         self.assertEqual("Prince of Wales Park", details["round_venue"])
         self.assertEqual("", details["round_pitch"])
 
+    def test_round_card_splits_a_combined_linked_venue_and_pitch(self) -> None:
+        card = BeautifulSoup(
+            """
+            <div>
+              <span>Sat 02 May 2026</span><span>08:00</span>
+              <span>Prince of Wales Park</span><span>1/2 Pitch North</span>
+              <a href="/hockeyballarat/venues/26298/18279">Prince of Wales Park - 1/2 Pitch North</a>
+              <a href="/hockeyballarat/games/team/26298/417815">Bobcats Maroon</a>
+            </div>
+            """,
+            "html.parser",
+        ).div
+
+        details = extract_round_card_details(
+            card,
+            "https://www.revolutionise.com.au/hockeyballarat/games/26298/14933",
+        )
+
+        self.assertEqual("Prince of Wales Park", details["round_venue"])
+        self.assertEqual("1/2 Pitch North", details["round_pitch"])
+
     def test_bye_context_infers_unique_date_and_location(self) -> None:
         context = infer_bye_round_context([
             {
