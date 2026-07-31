@@ -1,0 +1,68 @@
+name: Dev Quality
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  verify:
+    name: TypeScript, build, Python and workflow checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint the locked development-plan package
+        run: npm run lint:dev-plan
+
+      - name: Check TypeScript
+        run: npx tsc --noEmit
+
+      - name: Build the app
+        run: npm run build
+
+      - name: Run Python regression tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Validate GitHub workflows with pinned actionlint
+        shell: bash
+        run: |
+          archive="actionlint_1.7.12_linux_amd64.tar.gz"
+          curl -fsSLO "https://github.com/rhysd/actionlint/releases/download/v1.7.12/${archive}"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  ${archive}" | sha256sum -c -
+          tar -xzf "${archive}" actionlint
+          ./actionlint -color=false

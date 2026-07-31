@@ -10,6 +10,7 @@
     "prebuild:dev": "node scripts/check-dev-environment.mjs --frontend-only",
     "build:dev": "vite build --mode development",
     "env:check:dev": "node scripts/check-dev-environment.mjs",
+    "lint:dev-plan": "node scripts/lint-dev-plan.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
