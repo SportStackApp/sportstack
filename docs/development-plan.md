@@ -62,11 +62,16 @@ Umpire Match Voting, expose the existing competition and import pages to the cor
 and keep detail/build screens contextual. Association and club menu choices are explicitly scoped;
 page checks, RLS and Edge Functions remain the security boundary.
 
-## 6. Dashboard and availability
+## 6. Dashboard and availability — implemented on Dev, owner smoke pending
 
 - Improve primary-team information and upcoming fixture details.
 - Make player availability easier to understand and update.
 - Keep the Association to Club to Division to Team workflow consistent.
+
+The dashboard now identifies the selected team's Primary, Secondary or Fill-in relationship, makes
+home/away, division, date, time, venue and published line-up information easier to scan, and shows
+availability only for the signed-in player's eligible fixtures. Availability uses accessible
+buttons, prevents repeat writes while saving and reports load failures separately from empty data.
 
 ## 7. Communications
 

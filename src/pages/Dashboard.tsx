@@ -82,6 +82,61 @@ interface DashboardFeedMessage {
 }
 
 type MembershipType = Database["public"]["Enums"]["membership_type_enum"];
+type DisplayMembershipType = "PRIMARY" | "SECONDARY" | "FILL_IN";
+
+const AVAILABILITY_OPTIONS = [
+  { status: "AVAILABLE", label: "Available", icon: Check },
+  { status: "UNAVAILABLE", label: "Unavailable", icon: X },
+  { status: "MAYBE", label: "Unsure", icon: HelpCircle },
+] as const;
+
+const availabilityLabel = (status?: AvailabilityStatus) => {
+  if (status === "AVAILABLE") return "Available";
+  if (status === "UNAVAILABLE") return "Unavailable";
+  if (status === "MAYBE") return "Unsure";
+  return "No response";
+};
+
+interface AvailabilityControlsProps {
+  current?: AvailabilityStatus;
+  saving: boolean;
+  onChange: (status: AvailabilityStatus) => void;
+  compact?: boolean;
+}
+
+const AvailabilityControls = ({ current, saving, onChange, compact = false }: AvailabilityControlsProps) => (
+  <div className="space-y-1.5">
+    <p className={cn("text-xs text-primary-foreground/80", compact && "text-[10px]")} aria-live="polite">
+      Your availability: <span className="font-semibold text-primary-foreground">{availabilityLabel(current)}</span>
+      {saving && <span> · Saving…</span>}
+    </p>
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Set your availability">
+      {AVAILABILITY_OPTIONS.map(({ status, label, icon: Icon }) => {
+        const isSelected = current === status;
+        return (
+          <button
+            type="button"
+            key={status}
+            aria-pressed={isSelected}
+            aria-label={`${label}${isSelected ? "; selected; select again to clear" : ""}`}
+            disabled={saving}
+            onClick={() => onChange(status)}
+            className={cn(
+              "inline-flex min-h-8 items-center justify-center rounded-md border border-primary-foreground/20 px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground disabled:cursor-wait disabled:opacity-60",
+              compact && "min-h-7 px-2 text-[10px]",
+              isSelected
+                ? "bg-primary-foreground text-primary"
+                : "bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20",
+            )}
+          >
+            <Icon className={cn("mr-1 h-3.5 w-3.5", compact && "h-3 w-3")} />
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
 
 const FIXTURE_SELECT =
   "id, fixture_date, status, home_team_id, away_team_id, division_id, venue_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name), divisions:divisions!fixtures_division_id_fkey(id, name)";
@@ -110,7 +165,12 @@ const Dashboard = () => {
   const [games, setGames] = useState<GameRow[]>([]);
   const [calendarGames, setCalendarGames] = useState<CalendarGameRow[]>([]);
   const [availability, setAvailability] = useState<Record<string, AvailabilityStatus>>({});
+  const [availabilitySaving, setAvailabilitySaving] = useState<Set<string>>(new Set());
+  const [teamMembershipTypes, setTeamMembershipTypes] = useState<Record<string, DisplayMembershipType>>({});
   const [loading, setLoading] = useState(true);
+  const [fixturesError, setFixturesError] = useState(false);
+  const [fixtureReloadKey, setFixtureReloadKey] = useState(0);
+  const [calendarError, setCalendarError] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [profileName, setProfileName] = useState("");
   const [teamRequests, setTeamRequests] = useState<TeamRequest[]>([]);
@@ -229,12 +289,15 @@ const Dashboard = () => {
     const fetchGames = async () => {
       if (!selectedTeamId) {
         setGames([]);
+        setPublishedLineupFixtureIds(new Set());
+        setFixturesError(false);
         setLoading(false);
         return;
       }
       setLoading(true);
+      setFixturesError(false);
 
-      const { data: gamesData } = await supabase
+      const { data: gamesData, error: gamesError } = await supabase
         .from("fixtures")
         .select(FIXTURE_SELECT)
         .or(`home_team_id.eq.${selectedTeamId},away_team_id.eq.${selectedTeamId}`)
@@ -242,6 +305,14 @@ const Dashboard = () => {
         .eq("status", "SCHEDULED")
         .order("fixture_date", { ascending: true })
         .limit(8);
+
+      if (gamesError) {
+        setGames([]);
+        setPublishedLineupFixtureIds(new Set());
+        setFixturesError(true);
+        setLoading(false);
+        return;
+      }
 
       const gamesList = (gamesData as GameRow[]) || [];
       setGames(gamesList);
@@ -256,22 +327,27 @@ const Dashboard = () => {
             .in("fixture_id", gameIds)
             .not("published_at", "is", null);
         setPublishedLineupFixtureIds(new Set((lineupsResult.data || []).map((lineup) => lineup.fixture_id)));
+      } else {
+        setPublishedLineupFixtureIds(new Set());
       }
 
       setLoading(false);
     };
     fetchGames();
-  }, [selectedTeamId, user]);
+  }, [fixtureReloadKey, selectedTeamId, user]);
 
   useEffect(() => {
     if (!user) {
       setCalendarGames([]);
       setAvailability({});
+      setTeamMembershipTypes({});
+      setCalendarError(false);
       return;
     }
 
     let active = true;
     const loadPlayerCalendar = async () => {
+      setCalendarError(false);
       const now = new Date().toISOString();
       const [regularResult, fillInResult] = await Promise.all([
         supabase
@@ -288,6 +364,16 @@ const Dashboard = () => {
           .gte("access_expires_at", now),
       ]);
 
+      if (regularResult.error || fillInResult.error) {
+        if (active) {
+          setCalendarGames([]);
+          setAvailability({});
+          setTeamMembershipTypes({});
+          setCalendarError(true);
+        }
+        return;
+      }
+
       const regularMemberships = (regularResult.data || []).map((row) => ({
         teamId: row.team_id,
         membershipType: row.membership_type === "PRIMARY" ? "PRIMARY" as const : "SECONDARY" as const,
@@ -296,6 +382,14 @@ const Dashboard = () => {
         fixtureId: row.fixture_id,
         teamId: row.team_id,
       }));
+      const nextMembershipTypes: Record<string, DisplayMembershipType> = {};
+      for (const membership of regularMemberships) {
+        nextMembershipTypes[membership.teamId] = membership.membershipType;
+      }
+      for (const fillIn of fillIns) {
+        if (!nextMembershipTypes[fillIn.teamId]) nextMembershipTypes[fillIn.teamId] = "FILL_IN";
+      }
+      if (active) setTeamMembershipTypes(nextMembershipTypes);
       const regularTeamIds = [...new Set(regularMemberships.map((row) => row.teamId))];
       const fillInFixtureIds = [...new Set(fillIns.map((row) => row.fixtureId))];
 
@@ -308,7 +402,7 @@ const Dashboard = () => {
             .eq("status", "SCHEDULED")
             .order("fixture_date", { ascending: true })
             .limit(60)
-        : Promise.resolve({ data: [] });
+        : Promise.resolve({ data: [], error: null });
       const fillInFixturesPromise = fillInFixtureIds.length > 0
         ? supabase
             .from("fixtures")
@@ -317,12 +411,21 @@ const Dashboard = () => {
             .gte("fixture_date", now)
             .eq("status", "SCHEDULED")
             .order("fixture_date", { ascending: true })
-        : Promise.resolve({ data: [] });
+        : Promise.resolve({ data: [], error: null });
 
       const [regularFixturesResult, fillInFixturesResult] = await Promise.all([
         regularFixturesPromise,
         fillInFixturesPromise,
       ]);
+
+      if (regularFixturesResult.error || fillInFixturesResult.error) {
+        if (active) {
+          setCalendarGames([]);
+          setAvailability({});
+          setCalendarError(true);
+        }
+        return;
+      }
 
       const membershipOrder = { PRIMARY: 0, SECONDARY: 1, FILL_IN: 2 } as const;
       const merged = new Map<string, CalendarGameRow>();
@@ -357,7 +460,15 @@ const Dashboard = () => {
             .select("fixture_id, status")
             .eq("user_id", user.id)
             .in("fixture_id", fixtureIds)
-        : { data: [] };
+        : { data: [], error: null };
+      if (availabilityResult.error) {
+        if (active) {
+          setCalendarGames(nextGames);
+          setAvailability({});
+          setCalendarError(true);
+        }
+        return;
+      }
       const nextAvailability: Record<string, AvailabilityStatus> = {};
       for (const row of availabilityResult.data || []) {
         if (row.status !== "NO_RESPONSE") nextAvailability[row.fixture_id] = row.status as AvailabilityStatus;
@@ -454,9 +565,10 @@ const Dashboard = () => {
   }, [selectedAssociationId, selectedClubId, selectedTeamId, user]);
 
   const handleAvailabilityChange = async (gameId: string, status: AvailabilityStatus) => {
-    if (!user) return;
+    if (!user || availabilitySaving.has(gameId)) return;
     const previous = availability[gameId];
     const isClearing = previous === status;
+    setAvailabilitySaving((current) => new Set(current).add(gameId));
     setAvailability((current) => {
       const next = { ...current };
       if (isClearing) delete next[gameId];
@@ -484,6 +596,11 @@ const Dashboard = () => {
     } else if (isClearing) {
       toast({ title: "Availability cleared", description: "No response is selected for this fixture." });
     }
+    setAvailabilitySaving((current) => {
+      const next = new Set(current);
+      next.delete(gameId);
+      return next;
+    });
   };
 
   const handleAcceptRequest = async (request: TeamRequest, joinAsSecondary?: boolean) => {
@@ -616,6 +733,7 @@ const Dashboard = () => {
   };
 
   const navigateMonth = (direction: "prev" | "next") => {
+    setSelectedCalendarDate(null);
     setCalendarMonth((prev) => {
       const newDate = new Date(prev);
       newDate.setMonth(newDate.getMonth() + (direction === "prev" ? -1 : 1));
@@ -681,6 +799,8 @@ const Dashboard = () => {
   const canEditCurrentClub = selectedClubId ? canManageClub(selectedClubId) : false;
   const canManageCurrentTeam = selectedTeamId ? canManageTeam(selectedTeamId) : false;
   const canOpenFixtureDetail = Boolean(selectedTeamId);
+  const selectedMembershipType = selectedTeamId ? teamMembershipTypes[selectedTeamId] : undefined;
+  const playerFixtureIds = new Set(calendarGames.map((fixture) => fixture.id));
   const selectedDayFixtures = selectedCalendarDate
     ? calendarGames.filter((fixture) => {
         const fixtureDate = new Date(fixture.fixture_date);
@@ -837,7 +957,15 @@ const Dashboard = () => {
             <p className="text-sm opacity-80">Welcome back{profileName ? `, ${profileName}` : ""}</p>
             {selectedTeamId ? (
               <>
-                <h1 className="truncate text-xl font-semibold sm:text-2xl">{teamName}</h1>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <h1 className="truncate text-xl font-semibold sm:text-2xl">{teamName}</h1>
+                  {selectedMembershipType && (
+                    <MembershipTypeBadge
+                      membershipType={selectedMembershipType}
+                      className="border-white/60 bg-white/90 text-slate-900"
+                    />
+                  )}
+                </div>
                 <p className="truncate text-sm opacity-80">
                   {[selectedClub?.name, selectedAssociation?.name].filter(Boolean).join(" • ")}
                 </p>
@@ -881,7 +1009,24 @@ const Dashboard = () => {
                   ))}
                 </div>
               ) : games.length === 0 ? (
-                <p className="text-primary-foreground/70 text-sm">No upcoming fixtures</p>
+                fixturesError ? (
+                  <div className="rounded-lg bg-primary-foreground/10 p-3 text-sm text-primary-foreground">
+                    <p className="flex items-center gap-2 font-medium">
+                      <AlertCircle className="h-4 w-4" /> Upcoming fixtures could not be loaded.
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="mt-3"
+                      onClick={() => setFixtureReloadKey((current) => current + 1)}
+                    >
+                      Try again
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-primary-foreground/70 text-sm">No upcoming fixtures</p>
+                )
               ) : (
                 games.slice(0, 5).map((game) => {
                   const gameDate = new Date(game.fixture_date);
@@ -890,76 +1035,76 @@ const Dashboard = () => {
                   const venueName = game.venue?.name ?? "TBD";
                   const divisionName = game.divisions?.name;
                   const avail = availability[game.id];
+                  const isHomeFixture = game.home_team_id === selectedTeamId;
+                  const canSetAvailability = playerFixtureIds.has(game.id);
 
-                  const fixtureCard = (
-                    <>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <p className="text-sm">
-                          {homeTeam} vs {awayTeam}
-                        </p>
-                        {canOpenFixtureDetail && <ChevronRight className="h-4 w-4 text-primary-foreground/50 flex-shrink-0" />}
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-primary-foreground/70 mb-2">
-                        {divisionName && <span>{divisionName}</span>}
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {gameDate.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {gameDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {venueName}
-                        </span>
-                      </div>
-
-                      {publishedLineupFixtureIds.has(game.id) && (
-                        <Badge className="mb-2 border-0 bg-sky-500/25 text-sky-100">Line-up published</Badge>
-                      )}
-
-                      {/* Availability buttons */}
-                      <div className="flex gap-2" onClick={(e) => e.preventDefault()}>
-                        {(["AVAILABLE", "UNAVAILABLE", "MAYBE"] as const).map((status) => {
-                          const config = {
-                            AVAILABLE: { icon: Check, label: "Available", active: "bg-green-500 text-white", inactive: "bg-green-500/20 text-green-200" },
-                            UNAVAILABLE: { icon: X, label: "Not Available", active: "bg-red-500 text-white", inactive: "bg-red-500/20 text-red-200" },
-                            MAYBE: { icon: HelpCircle, label: "Unsure", active: "bg-yellow-500 text-white", inactive: "bg-yellow-500/20 text-yellow-200" },
-                          };
-                          const c = config[status];
-                          const Icon = c.icon;
-                          return (
-                            <Badge
-                              key={status}
-                              onClick={() => handleAvailabilityChange(game.id, status)}
-                              className={`text-xs cursor-pointer transition-all border-0 ${
-                                avail === status ? c.active : `${c.inactive} hover:opacity-80`
-                              }`}
-                            >
-                              <Icon className="h-3 w-3 mr-1" />
-                              {c.label}
-                            </Badge>
-                          );
-                        })}
-                      </div>
-                    </>
-                  );
-
-                  return canOpenFixtureDetail ? (
-                    <Link
-                      key={game.id}
-                      to={`/games/${game.id}`}
-                      className="block p-3 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
-                    >
-                      {fixtureCard}
-                    </Link>
-                  ) : (
+                  return (
                     <div
                       key={game.id}
-                      className="block p-3 rounded-lg bg-primary-foreground/10"
+                      className="rounded-lg bg-primary-foreground/10 transition-colors hover:bg-primary-foreground/15"
                     >
-                      {fixtureCard}
+                      {canOpenFixtureDetail ? (
+                        <Link to={`/games/${game.id}`} className="block p-3 pb-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="mb-1 flex flex-wrap items-center gap-2">
+                                <Badge variant="outline" className="border-primary-foreground/30 text-primary-foreground">
+                                  {isHomeFixture ? "Home" : "Away"}
+                                </Badge>
+                                {divisionName && <span className="text-xs text-primary-foreground/70">{divisionName}</span>}
+                              </div>
+                              <p className="text-sm font-medium text-primary-foreground">
+                                {homeTeam} vs {awayTeam}
+                              </p>
+                            </div>
+                            <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-primary-foreground/50" />
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-primary-foreground/75">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {gameDate.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {gameDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                            <span className="flex min-w-0 items-center gap-1">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{venueName}</span>
+                            </span>
+                          </div>
+                        </Link>
+                      ) : (
+                        <div className="p-3 pb-2">
+                          <div className="mb-1 flex flex-wrap items-center gap-2">
+                            <Badge variant="outline" className="border-primary-foreground/30 text-primary-foreground">
+                              {isHomeFixture ? "Home" : "Away"}
+                            </Badge>
+                            {divisionName && <span className="text-xs text-primary-foreground/70">{divisionName}</span>}
+                          </div>
+                          <p className="text-sm font-medium text-primary-foreground">{homeTeam} vs {awayTeam}</p>
+                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-primary-foreground/75">
+                            <span>{gameDate.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}</span>
+                            <span>{gameDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</span>
+                            <span className="truncate">{venueName}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {(publishedLineupFixtureIds.has(game.id) || canSetAvailability) && (
+                        <div className="space-y-2 border-t border-primary-foreground/15 px-3 py-2.5">
+                          {publishedLineupFixtureIds.has(game.id) && (
+                            <Badge className="border-0 bg-sky-500/25 text-sky-100">Line-up published</Badge>
+                          )}
+                          {canSetAvailability && (
+                            <AvailabilityControls
+                              current={avail}
+                              saving={availabilitySaving.has(game.id)}
+                              onChange={(status) => void handleAvailabilityChange(game.id, status)}
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -996,6 +1141,12 @@ const Dashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
+              {calendarError && (
+                <div className="mb-3 flex items-start gap-2 rounded-md bg-primary-foreground/10 p-2 text-xs text-primary-foreground">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  Your full fixture calendar or availability could not be loaded. Please refresh and try again.
+                </div>
+              )}
               <div className="grid grid-cols-7 gap-1 text-center text-xs">
                 {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => (
                   <div key={i} className="py-0.5 text-primary-foreground/70 font-medium">{day}</div>
@@ -1054,24 +1205,15 @@ const Dashboard = () => {
                       </div>
                       <p className="mt-1 text-primary-foreground/75">
                         {new Date(fixture.fixture_date).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
-                        {` • ${availability[fixture.id] === "AVAILABLE" ? "Available" : availability[fixture.id] === "UNAVAILABLE" ? "Not available" : availability[fixture.id] === "MAYBE" ? "Unsure" : "No response"}`}
+                        {` • ${availabilityLabel(availability[fixture.id])}`}
                       </p>
-                      <div className="mt-2 flex gap-1">
-                        {(["AVAILABLE", "UNAVAILABLE", "MAYBE"] as const).map((status) => (
-                          <button
-                            type="button"
-                            key={status}
-                            onClick={() => void handleAvailabilityChange(fixture.id, status)}
-                            className={cn(
-                              "rounded px-1.5 py-1 text-[10px] transition-colors",
-                              availability[fixture.id] === status
-                                ? "bg-white font-semibold text-slate-900"
-                                : "bg-white/15 text-white hover:bg-white/25",
-                            )}
-                          >
-                            {status === "AVAILABLE" ? "Available" : status === "UNAVAILABLE" ? "Not available" : "Unsure"}
-                          </button>
-                        ))}
+                      <div className="mt-2">
+                        <AvailabilityControls
+                          current={availability[fixture.id]}
+                          saving={availabilitySaving.has(fixture.id)}
+                          compact
+                          onChange={(status) => void handleAvailabilityChange(fixture.id, status)}
+                        />
                       </div>
                     </div>
                   ))}

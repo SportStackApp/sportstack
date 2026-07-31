@@ -134,6 +134,8 @@ Treat these as current caution areas unless a newer live check proves otherwise:
   browser checks passed with no Vite overlay or console errors.
 - The reorganised signed-in navigation still needs an owner smoke test in Super Admin, Association
   Admin, Club Admin, Team Manager, Player and Umpire modes.
+- The dashboard and availability reliability pass still needs an owner smoke test across a Primary,
+  Secondary and, where available, Fill-in fixture.
 
 ## Current Codex handoff template
 
@@ -176,6 +178,14 @@ What changed:
   added Communications to association and club menus, and added an Umpire-role ballot link.
 - Recorded direct and contextual route decisions in `docs/navigation-audit.md`. Menu visibility is
   documented as a usability layer; route checks, RLS and Edge Functions remain authoritative.
+- Improved the daily dashboard team context and fixture cards. The selected team now shows its
+  Primary, Secondary or Fill-in relationship, and fixtures clearly show home/away, division, date,
+  time, venue and published line-up state.
+- Replaced clickable availability badges nested inside fixture links with accessible buttons outside
+  the link. Repeat writes are blocked while saving, selecting the active choice still clears it,
+  and only fixtures for which the player is eligible show availability controls.
+- Added separate dashboard load-error states so a failed fixture, calendar or availability request
+  is no longer presented as a genuine empty result.
 
 Checks run:
 
@@ -193,6 +203,8 @@ Checks run:
 - Full repository lint remained unchanged at 521 problems after a standalone rerun.
 - Navigation focused lint, TypeScript and production build passed. Full repository lint remained at
   the known 521-problem legacy backlog and added no changed-file finding.
+- Dashboard focused lint, TypeScript and production build passed. Full repository lint remained at
+  the same known 521-problem legacy backlog.
 
 What Aaron should test next:
 
@@ -205,6 +217,9 @@ What Aaron should test next:
   rollout. Do not connect `hb` from this repository-only package.
 - Check the desktop menu and mobile drawer in each role mode available to your account. Confirm the
   page groups and labels are logical, then open one item from each visible group.
+- On Dev, open the Primary and Secondary teams from the player team switcher. Confirm the banner
+  badge, home/away fixture details and availability status are correct; change one response, then
+  select it again and confirm it clears to No response.
 
 Risk level:
 
