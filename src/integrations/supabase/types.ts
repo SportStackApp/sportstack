@@ -7536,6 +7536,17 @@ export type Database = {
         Args: { p_action: string; p_lines?: Json; p_submission_id: string }
         Returns: Json
       }
+      save_safety_hub_form: {
+        Args: {
+          p_association_id: string
+          p_club_id: string
+          p_mode: string
+          p_payload: Json
+          p_record_id: string
+          p_team_id: string
+        }
+        Returns: string
+      }
       set_module_feature_flag: {
         Args: {
           p_enabled: boolean

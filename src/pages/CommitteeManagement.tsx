@@ -488,6 +488,8 @@ export default function CommitteeManagement() {
               <CommitteeMeetings
                 key={`meetings-${selectedCommitteeId}`}
                 committeeId={selectedCommitteeId}
+                associationId={selectedCommittee?.association_id || ""}
+                clubId={selectedCommittee?.club_id || null}
                 canManage={permissions.manage_meetings}
                 canRecordMinutes={permissions.record_minutes}
                 profiles={profiles}

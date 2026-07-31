@@ -143,11 +143,17 @@ minutes, decisions and assigned actions beside every point. Current members can 
 posting and voting require explicit position permissions. An append-only activity view records
 committee setup, poll, meeting, minutes and chat changes.
 
-## 13. Risk and Quality Improvement
+## 13. Risk and Quality Improvement — implemented on Dev, owner smoke pending
 
 - Complete Risk Register, risk review and BE SMART Action write workflows.
 - Complete Quality Improvement and Bright Idea workflows.
 - Link committee decisions and maintain a complete audit history.
+
+The existing live Safety Hub now saves Risk Register, BE SMART Action, Quality Improvement, Bright
+Idea, committee-review, risk-review and record-link forms instead of retaining browser-only drafts.
+One RLS-protected transaction saves each record and its permanent links, while the existing
+append-only audit triggers record every change. Committee meeting decisions can link to accessible
+Risk or Quality records only when the record is real and inside the committee's organisation scope.
 
 ## 14. Testing and reliability
 

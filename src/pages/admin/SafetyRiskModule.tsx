@@ -14,6 +14,7 @@ import {
   Lightbulb,
   Link2,
   ListChecks,
+  Loader2,
   Plus,
   Search,
   ShieldCheck,
@@ -97,6 +98,7 @@ type BrightIdeaStatus = "Submitted" | "Under review" | "Accepted" | "Deferred" |
 
 interface RiskRecord {
   kind: "risk";
+  databaseId?: string;
   id: string;
   title: string;
   summary: string;
@@ -123,6 +125,7 @@ interface RiskRecord {
 
 interface ActionRecord {
   kind: "action";
+  databaseId?: string;
   id: string;
   title: string;
   owner: string;
@@ -143,6 +146,7 @@ interface ActionRecord {
 
 interface QiRecord {
   kind: "qi";
+  databaseId?: string;
   id: string;
   title: string;
   source: string;
@@ -163,6 +167,7 @@ interface QiRecord {
 
 interface BrightIdeaRecord {
   kind: "idea";
+  databaseId?: string;
   id: string;
   title: string;
   submittedBy: string;
@@ -1019,7 +1024,7 @@ export default function SafetyRiskModule() {
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [formDirty, setFormDirty] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
-  const [prototypeSaveMessage, setPrototypeSaveMessage] = useState<string | null>(null);
+  const [formSaving, setFormSaving] = useState(false);
 
   const scopeLabel = selectedTeam?.name || selectedClub?.name || selectedAssociation?.name || "All accessible organisations";
   const recordsById = useMemo(
@@ -1086,7 +1091,6 @@ export default function SafetyRiskModule() {
     setFormStep(0);
     setFormErrors([]);
     setFormDirty(false);
-    setPrototypeSaveMessage(null);
   };
 
   const toggleLinkedRow = (recordId: string) => {
@@ -1121,24 +1125,68 @@ export default function SafetyRiskModule() {
     setFormStep(0);
     setFormErrors([]);
     setFormDirty(false);
-    setPrototypeSaveMessage(null);
   };
 
-  const submitForm = () => {
+  const submitForm = async () => {
     if (!formMode) return;
     const errors = validateSafetyForm(formMode, formValues);
+    const isEdit = Boolean(
+      (formMode === "risk" && formContext.riskId)
+      || (formMode === "action" && formContext.actionId)
+      || (formMode === "qi" && formContext.qiId),
+    );
+    if (isEdit && !formValues.changeReason?.trim()) {
+      errors.push("Change reason is required when editing an existing record.");
+    }
+    if (["risk", "action", "qi", "idea"].includes(formMode) && !isEdit && !selectedAssociation?.id) {
+      errors.push("Select an association before creating a Safety Hub record.");
+    }
     if (errors.length > 0) {
       setFormErrors(errors);
       return;
     }
 
-    const message = getPrototypeSaveMessage(formMode, formContext);
-    setPrototypeSaveMessage(message);
-    setFormDirty(false);
-    toast({
-      title: "Draft checked - not saved",
-      description: message,
-    });
+    setFormSaving(true);
+    try {
+      const ownerId = await resolveSafetyOwnerId(formValues.owner || "");
+      const recordId = getFormRecordDatabaseId(formMode, formContext, safetyData);
+      const payload = buildSafetyFormPayload(formMode, formValues, safetyData, ownerId);
+      const { error: saveError } = await supabase.rpc("save_safety_hub_form", {
+        p_mode: formMode,
+        p_record_id: (recordId ?? null) as string,
+        p_association_id: (selectedAssociation?.id ?? null) as string,
+        p_club_id: (selectedClub?.id ?? null) as string,
+        p_team_id: (selectedTeam?.id ?? null) as string,
+        p_payload: payload,
+      });
+      if (saveError) throw saveError;
+
+      const nextData = await loadSafetyHubData({
+        associationId: selectedAssociation?.id,
+        clubId: selectedClub?.id,
+        teamId: selectedTeam?.id,
+      });
+      setSafetyData(nextData);
+      const followUpMode = formMode === "committee-review"
+        ? getCommitteeReviewFollowUpMode(formValues.conversion)
+        : null;
+      const ideaId = formContext.ideaId;
+      closeForm();
+      if (followUpMode && ideaId) {
+        const nextContext = { ideaId };
+        setFormMode(followUpMode);
+        setFormContext(nextContext);
+        setFormValues(createInitialFormValues(followUpMode, nextContext, scopeLabel, nextData));
+        toast({ title: "Committee decision saved", description: "Complete the linked record now." });
+      } else {
+        toast({ title: getSafetySaveTitle(formMode), description: "The live Dev record and audit history are up to date." });
+      }
+    } catch (error: unknown) {
+      setFormErrors([getErrorMessage(error)]);
+      toast({ title: "Safety Hub record not saved", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setFormSaving(false);
+    }
   };
 
   const riskCategories = useMemo(
@@ -1840,11 +1888,11 @@ export default function SafetyRiskModule() {
         values={formValues}
         step={formStep}
         errors={formErrors}
-        saveMessage={prototypeSaveMessage}
+        saving={formSaving}
         onStepChange={setFormStep}
         onValueChange={updateFormValue}
         onRequestClose={requestFormClose}
-        onSubmit={submitForm}
+        onSubmit={() => void submitForm()}
       />
       <SafetyDetailDrawer
         record={activeRecord}
@@ -1857,7 +1905,7 @@ export default function SafetyRiskModule() {
           <AlertDialogHeader>
             <AlertDialogTitle>Discard this draft?</AlertDialogTitle>
             <AlertDialogDescription>
-              This prototype form has unsaved changes. Closing it will clear the local draft.
+              This form has unsaved changes. Closing it will clear the draft.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1901,7 +1949,7 @@ function AddRecordButton({ onOpenForm }: { onOpenForm: (mode: SafetyFormMode) =>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>Prototype forms - not saved</DropdownMenuLabel>
+        <DropdownMenuLabel>Create Safety Hub record</DropdownMenuLabel>
         <DropdownMenuItem onClick={() => openFormAndCloseMenu("risk")}>Add risk</DropdownMenuItem>
         <DropdownMenuItem onClick={() => openFormAndCloseMenu("action")}>Add action</DropdownMenuItem>
         <DropdownMenuItem onClick={() => openFormAndCloseMenu("qi")}>Add QI item</DropdownMenuItem>
@@ -2615,7 +2663,7 @@ function SafetyFormDialog({
   values,
   step,
   errors,
-  saveMessage,
+  saving,
   onStepChange,
   onValueChange,
   onRequestClose,
@@ -2626,7 +2674,7 @@ function SafetyFormDialog({
   values: Record<string, string>;
   step: number;
   errors: string[];
-  saveMessage: string | null;
+  saving: boolean;
   onStepChange: (step: number) => void;
   onValueChange: (field: string, value: string) => void;
   onRequestClose: () => void;
@@ -2635,6 +2683,11 @@ function SafetyFormDialog({
   const riskStepCount = 5;
   const canGoBack = mode === "risk" && step > 0;
   const canGoForward = mode === "risk" && step < riskStepCount - 1;
+  const needsChangeReason = Boolean(
+    (mode === "risk" && context.riskId)
+    || (mode === "action" && context.actionId)
+    || (mode === "qi" && context.qiId),
+  );
 
   return (
     <Dialog open={Boolean(mode)} onOpenChange={(open) => !open && onRequestClose()}>
@@ -2651,7 +2704,6 @@ function SafetyFormDialog({
             )}
 
             <FormErrors errors={errors} />
-            <PrototypeSaveBanner message={saveMessage} />
 
             <div className="space-y-4">
               {mode === "risk" && <RiskFormStep step={step} values={values} onValueChange={onValueChange} />}
@@ -2661,24 +2713,33 @@ function SafetyFormDialog({
               {mode === "committee-review" && <CommitteeReviewForm values={values} onValueChange={onValueChange} />}
               {mode === "risk-review" && <RiskReviewForm values={values} onValueChange={onValueChange} />}
               {mode === "link-records" && <LinkRecordsForm values={values} onValueChange={onValueChange} />}
+              {needsChangeReason && (
+                <TextAreaField
+                  label="Reason for this change"
+                  field="changeReason"
+                  values={values}
+                  onValueChange={onValueChange}
+                />
+              )}
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="outline" onClick={onRequestClose}>
+              <Button type="button" variant="outline" onClick={onRequestClose} disabled={saving}>
                 Close
               </Button>
               {canGoBack && (
-                <Button type="button" variant="outline" onClick={() => onStepChange(step - 1)}>
+                <Button type="button" variant="outline" onClick={() => onStepChange(step - 1)} disabled={saving}>
                   Back
                 </Button>
               )}
               {canGoForward ? (
-                <Button type="button" onClick={() => onStepChange(step + 1)}>
+                <Button type="button" onClick={() => onStepChange(step + 1)} disabled={saving}>
                   Next
                 </Button>
               ) : (
-                <Button type="button" onClick={onSubmit}>
-                  Validate draft
+                <Button type="button" onClick={onSubmit} disabled={saving}>
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save record
                 </Button>
               )}
             </DialogFooter>
@@ -2728,7 +2789,7 @@ function RiskFormStep({
       <div className="space-y-4">
         <LinkedContextBanner ids={[values.linkedActionId, values.linkedQiId, values.linkedIdeaId]} />
         <FormGrid>
-          <TextField label="Organisation scope" field="scope" values={values} onValueChange={onValueChange} />
+          <ReadOnlyField label="Organisation scope" value={values.scope || "Select an organisation"} />
           <SelectField label="Risk type" field="type" values={values} onValueChange={onValueChange} options={["Operational", "Clinical", "Governance", "Environmental", "Conduct"]} />
           <TextField label="Category" field="category" values={values} onValueChange={onValueChange} />
           <TextField label="Owner (optional)" field="owner" values={values} onValueChange={onValueChange} />
@@ -2779,13 +2840,13 @@ function RiskFormStep({
       <TextAreaField label="Treatment plan" field="treatmentPlan" values={values} onValueChange={onValueChange} />
       <FormGrid>
         <SelectField label="Review frequency" field="reviewFrequency" values={values} onValueChange={onValueChange} options={reviewFrequencyOptions} />
-        <TextField label="Next review date" field="nextReview" values={values} onValueChange={onValueChange} />
+        <TextField label="Next review date" field="nextReview" type="date" values={values} onValueChange={onValueChange} />
       </FormGrid>
       <TextAreaField label="Evidence or notes" field="evidence" values={values} onValueChange={onValueChange} />
       <div className="rounded-md border bg-muted/40 p-4">
         <div className="text-sm font-medium">Review before saving</div>
         <p className="mt-1 text-sm text-muted-foreground">
-          This prototype keeps the draft in the browser only. It will not create or edit a live risk record.
+          Saving updates the live Dev Risk Register and records the change in the audit history.
         </p>
       </div>
     </div>
@@ -2827,13 +2888,13 @@ function ActionForm({
       <DetailSection title="Responsibility, resources and due date">
         <FormGrid>
           <TextField label="Owner (optional)" field="owner" values={values} onValueChange={onValueChange} />
-          <TextField label="Due date" field="dueDate" values={values} onValueChange={onValueChange} />
+          <TextField label="Due date" field="dueDate" type="date" values={values} onValueChange={onValueChange} />
         </FormGrid>
         <TextAreaField label="Resources or support needed" field="resources" values={values} onValueChange={onValueChange} />
       </DetailSection>
       <DetailSection title="Review and save note">
         <p className="text-sm text-muted-foreground">
-          This prototype validates the action draft locally only. It will not create or update a live action record.
+          Saving updates the live Dev action register and records the change in the audit history.
         </p>
       </DetailSection>
     </div>
@@ -2855,7 +2916,7 @@ function QiForm({
         <TextField label="Area" field="area" values={values} onValueChange={onValueChange} />
         <TextField label="Owner (optional)" field="owner" values={values} onValueChange={onValueChange} />
         <AutomaticAddedByField />
-        <TextField label="Due date" field="dueDate" values={values} onValueChange={onValueChange} />
+        <TextField label="Due date" field="dueDate" type="date" values={values} onValueChange={onValueChange} />
         <SelectField label="Priority" field="priority" values={values} onValueChange={onValueChange} options={["Low", "Medium", "High"]} />
         <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["New", "Awaiting decision", "Approved", "In progress", "Complete", "Entered in error"]} />
       </FormGrid>
@@ -2878,9 +2939,9 @@ function BrightIdeaForm({
     <div className="space-y-4">
       <FormGrid>
         <TextField label="Idea title" field="title" values={values} onValueChange={onValueChange} />
-        <TextField label="Submitted by" field="submittedBy" values={values} onValueChange={onValueChange} />
-        <TextField label="Organisation scope" field="scope" values={values} onValueChange={onValueChange} />
-        <SelectField label="Status" field="status" values={values} onValueChange={onValueChange} options={["Submitted", "Under review", "Accepted", "Deferred", "Closed", "Entered in error"]} />
+        <AutomaticAddedByField />
+        <ReadOnlyField label="Organisation scope" value={values.scope || "Select an organisation"} />
+        <ReadOnlyField label="Status" value="Submitted" />
       </FormGrid>
       <TextAreaField label="Why it is needed" field="whyNeeded" values={values} onValueChange={onValueChange} />
       <TextAreaField label="Suggested implementation" field="suggestedImplementation" values={values} onValueChange={onValueChange} />
@@ -2929,10 +2990,10 @@ function RiskReviewForm({
     <div className="space-y-4">
       <LinkedContextBanner ids={[values.riskId]} />
       <FormGrid>
-        <TextField label="Risk ID" field="riskId" values={values} onValueChange={onValueChange} />
-        <TextField label="Reviewed by" field="reviewedBy" values={values} onValueChange={onValueChange} />
-        <TextField label="Review date" field="reviewDate" values={values} onValueChange={onValueChange} />
-        <TextField label="Next review date" field="nextReview" values={values} onValueChange={onValueChange} />
+        <ReadOnlyField label="Risk ID" value={values.riskId || "No risk selected"} />
+        <AutomaticAddedByField />
+        <TextField label="Review date" field="reviewDate" type="date" values={values} onValueChange={onValueChange} />
+        <TextField label="Next review date" field="nextReview" type="date" values={values} onValueChange={onValueChange} />
         <SelectField label="Residual likelihood" field="residualLikelihood" values={values} onValueChange={onValueChange} options={formLikelihoodOptions} />
         <SelectField label="Residual consequence" field="residualConsequence" values={values} onValueChange={onValueChange} options={formConsequenceOptions} />
         <RatingPreview label="Calculated residual rating" rating={residualRating} />
@@ -2955,7 +3016,7 @@ function LinkRecordsForm({
     <div className="space-y-4">
       <LinkedContextBanner ids={[values.sourceRecordId, values.linkedRiskId, values.linkedActionId, values.linkedQiId, values.linkedIdeaId]} />
       <FormGrid>
-        <TextField label="Source record" field="sourceRecordId" values={values} onValueChange={onValueChange} />
+        <ReadOnlyField label="Source record" value={values.sourceRecordId || "No source record selected"} />
         <TextField label="Existing risk ID" field="linkedRiskId" values={values} onValueChange={onValueChange} />
         <TextField label="Existing action ID" field="linkedActionId" values={values} onValueChange={onValueChange} />
         <TextField label="Existing QI ID" field="linkedQiId" values={values} onValueChange={onValueChange} />
@@ -2963,7 +3024,7 @@ function LinkRecordsForm({
       </FormGrid>
       <TextAreaField label="Link reason or notes" field="linkNotes" values={values} onValueChange={onValueChange} />
       <div className="rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
-        This prototype validates the relationship only in the browser. It does not create a live link yet.
+        Saving creates permanent live links between the selected Safety Hub records.
       </div>
     </div>
   );
@@ -2976,11 +3037,13 @@ function FormGrid({ children }: { children: React.ReactNode }) {
 function TextField({
   label,
   field,
+  type = "text",
   values,
   onValueChange,
 }: {
   label: string;
   field: string;
+  type?: string;
   values: Record<string, string>;
   onValueChange: (field: string, value: string) => void;
 }) {
@@ -2989,6 +3052,7 @@ function TextField({
       <Label htmlFor={field}>{label}</Label>
       <Input
         id={field}
+        type={type}
         value={values[field] || ""}
         onChange={(event) => onValueChange(field, event.target.value)}
       />
@@ -3015,7 +3079,7 @@ function PermanentRelationshipPanel({ ids }: { ids: Array<string | undefined> })
       <div className="text-sm font-medium">Permanent source relationship</div>
       {visibleIds.length === 0 ? (
         <p className="mt-1 text-sm text-muted-foreground">
-          No source record selected. This prototype record will be treated as independent.
+          No source record selected. This record will be saved as independent.
         </p>
       ) : (
         <div className="mt-3 grid gap-2 md:grid-cols-2">
@@ -3142,20 +3206,6 @@ function FormErrors({ errors }: { errors: string[] }) {
           <li key={error}>{error}</li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-function PrototypeSaveBanner({ message }: { message: string | null }) {
-  if (!message) return null;
-
-  return (
-    <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
-      <CheckCircle2 className="mt-0.5 h-4 w-4" />
-      <div>
-        <div className="font-medium">Draft validation complete - not saved</div>
-        <div>{message}</div>
-      </div>
     </div>
   );
 }
@@ -3593,7 +3643,7 @@ function createInitialFormValues(
       scope: risk?.scope || scopeLabel,
       type: risk?.type || "Operational",
       category: risk?.category || "Safety",
-      owner: risk?.owner || "",
+      owner: editableSafetyOwner(risk?.owner),
       status: risk?.status || "Open",
       title: risk?.title || idea?.title || qi?.title || action?.title || "",
       riskEvent: risk?.title || qi?.issue || idea?.whyNeeded || "",
@@ -3607,8 +3657,9 @@ function createInitialFormValues(
       targetRating: risk?.targetRating || "Medium",
       treatmentPlan: risk?.treatmentPlan || "",
       reviewFrequency: "Quarterly",
-      nextReview: risk?.nextReview || "",
+      nextReview: toSafetyDateInput(risk?.nextReview),
       evidence: risk?.evidence || "",
+      changeReason: "",
       linkedActionId: context.actionId || "",
       linkedQiId: context.qiId || "",
       linkedIdeaId: context.ideaId || "",
@@ -3618,8 +3669,8 @@ function createInitialFormValues(
   if (mode === "action") {
     return {
       title: action?.title || idea?.title || "",
-      owner: action?.owner || "",
-      dueDate: action?.dueDate || "",
+      owner: editableSafetyOwner(action?.owner),
+      dueDate: toSafetyDateInput(action?.dueDate),
       status: action?.status || "Not started",
       linkedRiskId: action?.linkedRiskId || context.riskId || "",
       linkedQiId: action?.linkedQiId || context.qiId || "",
@@ -3632,6 +3683,7 @@ function createInitialFormValues(
       relevant: action?.relevant || idea?.whyNeeded || "",
       timeBound: action?.timeBound || "",
       resources: "",
+      changeReason: "",
     };
   }
 
@@ -3640,8 +3692,8 @@ function createInitialFormValues(
       title: qi?.title || idea?.title || "",
       source: qi?.source || (idea ? "Bright Idea" : context.riskId ? "Risk review" : context.actionId ? "Action follow-up" : "Committee review"),
       area: qi?.area || "",
-      owner: qi?.owner || "",
-      dueDate: qi?.dueDate || "",
+      owner: editableSafetyOwner(qi?.owner),
+      dueDate: toSafetyDateInput(qi?.dueDate),
       priority: qi?.priority || "Medium",
       status: qi?.status || "New",
       linkedRiskId: qi?.linkedRiskId || context.riskId || "",
@@ -3650,6 +3702,7 @@ function createInitialFormValues(
       issue: qi?.issue || idea?.whyNeeded || "",
       requiredAction: qi?.requiredAction || idea?.suggestedImplementation || "",
       outcome: qi?.outcome || "",
+      changeReason: "",
     };
   }
 
@@ -3693,8 +3746,8 @@ function createInitialFormValues(
   return {
     riskId: risk?.id || "",
     reviewedBy: "Safety Lead",
-    reviewDate: "11/07/2026",
-    nextReview: risk?.nextReview || "",
+    reviewDate: new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Melbourne" }),
+    nextReview: toSafetyDateInput(risk?.nextReview),
     residualLikelihood: risk?.likelihood || "Possible",
     residualConsequence: risk?.consequence || "Moderate",
     status: risk?.status || "Open",
@@ -3719,7 +3772,7 @@ function getFormDescription(mode: SafetyFormMode, context: SafetyFormContext) {
   if (mode === "qi") return context.ideaId ? "QI form carrying text across from the Bright Idea." : "Independent or linked quality improvement form.";
   if (mode === "idea") return "Simple suggestion form for signed-in users.";
   if (mode === "committee-review") return "Committee decision and conversion notes for a Bright Idea.";
-  if (mode === "link-records") return "Prototype link manager for connecting existing mock records.";
+  if (mode === "link-records") return "Connect existing live records while preserving their original history.";
   return "Risk review form using the same matrix as the risk form.";
 }
 
@@ -3759,6 +3812,8 @@ function validateSafetyForm(mode: SafetyFormMode, values: Record<string, string>
     requireField("ideaId", "Bright Idea ID");
     requireField("decision", "Committee decision");
     requireField("committeeNotes", "Committee discussion");
+    requireField("decisionReason", "Decision reason");
+    if (values.conversion === "Link to existing record") requireField("linkedRecordId", "Linked record");
   }
 
   if (mode === "link-records") {
@@ -3767,7 +3822,6 @@ function validateSafetyForm(mode: SafetyFormMode, values: Record<string, string>
 
   if (mode === "risk-review") {
     requireField("riskId", "Risk ID");
-    requireField("reviewedBy", "Reviewed by");
     requireField("reviewDate", "Review date");
     requireField("reviewNotes", "Review notes");
   }
@@ -3915,6 +3969,7 @@ function buildSafetyHubData({
 
     return {
       kind: "risk",
+      databaseId: row.id,
       id: displayByDatabaseId.get(row.id) ?? row.id,
       title: row.title,
       summary: row.description ?? row.consequences ?? row.risk_event ?? "No summary recorded.",
@@ -3944,6 +3999,7 @@ function buildSafetyHubData({
     const links = linkedDisplayIds.get(row.id) ?? [];
     return {
       kind: "action",
+      databaseId: row.id,
       id: displayByDatabaseId.get(row.id) ?? row.id,
       title: row.title,
       owner: profileNames.get(row.assigned_to ?? "") ?? "Unassigned",
@@ -3967,6 +4023,7 @@ function buildSafetyHubData({
     const links = linkedDisplayIds.get(row.id) ?? [];
     return {
       kind: "qi",
+      databaseId: row.id,
       id: displayByDatabaseId.get(row.id) ?? row.id,
       title: row.title,
       source: row.source ?? "Not recorded",
@@ -3990,6 +4047,7 @@ function buildSafetyHubData({
     const links = linkedDisplayIds.get(row.id) ?? [];
     return {
       kind: "idea",
+      databaseId: row.id,
       id: displayByDatabaseId.get(row.id) ?? row.id,
       title: row.title,
       submittedBy: profileNames.get(row.submitted_by ?? "") ?? "Unknown submitter",
@@ -4279,19 +4337,219 @@ function getErrorMessage(error: unknown) {
   return "An unknown Supabase error occurred.";
 }
 
-function getPrototypeSaveMessage(mode: SafetyFormMode, context: SafetyFormContext) {
-  const linkText = [context.riskId, context.actionId, context.qiId, context.ideaId]
-    .filter(Boolean)
-    .join(", ");
-  const suffix = linkText ? ` Linked context: ${linkText}.` : "";
+function getSafetyRecord(data: SafetyHubData, displayId: string | undefined): CoreSafetyRecord | undefined {
+  if (!displayId) return undefined;
+  return [...data.risks, ...data.actions, ...data.qiItems, ...data.brightIdeas]
+    .find((record) => record.id === displayId);
+}
 
-  if (mode === "risk") return `Risk draft validated locally.${suffix}`;
-  if (mode === "action") return `Action draft validated locally.${suffix}`;
-  if (mode === "qi") return `QI draft validated locally.${suffix}`;
-  if (mode === "idea") return "Bright Idea draft validated locally.";
-  if (mode === "committee-review") return `Committee review draft validated locally.${suffix}`;
-  if (mode === "link-records") return `Linked-record draft validated locally.${suffix}`;
-  return `Risk review draft validated locally.${suffix}`;
+function requireSafetyRecord(data: SafetyHubData, displayId: string | undefined, label: string): CoreSafetyRecord {
+  const record = getSafetyRecord(data, displayId);
+  if (!record?.databaseId) throw new Error(`${label} was not found in the current organisation scope.`);
+  return record;
+}
+
+function getFormRecordDatabaseId(
+  mode: SafetyFormMode,
+  context: SafetyFormContext,
+  data: SafetyHubData,
+): string | null {
+  const displayId = mode === "risk" ? context.riskId
+    : mode === "action" ? context.actionId
+      : mode === "qi" ? context.qiId
+        : mode === "committee-review" ? context.ideaId
+          : mode === "risk-review" ? context.riskId
+            : mode === "link-records"
+              ? context.riskId || context.actionId || context.qiId || context.ideaId
+              : undefined;
+  if (!displayId) return null;
+  return requireSafetyRecord(data, displayId, "Source record").databaseId || null;
+}
+
+function getLinkedRecordId(
+  data: SafetyHubData,
+  displayId: string | undefined,
+  expectedKind?: CoreSafetyRecord["kind"],
+): string | null {
+  if (!displayId?.trim()) return null;
+  const record = requireSafetyRecord(data, displayId.trim(), "Linked record");
+  if (expectedKind && record.kind !== expectedKind) {
+    throw new Error(`${displayId} is not a ${expectedKind === "qi" ? "QI" : expectedKind} record.`);
+  }
+  return record.databaseId || null;
+}
+
+async function resolveSafetyOwnerId(ownerName: string): Promise<string | null> {
+  const wanted = ownerName.trim().toLocaleLowerCase("en-AU");
+  if (!wanted) return null;
+  const { data, error } = await supabase.from("profiles").select("id, first_name, last_name");
+  if (error) throw error;
+  const matches = (data || []).filter((profile) =>
+    [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim().toLocaleLowerCase("en-AU") === wanted,
+  );
+  if (matches.length === 0) throw new Error("Owner must exactly match a SportStack user's full name, or be left blank.");
+  if (matches.length > 1) throw new Error("More than one SportStack user has that owner name. Leave it blank until a user selector is added.");
+  return matches[0].id;
+}
+
+function buildSafetyFormPayload(
+  mode: SafetyFormMode,
+  values: Record<string, string>,
+  data: SafetyHubData,
+  ownerId: string | null,
+): Json {
+  const linkedRiskId = getLinkedRecordId(data, values.linkedRiskId, "risk");
+  const linkedActionId = getLinkedRecordId(data, values.linkedActionId, "action");
+  const linkedQiId = getLinkedRecordId(data, values.linkedQiId, "qi");
+  const linkedIdeaId = getLinkedRecordId(data, values.linkedIdeaId, "idea");
+  const baseLinks = {
+    linked_risk_id: linkedRiskId,
+    linked_action_id: linkedActionId,
+    linked_qi_id: linkedQiId,
+    linked_idea_id: linkedIdeaId,
+    link_reason: values.linkNotes || "Related Safety Hub records",
+  };
+
+  if (mode === "risk") {
+    return {
+      ...baseLinks,
+      title: values.title.trim(), summary: values.summary.trim(), risk_event: values.riskEvent.trim(),
+      consequences: values.consequences.trim(), risk_type: values.type, category: values.category.trim(),
+      owner_id: ownerId, status: toRiskDatabaseStatus(values.status),
+      inherent_likelihood: safetyRatingNumber(values.inherentLikelihood),
+      inherent_consequence: safetyRatingNumber(values.inherentConsequence),
+      inherent_rating: calculateRiskRating(values.inherentLikelihood, values.inherentConsequence),
+      residual_likelihood: safetyRatingNumber(values.residualLikelihood),
+      residual_consequence: safetyRatingNumber(values.residualConsequence),
+      residual_rating: calculateRiskRating(values.residualLikelihood, values.residualConsequence),
+      target_rating: values.targetRating, existing_controls: values.existingControls.trim(),
+      treatment_plan: values.treatmentPlan.trim(), review_frequency: values.reviewFrequency,
+      next_review_date: values.nextReview || null, evidence: values.evidence.trim(),
+      change_reason: values.changeReason?.trim() || null,
+    };
+  }
+  if (mode === "action") {
+    return {
+      ...baseLinks,
+      title: values.title.trim(), owner_id: ownerId, status: toActionDatabaseStatus(values.status),
+      due_date: values.dueDate || null, baseline: values.baseline.trim(), evaluate: values.evaluate.trim(),
+      specific: values.specific.trim(), measurable: values.measurable.trim(),
+      achievable: values.achievable.trim(), relevant: values.relevant.trim(),
+      time_bound: values.timeBound.trim(), resources: values.resources.trim(),
+      change_reason: values.changeReason?.trim() || null,
+    };
+  }
+  if (mode === "qi") {
+    return {
+      ...baseLinks,
+      title: values.title.trim(), source: values.source.trim(), area: values.area.trim(), owner_id: ownerId,
+      due_date: values.dueDate || null, priority: values.priority.toUpperCase(),
+      status: toQiDatabaseStatus(values.status), issue: values.issue.trim(),
+      required_action: values.requiredAction.trim(), outcome: values.outcome.trim(),
+      change_reason: values.changeReason?.trim() || null,
+    };
+  }
+  if (mode === "idea") {
+    return {
+      title: values.title.trim(), why_needed: values.whyNeeded.trim(),
+      suggested_implementation: values.suggestedImplementation.trim(),
+      suggested_evaluation: values.suggestedEvaluation.trim(), could_assist: values.couldAssist.trim(),
+      other_information: values.otherInfo.trim(), status: toIdeaDatabaseStatus(values.status),
+    };
+  }
+  if (mode === "committee-review") {
+    const linkedRecord = getLinkedRecordId(data, values.linkedRecordId);
+    const record = getSafetyRecord(data, values.linkedRecordId);
+    return {
+      decision: toIdeaDatabaseDecision(values.decision),
+      status: toIdeaStatusFromDecision(values.decision),
+      committee_notes: values.committeeNotes.trim(), decision_reason: values.decisionReason.trim(),
+      linked_risk_id: record?.kind === "risk" ? linkedRecord : null,
+      linked_action_id: record?.kind === "action" ? linkedRecord : null,
+      linked_qi_id: record?.kind === "qi" ? linkedRecord : null,
+      linked_idea_id: null,
+      link_reason: values.decisionReason.trim() || "Committee decision relationship",
+    };
+  }
+  if (mode === "risk-review") {
+    return {
+      reviewed_at: new Date(`${values.reviewDate}T12:00:00`).toISOString(),
+      residual_likelihood: safetyRatingNumber(values.residualLikelihood),
+      residual_consequence: safetyRatingNumber(values.residualConsequence),
+      residual_rating: calculateRiskRating(values.residualLikelihood, values.residualConsequence),
+      status: toRiskDatabaseStatus(values.status), next_review_date: values.nextReview || null,
+      review_notes: values.reviewNotes.trim(), evidence: values.evidence.trim(),
+    };
+  }
+
+  const source = requireSafetyRecord(data, values.sourceRecordId, "Source record");
+  return {
+    ...baseLinks,
+    source_type: source.kind,
+    link_reason: values.linkNotes.trim(),
+  };
+}
+
+function safetyRatingNumber(value: string): number {
+  const likelihood = formLikelihoodOptions.indexOf(value);
+  if (likelihood >= 0) return likelihood + 1;
+  const consequence = formConsequenceOptions.indexOf(value);
+  if (consequence >= 0) return consequence + 1;
+  throw new Error("Select a valid likelihood or consequence rating.");
+}
+
+function toRiskDatabaseStatus(value: string): string {
+  return ({ Open: "OPEN", "In progress": "IN_PROGRESS", Controlled: "CONTROLLED", Closed: "CLOSED", "Entered in error": "ENTERED_IN_ERROR" } as Record<string, string>)[value] || "OPEN";
+}
+
+function toActionDatabaseStatus(value: string): string {
+  return ({ "Not started": "PENDING", "In progress": "IN_PROGRESS", Blocked: "BLOCKED", Complete: "COMPLETED", "Entered in error": "ENTERED_IN_ERROR" } as Record<string, string>)[value] || "PENDING";
+}
+
+function toQiDatabaseStatus(value: string): string {
+  return ({ New: "NEW", "Awaiting decision": "AWAITING_DECISION", Approved: "APPROVED", "In progress": "IN_PROGRESS", Complete: "COMPLETED", "Entered in error": "ENTERED_IN_ERROR" } as Record<string, string>)[value] || "NEW";
+}
+
+function toIdeaDatabaseStatus(value: string): string {
+  return value.trim().toUpperCase().replaceAll(" ", "_");
+}
+
+function toIdeaDatabaseDecision(value: string): string | null {
+  return value === "Pending" ? null : value.toUpperCase();
+}
+
+function toIdeaStatusFromDecision(value: string): string {
+  if (value === "Accept") return "ACCEPTED";
+  if (value === "Defer") return "DEFERRED";
+  if (value === "Pending") return "UNDER_REVIEW";
+  return "CLOSED";
+}
+
+function getCommitteeReviewFollowUpMode(value: string): "risk" | "action" | "qi" | null {
+  if (value === "Create risk") return "risk";
+  if (value === "Create action") return "action";
+  if (value === "Create QI item") return "qi";
+  return null;
+}
+
+function getSafetySaveTitle(mode: SafetyFormMode): string {
+  if (mode === "risk-review") return "Risk review saved";
+  if (mode === "committee-review") return "Committee decision saved";
+  if (mode === "link-records") return "Record links saved";
+  if (mode === "idea") return "Bright Idea submitted";
+  if (mode === "qi") return "QI record saved";
+  if (mode === "action") return "BE SMART action saved";
+  return "Risk record saved";
+}
+
+function editableSafetyOwner(value: string | undefined): string {
+  return value && !["Unassigned", "Not recorded"].includes(value) ? value : "";
+}
+
+function toSafetyDateInput(value: string | undefined): string {
+  if (!value || value === "Not recorded") return "";
+  const [day, month, year] = value.split("/");
+  return day && month && year ? `${year}-${month}-${day}` : value;
 }
 
 function parseDateFilter(value: string): Date | null {

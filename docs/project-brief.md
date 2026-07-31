@@ -241,6 +241,8 @@ npm run lint
 - Root `test_*.js` files may be old investigation scripts and should be reviewed before cleanup.
 - Scoped module controls and committee setup/operations are implemented on Dev. Fine-grained
   Player MVP Voting and Umpire Match Voting submission/result visibility remains parked.
+- Safety Hub registers and their guided forms are live on Dev with scoped writes, permanent links,
+  risk/committee reviews and append-only audit history. Owner smoke testing is still pending.
 - Module settings now inherit from the closest parent and child overrides have warning prompts.
 - User profile address structure is parked for a later structured-address pass; keep current address changes small.
 - Formation/pitch rotation for mobile is parked for a later lineup/formation builder pass.

@@ -153,6 +153,8 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 - Committee operations need an owner smoke test with appointed users. Dev has no polls, meetings,
   chat messages or operation history. Voting and chat deliberately require a current appointment
   with the matching position permission, including for scoped administrators.
+- Safety Hub write workflows need an owner smoke test with disposable Dev records. The existing one
+  Risk, Action, QI item, Bright Idea, review and four links were not changed during implementation.
 
 ## Current Codex handoff template
 
@@ -269,6 +271,14 @@ What changed:
 - Added Dev hardening migrations to remove public API access to internal committee trigger helpers
   and cover the new foreign-key joins with indexes. Anonymous chat access remains denied and voting
   and chat require a current appointment with the explicit position permission.
+- Completed Block 13 with an atomic, RLS-invoker Safety Hub workflow. Risk, BE SMART Action, QI,
+  Bright Idea, committee review, risk review and permanent link forms now save live Dev records and
+  refresh the registers instead of only validating browser drafts.
+- Existing edit workflows require a reason, risk reviews atomically append an immutable review and
+  update the current risk, and Bright Idea committee decisions can lead directly into a prefilled
+  Risk, Action or QI form. The existing append-only audit triggers remain authoritative.
+- Added scoped committee-decision links from each meeting agenda point to a Risk, Action, QI or
+  Bright Idea. A database trigger rejects missing records and cross-association or cross-club links.
 
 Checks run:
 
@@ -336,6 +346,15 @@ Checks run:
   authenticated permission and workflow functions.
 - Committee operations focused ESLint, TypeScript and production build passed. The React review kept
   related reads parallel and resets operation screens when the selected committee changes.
+- The Safety Hub workflow passed a rollback-only test covering record creation, permanent links,
+  committee review, risk review, current-risk update and audit history. A second rollback test proved
+  linked records inherit their source club scope; a third accepted a valid committee decision link
+  and rejected a missing target.
+- Post-apply counts remain one Risk, one Action, one QI item, one Bright Idea, one review, four links
+  and ten audit rows, with zero rollback-test rows. The save function is SECURITY INVOKER, has a
+  fixed empty search path, is authenticated-only and produced no Supabase adviser security finding.
+- Safety Hub and Committee Meetings focused ESLint, TypeScript and production build passed. The
+  existing large-bundle warning remains.
 
 What Aaron should test next:
 
@@ -368,11 +387,14 @@ What Aaron should test next:
 - Create one clearly marked Dev association or club committee. Add President and Member positions
   with different permissions, appoint your test user, then record one disposable governance link
   and qualification with an expiry date.
+- In Dev Safety Hub, create a clearly marked Risk, create a linked BE SMART Action and QI item, save
+  a risk review and confirm Audit History shows the changes. Link one committee meeting decision to
+  the disposable Risk and confirm a record outside the committee scope is rejected.
 
 Risk level:
 
-- Medium. This includes additive Dev-only schema/RLS/grant work, atomic ballot/admin writes, module
-  route controls and private committee setup. No committee data, explicit module override,
+- Medium. This includes additive Dev-only schema/RLS/grant work, atomic ballot/admin/Safety Hub
+  writes, module route controls and private committee workflows. No committee data, explicit module override,
   membership cleanup, Production database, deployment, DNS or redirect change was made.
 
 ### Previous handoff entry

@@ -123,6 +123,10 @@ Future agents should start by reading these files in order:
   meetings with minutes, decisions and assigned actions; current-member-only chat; and append-only
   activity history. Voting and chat require an active appointment with the explicit position
   permission, including for administrators.
+- Block 13 is implemented on Dev pending owner smoke testing. The live Safety Hub forms now save
+  Risk, BE SMART Action, QI, Bright Idea, committee-review, risk-review and permanent-link records
+  atomically behind existing scoped RLS. Audit history remains append-only. Committee meeting
+  decisions can link only to real Safety Hub records inside the committee's association/club scope.
 - Do not merge or cherry-pick `chore/domain-structure` commit `3a7d6cc`; it contains the superseded
   assumption that `hb` belongs to the separate ignored Hockey Ballarat module. The corrected work
   is being landed directly on `dev`.
@@ -153,6 +157,8 @@ Future agents should start by reading these files in order:
    user, then add one disposable governance link and qualification record. Create a poll containing
    all four question types, submit it once as an appointed voter, create a meeting from a two-point
    template, save minutes and send one private chat message.
+9. In Dev Safety Hub, create a disposable Risk, linked Action and QI item, record a risk review and
+   confirm its audit history. Link one meeting decision to that Risk and test the scope blocker.
 
-Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace and Safety Hub write forms
-remain parked.
+Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace remains experimental and
+disabled by default.
