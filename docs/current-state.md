@@ -164,6 +164,9 @@ Checks run:
 - A disposable resume test independently rechecked all three backup file sizes and SHA-256 hashes.
 - The fail-closed preflight correctly refused to continue while the new script and documentation
   were uncommitted.
+- After the setup commit reached both `dev` and `main`, a clean read-only preflight verified the
+  exact `682b8ea` -> `74e2947` fast-forward, the two-migration/one-function allow-list and the Dev
+  local Supabase link, then stopped at the intentionally missing encrypted Production access file.
 - Vercel CLI installation and command help checks passed.
 - `npx tsc --noEmit` and `npm run build` passed. Repository-wide `npm run lint` still reports the
   unchanged legacy baseline of 433 errors and 89 warnings outside this PowerShell/documentation
