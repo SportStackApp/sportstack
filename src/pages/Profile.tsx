@@ -24,6 +24,8 @@ import { ProfilePhotoCropper } from "@/components/profile/ProfilePhotoCropper";
 import { StatsDetailDialog } from "@/components/profile/StatsDetailDialog";
 import { SetPrimaryTeamDialog } from "@/components/profile/SetPrimaryTeamDialog";
 import { PlayerPositionPreferences } from "@/components/profile/PlayerPositionPreferences";
+import { useAppMode } from "@/contexts/AppModeContext";
+import { membershipPriority } from "@/lib/playerPositions";
 import { uploadAvatar, deleteAvatar } from "@/lib/uploadAvatar";
 import { useTestRole } from "@/contexts/TestRoleContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -114,11 +116,17 @@ interface PrimaryChangeRequestData {
   to_team: { id: string; name: string };
 }
 
+interface RoleScopeDisplay {
+  role: AppRole;
+  scope: string;
+}
+
 const Profile = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { modeLabel, roles } = useAppMode();
   const { testRole, setTestRole } = useTestRole();
   const returnTo = getSafeAppPath(searchParams.get("returnTo"), "");
   
@@ -141,7 +149,7 @@ const Profile = () => {
   const [requestAdditionalDialogOpen, setRequestAdditionalDialogOpen] = useState(false);
   const [latestRevSportsMatchUrl, setLatestRevSportsMatchUrl] = useState<string | null>(null);
   const [playerHistory, setPlayerHistory] = useState<PlayerHistoryRecord[]>([]);
-  const [mvpBallotCount, setMvpBallotCount] = useState(0);
+  const [roleScopes, setRoleScopes] = useState<RoleScopeDisplay[]>([]);
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -225,13 +233,14 @@ const Profile = () => {
         }, {});
 
         // Transform the data to match our interface
-        const transformed = membershipData.map((m: any) => {
+        const transformedByTeam = new Map<string, TeamMembershipData>();
+        membershipData.forEach((m: any) => {
           const teamObj = teamMap[m.team_id];
           // clubs could be an array or an object depending on PostgREST, but usually an object for many-to-one
           const club = Array.isArray(teamObj?.clubs) ? teamObj.clubs[0] : teamObj?.clubs;
           const association = Array.isArray(club?.associations) ? club.associations[0] : club?.associations;
 
-          return {
+          const candidate: TeamMembershipData = {
             id: m.id,
             team_id: m.team_id,
             membership_type: m.membership_type,
@@ -251,8 +260,12 @@ const Profile = () => {
               },
             },
           };
+          const current = transformedByTeam.get(m.team_id);
+          if (!current || (membershipPriority[candidate.membership_type] || 0) > (membershipPriority[current.membership_type] || 0)) {
+            transformedByTeam.set(m.team_id, candidate);
+          }
         });
-        setMemberships(transformed);
+        setMemberships(Array.from(transformedByTeam.values()));
       }
     }
 
@@ -299,7 +312,7 @@ const Profile = () => {
     }
     setPendingRequestTeams(pendingReqsTransformed);
 
-    const { data: latestRevSportsRow } = await (supabase as any)
+    const { data: latestRevSportsRow } = await supabase
       .from("revsports_players")
       .select("match_url")
       .eq("profile_id", user.id)
@@ -310,20 +323,21 @@ const Profile = () => {
     setLatestRevSportsMatchUrl(latestRevSportsRow?.match_url || null);
 
     try {
-      const [history, ballotResult] = await Promise.all([
-        loadPlayerHistory(user.id),
-        supabase
-          .from("mvp_vote_submissions")
-          .select("id", { count: "exact", head: true })
-          .eq("voter_profile_id", user.id),
-      ]);
+      const history = await loadPlayerHistory(user.id);
       setPlayerHistory(history);
-      setMvpBallotCount(ballotResult.count || 0);
     } catch (historyError) {
       console.error("Error fetching player history:", historyError);
       setPlayerHistory([]);
-      setMvpBallotCount(0);
     }
+
+    const { data: roleRows } = await supabase
+      .from("user_roles")
+      .select("role, associations(name), clubs(name), teams(name)")
+      .eq("user_id", user.id);
+    setRoleScopes((roleRows || []).map((row) => ({
+      role: row.role as AppRole,
+      scope: row.teams?.name || row.clubs?.name || row.associations?.name || "All accessible organisations",
+    })));
 
     // Fetch all available teams with club and association info
     const [{ data: assocData }, { data: clubData }, { data: teamData }] = await Promise.all([
@@ -815,13 +829,13 @@ const Profile = () => {
   const gamesPlayed = playerHistory.length;
   const goalsScored = playerHistory.reduce((sum, game) => sum + game.goals, 0);
   const teamsRepresented = new Set(playerHistory.map((game) => `${game.clubName}:${game.teamName}`)).size;
-  const regularPositionTeams = approvedMemberships
-    .filter((membership) => membership.membership_type !== "FILL_IN")
-    .map((membership) => ({
+  const regularPositionTeams = approvedMemberships.map((membership) => ({
+      membershipId: membership.id,
       teamId: membership.team_id,
       teamName: membership.team.name,
       clubName: membership.team.club.name,
       membershipType: membership.membership_type,
+      jerseyNumber: membership.jersey_number,
     }));
   const gameRecords = playerHistory.map((game) => ({
     id: game.id,
@@ -907,16 +921,27 @@ const Profile = () => {
         )}
         
         
-        {/* User Roles Display */}
-        <div className="flex flex-wrap gap-2 justify-center mt-3">
-          <Badge variant="secondary" className="text-xs">
-            {getRoleEmoji(testRole as AppRole)} {getRoleDisplayName(testRole as AppRole)}
-          </Badge>
+        {/* Active mode and every assigned role remain visible together. */}
+        <div className="mt-3 space-y-2">
+          <Badge className="text-xs">Viewing as {modeLabel}</Badge>
+          <div className="flex flex-wrap justify-center gap-2">
+            {roleScopes.length > 0
+              ? roleScopes.map((item, index) => (
+                  <Badge key={`${item.role}-${item.scope}-${index}`} variant="secondary" className="text-xs">
+                    {getRoleEmoji(item.role)} {getRoleDisplayName(item.role)} · {item.scope}
+                  </Badge>
+                ))
+              : roles.map((role) => (
+                  <Badge key={role} variant="secondary" className="text-xs">
+                    {getRoleEmoji(role as AppRole)} {getRoleDisplayName(role as AppRole)}
+                  </Badge>
+                ))}
+          </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-3 gap-3">
         <Card
           className="text-center cursor-pointer hover:bg-muted/50 transition-colors"
           onClick={() => openStatsDialog("games")}
@@ -939,12 +964,6 @@ const Profile = () => {
           <CardContent className="pt-5">
             <p className="font-display text-3xl text-accent">{teamsRepresented}</p>
             <p className="text-xs text-muted-foreground">Teams Represented</p>
-          </CardContent>
-        </Card>
-        <Card className="text-center">
-          <CardContent className="pt-5">
-            <p className="font-display text-3xl text-accent">{mvpBallotCount}</p>
-            <p className="text-xs text-muted-foreground">MVP Ballots</p>
           </CardContent>
         </Card>
       </div>

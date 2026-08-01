@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +25,19 @@ import { Star, Trophy, Clock, CheckCircle2, ChevronLeft, Calendar, ShieldAlert, 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabase = originalSupabase as any;
 const DEFAULT_ASSOCIATION_TIMEZONE = "Australia/Melbourne";
+
+const formatDuration = (endDate: string | null) => {
+  if (!endDate) return null;
+  const remainingMs = new Date(endDate).getTime() - Date.now();
+  if (Number.isNaN(remainingMs) || remainingMs <= 0) return "Deadline passed";
+  const totalMinutes = Math.floor(remainingMs / 60_000);
+  const days = Math.floor(totalMinutes / 1_440);
+  const hours = Math.floor((totalMinutes % 1_440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `${days}d ${hours}h left`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  return `${minutes}m left`;
+};
 
 interface MvpSession {
   id: string;
@@ -105,6 +119,11 @@ interface RevsportsPlayer {
   jersey: string | null;
   profile_id: string | null;
   goals?: number | null;
+  green_cards?: number | null;
+  yellow_cards?: number | null;
+  red_cards?: number | null;
+  display_name?: string;
+  player_number?: string | null;
 }
 
 export default function MvpVoteCast() {
@@ -132,6 +151,26 @@ export default function MvpVoteCast() {
   const [shoutout, setShoutout] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const ballotDraftKey = user && sessionId ? `sportstack:mvp-ballot:${user.id}:${sessionId}` : null;
+
+  useEffect(() => {
+    if (!ballotDraftKey) return;
+    try {
+      const saved = window.localStorage.getItem(ballotDraftKey);
+      if (!saved) return;
+      const draft = JSON.parse(saved) as { votes?: typeof votes; shoutout?: string };
+      if (draft.votes) setVotes(draft.votes);
+      if (typeof draft.shoutout === "string") setShoutout(draft.shoutout);
+    } catch {
+      window.localStorage.removeItem(ballotDraftKey);
+    }
+  }, [ballotDraftKey]);
+
+  useEffect(() => {
+    if (!ballotDraftKey || success) return;
+    window.localStorage.setItem(ballotDraftKey, JSON.stringify({ votes, shoutout }));
+  }, [ballotDraftKey, shoutout, success, votes]);
 
   const refreshResultCheckState = useCallback(async () => {
     if (!sessionId) return;
@@ -244,7 +283,7 @@ export default function MvpVoteCast() {
                     const association = ((clubData as ClubAssociationRow[]) || [])
                       .map((club) => club.associations)
                       .find(Boolean);
-                    setAssociationContext(association?.abbreviation || association?.name || null);
+                    setAssociationContext(association?.name || association?.abbreviation || null);
                     setAssociationTimeZone(association?.timezone || DEFAULT_ASSOCIATION_TIMEZONE);
                   }
                 } else {
@@ -415,7 +454,7 @@ export default function MvpVoteCast() {
         // Only attended players on the session's fixture side can appear on the ballot.
         const { data: allRows, error: teammateErr } = await supabase
           .from("revsports_players")
-          .select("id, player_name, team, team_side, team_label, jersey, profile_id")
+          .select("id, player_name, team, team_side, team_label, jersey, profile_id, goals, green_cards, yellow_cards, red_cards")
           .eq("fixture_id", typedSession.fixture_id)
           .eq("attended", true);
 
@@ -430,7 +469,42 @@ export default function MvpVoteCast() {
             player.profile_id !== user.id,
         );
 
-        const sorted = eligible.sort((a, b) => a.player_name.localeCompare(b.player_name));
+        const profileIds = Array.from(new Set(eligible.map((player) => player.profile_id).filter(Boolean))) as string[];
+        const [profilesResult, membershipsResult] = await Promise.all([
+          profileIds.length > 0
+            ? supabase.from("profiles").select("id, first_name, last_name").in("id", profileIds)
+            : Promise.resolve({ data: [], error: null }),
+          profileIds.length > 0 && typedSession.team_id
+            ? supabase
+                .from("team_memberships")
+                .select("user_id, jersey_number")
+                .eq("team_id", typedSession.team_id)
+                .eq("status", "ACTIVE")
+                .in("user_id", profileIds)
+            : Promise.resolve({ data: [], error: null }),
+        ]);
+        if (profilesResult.error) throw profilesResult.error;
+        if (membershipsResult.error) throw membershipsResult.error;
+
+        const profileNames = new Map(
+          (profilesResult.data || []).map((profile: { id: string; first_name: string | null; last_name: string | null }) => [
+            profile.id,
+            [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim(),
+          ]),
+        );
+        const membershipNumbers = new Map(
+          (membershipsResult.data || []).map((membership: { user_id: string; jersey_number: number | null }) => [
+            membership.user_id,
+            membership.jersey_number === null ? null : String(membership.jersey_number),
+          ]),
+        );
+        const sorted = eligible
+          .map((player) => ({
+            ...player,
+            display_name: (player.profile_id && profileNames.get(player.profile_id)) || player.player_name,
+            player_number: (player.profile_id && membershipNumbers.get(player.profile_id)) || player.jersey,
+          }))
+          .sort((a, b) => (a.display_name || a.player_name).localeCompare(b.display_name || b.player_name));
         setEligiblePlayers(sorted);
 
         await refreshResultCheckState();
@@ -485,6 +559,7 @@ export default function MvpVoteCast() {
 
       setSuccess(true);
       setHasVoted(true);
+      if (ballotDraftKey) window.localStorage.removeItem(ballotDraftKey);
       toast({
         title: "Ballot submitted",
         description: "Your 3, 2 and 1 point votes were saved together."
@@ -520,6 +595,7 @@ export default function MvpVoteCast() {
 
   const recordResultCheck = async (response: MvpResultCheckResponse) => {
     if (!sessionId || checkingResult || resultCheck.response) return;
+    if (response === "INCORRECT" && resultComment.trim().length < 10) return;
 
     setCheckingResult(true);
     try {
@@ -609,6 +685,15 @@ export default function MvpVoteCast() {
   const scorerDialogRows = scorerDialogTeam
     ? goalScorers.filter((scorer) => scorer.team === scorerDialogTeam)
     : [];
+  const votingTimeLeft = sessionDisplayState === "open" ? formatDuration(session?.closes_at || null) : null;
+  const availablePlayersFor = (slot: keyof typeof votes) => {
+    const selectedElsewhere = new Set(
+      (Object.entries(votes) as Array<[keyof typeof votes, string]>)
+        .filter(([key, value]) => key !== slot && value !== "__none__")
+        .map(([, value]) => value),
+    );
+    return eligiblePlayers.filter((player) => !selectedElsewhere.has(player.id));
+  };
 
   const ScoreBlock = () => {
     if (!hasScore) {
@@ -681,7 +766,7 @@ export default function MvpVoteCast() {
             <span>{scoreboardDate ? formatDate(scoreboardDate) : "Date TBC"}</span>
           </div>
 
-          <div className="grid justify-center gap-4 sm:grid-cols-[minmax(120px,160px)_auto_minmax(120px,160px)] sm:items-center">
+          <div className="grid justify-center gap-4 sm:grid-cols-[minmax(120px,160px)_minmax(180px,1fr)_minmax(120px,160px)] sm:items-center">
             <ScoreboardTeamBlock name={homeName} logoUrl={homeTeam?.logo_url || null} />
             <ScoreBlock />
             <ScoreboardTeamBlock name={awayName} logoUrl={awayTeam?.logo_url || null} />
@@ -694,7 +779,7 @@ export default function MvpVoteCast() {
             <span className="text-white/35">/</span>
             <span>{scoreboardDate ? formatDate(scoreboardDate) : "Date TBC"}</span>
           </div>
-          <div className="grid gap-2 text-sm text-white/85 sm:grid-cols-3">
+          <div className="grid gap-2 text-sm text-white/85 sm:grid-cols-[minmax(120px,160px)_minmax(180px,1fr)_minmax(120px,160px)]">
             <div className="flex items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-2">
               <Clock className="h-4 w-4" />
               <span>{formatTime(scoreboardDate)}</span>
@@ -977,16 +1062,17 @@ export default function MvpVoteCast() {
       {sessionDisplayState === "open" && !hasVoted && canCastBallot && (
       <Card className="mx-auto max-w-xl">
         <CardHeader className="bg-muted/30 border-b pb-4">
-          <div className="hidden">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {session?.grade} • Round {session?.round}
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-muted-foreground">
+            <span className="uppercase tracking-wider">{session?.grade} • {roundLabel}</span>
+            <Badge variant="outline" className="border-green-200 bg-green-50 text-green-800">
+              Open{votingTimeLeft ? ` • ${votingTimeLeft}` : ""}
+            </Badge>
           </div>
           <CardTitle className="text-xl font-display leading-tight">
             Cast your MVP votes
           </CardTitle>
           <CardDescription>
-            Pick three teammates from {homeName} vs {awayName}.
+            Pick three teammates from {homeName} vs {awayName}. {formatDate(scoreboardDate || session!.game_date)} at {formatTime(scoreboardDate)}{fixture?.venue?.name ? `, ${fixture.venue.name}` : ""}.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">
@@ -1011,9 +1097,9 @@ export default function MvpVoteCast() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">-- Select a player --</SelectItem>
-                    {eligiblePlayers.map((p) => (
+                    {availablePlayersFor("vote3").map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.player_name} {p.jersey ? `(#${p.jersey})` : ""}
+                        {p.display_name || p.player_name} {p.player_number ? `(#${p.player_number})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1035,9 +1121,9 @@ export default function MvpVoteCast() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">-- Select a player --</SelectItem>
-                    {eligiblePlayers.map((p) => (
+                    {availablePlayersFor("vote2").map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.player_name} {p.jersey ? `(#${p.jersey})` : ""}
+                        {p.display_name || p.player_name} {p.player_number ? `(#${p.player_number})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1059,9 +1145,9 @@ export default function MvpVoteCast() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">-- Select a player --</SelectItem>
-                    {eligiblePlayers.map((p) => (
+                    {availablePlayersFor("vote1").map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.player_name} {p.jersey ? `(#${p.jersey})` : ""}
+                        {p.display_name || p.player_name} {p.player_number ? `(#${p.player_number})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1122,12 +1208,12 @@ export default function MvpVoteCast() {
           <DialogHeader>
             <DialogTitle>Report an incorrect match result?</DialogTitle>
             <DialogDescription>
-              This records your concern for team staff. The MVP module does not change the fixture score.
+              {homeName} vs {awayName} • {roundLabel} • {scoreboardDate ? formatDate(scoreboardDate) : "Date TBC"}. This records your concern for team staff and does not change the fixture score.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="mvp-result-comment">Comment (optional)</Label>
+              <Label htmlFor="mvp-result-comment">What is incorrect?</Label>
               <Textarea
                 id="mvp-result-comment"
                 value={resultComment}
@@ -1136,13 +1222,18 @@ export default function MvpVoteCast() {
                 className="min-h-24 resize-none"
                 placeholder="Briefly explain what looks wrong"
               />
-              <p className="text-right text-xs text-muted-foreground">{resultComment.length}/500</p>
+              <div className="flex justify-between gap-3 text-xs">
+                <span className={resultComment.trim().length > 0 && resultComment.trim().length < 10 ? "text-destructive" : "text-muted-foreground"}>
+                  Enter at least 10 characters so staff know what to check.
+                </span>
+                <span className="shrink-0 text-muted-foreground">{resultComment.length}/500</span>
+              </div>
             </div>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button variant="outline" disabled={checkingResult} onClick={() => setConcernDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button variant="destructive" disabled={checkingResult} onClick={() => void recordResultCheck("INCORRECT")}>
+              <Button variant="destructive" disabled={checkingResult || resultComment.trim().length < 10} onClick={() => void recordResultCheck("INCORRECT")}>
                 {checkingResult ? "Saving..." : "Confirm result is not correct"}
               </Button>
             </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,10 +9,12 @@ import { useToast } from "@/hooks/use-toast";
 import { loadTeamPositionOptions, type TeamPositionOption } from "@/lib/teamPositions";
 
 interface PositionTeam {
+  membershipId: string;
   teamId: string;
   teamName: string;
   clubName: string;
   membershipType: string;
+  jerseyNumber: number | null;
 }
 
 interface PlayerPositionPreferencesProps {
@@ -25,7 +28,12 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
   const [optionsByTeam, setOptionsByTeam] = useState<Record<string, TeamPositionOption[]>>({});
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [numbersByTeam, setNumbersByTeam] = useState<Record<string, string>>({});
   const teamIds = useMemo(() => teams.map((team) => team.teamId), [teams]);
+
+  useEffect(() => {
+    setNumbersByTeam(Object.fromEntries(teams.map((team) => [team.teamId, team.jerseyNumber === null ? "" : String(team.jerseyNumber)])));
+  }, [teams]);
 
   useEffect(() => {
     let active = true;
@@ -119,13 +127,30 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
     setSavingKey(null);
   };
 
+  const savePlayerNumber = async (team: PositionTeam) => {
+    const value = numbersByTeam[team.teamId]?.trim() || "";
+    if (value && !/^\d+$/.test(value)) {
+      toast({ title: "Number not saved", description: "Use a whole number only.", variant: "destructive" });
+      return;
+    }
+    setSavingKey(`${team.teamId}:number`);
+    const { error } = await supabase
+      .from("team_memberships")
+      .update({ jersey_number: value ? Number(value) : null })
+      .eq("id", team.membershipId)
+      .eq("user_id", user?.id || "");
+    setSavingKey(null);
+    if (error) toast({ title: "Player number not saved", description: error.message, variant: "destructive" });
+    else toast({ title: "Team player details saved" });
+  };
+
   if (teams.length === 0) return null;
 
   return (
     <Card>
       <CardHeader className="space-y-1 p-4 pb-2">
-        <CardTitle className="text-base">Preferred playing positions</CardTitle>
-        <CardDescription className="text-xs">Choose from the positions configured by each team.</CardDescription>
+        <CardTitle className="text-base">Team Player Details</CardTitle>
+        <CardDescription className="text-xs">Set your player number and preferred positions separately for each team.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2 px-4 pb-4 pt-0">
         {teams.map((team) => (
@@ -136,6 +161,28 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
                 <p className="text-xs text-muted-foreground">{team.clubName}</p>
               </div>
               <MembershipTypeBadge membershipType={team.membershipType} compact />
+            </div>
+            <div className="flex items-end gap-2">
+              <label className="flex-1 text-xs font-medium">
+                Player number
+                <Input
+                  inputMode="numeric"
+                  className="mt-1 h-8"
+                  placeholder="Not set"
+                  value={numbersByTeam[team.teamId] || ""}
+                  onChange={(event) => setNumbersByTeam((current) => ({ ...current, [team.teamId]: event.target.value }))}
+                />
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={savingKey === `${team.teamId}:number`}
+                onClick={() => void savePlayerNumber(team)}
+              >
+                Save number
+              </Button>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {loadingOptions ? (

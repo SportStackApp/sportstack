@@ -16,13 +16,14 @@ import {
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Plus, Pencil, Trash2, Trophy, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getTeamDisplayName } from "@/lib/utils";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import type { Database } from "@/integrations/supabase/types";
+import { useTeamContext } from "@/contexts/TeamContext";
 
 type Team = Database["public"]["Tables"]["teams"]["Row"] & {
   division_id?: string | null;
@@ -55,6 +56,8 @@ const untypedSupabase = supabase as unknown as UntypedSupabaseClient;
 
 const TeamsManagement = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { selectedAssociationId, selectedClubId, selectedDivision } = useTeamContext();
   const { toast } = useToast();
   const { loading: scopeLoading, isSuperAdmin, isAnyAdmin, scopedTeamIds, scopedClubIds, scopedAssociationIds, canManageTeam } = useAdminScope();
 
@@ -66,15 +69,28 @@ const TeamsManagement = () => {
   const [loading, setLoading] = useState(true);
 
   // Filter Bar State
-  const [filterAssociation, setFilterAssociation] = useState<string>("all");
-  const [filterClub, setFilterClub] = useState<string>("all");
-  const [filterDivision, setFilterDivision] = useState<string>("all");
+  const [filterAssociation, setFilterAssociation] = useState<string>(searchParams.get("association") || selectedAssociationId || "all");
+  const [filterClub, setFilterClub] = useState<string>(searchParams.get("club") || selectedClubId || "all");
+  const [filterDivision, setFilterDivision] = useState<string>(searchParams.get("division") || selectedDivision || "all");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [filterAssociation, filterClub, filterDivision]);
+
+  useEffect(() => {
+    setFilterAssociation(searchParams.get("association") || selectedAssociationId || "all");
+    setFilterClub(searchParams.get("club") || selectedClubId || "all");
+    setFilterDivision(searchParams.get("division") || selectedDivision || "all");
+  }, [searchParams, selectedAssociationId, selectedClubId, selectedDivision]);
+
+  const updateFilterUrl = (key: "association" | "club" | "division", value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === "all") next.delete(key);
+    else next.set(key, value);
+    setSearchParams(next, { replace: true });
+  };
 
   // Dialog State
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -504,6 +520,11 @@ const TeamsManagement = () => {
               setFilterAssociation(v);
               setFilterClub("all");
               setFilterDivision("all");
+              const next = new URLSearchParams(searchParams);
+              if (v === "all") next.delete("association"); else next.set("association", v);
+              next.delete("club");
+              next.delete("division");
+              setSearchParams(next, { replace: true });
             }}
           >
             <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
@@ -520,7 +541,7 @@ const TeamsManagement = () => {
           <Label className="shrink-0">Filter by Club:</Label>
           <Select
             value={filterClub}
-            onValueChange={setFilterClub}
+            onValueChange={(value) => { setFilterClub(value); updateFilterUrl("club", value); }}
             disabled={filterAssociation === "all"}
           >
             <SelectTrigger className="w-56">
@@ -539,7 +560,7 @@ const TeamsManagement = () => {
           <Label className="shrink-0">Filter by Division:</Label>
           <Select
             value={filterDivision}
-            onValueChange={setFilterDivision}
+            onValueChange={(value) => { setFilterDivision(value); updateFilterUrl("division", value); }}
             disabled={filterAssociation === "all"}
           >
             <SelectTrigger className="w-56">

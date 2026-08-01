@@ -12,6 +12,19 @@ Future agents should start by reading these files in order:
 
 ## Current release state
 
+- The locked Owner-Test remediation package is implemented against SportStack Dev and prepared on
+  `dev` for integrated owner testing. It covers scoped administration and audit, state persistence,
+  cascade/navigation, Fixtures and Communications, both voting modules, Coaching/Profile,
+  Safety Hub and Committee Management. `main`, `prod`, Production Supabase, DNS and redirects are
+  unchanged.
+- Nine additive Dev migrations were applied. All new public tables have RLS, new administrative
+  functions reject anonymous execution, and private committee uploads are limited to 20 MB.
+- The historical-membership snapshot contains 201 duplicate user/team groups and 44 users with
+  multiple active Primary memberships (490 captured rows). New invalid writes are blocked; no
+  historical row was changed and cleanup still requires separate approval.
+- Quality status for the package: development-plan lint, TypeScript and production build pass.
+  Repository-wide lint is an existing backlog at 440 issues, down from the 442-issue start.
+
 - A guarded, backup-first Umpire Portal Production release script and runbook are prepared for
   `dev` and `main` staging. The script is pinned to the exact Production Supabase project, two
   approved migrations, one Edge Function and the Production Vercel setting. Vercel CLI 58.4.4 is
@@ -145,26 +158,17 @@ Future agents should start by reading these files in order:
 
 ## Best next owner test
 
-1. Approve or decline the reviewed `dev` to `main` staging package that includes the
-   Production-capable scraper workflow.
-2. Sign in to Dev and smoke-test one custom icon, one saved field template and one fixture line-up
-   formation change/save/reload.
-3. After the required Production approval, complete the Umpire Portal release and smoke-test both login
-   choices and one clearly marked test ballot.
-4. Complete the wider signed-in Production smoke test for Dashboard, Communications, availability,
-   Profile, Player MVP administration, Umpire Match Voting administration and key admin pages.
-5. On Dev, submit one clearly marked signed-in Umpire Match Voting test ballot and confirm a repeat
-   submission is blocked.
-6. On Dev, download the fixture template, preview one valid row and one deliberately ambiguous team
-   name, then test one membership approval and one unused-venue deletion with disposable Dev data.
-7. In Dev Roles & modules, disable one non-critical module at a disposable child scope, confirm its
-   menu and direct route are blocked, then select Use inherited and confirm access returns.
-8. Create one clearly marked Dev committee, add President and Member positions, appoint your test
-   user, then add one disposable governance link and qualification record. Create a poll containing
-   all four question types, submit it once as an appointed voter, create a meeting from a two-point
-   template, save minutes and send one private chat message.
-9. In Dev Safety Hub, create a disposable Risk, linked Action and QI item, record a risk review and
-   confirm its audit history. Link one meeting decision to that Risk and test the scope blocker.
+1. Run the integrated Owner-Test plan on Dev with separate actual-role accounts, starting with Club
+   Admin user visibility and protection of higher-role accounts.
+2. Test multi-team cascade selection, Team Overview, tabs, filters, drafts, refresh and incognito
+   theme persistence.
+3. Test Fixtures/bye display, chat history/pagination, Player MVP identity and status, and Umpire
+   Match Voting number-only validation.
+4. Test one disposable Safety Hub matrix/link workflow and one Committee meeting, upload, agenda,
+   minutes and linked-record workflow.
+5. Keep the 201 duplicate membership groups unchanged until Aaron approves the exact cleanup report.
+6. Only after acceptance, promote the reviewed package to `main`. Production and domain work remain
+   separately approval-gated.
 
 Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace remains experimental and
 disabled by default.

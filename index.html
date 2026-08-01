@@ -6,6 +6,15 @@
     <title>SportStack</title>
     <meta name="description" content="SportStack - Sports Management Made Simple">
     <meta name="author" content="SportStack" />
+    <script>
+      // Apply the last known theme before React paints; the signed-in account
+      // preference then confirms it from Supabase on every device.
+      try {
+        if (localStorage.getItem("theme") === "dark") document.documentElement.classList.add("dark");
+      } catch (_) {
+        // Storage can be unavailable in a restricted browser; light is safe.
+      }
+    </script>
 
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/favicon.ico">

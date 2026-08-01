@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,12 +55,20 @@ interface Season {
 }
 
 const Games = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { selectedTeamId, selectedClub, selectedTeam, selectedAssociationId } = useTeamContext();
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [viewMode, setViewMode] = useState<"list" | "calendar">(searchParams.get("view") === "calendar" ? "calendar" : "list");
+  const [fixtureTab, setFixtureTab] = useState<"upcoming" | "past">(searchParams.get("tab") === "past" ? "past" : "upcoming");
   const [games, setGames] = useState<GameRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [seasons, setSeasons] = useState<Season[]>([]);
-  const [selectedSeasonId, setSelectedSeasonId] = useState<string>("all");
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string>(searchParams.get("season") || "all");
+
+  const updateUrlState = (updates: Record<string, string>) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => next.set(key, value));
+    setSearchParams(next, { replace: true });
+  };
 
   // Fetch seasons for the association
   useEffect(() => {
@@ -77,11 +85,15 @@ const Games = () => {
       const s = (data as Season[]) || [];
       setSeasons(s);
       // Default to active season if exists
+      const requestedSeason = searchParams.get("season");
       const active = s.find((x) => x.is_active);
-      setSelectedSeasonId(active ? active.id : "all");
+      const nextSeason = requestedSeason && s.some((season) => season.id === requestedSeason)
+        ? requestedSeason
+        : active?.id || "all";
+      setSelectedSeasonId(nextSeason);
     };
     fetchSeasons();
-  }, [selectedAssociationId]);
+  }, [selectedAssociationId, searchParams]);
 
   useEffect(() => {
     const fetchGames = async () => {
@@ -160,8 +172,8 @@ const Games = () => {
         <div className="flex items-center gap-2 flex-wrap">
           {/* Season filter */}
           {seasons.length > 0 && (
-            <Select value={selectedSeasonId} onValueChange={setSelectedSeasonId}>
-              <SelectTrigger className="w-[150px]">
+            <Select value={selectedSeasonId} onValueChange={(value) => { setSelectedSeasonId(value); updateUrlState({ season: value }); }}>
+              <SelectTrigger className="w-[250px] max-w-full">
                 <SelectValue placeholder="Season" />
               </SelectTrigger>
               <SelectContent>
@@ -178,14 +190,18 @@ const Games = () => {
           <Button
             variant={viewMode === "list" ? "secondary" : "ghost"}
             size="icon-sm"
-            onClick={() => setViewMode("list")}
+            onClick={() => { setViewMode("list"); updateUrlState({ view: "list" }); }}
+            title="List view"
+            aria-label="List view"
           >
             <List className="h-4 w-4" />
           </Button>
           <Button
             variant={viewMode === "calendar" ? "secondary" : "ghost"}
             size="icon-sm"
-            onClick={() => setViewMode("calendar")}
+            onClick={() => { setViewMode("calendar"); updateUrlState({ view: "calendar" }); }}
+            title="Calendar view"
+            aria-label="Calendar view"
           >
             <CalendarDays className="h-4 w-4" />
           </Button>
@@ -208,7 +224,7 @@ const Games = () => {
           ))}
         </div>
       ) : (
-        <Tabs defaultValue="upcoming" className="w-full">
+        <Tabs value={fixtureTab} onValueChange={(value) => { const next = value as "upcoming" | "past"; setFixtureTab(next); updateUrlState({ tab: next }); }} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="upcoming">
               Upcoming ({upcomingGames.length})
@@ -220,7 +236,7 @@ const Games = () => {
             {upcomingGames.length === 0 ? (
               <EmptyState message="No upcoming games scheduled." />
             ) : (
-              <div className="space-y-3">
+               <div className={cn(viewMode === "calendar" ? "grid gap-3 md:grid-cols-2" : "space-y-3")}>
                 {upcomingGames.map((game, index) => (
                   <GameCard key={game.id} game={game} index={index} />
                 ))}
@@ -232,7 +248,7 @@ const Games = () => {
             {pastGames.length === 0 ? (
               <EmptyState message="No past games yet." />
             ) : (
-              <div className="space-y-3">
+               <div className={cn(viewMode === "calendar" ? "grid gap-3 md:grid-cols-2" : "space-y-3")}>
                 {pastGames.map((game, index) => (
                   <GameCard key={game.id} game={game} index={index} isPast />
                 ))}
@@ -256,6 +272,8 @@ const GameCard = ({ game, index, isPast }: GameCardProps) => {
   const awayTeam = game.away_team?.name ?? "Unknown";
   const venueName = game.venue?.name ?? "TBD";
   const gameDate = new Date(game.fixture_date);
+  const isBye = !game.home_team || !game.away_team;
+  const knownTeam = game.home_team?.name || game.away_team?.name || "Team";
 
   return (
     <Link to={`/games/${game.id}`}>
@@ -283,7 +301,7 @@ const GameCard = ({ game, index, isPast }: GameCardProps) => {
                 <div className="flex items-center gap-2 mb-2">
                   {game.round_number !== null && game.round_number !== undefined && (
                     <Badge variant="secondary" className="text-xs">
-                      Rd {game.round_number}
+                      Round {game.round_number}
                     </Badge>
                   )}
                   {isPast && game.status === "finalised" && (
@@ -294,10 +312,10 @@ const GameCard = ({ game, index, isPast }: GameCardProps) => {
                 </div>
 
                 <p className="font-semibold text-foreground truncate">
-                  {homeTeam} vs {awayTeam}
+                  {isBye ? `${knownTeam} — Bye` : `${homeTeam} vs ${awayTeam}`}
                 </p>
 
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
+                {!isBye && <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5" />
                     {gameDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
@@ -306,7 +324,7 @@ const GameCard = ({ game, index, isPast }: GameCardProps) => {
                     <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
                     <span className="truncate">{venueName}</span>
                   </span>
-                </div>
+                </div>}
               </div>
             </div>
 
@@ -316,7 +334,7 @@ const GameCard = ({ game, index, isPast }: GameCardProps) => {
                   {game.home_score} - {game.away_score}
                 </Badge>
               )}
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              {!isBye && <ChevronRight className="h-5 w-5 text-muted-foreground" />}
             </div>
           </div>
         </CardContent>

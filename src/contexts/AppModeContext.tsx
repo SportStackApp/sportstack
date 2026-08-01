@@ -4,28 +4,30 @@ import { useTestRole } from "@/contexts/TestRoleContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
-export type AppMode = "super_admin" | "association" | "club" | "team" | "player";
+type AppRole = Database["public"]["Enums"]["user_role_enum"];
+export type AppMode = "super_admin" | "association" | "club" | "team_manager" | "coach" | "player";
 
 const ROLE_TO_MODE: Record<AppRole, AppMode> = {
   SUPER_ADMIN: "super_admin",
   ASSOCIATION_ADMIN: "association",
   CLUB_ADMIN: "club",
-  TEAM_MANAGER: "team",
-  COACH: "team",
+  TEAM_MANAGER: "team_manager",
+  COACH: "coach",
   PLAYER: "player",
   UMPIRE: "player",
   VOTER: "player",
+  UMPIRE_ADMIN: "player",
 };
 
 // Mode hierarchy from highest to lowest
-const MODE_HIERARCHY: AppMode[] = ["super_admin", "association", "club", "team", "player"];
+const MODE_HIERARCHY: AppMode[] = ["super_admin", "association", "club", "team_manager", "coach", "player"];
 
 const MODE_LABELS: Record<AppMode, string> = {
   super_admin: "Super Admin",
   association: "Association Admin",
   club: "Club Admin",
-  team: "Team Manager",
+  team_manager: "Team Manager",
+  coach: "Coach",
   player: "Player",
 };
 
@@ -33,7 +35,8 @@ const MODE_LANDING: Record<AppMode, string> = {
   super_admin: "/admin",
   association: "/admin",
   club: "/admin",
-  team: "/dashboard",
+  team_manager: "/dashboard",
+  coach: "/dashboard",
   player: "/dashboard",
 };
 
@@ -123,7 +126,12 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
 
     // Restore persisted mode per user. A shared key lets one account's mode
     // leak into another account on the same browser.
-    const stored = localStorage.getItem(getStorageKey(user.id)) as AppMode | null;
+    const rawStored = localStorage.getItem(getStorageKey(user.id));
+    // Older builds stored both Coach and Team Manager as "team". Preserve a
+    // sensible landing mode while keeping the two permissions separate now.
+    const stored = (rawStored === "team"
+      ? activeRoles.includes("TEAM_MANAGER") ? "team_manager" : "coach"
+      : rawStored) as AppMode | null;
     if (stored && ordered.includes(stored)) {
       setModeState(stored);
     } else if (ordered.length > 0) {

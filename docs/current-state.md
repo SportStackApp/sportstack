@@ -30,9 +30,18 @@ Update this file after every meaningful Codex task, pull request, schema change,
 
 ## Current priority
 
-SportStack and its supporting processes are Aaron's primary focus, representing approximately 90%
-of planned work. Keep effort on the existing SportStack web app, its data/import reliability,
-deployment path and the daily dashboard, availability and communications owner-test cycle.
+The locked Owner-Test remediation package is implemented on the Dev database and `dev` code path.
+The immediate priority is integrated owner verification using real Super Admin, Association Admin,
+Club Admin, Team Manager, Coach and Player accounts before any `main` staging promotion.
+
+This package hardens scoped administration, preserves state consistently, separates Player MVP
+Voting from Umpire Match Voting, and completes the tested Fixtures, Communications, Coaching,
+Safety Hub and Committee workflows. It also adds recoverable route errors, immutable chat revision
+history, account-backed theme preference and private committee file storage.
+
+The pre-cleanup Dev snapshot contains 201 duplicate user/team groups and 44 users with multiple
+active Primary memberships, covering 490 captured rows. New invalid memberships are rejected. No
+historical membership was changed; cleanup needs a separate destructive-data approval.
 
 Near-term priority areas:
 
@@ -95,6 +104,12 @@ The backend is Supabase: Postgres, Auth, Storage, Row Level Security, and Edge F
 
 ## Recently changed
 
+The 1 August Owner-Test remediation package adds nine Dev-only additive migrations and the matching
+frontend workflows. All new administration RPCs deny anonymous execution, all new public tables
+have Row Level Security enabled, and the `committee-files` bucket is private with a 20 MB limit.
+The package passes `npm run lint:dev-plan`, `npx tsc --noEmit` and `npm run build`. Repository-wide
+lint remains legacy debt: 440 current issues versus 442 before this package.
+
 The approved Production compatibility release completed on 29 July 2026. Local and remote `dev`,
 `main` and `prod` were confirmed aligned at `53561de` before the 30 July Dev-only scraper-routine
 work began.
@@ -129,6 +144,11 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 - There is no formal authenticated browser suite yet. The Dev Quality workflow now covers focused
   development-plan lint, TypeScript, the production build, 100 Python regression tests and all
   GitHub workflow definitions; role-based browser flows still need owner smoke testing.
+- The Owner-Test remediation package still needs its integrated actual-account test across all six
+  roles, multi-team cascade state, incognito theme persistence, committee uploads and Safety Hub
+  linking. Viewing-as checks alone do not close this item.
+- Historical duplicate membership cleanup remains parked. The immutable snapshot and dry-run totals
+  are ready, but no row can be consolidated without Aaron approving the exact keep/remove report.
 - Umpire Portal staging is waiting at an explicit approval gate: the current `dev` package includes
   a GitHub workflow that can select Production targets, so it has not been promoted to `main`.
 - Formation/Lineup private-page browser smoke testing still needs an owner login. Signed-out local

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { cn, getTeamDisplayName } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -155,11 +156,10 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       ],
     },
     {
-      heading: "Voting",
+      heading: "MVP Voting",
       items: [
         { path: "/admin/mvp-voting", label: "Player MVP Voting", icon: Trophy },
-        { path: "/admin/umpire-voting", label: "Umpire Match Voting", icon: Vote },
-        { path: "/admin/analytics", label: "Voting Analytics", icon: BarChart3 },
+        { path: "/admin/analytics", label: "MVP Analytics", icon: BarChart3 },
       ],
     },
     {
@@ -209,11 +209,18 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       ],
     },
     {
-      heading: "Voting",
+      heading: "MVP Voting",
       items: [
         { path: "/admin/mvp-voting", label: "Player MVP Voting", icon: Trophy },
+        { path: "/admin/analytics", label: "MVP Analytics", icon: BarChart3 },
+      ],
+    },
+    {
+      heading: "Umpiring",
+      items: [
+        { path: "/umpire/vote", label: "Umpire Match Ballot", icon: ClipboardList },
         { path: "/admin/umpire-voting", label: "Umpire Match Voting", icon: Vote },
-        { path: "/admin/analytics", label: "Voting Analytics", icon: BarChart3 },
+        { path: "/admin/umpire-voting?tab=leaderboard", label: "Umpire Analytics", icon: BarChart3 },
       ],
     },
     {
@@ -270,11 +277,11 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       ],
     },
   ],
-  team: [
+  team_manager: [
     {
       heading: "Core",
       items: [
-        { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/dashboard", label: "My Dashboard", icon: LayoutDashboard },
         { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/chat", label: "Communications", icon: MessageCircle },
         { path: "/mvp-votes", label: "Player MVP", icon: Vote },
@@ -302,11 +309,31 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       ],
     },
   ],
+  coach: [
+    {
+      heading: "Core",
+      items: [
+        { path: "/dashboard", label: "My Dashboard", icon: LayoutDashboard },
+        { path: "/games", label: "Fixtures", icon: Calendar },
+        { path: "/chat", label: "Communications", icon: MessageCircle },
+        { path: "/mvp-votes", label: "Player MVP", icon: Vote },
+      ],
+    },
+    {
+      heading: "Coaching",
+      items: [
+        { path: "/coaching", label: "Squad", icon: ClipboardCheck },
+        { path: "/coaching/formations", label: "Formation Library", icon: LayoutGrid },
+        { path: "/roster", label: "Roster", icon: Users },
+        { path: "/coaching/trace", label: "Hockey Trace Lab", icon: Radar },
+      ],
+    },
+  ],
   player: [
     {
       heading: "Core",
       items: [
-        { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/dashboard", label: "My Dashboard", icon: LayoutDashboard },
         { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/chat", label: "Communications", icon: MessageCircle },
         { path: "/mvp-votes", label: "Player MVP", icon: Vote },
@@ -316,6 +343,8 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Umpiring",
       items: [
         { path: "/umpire/vote", label: "Umpire Match Ballot", icon: ClipboardList },
+        { path: "/admin/umpire-voting", label: "Umpire Match Voting", icon: Vote },
+        { path: "/admin/umpire-voting?tab=leaderboard", label: "Umpire Analytics", icon: BarChart3 },
       ],
     },
     {
@@ -371,7 +400,8 @@ const MOBILE_NAV: Record<AppMode, NavItem[]> = {
   super_admin: NAV_SETS.super_admin[0].items.slice(0, 4),
   association: NAV_SETS.association[0].items.slice(0, 4),
   club: NAV_SETS.club[0].items.slice(0, 4),
-  team: NAV_SETS.team[0].items.slice(0, 4),
+  team_manager: NAV_SETS.team_manager[0].items.slice(0, 4),
+  coach: NAV_SETS.coach[0].items.slice(0, 4),
   player: NAV_SETS.player[0].items.slice(0, 4),
 };
 
@@ -440,6 +470,11 @@ interface VoterMembershipRow {
 
 interface FillInMembershipRow {
   access_expires_at: string;
+  teams: VoterTeamRow | VoterTeamRow[] | null;
+}
+
+interface TeamRoleRow {
+  team_id: string | null;
   teams: VoterTeamRow | VoterTeamRow[] | null;
 }
 
@@ -539,6 +574,7 @@ const AppLayout = () => {
 
   const isVoterOnly = roles.length === 1 && roles[0] === "VOTER";
   const isBrandNewUser = roles.length === 0;
+  const isTeamScopedMode = mode === "player" || mode === "team_manager" || mode === "coach";
 
 
   // Keep the bell current without requiring a page refresh.
@@ -651,6 +687,7 @@ const AppLayout = () => {
           .from("communication_messages")
           .select("id", { count: "exact", head: true })
           .eq("channel_id", channelId)
+          .neq("author_id", user.id)
           .is("removed_at", null);
         if (readState?.last_read_at) query = query.gt("created_at", readState.last_read_at);
         return query;
@@ -729,14 +766,15 @@ const AppLayout = () => {
       setVoterTeamMemberships([]);
     };
 
-    if (mode !== "player" || !user) {
+    if (!isTeamScopedMode || !user) {
       clearPlayerHeaderContext();
       return;
     }
 
     const fetchPlayerHeaderContext = async () => {
       const now = new Date().toISOString();
-      const [regularResult, fillInResult, profileResult] = await Promise.all([
+      const scopedRole = mode === "team_manager" ? "TEAM_MANAGER" : mode === "coach" ? "COACH" : null;
+      const [regularResult, fillInResult, profileResult, roleResult] = await Promise.all([
         supabase
           .from("team_memberships")
           .select("team_id, membership_type, teams(id, name, division_id, clubs(id, name, logo_url, associations(id, name, abbreviation, logo_url)))")
@@ -759,6 +797,14 @@ const AppLayout = () => {
           .select("registered_club_id")
           .eq("id", user.id)
           .maybeSingle(),
+        scopedRole
+          ? supabase
+              .from("user_roles")
+              .select("team_id, teams(id, name, division_id, clubs(id, name, logo_url, associations(id, name, abbreviation, logo_url)))")
+              .eq("user_id", user.id)
+              .eq("role", scopedRole)
+              .not("team_id", "is", null)
+          : Promise.resolve({ data: [] as TeamRoleRow[], error: null }),
       ]);
 
       const toMembership = (
@@ -802,7 +848,17 @@ const AppLayout = () => {
         });
       const fillInRows = ((fillInResult.data || []) as unknown as FillInMembershipRow[]);
       const fillInMemberships = fillInRows.map((row) => toMembership(row, "FILL_IN", false));
-      const memberships = [...regularMemberships, ...fillInMemberships]
+      const roleMemberships = ((roleResult.data || []) as unknown as TeamRoleRow[])
+        .map((row) => {
+          const roleMembership = toMembership(row, "SECONDARY", false);
+          if (!roleMembership) return null;
+          const matchingMembership = regularMemberships.find((item) => item?.teamId === roleMembership.teamId);
+          return matchingMembership || roleMembership;
+        });
+      const accessibleMemberships = mode === "player"
+        ? [...regularMemberships, ...fillInMemberships]
+        : roleMemberships;
+      const memberships = accessibleMemberships
         .filter((membership): membership is VoterTeamMembership => Boolean(membership))
         .filter((membership, index, all) => all.findIndex((item) => item.teamId === membership.teamId) === index)
         .sort((a, b) => {
@@ -826,7 +882,7 @@ const AppLayout = () => {
 
       setVoterTeamMemberships(memberships);
 
-      const contextSessionKey = `player-primary-context:${user.id}`;
+      const contextSessionKey = `${mode}-primary-context:${user.id}`;
       const primaryMembership =
         memberships.find((membership) => membership.isDefaultTeam)
         || memberships.find((membership) => membership.membershipType === "PRIMARY")
@@ -866,6 +922,7 @@ const AppLayout = () => {
     };
   }, [
     fillInRefreshTick,
+    isTeamScopedMode,
     mode,
     user,
     selectedTeamId,
@@ -879,7 +936,7 @@ const AppLayout = () => {
     if (isViewingAsOverridden) return;
 
     if (selectedTeamId) {
-      setViewingAs("team");
+      setViewingAs("team_manager");
     } else if (selectedClubId) {
       setViewingAs("club");
     } else if (selectedAssociationId) {
@@ -987,13 +1044,13 @@ const AppLayout = () => {
   const cascadeClearClass =
     "h-7 w-7 shrink-0 rounded-full text-primary-foreground/60 hover:text-primary-foreground hover:bg-primary-foreground/10";
   const cascadeSummaryParts = [
-    selectedAssociation?.abbreviation || selectedAssociation?.name || (mode === "player" ? playerAssociationAbbr || playerAssociationName : ""),
-    selectedClub?.name || (mode === "player" ? playerClubName : ""),
+    selectedAssociation?.name || (isTeamScopedMode ? playerAssociationName : ""),
+    selectedClub?.name || (isTeamScopedMode ? playerClubName : ""),
     selectedDivisionObj?.name,
-    selectedTeam ? getTeamDisplayName(selectedTeam) : mode === "player" ? playerTeamName : "",
+    selectedTeam ? getTeamDisplayName(selectedTeam) : isTeamScopedMode ? playerTeamName : "",
   ].filter(Boolean);
   const cascadeSummary = cascadeSummaryParts.length > 0 ? cascadeSummaryParts.join(" > ") : "Select scope";
-  const selectedPlayerMembership = mode === "player"
+  const selectedPlayerMembership = isTeamScopedMode
     ? voterTeamMemberships.find((membership) => membership.teamId === selectedTeamId) || voterTeamMemberships[0]
     : undefined;
   const playerCanBrowseParentEntities = selectedPlayerMembership?.membershipType !== "FILL_IN";
@@ -1002,7 +1059,7 @@ const AppLayout = () => {
     // Player entity dashboards use their route ID and must not clear the
     // active membership context shown in the header. Clearing it here made
     // the player-primary effect immediately restore Pumas, creating a loop.
-    if (mode === "player") return;
+    if (isTeamScopedMode) return;
 
     const associationMatch = location.pathname.match(/^\/associations\/([^/]+)/);
     const clubMatch = location.pathname.match(/^\/clubs\/([^/]+)/);
@@ -1041,6 +1098,7 @@ const AppLayout = () => {
   }, [
     location.pathname,
     mode,
+    isTeamScopedMode,
     clubs,
     teams,
     teamDivisions,
@@ -1055,7 +1113,11 @@ const AppLayout = () => {
   ]);
 
   const handleLogout = async () => {
-    if (user?.id) sessionStorage.removeItem(`player-primary-context:${user.id}`);
+    if (user?.id) {
+      sessionStorage.removeItem(`player-primary-context:${user.id}`);
+      sessionStorage.removeItem(`team_manager-primary-context:${user.id}`);
+      sessionStorage.removeItem(`coach-primary-context:${user.id}`);
+    }
     await supabase.auth.signOut();
     navigate("/");
   };
@@ -1077,7 +1139,7 @@ const AppLayout = () => {
       divisionId: membership.divisionId || "",
       teamId: membership.teamId,
     });
-    navigate("/dashboard");
+    navigate(`/teams/${membership.teamId}`);
   };
 
   const handleFeedbackSubmit = async () => {
@@ -1214,7 +1276,8 @@ const AppLayout = () => {
             <option value="super_admin">⭐ Super Admin</option>
             {selectedAssociationId && <option value="association">Association Admin</option>}
             {selectedClubId && <option value="club">Club Admin</option>}
-            {selectedTeamId && <option value="team">Team Manager</option>}
+            {selectedTeamId && <option value="team_manager">Team Manager</option>}
+            {selectedTeamId && <option value="coach">Coach</option>}
             {selectedTeamId && <option value="player">Player</option>}
           </select>
         </div>
@@ -1345,7 +1408,7 @@ const AppLayout = () => {
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="min-w-0 flex-1 justify-start gap-2 px-2 text-primary-foreground hover:bg-primary-foreground/10 xl:hidden"
+                  className="min-w-0 flex-1 justify-start gap-2 px-2 text-primary-foreground hover:bg-primary-foreground/10 lg:hidden"
                 >
                   <MapPin className="h-4 w-4 shrink-0" />
                   <span className="truncate text-left text-sm font-medium">{cascadeSummary}</span>
@@ -1353,6 +1416,44 @@ const AppLayout = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[min(92vw,360px)] space-y-3 bg-background p-3" align="start">
+                {isTeamScopedMode && selectedPlayerMembership && (
+                  <div className="space-y-2">
+                    {playerCanBrowseParentEntities && (
+                      <div className="grid grid-cols-1 gap-1">
+                        <Button variant="ghost" className="justify-start" onClick={() => navigate(`/associations/${selectedPlayerMembership.associationId}`)}>
+                          {selectedPlayerMembership.associationName}
+                        </Button>
+                        <Button variant="ghost" className="justify-start" onClick={() => navigate(`/clubs/${selectedPlayerMembership.clubId}`)}>
+                          {selectedPlayerMembership.clubName}
+                        </Button>
+                        {selectedPlayerMembership.divisionId && (
+                          <Button variant="ghost" className="justify-start" onClick={() => navigate(`/divisions/${selectedPlayerMembership.divisionId}`)}>
+                            {selectedDivisionObj?.name || "Division Overview"}
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    <Label className="text-xs text-muted-foreground">Team</Label>
+                    {voterTeamMemberships.length > 1 ? (
+                      <Select value={selectedPlayerMembership.teamId} onValueChange={handleVoterTeamChange}>
+                        <SelectTrigger className={cascadePanelSelectTriggerClass}>
+                          <SelectValue placeholder="Select team" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border-border">
+                          {voterTeamMemberships.map((membership) => (
+                            <SelectItem key={membership.teamId} value={membership.teamId}>
+                              {membership.teamName} ({membership.membershipType === "PRIMARY" ? "Primary" : membership.membershipType === "FILL_IN" ? "Fill-in" : "Secondary"})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Button className="w-full justify-start" variant="outline" onClick={() => handleVoterTeamChange(selectedPlayerMembership.teamId)}>
+                        {selectedPlayerMembership.teamName}
+                      </Button>
+                    )}
+                  </div>
+                )}
                 {showAssociationSelector && (
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Association</Label>
@@ -1453,7 +1554,7 @@ const AppLayout = () => {
               </PopoverContent>
             </Popover>
 
-            <div className="hidden min-w-0 items-center gap-2 xl:flex">
+            <div className="hidden min-w-0 items-center gap-2 lg:flex">
             {/* Association Logo with Popover - only interactive for super_admin */}
             {showAssociationSelector ? (
               <div className="flex items-center gap-1">
@@ -1536,24 +1637,24 @@ const AppLayout = () => {
                 <button
                   type="button"
                   className="w-10 h-10 shrink-0 rounded-lg overflow-hidden border-2 border-primary-foreground/20 disabled:cursor-default"
-                  title={(mode === "player" ? playerAssociationName || playerClubName : selectedAssociation?.name) || "SportStack"}
-                  disabled={mode !== "player" || !playerCanBrowseParentEntities || !selectedPlayerMembership}
+                  title={(isTeamScopedMode ? playerAssociationName || playerClubName : selectedAssociation?.name) || "SportStack"}
+                  disabled={!isTeamScopedMode || !playerCanBrowseParentEntities || !selectedPlayerMembership}
                   onClick={() => selectedPlayerMembership && navigate(`/associations/${selectedPlayerMembership.associationId}`)}
                 >
                   <Avatar className="w-full h-full rounded-none">
                     <AvatarImage
-                      src={(mode === "player" ? playerLogoUrl : selectedAssociation?.logo_url) || "/favicon.ico"}
-                      alt={(mode === "player" ? playerAssociationName || playerClubName : selectedAssociation?.name) || "SportStack"}
+                      src={(isTeamScopedMode ? playerLogoUrl : selectedAssociation?.logo_url) || "/favicon.ico"}
+                      alt={(isTeamScopedMode ? playerAssociationName || playerClubName : selectedAssociation?.name) || "SportStack"}
                       className="object-cover"
                     />
                     <AvatarFallback className="rounded-none bg-accent text-accent-foreground text-xs font-semibold">
-                      {mode === "player"
+                      {isTeamScopedMode
                         ? playerAssociationAbbr || playerAssociationName.substring(0, 2).toUpperCase() || "SS"
                         : selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "SS"}
                     </AvatarFallback>
                   </Avatar>
                 </button>
-                {mode === "player" && playerCanBrowseParentEntities && selectedPlayerMembership && (
+                {isTeamScopedMode && playerCanBrowseParentEntities && selectedPlayerMembership && (
                   <button
                     type="button"
                     className={staticCascadeClass}
@@ -1563,7 +1664,7 @@ const AppLayout = () => {
                     {selectedPlayerMembership.clubName}
                   </button>
                 )}
-                {mode === "player" && voterTeamMemberships.length > 1 ? (
+                {isTeamScopedMode && voterTeamMemberships.length > 1 ? (
                   <div className="flex min-w-0 items-center gap-1">
                     {playerCanBrowseParentEntities && selectedPlayerMembership?.divisionId && (
                       <button
@@ -1590,7 +1691,7 @@ const AppLayout = () => {
                   </div>
                 ) : (
                   <>
-                    {mode === "player" && playerCanBrowseParentEntities && selectedDivisionObj && (
+                    {isTeamScopedMode && playerCanBrowseParentEntities && selectedDivisionObj && (
                       <button
                         type="button"
                         className={staticCascadeClass}
@@ -1600,13 +1701,15 @@ const AppLayout = () => {
                         {selectedDivisionObj.name}
                       </button>
                     )}
-                    {mode === "player" && selectedPlayerMembership && (
-                      <div
+                    {isTeamScopedMode && selectedPlayerMembership && (
+                      <button
+                        type="button"
                         className={staticCascadeClass}
-                        title={selectedPlayerMembership.teamName}
+                        title={`Open ${selectedPlayerMembership.teamName} overview`}
+                        onClick={() => navigate(`/teams/${selectedPlayerMembership.teamId}`)}
                       >
                         {selectedTeam ? getTeamDisplayName(selectedTeam) : playerTeamName}
-                      </div>
+                      </button>
                     )}
                   </>
                 )}
@@ -1617,9 +1720,9 @@ const AppLayout = () => {
             {showClubSelector && selectedAssociationId && filteredClubs.length > 0 && (
               <div className="flex items-center gap-1">
                 {filteredClubs.length === 1 ? (
-                  <div className={staticCascadeClass} title={selectedClub?.name || filteredClubs[0].name}>
+                  <button type="button" className={staticCascadeClass} title={`Open ${selectedClub?.name || filteredClubs[0].name} overview`} onClick={() => navigate(`/clubs/${selectedClub?.id || filteredClubs[0].id}`)}>
                     {selectedClub?.name || filteredClubs[0].name}
-                  </div>
+                  </button>
                 ) : (
                   <Select key={selectedAssociationId} value={selectedClubId || undefined} onValueChange={(v) => {
                     setSelectedClubId(v);
@@ -1654,9 +1757,9 @@ const AppLayout = () => {
             {showClubSelector && selectedClubId && filteredDivisions.length > 0 && (
               <div className="flex items-center gap-1">
                 {filteredDivisions.length === 1 ? (
-                  <div className={staticCascadeClass} title={selectedDivisionObj?.name || filteredDivisions[0].name}>
+                  <button type="button" className={staticCascadeClass} title={`Open ${selectedDivisionObj?.name || filteredDivisions[0].name} overview`} onClick={() => navigate(`/divisions/${selectedDivisionObj?.id || filteredDivisions[0].id}`)}>
                     {selectedDivisionObj?.name || filteredDivisions[0].name}
-                  </div>
+                  </button>
                 ) : (
                   <Select key={selectedClubId} value={selectedDivision || undefined} onValueChange={(v) => {
                     setSelectedDivision(v);
@@ -1690,9 +1793,9 @@ const AppLayout = () => {
             {showClubSelector && selectedClubId && cascadeDivisionId && cascadeTeams.length > 0 && (
               <div className="flex items-center gap-1">
                 {cascadeTeams.length === 1 ? (
-                  <div className={staticCascadeClass} title={getTeamDisplayName(selectedTeam || cascadeTeams[0])}>
+                  <button type="button" className={staticCascadeClass} title={`Open ${getTeamDisplayName(selectedTeam || cascadeTeams[0])} overview`} onClick={() => navigate(`/teams/${selectedTeam?.id || cascadeTeams[0].id}`)}>
                     {getTeamDisplayName(selectedTeam || cascadeTeams[0])}
-                  </div>
+                  </button>
                 ) : (
                   <Select key={selectedClubId + cascadeDivisionId} value={selectedTeamId || undefined} onValueChange={(v) => {
                     if (!selectedDivision && cascadeDivisionId) setSelectedDivision(cascadeDivisionId);
@@ -1859,7 +1962,9 @@ const AppLayout = () => {
 
         {/* Main Content */}
         <main className="min-w-0 flex-1 min-h-[calc(100vh-3.5rem)] p-4 lg:p-6 bg-muted/30">
-          <Outlet />
+          <RouteErrorBoundary resetKey={`${location.pathname}${location.search}`}>
+            <Outlet />
+          </RouteErrorBoundary>
         </main>
       </div>
 

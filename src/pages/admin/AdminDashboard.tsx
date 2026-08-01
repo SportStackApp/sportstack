@@ -56,10 +56,10 @@ const AdminDashboard = () => {
     : "global";
 
   const dashboardTitle =
-    contextLevel === "team" ? selectedTeam?.name || "Team Dashboard"
-    : contextLevel === "club" ? selectedClub?.name || "Club Dashboard"
-    : contextLevel === "association" ? selectedAssociation?.name || "Association Dashboard"
-    : "Admin Dashboard";
+    contextLevel === "team" ? `${selectedTeam?.name || "Team"} Admin Dashboard`
+    : contextLevel === "club" ? `${selectedClub?.name || "Club"} Admin Dashboard`
+    : contextLevel === "association" ? `${selectedAssociation?.name || "Association"} Admin Dashboard`
+    : "SportStack Admin";
 
   const dashboardSubtitle =
     contextLevel === "team" ? "Team stats and activity"
@@ -177,13 +177,32 @@ const AdminDashboard = () => {
   const showAssociations = contextLevel === "global";
   const showClubs = contextLevel === "global" || contextLevel === "association";
   const showTeams = contextLevel !== "team";
+  const scopeQuery = new URLSearchParams();
+  if (selectedAssociationId) scopeQuery.set("association", selectedAssociationId);
+  if (selectedClubId) scopeQuery.set("club", selectedClubId);
+  if (selectedTeamId) scopeQuery.set("team", selectedTeamId);
+  const scopedHref = (path: string) => scopeQuery.size > 0 ? `${path}?${scopeQuery.toString()}` : path;
+  const scopeBanner = (
+    selectedTeam as { banner_url?: string | null; primary_colour?: string | null } | null
+  )?.banner_url || (
+    selectedClub as { banner_url?: string | null; primary_colour?: string | null } | null
+  )?.banner_url || (
+    selectedAssociation as { banner_url?: string | null; primary_colour?: string | null } | null
+  )?.banner_url;
+  const scopeColour = (
+    selectedTeam as { primary_colour?: string | null } | null
+  )?.primary_colour || (
+    selectedClub as { primary_colour?: string | null } | null
+  )?.primary_colour || (
+    selectedAssociation as { primary_colour?: string | null } | null
+  )?.primary_colour || undefined;
 
   const statCards = [
     ...(showAssociations ? [{
       title: "Associations",
       value: stats.associations,
       icon: Building2,
-      href: "/admin/associations",
+      href: scopedHref("/admin/associations"),
       description: "Manage associations",
       color: "text-blue-600",
     }] : []),
@@ -191,7 +210,7 @@ const AdminDashboard = () => {
       title: "Clubs",
       value: stats.clubs,
       icon: Shield,
-      href: "/admin/clubs",
+      href: scopedHref("/admin/clubs"),
       description: "Manage clubs",
       color: "text-green-600",
     }] : []),
@@ -199,7 +218,7 @@ const AdminDashboard = () => {
       title: "Teams",
       value: stats.teams,
       icon: Trophy,
-      href: "/admin/teams",
+      href: scopedHref("/admin/teams"),
       description: "Manage teams",
       color: "text-purple-600",
     }] : []),
@@ -207,7 +226,7 @@ const AdminDashboard = () => {
       title: "Divisions",
       value: stats.divisions,
       icon: Trophy,
-      href: "/admin/divisions",
+      href: scopedHref("/admin/divisions"),
       description: "Manage divisions",
       color: "text-sky-600",
     }] : []),
@@ -215,7 +234,7 @@ const AdminDashboard = () => {
       title: "Venues",
       value: stats.venues,
       icon: Trophy,
-      href: "/admin/venues",
+      href: scopedHref("/admin/venues"),
       description: "Manage venues",
       color: "text-cyan-600",
     }] : []),
@@ -223,7 +242,7 @@ const AdminDashboard = () => {
       title: "Users",
       value: stats.users,
       icon: Users,
-      href: "/admin/users",
+      href: scopedHref("/admin/users"),
       description: "Manage users & roles",
       color: "text-orange-600",
     },
@@ -246,6 +265,23 @@ const AdminDashboard = () => {
           </Badge>
         )}
       </div>
+
+      {contextLevel !== "global" && (
+        <div
+          className="flex min-h-28 items-end overflow-hidden rounded-xl border bg-primary p-5 text-primary-foreground shadow-sm"
+          style={{
+            backgroundColor: scopeColour,
+            backgroundImage: scopeBanner ? `linear-gradient(90deg, rgba(0,0,0,.62), rgba(0,0,0,.12)), url(${scopeBanner})` : undefined,
+            backgroundPosition: "center",
+            backgroundSize: "cover",
+          }}
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide opacity-80">Selected management scope</p>
+            <p className="mt-1 text-xl font-semibold">{selectedTeam?.name || selectedClub?.name || selectedAssociation?.name}</p>
+          </div>
+        </div>
+      )}
 
       {/* Pending Memberships Alert */}
       {stats.pendingMemberships > 0 && (
@@ -321,44 +357,14 @@ const AdminDashboard = () => {
           <CardDescription>Common administrative tasks</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {contextLevel === "global" && (
-            <Button variant="outline" asChild className="h-auto py-4 flex-col">
-              <Link to="/admin/associations">
-                <Building2 className="mb-2 h-6 w-6" />
-                <span>Associations</span>
-              </Link>
-            </Button>
-          )}
-          {(contextLevel === "global" || contextLevel === "association") && (
-            <Button variant="outline" asChild className="h-auto py-4 flex-col">
-              <Link to="/admin/clubs">
-                <Shield className="mb-2 h-6 w-6" />
-                <span>Clubs</span>
-              </Link>
-            </Button>
-          )}
-          {contextLevel !== "team" && (
-            <Button variant="outline" asChild className="h-auto py-4 flex-col">
-              <Link to="/admin/teams">
-                <Trophy className="mb-2 h-6 w-6" />
-                <span>Teams</span>
-              </Link>
-            </Button>
-          )}
           {contextLevel === "team" && (
             <Button variant="outline" asChild className="h-auto py-4 flex-col">
-              <Link to="/admin/fixtures">
+              <Link to={scopedHref("/admin/fixtures")}>
                 <Clock className="mb-2 h-6 w-6" />
                 <span>Fixtures</span>
               </Link>
             </Button>
           )}
-          <Button variant="outline" asChild className="h-auto py-4 flex-col">
-            <Link to="/admin/users">
-              <Users className="mb-2 h-6 w-6" />
-              <span>Manage Users</span>
-            </Link>
-          </Button>
           {isSuperAdmin && (
             <Button variant="outline" asChild className="h-auto py-4 flex-col">
               <Link to="/admin/error-logs">

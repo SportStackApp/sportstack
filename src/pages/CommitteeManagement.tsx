@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ExternalLink, Loader2, Plus } from "lucide-react";
+import { ExternalLink, FileUp, Loader2, Plus } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,7 +69,23 @@ const formatDate = (value: string | null) => value
     .format(new Date(`${value}T00:00:00`))
   : "Current";
 
+const MAX_COMMITTEE_FILE_BYTES = 20 * 1024 * 1024;
+const COMMITTEE_FILE_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "image/jpeg",
+  "image/png",
+]);
+
+const safeFileName = (name: string) => name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "file";
+
 export default function CommitteeManagement() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
   const {
@@ -99,11 +116,24 @@ export default function CommitteeManagement() {
   const [documentOpen, setDocumentOpen] = useState(false);
   const [qualificationOpen, setQualificationOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [qualificationFile, setQualificationFile] = useState<File | null>(null);
   const [committeeForm, setCommitteeForm] = useState({ scopeType: "ASSOCIATION", associationId: "", clubId: "", name: "", description: "" });
   const [positionForm, setPositionForm] = useState({ id: "", title: "", description: "", isPresident: false, permissions: emptyPermissionState() });
   const [memberForm, setMemberForm] = useState({ userId: "", positionId: "", startDate: new Date().toISOString().slice(0, 10), endDate: "", notes: "" });
-  const [documentForm, setDocumentForm] = useState({ title: "", type: "Governance", url: "", notes: "" });
-  const [qualificationForm, setQualificationForm] = useState({ memberId: "", title: "", issuer: "", obtainedDate: "", expiryDate: "", documentUrl: "", notes: "" });
+  const [documentForm, setDocumentForm] = useState({ title: "", type: "Governance", notes: "" });
+  const [qualificationForm, setQualificationForm] = useState({ memberId: "", title: "", issuer: "", obtainedDate: "", expiryDate: "", notes: "" });
+
+  const area = searchParams.get("area") === "admin" ? "admin" : "work";
+  const defaultTab = area === "admin" ? "positions" : "calendar";
+  const activeTab = searchParams.get("tab") || defaultTab;
+  const setWorkspace = (nextArea: "work" | "admin", nextTab: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("area", nextArea);
+    next.set("tab", nextTab);
+    if (selectedCommitteeId) next.set("committee", selectedCommitteeId);
+    setSearchParams(next, { replace: true });
+  };
 
   const selectedCommittee = committees.find((committee) => committee.id === selectedCommitteeId);
   const profileById = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);
@@ -135,13 +165,20 @@ export default function CommitteeManagement() {
       setCommittees(committeeResult.data || []);
       setProfiles(profileResult.data || []);
       setSelectedCommitteeId((current) =>
-        current && committeeResult.data?.some((committee) => committee.id === current)
-          ? current
+        (searchParams.get("committee") || current) && committeeResult.data?.some((committee) => committee.id === (searchParams.get("committee") || current))
+          ? searchParams.get("committee") || current
           : committeeResult.data?.[0]?.id || "",
       );
     }
     setLoading(false);
-  }, []);
+  }, [searchParams]);
+
+  const changeCommittee = (committeeId: string) => {
+    setSelectedCommitteeId(committeeId);
+    const next = new URLSearchParams(searchParams);
+    next.set("committee", committeeId);
+    setSearchParams(next, { replace: true });
+  };
 
   const loadCommitteeDetail = useCallback(async () => {
     if (!selectedCommitteeId) {
@@ -291,13 +328,27 @@ export default function CommitteeManagement() {
   };
 
   const saveDocument = async () => {
-    if (!user || !selectedCommitteeId || !documentForm.title.trim() || !documentForm.url.trim()) return;
+    if (!user || !selectedCommitteeId || !documentForm.title.trim() || !documentFile) return;
+    if (documentFile.size > MAX_COMMITTEE_FILE_BYTES || !COMMITTEE_FILE_TYPES.has(documentFile.type)) {
+      toast({ title: "File not accepted", description: "Use PDF, Office, JPG or PNG files up to 20 MB.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
+    const storagePath = `${selectedCommitteeId}/documents/${crypto.randomUUID()}-${safeFileName(documentFile.name)}`;
+    const { error: uploadError } = await supabase.storage.from("committee-files").upload(storagePath, documentFile, {
+      contentType: documentFile.type,
+      upsert: false,
+    });
+    if (uploadError) {
+      toast({ title: "Document not uploaded", description: uploadError.message, variant: "destructive" });
+      setSaving(false);
+      return;
+    }
     const { error: saveError } = await supabase.from("committee_documents").insert({
       committee_id: selectedCommitteeId,
       title: documentForm.title.trim(),
       document_type: documentForm.type.trim() || "Governance",
-      document_url: documentForm.url.trim(),
+      document_url: `storage:${storagePath}`,
       notes: documentForm.notes.trim() || null,
       created_by: user.id,
     });
@@ -306,7 +357,8 @@ export default function CommitteeManagement() {
     } else {
       toast({ title: "Governance document added" });
       setDocumentOpen(false);
-      setDocumentForm({ title: "", type: "Governance", url: "", notes: "" });
+      setDocumentForm({ title: "", type: "Governance", notes: "" });
+      setDocumentFile(null);
       await loadCommitteeDetail();
     }
     setSaving(false);
@@ -314,14 +366,32 @@ export default function CommitteeManagement() {
 
   const saveQualification = async () => {
     if (!user || !qualificationForm.memberId || !qualificationForm.title.trim()) return;
+    if (qualificationFile && (qualificationFile.size > MAX_COMMITTEE_FILE_BYTES || !COMMITTEE_FILE_TYPES.has(qualificationFile.type))) {
+      toast({ title: "File not accepted", description: "Use PDF, Office, JPG or PNG files up to 20 MB.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
+    let storedDocumentUrl: string | null = null;
+    if (qualificationFile) {
+      const storagePath = `${selectedCommitteeId}/qualifications/${crypto.randomUUID()}-${safeFileName(qualificationFile.name)}`;
+      const { error: uploadError } = await supabase.storage.from("committee-files").upload(storagePath, qualificationFile, {
+        contentType: qualificationFile.type,
+        upsert: false,
+      });
+      if (uploadError) {
+        toast({ title: "Evidence not uploaded", description: uploadError.message, variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+      storedDocumentUrl = `storage:${storagePath}`;
+    }
     const { error: saveError } = await supabase.from("committee_member_qualifications").insert({
       committee_member_id: qualificationForm.memberId,
       title: qualificationForm.title.trim(),
       issuer: qualificationForm.issuer.trim() || null,
       obtained_date: qualificationForm.obtainedDate || null,
       expiry_date: qualificationForm.expiryDate || null,
-      document_url: qualificationForm.documentUrl.trim() || null,
+      document_url: storedDocumentUrl,
       notes: qualificationForm.notes.trim() || null,
       created_by: user.id,
     });
@@ -330,10 +400,27 @@ export default function CommitteeManagement() {
     } else {
       toast({ title: "Qualification added" });
       setQualificationOpen(false);
-      setQualificationForm({ memberId: "", title: "", issuer: "", obtainedDate: "", expiryDate: "", documentUrl: "", notes: "" });
+      setQualificationForm({ memberId: "", title: "", issuer: "", obtainedDate: "", expiryDate: "", notes: "" });
+      setQualificationFile(null);
       await loadCommitteeDetail();
     }
     setSaving(false);
+  };
+
+  const openCommitteeFile = async (documentUrl: string | null) => {
+    if (!documentUrl) return;
+    if (!documentUrl.startsWith("storage:")) {
+      window.open(documentUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    const { data, error: signedUrlError } = await supabase.storage
+      .from("committee-files")
+      .createSignedUrl(documentUrl.slice("storage:".length), 300);
+    if (signedUrlError || !data?.signedUrl) {
+      toast({ title: "File could not be opened", description: signedUrlError?.message || "Please try again.", variant: "destructive" });
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   };
 
   if (adminLoading || loading) return <Skeleton className="h-96 w-full" />;
@@ -361,31 +448,37 @@ export default function CommitteeManagement() {
         <>
           <Card>
             <CardContent className="pt-6">
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-                <div className="space-y-2">
-                  <Label>Committee</Label>
-                  <Select value={selectedCommitteeId} onValueChange={setSelectedCommitteeId}>
-                    <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
-                    <SelectContent>{committees.map((committee) => <SelectItem key={committee.id} value={committee.id}>{committee.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                {selectedCommittee && (
-                  <Badge variant="outline">
-                    {selectedCommittee.scope_type === "CLUB"
-                      ? clubById.get(selectedCommittee.club_id || "")?.name || "Club"
-                      : associationById.get(selectedCommittee.association_id)?.name || "Association"}
-                  </Badge>
-                )}
+              <div className="space-y-2">
+                <Label>Committee</Label>
+                <Select value={selectedCommitteeId} onValueChange={changeCommittee}>
+                  <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
+                  <SelectContent>{committees.map((committee) => {
+                    const scopeName = committee.scope_type === "CLUB"
+                      ? clubById.get(committee.club_id || "")?.name || "Club"
+                      : associationById.get(committee.association_id)?.name || "Association";
+                    return <SelectItem key={committee.id} value={committee.id}>{committee.name} — {scopeName}</SelectItem>;
+                  })}</SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
 
-          <Tabs defaultValue="positions" className="space-y-4">
-            <TabsList className="grid h-auto w-full grid-cols-2 md:grid-cols-4">
+          <Tabs value={area} onValueChange={(value) => setWorkspace(value as "work" | "admin", value === "admin" ? "positions" : "calendar")}>
+            <TabsList className="grid h-auto w-full grid-cols-2">
+              <TabsTrigger value="work">Committee Work</TabsTrigger>
+              <TabsTrigger value="admin">Committee Administration</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {area === "admin" ? (
+          <Tabs value={activeTab} onValueChange={(value) => setWorkspace("admin", value)} className="space-y-4">
+            <TabsList className="grid h-auto w-full grid-cols-2 md:grid-cols-6">
               <TabsTrigger value="positions">Positions</TabsTrigger>
               <TabsTrigger value="members">Members</TabsTrigger>
               <TabsTrigger value="documents">Documents</TabsTrigger>
               <TabsTrigger value="qualifications">Qualifications</TabsTrigger>
+              <TabsTrigger value="templates">Templates</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
             </TabsList>
 
             <TabsContent value="positions">
@@ -396,7 +489,7 @@ export default function CommitteeManagement() {
                 </CardHeader>
                 <CardContent className="grid gap-3 lg:grid-cols-2">
                   {positions.length === 0 ? <p className="text-sm text-muted-foreground">No positions created.</p> : positions.map((position) => (
-                    <div key={position.id} className="space-y-3 rounded-lg border p-4">
+                    <div key={position.id} className="space-y-2 rounded-lg border px-3 py-2.5">
                       <div className="flex items-start justify-between gap-3">
                         <div><p className="font-medium">{position.title}</p><p className="text-sm text-muted-foreground">{position.description || "No description"}</p></div>
                         {position.is_president && <Badge>President</Badge>}
@@ -441,7 +534,7 @@ export default function CommitteeManagement() {
                   {documents.length === 0 ? <p className="text-sm text-muted-foreground">No documents recorded.</p> : documents.map((document) => (
                     <div key={document.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
                       <div><p className="font-medium">{document.title}</p><p className="text-sm text-muted-foreground">{document.document_type}</p></div>
-                      <Button asChild variant="outline" size="sm"><a href={document.document_url} target="_blank" rel="noreferrer"><ExternalLink className="mr-2 h-4 w-4" />Open</a></Button>
+                      <Button variant="outline" size="sm" onClick={() => void openCommitteeFile(document.document_url)}><ExternalLink className="mr-2 h-4 w-4" />Open</Button>
                     </div>
                   ))}
                 </CardContent>
@@ -460,22 +553,53 @@ export default function CommitteeManagement() {
                     return (
                       <div key={qualification.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
                         <div><p className="font-medium">{qualification.title}</p><p className="text-sm text-muted-foreground">{profileName(profileById.get(member?.user_id || ""))}{qualification.issuer ? ` • ${qualification.issuer}` : ""}</p></div>
-                        <div className="text-sm text-muted-foreground">Expires: {formatDate(qualification.expiry_date)}</div>
+                        <div className="flex items-center gap-2"><span className="text-sm text-muted-foreground">Expires: {formatDate(qualification.expiry_date)}</span>{qualification.document_url && <Button variant="outline" size="sm" onClick={() => void openCommitteeFile(qualification.document_url)}>Open evidence</Button>}</div>
                       </div>
                     );
                   })}
                 </CardContent>
               </Card>
             </TabsContent>
-          </Tabs>
 
-          <Tabs defaultValue="polls" className="space-y-4">
-            <TabsList className="grid h-auto w-full grid-cols-2 md:grid-cols-4">
-              <TabsTrigger value="polls">Polls</TabsTrigger>
+            <TabsContent value="templates">
+              <CommitteeMeetings
+                key={`templates-${selectedCommitteeId}`}
+                mode="templates"
+                committeeId={selectedCommitteeId}
+                associationId={selectedCommittee?.association_id || ""}
+                clubId={selectedCommittee?.club_id || null}
+                canManage={permissions.manage_meetings}
+                canRecordMinutes={permissions.record_minutes}
+                profiles={profiles}
+                memberProfileIds={members.map((member) => member.user_id)}
+              />
+            </TabsContent>
+            <TabsContent value="activity">
+              <CommitteeActivity key={`activity-${selectedCommitteeId}`} committeeId={selectedCommitteeId} profiles={profiles} />
+            </TabsContent>
+          </Tabs>
+          ) : (
+          <Tabs value={activeTab} onValueChange={(value) => setWorkspace("work", value)} className="space-y-4">
+            <TabsList className="grid h-auto w-full grid-cols-2 md:grid-cols-5">
+              <TabsTrigger value="calendar">Calendar</TabsTrigger>
               <TabsTrigger value="meetings">Meetings</TabsTrigger>
+              <TabsTrigger value="polls">Polls</TabsTrigger>
               <TabsTrigger value="chat">Chat</TabsTrigger>
-              <TabsTrigger value="activity">Activity</TabsTrigger>
+              <TabsTrigger value="minutes">Minutes</TabsTrigger>
             </TabsList>
+            <TabsContent value="calendar">
+              <CommitteeMeetings
+                key={`calendar-${selectedCommitteeId}`}
+                mode="calendar"
+                committeeId={selectedCommitteeId}
+                associationId={selectedCommittee?.association_id || ""}
+                clubId={selectedCommittee?.club_id || null}
+                canManage={permissions.manage_meetings}
+                canRecordMinutes={permissions.record_minutes}
+                profiles={profiles}
+                memberProfileIds={members.map((member) => member.user_id)}
+              />
+            </TabsContent>
             <TabsContent value="polls">
               <CommitteePolls
                 key={`polls-${selectedCommitteeId}`}
@@ -487,12 +611,14 @@ export default function CommitteeManagement() {
             <TabsContent value="meetings">
               <CommitteeMeetings
                 key={`meetings-${selectedCommitteeId}`}
+                mode="meetings"
                 committeeId={selectedCommitteeId}
                 associationId={selectedCommittee?.association_id || ""}
                 clubId={selectedCommittee?.club_id || null}
                 canManage={permissions.manage_meetings}
                 canRecordMinutes={permissions.record_minutes}
                 profiles={profiles}
+                memberProfileIds={members.map((member) => member.user_id)}
               />
             </TabsContent>
             <TabsContent value="chat">
@@ -503,14 +629,21 @@ export default function CommitteeManagement() {
                 profiles={profiles}
               />
             </TabsContent>
-            <TabsContent value="activity">
-              <CommitteeActivity
-                key={`activity-${selectedCommitteeId}`}
+            <TabsContent value="minutes">
+              <CommitteeMeetings
+                key={`minutes-${selectedCommitteeId}`}
+                mode="minutes"
                 committeeId={selectedCommitteeId}
+                associationId={selectedCommittee?.association_id || ""}
+                clubId={selectedCommittee?.club_id || null}
+                canManage={permissions.manage_meetings}
+                canRecordMinutes={permissions.record_minutes}
                 profiles={profiles}
+                memberProfileIds={members.map((member) => member.user_id)}
               />
             </TabsContent>
           </Tabs>
+          )}
         </>
       )}
 
@@ -522,12 +655,14 @@ export default function CommitteeManagement() {
         <div className="grid grid-cols-2 gap-3"><InputField label="Start date" type="date" value={memberForm.startDate} onChange={(startDate) => setMemberForm((current) => ({ ...current, startDate }))} /><InputField label="End date (optional)" type="date" value={memberForm.endDate} onChange={(endDate) => setMemberForm((current) => ({ ...current, endDate }))} /></div>
         <TextAreaField label="Appointment notes" value={memberForm.notes} onChange={(notes) => setMemberForm((current) => ({ ...current, notes }))} />
       </SimpleDialog>
-      <SimpleDialog open={documentOpen} onOpenChange={setDocumentOpen} title="Add governance document" description="Record a secure document link and its purpose." saving={saving} onSave={() => void saveDocument()}>
-        <InputField label="Title" value={documentForm.title} onChange={(title) => setDocumentForm((current) => ({ ...current, title }))} /><InputField label="Document type" value={documentForm.type} onChange={(type) => setDocumentForm((current) => ({ ...current, type }))} /><InputField label="Document URL" type="url" value={documentForm.url} onChange={(url) => setDocumentForm((current) => ({ ...current, url }))} /><TextAreaField label="Notes" value={documentForm.notes} onChange={(notes) => setDocumentForm((current) => ({ ...current, notes }))} />
+      <SimpleDialog open={documentOpen} onOpenChange={setDocumentOpen} title="Upload governance document" description="Private committee file. PDF, Office, JPG or PNG; maximum 20 MB." saving={saving} onSave={() => void saveDocument()}>
+        <InputField label="Title" value={documentForm.title} onChange={(title) => setDocumentForm((current) => ({ ...current, title }))} /><InputField label="Document type" value={documentForm.type} onChange={(type) => setDocumentForm((current) => ({ ...current, type }))} />
+        <FileField label="Document file" file={documentFile} onChange={setDocumentFile} />
+        <TextAreaField label="Notes" value={documentForm.notes} onChange={(notes) => setDocumentForm((current) => ({ ...current, notes }))} />
       </SimpleDialog>
-      <SimpleDialog open={qualificationOpen} onOpenChange={setQualificationOpen} title="Add qualification" description="Attach training or a check to a current appointment." saving={saving} onSave={() => void saveQualification()}>
+      <SimpleDialog open={qualificationOpen} onOpenChange={setQualificationOpen} title="Add qualification" description="Attach training or a check to a current appointment. Evidence is stored privately." saving={saving} onSave={() => void saveQualification()}>
         <SelectField label="Committee member" value={qualificationForm.memberId} onChange={(memberId) => setQualificationForm((current) => ({ ...current, memberId }))} options={members.filter((member) => permissions.manage_members || member.user_id === user?.id).map((member) => ({ id: member.id, name: `${profileName(profileById.get(member.user_id))} — ${positionById.get(member.position_id)?.title || "Position"}` }))} />
-        <InputField label="Qualification title" value={qualificationForm.title} onChange={(title) => setQualificationForm((current) => ({ ...current, title }))} /><InputField label="Issuer" value={qualificationForm.issuer} onChange={(issuer) => setQualificationForm((current) => ({ ...current, issuer }))} /><div className="grid grid-cols-2 gap-3"><InputField label="Obtained date" type="date" value={qualificationForm.obtainedDate} onChange={(obtainedDate) => setQualificationForm((current) => ({ ...current, obtainedDate }))} /><InputField label="Expiry date" type="date" value={qualificationForm.expiryDate} onChange={(expiryDate) => setQualificationForm((current) => ({ ...current, expiryDate }))} /></div><InputField label="Evidence URL" type="url" value={qualificationForm.documentUrl} onChange={(documentUrl) => setQualificationForm((current) => ({ ...current, documentUrl }))} /><TextAreaField label="Notes" value={qualificationForm.notes} onChange={(notes) => setQualificationForm((current) => ({ ...current, notes }))} />
+        <InputField label="Qualification title" value={qualificationForm.title} onChange={(title) => setQualificationForm((current) => ({ ...current, title }))} /><InputField label="Issuer" value={qualificationForm.issuer} onChange={(issuer) => setQualificationForm((current) => ({ ...current, issuer }))} /><div className="grid grid-cols-2 gap-3"><InputField label="Obtained date" type="date" value={qualificationForm.obtainedDate} onChange={(obtainedDate) => setQualificationForm((current) => ({ ...current, obtainedDate }))} /><InputField label="Expiry date" type="date" value={qualificationForm.expiryDate} onChange={(expiryDate) => setQualificationForm((current) => ({ ...current, expiryDate }))} /></div><FileField label="Evidence file (optional)" file={qualificationFile} onChange={setQualificationFile} /><TextAreaField label="Notes" value={qualificationForm.notes} onChange={(notes) => setQualificationForm((current) => ({ ...current, notes }))} />
       </SimpleDialog>
     </div>
   );
@@ -563,6 +698,10 @@ function InputField({ label, value, onChange, type = "text" }: { label: string; 
 
 function TextAreaField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return <div className="space-y-2"><Label>{label}</Label><Textarea value={value} onChange={(event) => onChange(event.target.value)} /></div>;
+}
+
+function FileField({ label, file, onChange }: { label: string; file: File | null; onChange: (file: File | null) => void }) {
+  return <div className="space-y-2"><Label>{label}</Label><label className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed p-3 text-sm hover:bg-muted/40"><FileUp className="h-4 w-4" /><span className="min-w-0 truncate">{file?.name || "Choose a file"}</span><Input className="hidden" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png" onChange={(event) => onChange(event.target.files?.[0] || null)} /></label>{file && <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)} MB</p>}</div>;
 }
 
 function SelectField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: Array<{ id: string; name: string }> }) {

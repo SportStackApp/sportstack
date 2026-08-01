@@ -47,6 +47,7 @@ interface Division {
   min_age: number | null;
   max_age: number | null;
   default_match_duration_minutes: number | null;
+  umpire_vote_scheme_key: "classic_3_2_1" | "junior_2_1_split";
   created_at: string;
 }
 
@@ -87,6 +88,7 @@ const DivisionsManagement = () => {
     min_age: "",
     max_age: "",
     default_match_duration_minutes: "",
+    umpire_vote_scheme_key: "classic_3_2_1",
   });
   const [saving, setSaving] = useState(false);
 
@@ -172,6 +174,7 @@ const DivisionsManagement = () => {
         min_age: div.min_age !== null && div.min_age !== undefined ? div.min_age.toString() : "",
         max_age: div.max_age !== null && div.max_age !== undefined ? div.max_age.toString() : "",
         default_match_duration_minutes: div.default_match_duration_minutes?.toString() ?? "",
+        umpire_vote_scheme_key: div.umpire_vote_scheme_key || "classic_3_2_1",
       });
     } else {
       setEditingDivision(null);
@@ -185,6 +188,7 @@ const DivisionsManagement = () => {
         min_age: "",
         max_age: "",
         default_match_duration_minutes: "",
+        umpire_vote_scheme_key: "classic_3_2_1",
       });
     }
     setDialogOpen(true);
@@ -230,6 +234,7 @@ const DivisionsManagement = () => {
       min_age: formData.min_age.trim() !== "" ? parseInt(formData.min_age, 10) : null,
       max_age: formData.max_age.trim() !== "" ? parseInt(formData.max_age, 10) : null,
       default_match_duration_minutes: durationMinutes,
+      umpire_vote_scheme_key: formData.umpire_vote_scheme_key,
     };
 
     if (editingDivision) {
@@ -367,6 +372,25 @@ const DivisionsManagement = () => {
                       <SelectItem value="Womens">Women's</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Umpire Match Voting scheme</Label>
+                  <Select
+                    value={formData.umpire_vote_scheme_key}
+                    onValueChange={(value) => setFormData({
+                      ...formData,
+                      umpire_vote_scheme_key: value as "classic_3_2_1" | "junior_2_1_split",
+                    })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="classic_3_2_1">Classic 3/2/1</SelectItem>
+                      <SelectItem value="junior_2_1_split">2/1 Male + 2/1 Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    This scheme is applied automatically when an umpire selects this division.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Age Group</Label>

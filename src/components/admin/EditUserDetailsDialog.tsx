@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, KeyRound, Loader2, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import type { AppMode } from "@/contexts/AppModeContext";
 
 // Extend the Profile type locally to match what UsersManagement.tsx expects
 interface ProfileWithExtensions {
@@ -63,6 +64,9 @@ interface EditUserDetailsDialogProps {
   teamsContent?: React.ReactNode;
   onSaveRoles?: () => void;
   rolesSaving?: boolean;
+  actorMode: AppMode;
+  canManageAuthentication?: boolean;
+  membershipOnly?: boolean;
 }
 
 export const EditUserDetailsDialog = ({
@@ -76,13 +80,16 @@ export const EditUserDetailsDialog = ({
   teamsContent,
   onSaveRoles,
   rolesSaving = false,
+  actorMode,
+  canManageAuthentication = false,
+  membershipOnly = false,
 }: EditUserDetailsDialogProps) => {
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState(membershipOnly ? "teams" : "details");
 
   // Form Fields
   const [email, setEmail] = useState("");
@@ -122,11 +129,12 @@ export const EditUserDetailsDialog = ({
     setEmergencyContactPhone(user_emergency_contact_phone || "");
     setEmail(user_email || "");
     setErrorMsg("");
-    setActiveTab("details");
+    setActiveTab(membershipOnly ? "teams" : "details");
 
     const fetchUserDetails = async () => {
       setLoading(true);
       try {
+        if (!canManageAuthentication) return;
         // Try calling the function using GET first
         let res = await supabase.functions.invoke("update-user-details", {
           method: "GET",
@@ -162,7 +170,7 @@ export const EditUserDetailsDialog = ({
       }
     };
 
-    fetchUserDetails();
+    void fetchUserDetails();
   }, [
     open,
     user?.id,
@@ -176,6 +184,8 @@ export const EditUserDetailsDialog = ({
     user_emergency_contact_name,
     user_emergency_contact_phone,
     user_email,
+    canManageAuthentication,
+    membershipOnly,
   ]);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -186,10 +196,7 @@ export const EditUserDetailsDialog = ({
     setErrorMsg("");
 
     try {
-      const { data, error } = await supabase.functions.invoke("update-user-details", {
-        body: {
-          user_id: user.id,
-          email: email.trim(),
+      const profileDetails = {
           first_name: firstName.trim() || null,
           last_name: lastName.trim() || null,
           phone: phone.trim() || null,
@@ -199,8 +206,21 @@ export const EditUserDetailsDialog = ({
           gender: gender || null,
           emergency_contact_name: emergencyContactName.trim() || null,
           emergency_contact_phone: emergencyContactPhone.trim() || null,
-        },
-      });
+      };
+
+      const { data, error } = canManageAuthentication
+        ? await supabase.functions.invoke("update-user-details", {
+            body: {
+              user_id: user.id,
+              email: email.trim(),
+              ...profileDetails,
+            },
+          })
+        : await supabase.rpc("admin_update_profile_details" as never, {
+            p_user_id: user.id,
+            p_details: profileDetails,
+            p_actor_mode: actorMode,
+          } as never);
 
       if (error || data?.error) {
         const errMsg = data?.error || error?.message || "Failed to update user details.";
@@ -247,10 +267,10 @@ export const EditUserDetailsDialog = ({
             <div>
               <DialogTitle>Edit User</DialogTitle>
               <DialogDescription>
-                Update details, roles, and team access for this user.
+               {membershipOnly ? "Manage team membership within your assigned teams." : "Update details, roles, and team access for this user."}
               </DialogDescription>
             </div>
-            {onSendAccessLink && (
+            {onSendAccessLink && canManageAuthentication && (
               <Button
                 type="button"
                 variant="secondary"
@@ -294,24 +314,30 @@ export const EditUserDetailsDialog = ({
             )}
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
+              {!membershipOnly && <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="details">Details</TabsTrigger>
                 <TabsTrigger value="roles">Roles</TabsTrigger>
                 <TabsTrigger value="teams">Teams</TabsTrigger>
-              </TabsList>
+              </TabsList>}
 
-              <TabsContent value="details" className="mt-4 space-y-6">
+              {!membershipOnly && <TabsContent value="details" className="mt-4 space-y-6">
                 {/* Email Field */}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Authentication email</Label>
                   <Input
                     id="email"
                     type="email"
-                    required
+                    required={canManageAuthentication}
+                    disabled={!canManageAuthentication}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="email@example.com"
                   />
+                  {!canManageAuthentication && (
+                    <p className="text-xs text-muted-foreground">
+                      Email is managed separately and will not be changed when these details are saved.
+                    </p>
+                  )}
                 </div>
 
                 {/* Names */}
@@ -422,11 +448,11 @@ export const EditUserDetailsDialog = ({
                     </div>
                   </div>
                 </div>
-              </TabsContent>
+              </TabsContent>}
 
-              <TabsContent value="roles" className="mt-4">
+              {!membershipOnly && <TabsContent value="roles" className="mt-4">
                 {rolesContent || <p className="text-sm text-muted-foreground">No role controls available.</p>}
-              </TabsContent>
+              </TabsContent>}
 
               <TabsContent value="teams" className="mt-4">
                 {teamsContent || <p className="text-sm text-muted-foreground">No team controls available.</p>}
@@ -437,7 +463,7 @@ export const EditUserDetailsDialog = ({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                 Cancel
               </Button>
-              {activeTab !== "details" && onSaveRoles ? (
+              {membershipOnly ? null : activeTab !== "details" && onSaveRoles ? (
                 <Button type="button" onClick={onSaveRoles} disabled={rolesSaving}>
                   {rolesSaving ? "Saving..." : "Save Roles & Teams"}
                 </Button>

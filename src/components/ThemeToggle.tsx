@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -12,24 +11,6 @@ export function ThemeToggle() {
   const { user } = useAuth();
   const { toast } = useToast();
   const isDark = resolvedTheme === "dark";
-
-  useEffect(() => {
-    if (!user) return;
-
-    const loadAccountTheme = async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("theme_preference")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!error && (data?.theme_preference === "light" || data?.theme_preference === "dark")) {
-        setTheme(data.theme_preference);
-      }
-    };
-
-    void loadAccountTheme();
-  }, [setTheme, user]);
 
   const handleThemeChange = async (checked: boolean) => {
     const preference = checked ? "dark" : "light";

@@ -39,7 +39,7 @@ import {
   type UmpireLinkedPlayerOption,
 } from "@/lib/umpireLinkedPlayers";
 
-type AppMode = "super_admin" | "association" | "club" | "team" | "player";
+type AppMode = "super_admin" | "association" | "club" | "team_manager" | "coach" | "player";
 
 interface VoteCard {
   schemeLineKey: string;
@@ -61,9 +61,22 @@ interface SelectedFixtureInfo {
   homeTeamName: string;
   awayTeamName: string;
   round_number: number;
+  fixtureDate: string | null;
 }
 
 type FixtureOption = SelectedFixtureInfo;
+
+interface RoundOption {
+  number: number;
+  startDate: string;
+  endDate: string;
+}
+
+interface DivisionOption {
+  id: string;
+  name: string;
+  umpire_vote_scheme_key: UmpireVoteSchemeKey;
+}
 
 const errorMessage = (error: unknown, fallback: string) =>
   error instanceof Error
@@ -110,7 +123,9 @@ export default function UmpireVoteSubmit() {
   // Step 1 - Proxy settings
   const [isProxy, setIsProxy] = useState(false);
   const [proxyUmpireName, setProxyUmpireName] = useState("");
+  const [proxyUmpireProfileId, setProxyUmpireProfileId] = useState<string | null>(null);
   const [proxyReason, setProxyReason] = useState("");
+  const [umpireOptions, setUmpireOptions] = useState<UmpireLinkedPlayerOption[]>([]);
 
   // Step 1 - User Associations & Selection
   const [userAssociations, setUserAssociations] = useState<{ id: string; name: string }[]>([]);
@@ -118,8 +133,8 @@ export default function UmpireVoteSubmit() {
   const [associationsLoading, setAssociationsLoading] = useState(false);
 
   // Step 1 - Selection lists
-  const [rounds, setRounds] = useState<number[]>([]);
-  const [divisions, setDivisions] = useState<{ id: string; name: string }[]>([]);
+  const [rounds, setRounds] = useState<RoundOption[]>([]);
+  const [divisions, setDivisions] = useState<DivisionOption[]>([]);
   const [fixtures, setFixtures] = useState<FixtureOption[]>([]);
   const [teamsMap, setTeamsMap] = useState<Map<string, string>>(new Map());
 
@@ -139,15 +154,124 @@ export default function UmpireVoteSubmit() {
   // Step 2 - Vote cards state
   const [voteCards, setVoteCards] = useState<VoteCard[]>([]);
   const [selectedSchemeKey, setSelectedSchemeKey] = useState<UmpireVoteSchemeKey>("classic_3_2_1");
+  const [numberOnlyAcknowledged, setNumberOnlyAcknowledged] = useState(false);
 
   // Step 2 - Linked SportStack player options for the selected fixture.
   const [linkedPlayers, setLinkedPlayers] = useState<UmpireLinkedPlayerOption[]>([]);
   const [linkedPlayersLoading, setLinkedPlayersLoading] = useState(false);
   const [linkedPlayersError, setLinkedPlayersError] = useState<string | null>(null);
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const draftKey = user ? `sportstack:umpire-ballot:${user.id}` : null;
+
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const saved = window.localStorage.getItem(draftKey);
+      if (saved) {
+        const draft = JSON.parse(saved) as {
+          step?: 1 | 2 | 3;
+          isProxy?: boolean;
+          proxyUmpireName?: string;
+          proxyUmpireProfileId?: string | null;
+          proxyReason?: string;
+          selectedAssociationId?: string;
+          selectedRound?: string;
+          selectedDivisionId?: string;
+          selectedFixtureId?: string;
+          selectedSchemeKey?: UmpireVoteSchemeKey;
+          voteCards?: VoteCard[];
+          numberOnlyAcknowledged?: boolean;
+        };
+        if (draft.step) setStep(draft.step);
+        setIsProxy(Boolean(draft.isProxy));
+        setProxyUmpireName(draft.proxyUmpireName || "");
+        setProxyUmpireProfileId(draft.proxyUmpireProfileId || null);
+        setProxyReason(draft.proxyReason || "");
+        setSelectedAssociationId(draft.selectedAssociationId || "");
+        setSelectedRound(draft.selectedRound || "");
+        setSelectedDivisionId(draft.selectedDivisionId || "");
+        setSelectedFixtureId(draft.selectedFixtureId || "");
+        if (draft.selectedSchemeKey) setSelectedSchemeKey(draft.selectedSchemeKey);
+        if (draft.voteCards) setVoteCards(draft.voteCards);
+        setNumberOnlyAcknowledged(Boolean(draft.numberOnlyAcknowledged));
+      }
+    } catch {
+      window.localStorage.removeItem(draftKey);
+    } finally {
+      setDraftHydrated(true);
+    }
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftKey || !draftHydrated || submitSuccess) return;
+    window.localStorage.setItem(draftKey, JSON.stringify({
+      step,
+      isProxy,
+      proxyUmpireName,
+      proxyUmpireProfileId,
+      proxyReason,
+      selectedAssociationId,
+      selectedRound,
+      selectedDivisionId,
+      selectedFixtureId,
+      selectedSchemeKey,
+      voteCards,
+      numberOnlyAcknowledged,
+    }));
+  }, [
+    draftHydrated,
+    draftKey,
+    isProxy,
+    numberOnlyAcknowledged,
+    proxyReason,
+    proxyUmpireName,
+    proxyUmpireProfileId,
+    selectedAssociationId,
+    selectedDivisionId,
+    selectedFixtureId,
+    selectedRound,
+    selectedSchemeKey,
+    step,
+    submitSuccess,
+    voteCards,
+  ]);
 
   // Role Access Protection check
   const isUmpire =
     (roles as string[]).some((role) => ["UMPIRE", "UMPIRE_ADMIN", "SUPER_ADMIN"].includes(role));
+
+  useEffect(() => {
+    if (!isUmpire) return;
+
+    const loadUmpires = async () => {
+      const { data: roleRows, error: roleError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .in("role", ["UMPIRE", "UMPIRE_ADMIN"]);
+      if (roleError) return;
+
+      const profileIds = Array.from(new Set((roleRows || []).map((row) => row.user_id)));
+      if (profileIds.length === 0) return;
+      const { data: profileRows, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", profileIds);
+      if (profileError) return;
+
+      setUmpireOptions((profileRows || []).map((profile) => ({
+        optionId: `umpire:${profile.id}`,
+        profileId: profile.id,
+        name: [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() || "Unnamed umpire",
+        number: "",
+        teamId: null,
+        teamLabel: "",
+        contextLabel: "",
+        source: "association" as const,
+      })).sort((a, b) => a.name.localeCompare(b.name)));
+    };
+
+    void loadUmpires();
+  }, [isUmpire]);
 
   // Load user's associations
   useEffect(() => {
@@ -244,21 +368,28 @@ export default function UmpireVoteSubmit() {
       try {
         const { data, error } = await supabase
           .from("fixtures")
-          .select("round_number, divisions!inner(association_id)")
+          .select("round_number, fixture_date, divisions!inner(association_id)")
           .eq("divisions.association_id", selectedAssociationId)
-          .eq("status", "COMPLETED");
+          .not("round_number", "is", null)
+          .order("fixture_date");
 
         if (error) throw error;
 
-        const uniqueRounds = Array.from(
-          new Set(
-            data
-              ?.map((fixture) => fixture.round_number)
-              .filter((round): round is number => round !== null) || []
-          )
-        ).sort((a, b) => a - b) as number[];
+        const now = Date.now();
+        const dateRanges = new Map<number, { startDate: string; endDate: string }>();
+        (data || []).forEach((fixture) => {
+          if (fixture.round_number === null || !fixture.fixture_date) return;
+          const current = dateRanges.get(fixture.round_number);
+          dateRanges.set(fixture.round_number, {
+            startDate: !current || fixture.fixture_date < current.startDate ? fixture.fixture_date : current.startDate,
+            endDate: !current || fixture.fixture_date > current.endDate ? fixture.fixture_date : current.endDate,
+          });
+        });
 
-        setRounds(uniqueRounds);
+        setRounds(Array.from(dateRanges.entries())
+          .filter(([, range]) => new Date(range.startDate).getTime() <= now)
+          .map(([number, range]) => ({ number, ...range }))
+          .sort((a, b) => a.number - b.number));
       } catch (error: unknown) {
         console.error("Error fetching rounds:", error);
         toast({
@@ -309,13 +440,16 @@ export default function UmpireVoteSubmit() {
 
         const { data: divData, error: divError } = await supabase
           .from("divisions")
-          .select("id, name")
+          .select("id, name, umpire_vote_scheme_key")
           .in("id", uniqueDivisionIds)
           .order("name");
 
         if (divError) throw divError;
 
-        setDivisions(divData || []);
+        setDivisions(((divData || []) as unknown as DivisionOption[]).map((division) => ({
+          ...division,
+          umpire_vote_scheme_key: division.umpire_vote_scheme_key || "classic_3_2_1",
+        })));
       } catch (error: unknown) {
         console.error("Error fetching divisions:", error);
         toast({
@@ -345,7 +479,7 @@ export default function UmpireVoteSubmit() {
         // Query fixtures for this round and division, filtering out byes (away_team_id not null)
         const { data: fixturesData, error: fixturesError } = await supabase
           .from("fixtures")
-          .select("id, home_team_id, away_team_id, division_id, round_number, divisions!inner(association_id)")
+          .select("id, fixture_date, home_team_id, away_team_id, division_id, round_number, divisions!inner(association_id)")
           .eq("round_number", parseInt(selectedRound, 10))
           .eq("division_id", selectedDivisionId)
           .eq("divisions.association_id", selectedAssociationId)
@@ -393,6 +527,7 @@ export default function UmpireVoteSubmit() {
             homeTeamName: newTeamsMap.get(fixture.home_team_id) || "Unknown Home Team",
             awayTeamName: newTeamsMap.get(fixture.away_team_id) || "Unknown Away Team",
             round_number: fixture.round_number,
+            fixtureDate: fixture.fixture_date,
           } satisfies FixtureOption];
         });
 
@@ -431,6 +566,7 @@ export default function UmpireVoteSubmit() {
         homeTeamName: matched.homeTeamName,
         awayTeamName: matched.awayTeamName,
         round_number: matched.round_number,
+        fixtureDate: matched.fixtureDate,
       });
     }
   }, [selectedFixtureId, fixtures, selectedDivisionId, divisions]);
@@ -485,15 +621,10 @@ export default function UmpireVoteSubmit() {
     }));
   };
 
-  const initialiseVoteCards = (divName: string) => {
-    const scheme = getDefaultUmpireVoteScheme(divName);
+  const initialiseVoteCards = (division: DivisionOption) => {
+    const scheme = UMPIRE_VOTE_SCHEMES[division.umpire_vote_scheme_key] || getDefaultUmpireVoteScheme(division.name);
     setSelectedSchemeKey(scheme.key);
     setVoteCards(buildVoteCards(scheme.key));
-  };
-
-  const handleSchemeChange = (schemeKey: UmpireVoteSchemeKey) => {
-    setSelectedSchemeKey(schemeKey);
-    setVoteCards(buildVoteCards(schemeKey));
   };
 
   // Navigation handlers
@@ -519,7 +650,12 @@ export default function UmpireVoteSubmit() {
       return;
     }
 
-    initialiseVoteCards(selectedFixture.divisionName);
+    const division = divisions.find((item) => item.id === selectedFixture.division_id);
+    initialiseVoteCards(division || {
+      id: selectedFixture.division_id,
+      name: selectedFixture.divisionName,
+      umpire_vote_scheme_key: getDefaultUmpireVoteScheme(selectedFixture.divisionName).key,
+    });
     setStep(2);
   };
 
@@ -529,6 +665,15 @@ export default function UmpireVoteSubmit() {
       toast({
         title: "Check the ballot",
         description: validationError,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (voteCards.some((card) => !card.playerName.trim() && card.playerNumber.trim()) && !numberOnlyAcknowledged) {
+      toast({
+        title: "Player identification warning",
+        description: "A number-only vote may be difficult to link. Please acknowledge the warning before continuing.",
         variant: "destructive",
       });
       return;
@@ -545,9 +690,11 @@ export default function UmpireVoteSubmit() {
 
   // Form Reset
   const handleReset = () => {
+    if (draftKey) window.localStorage.removeItem(draftKey);
     setStep(1);
     setIsProxy(false);
     setProxyUmpireName("");
+    setProxyUmpireProfileId(null);
     setProxyReason("");
     if (userAssociations.length > 1) {
       setSelectedAssociationId("");
@@ -558,6 +705,7 @@ export default function UmpireVoteSubmit() {
     setSelectedFixture(null);
     setSelectedSchemeKey("classic_3_2_1");
     setVoteCards([]);
+    setNumberOnlyAcknowledged(false);
     setSubmitSuccess(false);
     setSubmitError(null);
   };
@@ -570,6 +718,11 @@ export default function UmpireVoteSubmit() {
     if (validationError) {
       setSubmitError(validationError);
       toast({ title: "Check the ballot", description: validationError, variant: "destructive" });
+      return;
+    }
+
+    if (voteCards.some((card) => !card.playerName.trim() && card.playerNumber.trim()) && !numberOnlyAcknowledged) {
+      setSubmitError("Acknowledge the number-only player warning before submitting.");
       return;
     }
 
@@ -603,6 +756,7 @@ export default function UmpireVoteSubmit() {
 
       // Success
       setSubmitSuccess(true);
+      if (draftKey) window.localStorage.removeItem(draftKey);
       toast({
         title: "Ballot submitted",
         description: "The Umpire Match Voting ballot is ready for administrator review.",
@@ -640,7 +794,18 @@ export default function UmpireVoteSubmit() {
     (!isProxy || (proxyUmpireName.trim() !== "" && proxyReason.trim() !== ""));
 
   // Check validity for Step 2
-  const isStep2Valid = validateVoteCards(voteCards, selectedFixture) === null;
+  const numberOnlyLines = voteCards.filter((card) => !card.playerName.trim() && card.playerNumber.trim());
+  const step2ValidationError = validateVoteCards(voteCards, selectedFixture);
+  const isStep2Valid = step2ValidationError === null && (numberOnlyLines.length === 0 || numberOnlyAcknowledged);
+
+  const formatRoundRange = (round: RoundOption) => {
+    const date = (value: string) => new Date(value).toLocaleDateString("en-AU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    return round.startDate === round.endDate ? date(round.startDate) : `${date(round.startDate)}–${date(round.endDate)}`;
+  };
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
@@ -781,10 +946,20 @@ export default function UmpireVoteSubmit() {
                         <label className="text-xs font-semibold text-muted-foreground">
                           Umpire Name *
                         </label>
-                        <Input
-                          placeholder="Enter umpire's full name"
+                        <UmpireLinkedPlayerPicker
                           value={proxyUmpireName}
-                          onChange={(e) => setProxyUmpireName(e.target.value)}
+                          profileId={proxyUmpireProfileId}
+                          options={umpireOptions}
+                          simplifiedSuggestions
+                          placeholder="Start typing the umpire's name"
+                          onNameChange={(value) => {
+                            setProxyUmpireName(value);
+                            setProxyUmpireProfileId(null);
+                          }}
+                          onSelect={(option) => {
+                            setProxyUmpireName(option.name);
+                            setProxyUmpireProfileId(option.profileId);
+                          }}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -863,8 +1038,8 @@ export default function UmpireVoteSubmit() {
                             <SelectItem value="__none__" disabled>No rounds found</SelectItem>
                           ) : (
                             rounds.map((round) => (
-                              <SelectItem key={round} value={String(round)}>
-                                Round {round}
+                              <SelectItem key={round.number} value={String(round.number)}>
+                                Round {round.number} • {formatRoundRange(round)}
                               </SelectItem>
                             ))
                           )}
@@ -989,33 +1164,12 @@ export default function UmpireVoteSubmit() {
                   </span>
                 </div>
 
-                <div className="rounded-lg border border-border/70 p-4">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">Voting scheme</p>
-                      <p className="text-xs text-muted-foreground">
-                        Frontend-only for now. It controls the vote cards shown below and still saves to the existing vote line table.
-                      </p>
-                    </div>
-                    <Select
-                      value={selectedSchemeKey}
-                      onValueChange={(value) => handleSchemeChange(value as UmpireVoteSchemeKey)}
-                    >
-                      <SelectTrigger className="w-full md:w-64">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.values(UMPIRE_VOTE_SCHEMES).map((scheme) => (
-                          <SelectItem key={scheme.key} value={scheme.key}>
-                            {scheme.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/70 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{UMPIRE_VOTE_SCHEMES[selectedSchemeKey].name}</p>
+                    <p className="text-xs text-muted-foreground">{UMPIRE_VOTE_SCHEMES[selectedSchemeKey].description}</p>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {UMPIRE_VOTE_SCHEMES[selectedSchemeKey].description}
-                  </p>
+                  <Badge variant="outline">Division setting</Badge>
                 </div>
 
                 {linkedPlayersError && (
@@ -1029,6 +1183,13 @@ export default function UmpireVoteSubmit() {
                 <div className="space-y-4">
                   {voteCards.map((card, idx) => {
                     const is3PtGoldCard = card.points === 3;
+                    const lineError = !card.teamId || card.teamId === "__none__"
+                      ? "Select the team for this vote."
+                      : !card.playerName.trim() && !card.playerNumber.trim()
+                        ? "Enter a player name or player number."
+                        : card.playerNumber.trim() && !/^\d{1,3}$/.test(card.playerNumber.trim())
+                          ? "Player number must contain one to three digits."
+                          : null;
                     return (
                       <div
                         key={idx}
@@ -1068,7 +1229,9 @@ export default function UmpireVoteSubmit() {
                               profileId={card.profileId}
                               options={linkedPlayers}
                               loading={linkedPlayersLoading}
+                              simplifiedSuggestions
                               onNameChange={(playerName) => {
+                                setNumberOnlyAcknowledged(false);
                                 setVoteCards((current) =>
                                   current.map((item, cardIndex) =>
                                     cardIndex === idx
@@ -1078,6 +1241,7 @@ export default function UmpireVoteSubmit() {
                                 );
                               }}
                               onSelect={(player) => {
+                                setNumberOnlyAcknowledged(false);
                                 setVoteCards((current) =>
                                   current.map((item, cardIndex) =>
                                     cardIndex === idx
@@ -1104,6 +1268,7 @@ export default function UmpireVoteSubmit() {
                               placeholder="#"
                               value={card.playerNumber}
                               onChange={(e) => {
+                                setNumberOnlyAcknowledged(false);
                                 setVoteCards((current) =>
                                   current.map((item, cardIndex) =>
                                     cardIndex === idx
@@ -1123,6 +1288,7 @@ export default function UmpireVoteSubmit() {
                             <Select
                               value={card.teamId || "__none__"}
                               onValueChange={(val) => {
+                                setNumberOnlyAcknowledged(false);
                                 setVoteCards((current) =>
                                   current.map((item, cardIndex) =>
                                     cardIndex === idx ? { ...item, teamId: val } : item,
@@ -1145,10 +1311,34 @@ export default function UmpireVoteSubmit() {
                             </Select>
                           </div>
                         </div>
+                        {lineError && <p className="mt-2 text-sm font-medium text-destructive">{lineError}</p>}
                       </div>
                     );
                   })}
                 </div>
+
+                {numberOnlyLines.length > 0 && (
+                  <div className="rounded-lg border border-amber-400/60 bg-amber-50 p-4 text-amber-950 dark:bg-amber-950/25 dark:text-amber-100">
+                    <div className="flex items-start gap-3">
+                      <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" />
+                      <div className="space-y-3">
+                        <div>
+                          <p className="font-semibold">Player number entered without a name</p>
+                          <p className="mt-1 text-sm">
+                            This can make the player difficult to identify and may prevent the votes being assigned correctly.
+                          </p>
+                        </div>
+                        <label className="flex cursor-pointer items-start gap-2 text-sm font-medium">
+                          <Checkbox
+                            checked={numberOnlyAcknowledged}
+                            onCheckedChange={(checked) => setNumberOnlyAcknowledged(checked === true)}
+                          />
+                          <span>I understand and want to continue with number-only identification.</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Back and Next navigation buttons */}
                 <div className="flex items-center justify-between pt-4 border-t border-border">

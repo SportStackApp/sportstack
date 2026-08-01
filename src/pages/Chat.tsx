@@ -7,6 +7,7 @@ import {
   MessageCircle,
   MoreHorizontal,
   Pencil,
+  History,
   Send,
   Settings,
   ShieldAlert,
@@ -48,6 +49,7 @@ import { cn } from "@/lib/utils";
 
 const database = supabase;
 const REACTIONS = ["👍", "❤️", "😊", "🎉"] as const;
+const MESSAGE_PAGE_SIZE = 50;
 
 interface CommunicationMessage {
   id: string;
@@ -69,6 +71,15 @@ interface Reaction {
   message_id: string;
   user_id: string;
   emoji: string;
+}
+
+interface MessageRevision {
+  id: string;
+  message_id: string;
+  revision_number: number;
+  content: string;
+  edited_by: string;
+  edited_at: string;
 }
 
 interface Member {
@@ -138,7 +149,14 @@ const Chat = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [moderating, setModerating] = useState<CommunicationMessage | null>(null);
   const [moderationReason, setModerationReason] = useState("");
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const [historyMessage, setHistoryMessage] = useState<CommunicationMessage | null>(null);
+  const [messageRevisions, setMessageRevisions] = useState<MessageRevision[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesViewportRef = useRef<HTMLDivElement>(null);
+  const loadedChannelRef = useRef<string | null>(null);
 
   const channelId = channels[tab];
   const canAdminister = isSuperAdmin || (
@@ -213,6 +231,7 @@ const Chat = () => {
           .from("communication_messages")
           .select("id", { count: "exact", head: true })
           .eq("channel_id", id)
+          .neq("author_id", user.id)
           .is("removed_at", null);
         if (state?.last_read_at) query = query.gt("created_at", state.last_read_at);
         const result = await query;
@@ -243,6 +262,8 @@ const Chat = () => {
       setMessages([]);
       setReactions([]);
       setOwnPermission(null);
+      setHasOlderMessages(false);
+      loadedChannelRef.current = null;
       setLoading(false);
       return;
     }
@@ -253,8 +274,8 @@ const Chat = () => {
       .from("communication_messages")
       .select("id, channel_id, message_type, author_id, content, reply_to_id, is_important, edited_at, removed_at, removed_by, moderation_reason, created_at")
       .eq("channel_id", channelId)
-      .order("created_at", { ascending: true })
-      .limit(150);
+      .order("created_at", { ascending: false })
+      .limit(MESSAGE_PAGE_SIZE);
     if (error) {
       console.error("Unable to load communications", error);
       setMessages([]);
@@ -262,8 +283,16 @@ const Chat = () => {
       setLoading(false);
       return;
     }
-    const loaded = (data || []) as CommunicationMessage[];
-    setMessages(loaded);
+    const loaded = ((data || []) as CommunicationMessage[]).reverse();
+    const isSameChannel = loadedChannelRef.current === channelId;
+    loadedChannelRef.current = channelId;
+    setMessages((current) => {
+      if (!isSameChannel) return loaded;
+      const merged = new Map(current.map((message) => [message.id, message]));
+      for (const message of loaded) merged.set(message.id, message);
+      return [...merged.values()].sort((a, b) => a.created_at.localeCompare(b.created_at));
+    });
+    setHasOlderMessages(loaded.length === MESSAGE_PAGE_SIZE);
     const messageIds = loaded.map((message) => message.id);
     const authorIds = [...new Set(loaded.map((message) => message.author_id))];
     const [reactionResult, profileResult, permissionResult] = await Promise.all([
@@ -288,7 +317,57 @@ const Chat = () => {
     setOwnPermission(permissionResult.data || null);
     setLoading(false);
     await markChannelRead(loaded.at(-1));
-  }, [channelId, markChannelRead, user]);
+    if (!targetMessageId) requestAnimationFrame(() => messagesEndRef.current?.scrollIntoView({ behavior: isSameChannel ? "smooth" : "auto" }));
+  }, [channelId, markChannelRead, targetMessageId, user]);
+
+  const loadOlderMessages = useCallback(async () => {
+    const oldest = messages[0];
+    const viewport = messagesViewportRef.current;
+    if (!channelId || !oldest || !hasOlderMessages || loadingOlderMessages || !viewport) return;
+
+    setLoadingOlderMessages(true);
+    const previousHeight = viewport.scrollHeight;
+    const { data, error } = await database
+      .from("communication_messages")
+      .select("id, channel_id, message_type, author_id, content, reply_to_id, is_important, edited_at, removed_at, removed_by, moderation_reason, created_at")
+      .eq("channel_id", channelId)
+      .lt("created_at", oldest.created_at)
+      .order("created_at", { ascending: false })
+      .limit(MESSAGE_PAGE_SIZE);
+
+    if (error) {
+      setLoadingOlderMessages(false);
+      toast({ title: "Older messages not loaded", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    const older = ((data || []) as CommunicationMessage[]).reverse();
+    setMessages((current) => [...older, ...current]);
+    setHasOlderMessages(older.length === MESSAGE_PAGE_SIZE);
+
+    const authorIds = [...new Set(older.map((message) => message.author_id))];
+    const messageIds = older.map((message) => message.id);
+    const [profileResult, reactionResult] = await Promise.all([
+      authorIds.length > 0
+        ? database.from("profiles").select("id, first_name, last_name").in("id", authorIds)
+        : Promise.resolve({ data: [] }),
+      messageIds.length > 0
+        ? database.from("communication_reactions").select("id, message_id, user_id, emoji").in("message_id", messageIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+    setProfiles((current) => ({
+      ...current,
+      ...Object.fromEntries(((profileResult.data || []) as ProfileRow[]).map((profile) => [
+        profile.id,
+        [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Member",
+      ])),
+    }));
+    setReactions((current) => [...((reactionResult.data || []) as Reaction[]), ...current]);
+    requestAnimationFrame(() => {
+      viewport.scrollTop = viewport.scrollHeight - previousHeight;
+      setLoadingOlderMessages(false);
+    });
+  }, [channelId, hasOlderMessages, loadingOlderMessages, messages, toast]);
 
   useEffect(() => {
     void loadMessages();
@@ -341,9 +420,21 @@ const Chat = () => {
     requestAnimationFrame(() => document.getElementById(`communication-${targetMessageId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }));
   }, [loading, messages, targetMessageId]);
 
+  const draftStorageKey = user && channelId ? `communication-draft:${user.id}:${channelId}` : null;
+
   useEffect(() => {
-    if (!targetMessageId) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, targetMessageId]);
+    setReplyTo(null);
+    setEditing(null);
+    setImportant(false);
+    setPendingMentions([]);
+    setComposer(draftStorageKey ? localStorage.getItem(draftStorageKey) || "" : "");
+  }, [draftStorageKey]);
+
+  useEffect(() => {
+    if (!draftStorageKey || editing) return;
+    if (composer) localStorage.setItem(draftStorageKey, composer);
+    else localStorage.removeItem(draftStorageKey);
+  }, [composer, draftStorageKey, editing]);
 
   const mentionQuery = useMemo(() => {
     if (tab !== "team") return null;
@@ -378,6 +469,36 @@ const Chat = () => {
     setEditing(null);
     setImportant(false);
     setPendingMentions([]);
+    if (draftStorageKey) localStorage.removeItem(draftStorageKey);
+  };
+
+  const openEditHistory = async (message: CommunicationMessage) => {
+    setHistoryMessage(message);
+    setHistoryLoading(true);
+    const { data, error } = await database
+      .from("communication_message_revisions" as never)
+      .select("id, message_id, revision_number, content, edited_by, edited_at")
+      .eq("message_id", message.id)
+      .order("revision_number", { ascending: false });
+    if (error) {
+      toast({ title: "Edit history not loaded", description: error.message, variant: "destructive" });
+      setMessageRevisions([]);
+    } else {
+      const revisions = (data || []) as unknown as MessageRevision[];
+      setMessageRevisions(revisions);
+      const editorIds = [...new Set(revisions.map((revision) => revision.edited_by))];
+      if (editorIds.length > 0) {
+        const { data: editorProfiles } = await database.from("profiles").select("id, first_name, last_name").in("id", editorIds);
+        setProfiles((current) => ({
+          ...current,
+          ...Object.fromEntries(((editorProfiles || []) as ProfileRow[]).map((profile) => [
+            profile.id,
+            [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Member",
+          ])),
+        }));
+      }
+    }
+    setHistoryLoading(false);
   };
 
   const sendMessage = async (broadcastConfirmed = false) => {
@@ -477,7 +598,6 @@ const Chat = () => {
     const next = value as CommunicationTab;
     setTab(next);
     setSearchParams({ tab: next });
-    resetComposer();
   };
 
   return (
@@ -517,7 +637,19 @@ const Chat = () => {
 
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          <div className="h-[52vh] min-h-[360px] space-y-4 overflow-y-auto p-4">
+          <div
+            ref={messagesViewportRef}
+            className="h-[52vh] min-h-[360px] space-y-4 overflow-y-auto p-4"
+            onScroll={(event) => {
+              if (event.currentTarget.scrollTop < 80) void loadOlderMessages();
+            }}
+          >
+            {loadingOlderMessages && <p className="text-center text-xs text-muted-foreground">Loading earlier messages…</p>}
+            {!loadingOlderMessages && hasOlderMessages && messages.length > 0 && (
+              <Button variant="ghost" size="sm" className="mx-auto flex" onClick={() => void loadOlderMessages()}>
+                Load earlier messages
+              </Button>
+            )}
             {!channelId ? (
               <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
                 {loadError ? "This communication area could not be loaded. Refresh and try again." : `Select a ${tab} to open this communication area.`}
@@ -557,7 +689,11 @@ const Chat = () => {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{own ? "You" : profiles[message.author_id] || "Member"}</span>
                         <span className="text-xs text-muted-foreground">{formatTime(message.created_at)}</span>
-                        {message.edited_at && <span className="text-xs text-muted-foreground">Edited</span>}
+                        {message.edited_at && (
+                          <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={() => void openEditHistory(message)}>
+                            Edited · view history
+                          </button>
+                        )}
                         {message.is_important && <span className="rounded bg-amber-200 px-1.5 text-xs text-amber-900">Important</span>}
                       </div>
                     </div>
@@ -753,6 +889,35 @@ const Chat = () => {
               Remove content
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(historyMessage)} onOpenChange={(open) => !open && setHistoryMessage(null)}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><History className="h-4 w-4" /> Message edit history</DialogTitle>
+            <DialogDescription>Every earlier version is visible to conversation participants.</DialogDescription>
+          </DialogHeader>
+          {historyLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : (
+            <div className="space-y-3">
+              {historyMessage && (
+                <div className="rounded-md border bg-primary/5 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">Current version</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">{historyMessage.content}</p>
+                </div>
+              )}
+              {messageRevisions.map((revision) => (
+                <div key={revision.id} className="rounded-md border p-3">
+                  <p className="text-xs text-muted-foreground">
+                    Earlier version {revision.revision_number} · edited by {profiles[revision.edited_by] || "Member"} · {new Date(revision.edited_at).toLocaleString("en-AU")}
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">{revision.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

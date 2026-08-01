@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase as originalSupabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +22,7 @@ import {
   type MvpSessionDisplayState,
   type MvpSessionStatus,
 } from "@/lib/mvpVoting";
-import { Award, Calendar, CheckCircle2, Clock, History, Send, Star, TriangleAlert } from "lucide-react";
+import { Award, Calendar, CheckCircle2, Clock, History, MapPin, Send, Star, TriangleAlert } from "lucide-react";
 
 // MVP tables and functions are added before the generated client types are regenerated.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,6 +52,12 @@ interface RevsportsPlayerRow {
   team_label: string | null;
   jersey: string | null;
   profile_id: string | null;
+  goals: number | null;
+  green_cards: number | null;
+  yellow_cards: number | null;
+  red_cards: number | null;
+  display_name?: string;
+  display_number?: string | null;
 }
 
 interface SubmissionRow {
@@ -66,8 +72,10 @@ interface VoteRow {
 
 interface FixtureTeamRow {
   id: string;
+  fixture_date: string | null;
   home_team_id: string | null;
   away_team_id: string | null;
+  venue: { name: string | null } | null;
 }
 
 interface FixtureFillInRow {
@@ -87,9 +95,16 @@ interface SessionTile extends MvpSession {
   hasSubmitted: boolean;
   isLegacy: boolean;
   timezone: string;
+  fixtureDate: string | null;
+  venueName: string | null;
 }
 
 const DEFAULT_ASSOCIATION_TIMEZONE = "Australia/Melbourne";
+
+const cleanRoundLabel = (round?: string | number | null) => {
+  const value = String(round ?? "").trim().replace(/^round\s+/i, "");
+  return value ? `Round ${value}` : "Round TBC";
+};
 
 const getSameSidePlayers = (
   players: RevsportsPlayerRow[],
@@ -152,6 +167,7 @@ const formatDuration = (endDate: string | null) => {
 export default function MvpVotes() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [schemaUnavailable, setSchemaUnavailable] = useState(false);
   const [hasAttendedMatches, setHasAttendedMatches] = useState(false);
@@ -161,7 +177,18 @@ export default function MvpVotes() {
   const [selectedSession, setSelectedSession] = useState<SessionTile | null>(null);
   const [requestingSessionId, setRequestingSessionId] = useState<string | null>(null);
   const [requestedSessionIds, setRequestedSessionIds] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<"current" | "history">("current");
+  const [activeTab, setActiveTab] = useState<"current" | "history">(
+    searchParams.get("tab") === "history" ? "history" : "current",
+  );
+
+  const changeTab = (value: "current" | "history") => {
+    setActiveTab(value);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set("tab", value);
+      return next;
+    }, { replace: true });
+  };
 
   useEffect(() => {
     const loadVotingData = async () => {
@@ -175,7 +202,7 @@ export default function MvpVotes() {
         const [voterRowsRes, fillInRowsRes, submissionsRes] = await Promise.all([
           supabase
             .from("revsports_players")
-            .select("id, fixture_id, player_name, team, team_side, team_label, jersey, profile_id")
+            .select("id, fixture_id, player_name, team, team_side, team_label, jersey, profile_id, goals, green_cards, yellow_cards, red_cards")
             .eq("profile_id", user.id)
             .eq("attended", true),
           supabase
@@ -242,7 +269,7 @@ export default function MvpVotes() {
           relatedFixtureIds.length > 0
             ? supabase
                 .from("revsports_players")
-                .select("id, fixture_id, player_name, team, team_side, team_label, jersey, profile_id")
+                .select("id, fixture_id, player_name, team, team_side, team_label, jersey, profile_id, goals, green_cards, yellow_cards, red_cards")
                 .in("fixture_id", relatedFixtureIds)
                 .eq("attended", true)
             : emptyRows,
@@ -253,7 +280,7 @@ export default function MvpVotes() {
           relatedFixtureIds.length > 0
             ? supabase
                 .from("fixtures")
-                .select("id, home_team_id, away_team_id")
+                .select("id, fixture_date, home_team_id, away_team_id, venue:venues!venue_id(name)")
                 .in("id", relatedFixtureIds)
             : emptyRows,
           sessionTeamIds.length > 0
@@ -290,6 +317,10 @@ export default function MvpVotes() {
             team_label: null,
             jersey: null,
             profile_id: user.id,
+            goals: 0,
+            green_cards: 0,
+            yellow_cards: 0,
+            red_cards: 0,
           }];
         });
         const voterByFixtureId = new Map(
@@ -334,13 +365,53 @@ export default function MvpVotes() {
               timezone: session.team_id
                 ? timezoneByTeamId.get(session.team_id) || DEFAULT_ASSOCIATION_TIMEZONE
                 : DEFAULT_ASSOCIATION_TIMEZONE,
+              fixtureDate: fixturesById.get(session.fixture_id)?.fixture_date || session.game_date,
+              venueName: fixturesById.get(session.fixture_id)?.venue?.name || null,
             };
           });
 
         setSessions(visibleSessions);
-        setPlayers([
+        const loadedPlayers = [
           ...((allPlayersRes.data as RevsportsPlayerRow[] | null) || []),
           ...syntheticFillInRows,
+        ];
+        const profileIds = Array.from(new Set(loadedPlayers.map((player) => player.profile_id).filter(Boolean))) as string[];
+        const [profilesResult, membershipsResult] = await Promise.all([
+          profileIds.length > 0
+            ? supabase.from("profiles").select("id, first_name, last_name").in("id", profileIds)
+            : Promise.resolve({ data: [], error: null }),
+          profileIds.length > 0 && sessionTeamIds.length > 0
+            ? supabase
+                .from("team_memberships")
+                .select("user_id, team_id, jersey_number")
+                .eq("status", "ACTIVE")
+                .in("user_id", profileIds)
+                .in("team_id", sessionTeamIds)
+            : Promise.resolve({ data: [], error: null }),
+        ]);
+        if (profilesResult.error) throw profilesResult.error;
+        if (membershipsResult.error) throw membershipsResult.error;
+        const profileNames = new Map(
+          (profilesResult.data || []).map((profile: { id: string; first_name: string | null; last_name: string | null }) => [
+            profile.id,
+            [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim(),
+          ]),
+        );
+        const membershipNumbers = new Map(
+          (membershipsResult.data || []).map((membership: { user_id: string; team_id: string; jersey_number: number | null }) => [
+            `${membership.user_id}:${membership.team_id}`,
+            membership.jersey_number === null ? null : String(membership.jersey_number),
+          ]),
+        );
+        const sessionTeamByFixture = new Map(sessionRows.map((session) => [session.fixture_id, session.team_id]));
+        setPlayers([
+          ...loadedPlayers.map((player) => ({
+            ...player,
+            display_name: (player.profile_id && profileNames.get(player.profile_id)) || player.player_name,
+            display_number: player.profile_id && sessionTeamByFixture.get(player.fixture_id)
+              ? membershipNumbers.get(`${player.profile_id}:${sessionTeamByFixture.get(player.fixture_id)}`) || player.jersey
+              : player.jersey,
+          })),
         ]);
         setVotes((votesRes.data as VoteRow[] | null) || []);
       } catch (error) {
@@ -393,7 +464,7 @@ export default function MvpVotes() {
 
   const getPlayerName = (playerId: string) => {
     const player = players.find((item) => item.id === playerId);
-    return player?.player_name || "Unknown player";
+    return player?.display_name || player?.player_name || "Unknown player";
   };
 
   const currentSessions = sessions.filter(
@@ -474,7 +545,7 @@ export default function MvpVotes() {
         </Card>
       ) : (
         <>
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "current" | "history")}>
+          <Tabs value={activeTab} onValueChange={(value) => changeTab(value as "current" | "history")}>
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="current">Current voting ({currentSessions.length})</TabsTrigger>
               <TabsTrigger value="history">My history ({historySessions.length})</TabsTrigger>
@@ -511,7 +582,7 @@ export default function MvpVotes() {
                       {session.grade}
                     </Badge>
                     <Badge variant="secondary" className="font-semibold shrink-0">
-                      Round {session.round}
+                      {cleanRoundLabel(session.round)}
                     </Badge>
                   </div>
                   <CardTitle className="text-lg font-display mt-2 leading-tight">
@@ -522,8 +593,14 @@ export default function MvpVotes() {
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 shrink-0 text-muted-foreground/75" />
-                      <span>{formatDate(session.game_date, session.timezone)}</span>
+                      <span>{formatDate(session.fixtureDate || session.game_date, session.timezone)}</span>
                     </div>
+                    {session.venueName && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 shrink-0 text-muted-foreground/75" />
+                        <span>{session.venueName}</span>
+                      </div>
+                    )}
                     {countdown && (
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 shrink-0 text-muted-foreground/75" />
@@ -586,7 +663,7 @@ export default function MvpVotes() {
             <DialogTitle>My MVP Ballot</DialogTitle>
             <DialogDescription>
               {selectedSession
-                ? `${selectedSession.home_team} vs ${selectedSession.away_team}, Round ${selectedSession.round}`
+                ? `${selectedSession.home_team} vs ${selectedSession.away_team}, ${cleanRoundLabel(selectedSession.round)} • ${formatDate(selectedSession.fixtureDate || selectedSession.game_date, selectedSession.timezone)}${selectedSession.venueName ? ` • ${selectedSession.venueName}` : ""}`
                 : ""}
             </DialogDescription>
           </DialogHeader>
@@ -620,7 +697,10 @@ export default function MvpVotes() {
                     return (
                       <div key={player.id} className="flex items-center justify-between gap-3 p-3 text-sm">
                         <span className="min-w-0 truncate">
-                          {player.player_name} {player.jersey ? `(#${player.jersey})` : ""}
+                          {player.display_name || player.player_name} {player.display_number ? `(#${player.display_number})` : ""}
+                        </span>
+                        <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                          {player.goals || 0}G • {(player.green_cards || 0) + (player.yellow_cards || 0) + (player.red_cards || 0)} cards
                         </span>
                         {points ? (
                           <Badge variant="outline" className="shrink-0 bg-green-100 text-green-800 border-green-200">

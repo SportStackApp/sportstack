@@ -16,21 +16,41 @@ If two clubs within the same association both have a team with the same name (e.
 ## Existing Duplicate Team Membership Data
 
 **Logged:** 1 August 2026
-**Status:** Parked — needs a separate read-only review and approved cleanup plan
+**Status:** Snapshot complete — cleanup remains approval-gated
 
 **Problem:**
-A Dev read-only audit found 202 repeated user/team membership keys. Of these, 200 contain a Primary
-and Secondary row and two contain two Secondary rows. It also found 44 users with more than one
-Primary membership across teams.
+A Dev read-only audit and immutable snapshot found 201 repeated user/team membership groups and 44
+users with more than one active Primary membership. The snapshot preserves 490 affected rows (402
+duplicate user/team rows and 88 multiple-Primary rows) before any cleanup.
 
 **Current protection:**
-- New membership-request approvals are serialised and atomic.
-- Approval stops when the requested user/team already has duplicate rows.
+- New direct administration and membership-request changes are serialised, scoped and atomic.
+- Database guards reject duplicate user/team memberships and multiple active Primary teams.
+- The interface deduplicates historical rows so users are not shown twice while cleanup is pending.
+- Administrative changes are recorded in the scoped audit log.
 - No existing membership was changed or deleted during the audit.
 
 **Next step:**
-Prepare a per-person dry-run report that identifies the intended row to keep. Any cleanup is a
-separate destructive data task and needs Aaron's approval.
+Review the captured per-person rows and produce the exact keep/remove proposal. Applying that
+proposal is a separate destructive data task and needs Aaron's approval.
+
+## Owner-Test Remediation Verification
+
+**Logged:** 1 August 2026
+**Status:** Implemented on Dev — actual-role owner test pending
+
+The locked remediation package is implemented across permissions, persistence, navigation,
+Fixtures/Communications, Player MVP Voting, Umpire Match Voting, Coaching/Profile, Safety Hub and
+Committee Management. Focused plan lint, TypeScript and build pass.
+
+Still required before staging:
+
+- Test with separate real Super Admin, Association Admin, Club Admin, Team Manager, Coach and Player
+  accounts; Viewing as is not sufficient.
+- Test multi-team and multi-role cascade state through refresh, logout/login and incognito.
+- Test committee private uploads, Safety Hub matrix/link changes and the two voting workflows with
+  clearly marked disposable Dev records.
+- Report repository-wide lint separately until its legacy 440-issue backlog is resolved.
 
 ## Email Template Polish
 **Logged:** 30 June 2026  

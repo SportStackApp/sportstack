@@ -228,6 +228,19 @@ interface SafetyHubData {
   brightIdeas: BrightIdeaRecord[];
   auditEvents: AuditRecord[];
   riskMatrix: RiskRating[][];
+  likelihoodDefinitions: RiskConfigDefinition[];
+  consequenceDefinitions: RiskConfigDefinition[];
+  riskCategories: RiskConfigCategory[];
+}
+
+interface RiskConfigDefinition {
+  id?: string;
+  name: string;
+  description: string;
+}
+
+interface RiskConfigCategory extends RiskConfigDefinition {
+  isActive: boolean;
 }
 
 interface SafetyHubDataContextValue extends SafetyHubData {
@@ -249,6 +262,7 @@ type SafetyReviewRow = Tables<"rg_risk_reviews">;
 type SafetyAuditRow = Tables<"rg_audit_log">;
 type SafetyMatrixRow = Tables<"rg_risk_matrix">;
 type SafetySettingsRow = Tables<"rg_risk_settings">;
+type SafetyDropdownRow = Tables<"rg_dropdown_values">;
 type ProfileRow = Tables<"profiles">;
 type AssociationRow = Tables<"associations">;
 type ClubRow = Tables<"clubs">;
@@ -268,6 +282,20 @@ const formConsequenceOptions = ["Insignificant", "Minor", "Moderate", "Major", "
 const reviewFrequencyOptions = ["Monthly", "Quarterly", "Six monthly", "Annual"];
 const ideaDecisionOptions = ["Pending", "Accept", "Defer", "Reject", "Close"];
 const conversionOptions = ["Create risk", "Create action", "Create QI item", "Link to existing record", "Close without conversion"];
+const defaultLikelihoodDefinitions: RiskConfigDefinition[] = [
+  { name: "Rare", description: "May occur only in exceptional circumstances." },
+  { name: "Unlikely", description: "Could occur, but has not happened recently in this organisation." },
+  { name: "Possible", description: "Might occur during a normal season or activity cycle." },
+  { name: "Likely", description: "Expected to occur unless controls are improved." },
+  { name: "Almost Certain", description: "Expected to occur repeatedly or is already happening." },
+];
+const defaultConsequenceDefinitions: RiskConfigDefinition[] = [
+  { name: "Insignificant", description: "No injury or disruption; managed with a quick local response." },
+  { name: "Minor", description: "Minor impact requiring routine treatment or follow-up." },
+  { name: "Moderate", description: "Meaningful impact requiring formal response and review." },
+  { name: "Major", description: "Serious impact, significant disruption or external attention." },
+  { name: "Severe", description: "Catastrophic harm or long-term organisational impact." },
+];
 
 const ratingStyles: Record<RiskRating, string> = {
   Low: "border-emerald-400 bg-emerald-100 text-emerald-900 dark:border-emerald-600 dark:bg-emerald-950/70 dark:text-emerald-100",
@@ -897,6 +925,9 @@ const prototypeSafetyHubData: SafetyHubData = {
   brightIdeas: prototypeBrightIdeas,
   auditEvents: prototypeAuditEvents,
   riskMatrix: prototypeRiskMatrix,
+  likelihoodDefinitions: defaultLikelihoodDefinitions,
+  consequenceDefinitions: defaultConsequenceDefinitions,
+  riskCategories: [],
 };
 
 const emptySafetyHubData: SafetyHubData = {
@@ -906,6 +937,9 @@ const emptySafetyHubData: SafetyHubData = {
   brightIdeas: [],
   auditEvents: [],
   riskMatrix: prototypeRiskMatrix,
+  likelihoodDefinitions: defaultLikelihoodDefinitions,
+  consequenceDefinitions: defaultConsequenceDefinitions,
+  riskCategories: [],
 };
 
 const SafetyHubDataContext = createContext<SafetyHubDataContextValue>({
@@ -925,8 +959,8 @@ function useSafetyHubData() {
   return useContext(SafetyHubDataContext);
 }
 
-const likelihoodLabels = ["Rare", "Unlikely", "Possible", "Likely", "Almost Certain"];
-const consequenceLabels = ["Insignificant", "Minor", "Moderate", "Major", "Severe"];
+const likelihoodLabels = defaultLikelihoodDefinitions.map((definition) => definition.name);
+const consequenceLabels = defaultConsequenceDefinitions.map((definition) => definition.name);
 
 const likelihoodGuidance = [
   "Rare: may occur only in exceptional circumstances, such as once every five or more seasons.",
@@ -1001,6 +1035,9 @@ export default function SafetyRiskModule() {
     brightIdeas,
     auditEvents,
     riskMatrix,
+    likelihoodDefinitions,
+    consequenceDefinitions,
+    riskCategories: configuredRiskCategories,
   } = safetyData;
   const [activeRecord, setActiveRecord] = useState<SafetyRecord | null>(null);
   const [expandedLinkedRowId, setExpandedLinkedRowId] = useState<string | null>(null);
@@ -1302,9 +1339,6 @@ export default function SafetyRiskModule() {
   const awaitingQi = qiItems.filter((item) => item.status === "Awaiting decision").length;
   const awaitingIdeas = brightIdeas.filter((idea) => idea.decision === "Pending").length;
   const overdueReviews = risks.filter((risk) => risk.reviewState === "Overdue").length;
-  const risksWithoutOwners = risks.filter((risk) => risk.owner === "Unassigned").length;
-  const risksWithoutControls = risks.filter((risk) => !risk.existingControls.trim()).length;
-  const aboveTarget = risks.filter((risk) => ratingOrder.indexOf(risk.residualRating) < ratingOrder.indexOf(risk.targetRating)).length;
   const combinedDueItems = [
     ...risks
       .filter((risk) => risk.reviewState !== "Current")
@@ -1365,7 +1399,7 @@ export default function SafetyRiskModule() {
             <div className="flex flex-wrap items-center gap-2">
               <ShieldCheck className="h-6 w-6 text-primary" />
               <h1 className="text-2xl font-semibold tracking-tight">Safety Hub</h1>
-              <Badge variant="outline">Read-only pilot</Badge>
+              <Badge variant="outline">Live Dev module</Badge>
             </div>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
               Manage risks, actions, quality improvements and Bright Ideas across {scopeLabel}.
@@ -1386,24 +1420,15 @@ export default function SafetyRiskModule() {
           <TabsTrigger value="audit" className={safetyTabTriggerClass}>Audit History</TabsTrigger>
         </TabsList>
 
-        <div className={cn(
-          "rounded-lg border px-4 py-3 text-sm",
-          dataError
-            ? "border-red-300 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-950/50 dark:text-red-100"
-            : "border-sky-300 bg-sky-50 text-sky-950 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-100",
-        )}>
-          <div className="font-semibold">
-            {dataError ? "Safety Hub data could not be loaded" : "Read-only Supabase connection"}
+        {dataError && (
+          <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/50 dark:text-red-100">
+            <div className="font-semibold">Safety Hub data could not be loaded</div>
+            <p className="mt-1">{dataError}</p>
           </div>
-          <p className="mt-1">
-            {dataError
-              ? dataError
-              : "Registers and dashboard totals use your scoped Supabase records. Prototype forms still validate locally and do not write to the database."}
-          </p>
-        </div>
+        )}
 
         <TabsContent value="dashboard" className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+          <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-9">
             <MetricCard icon={ShieldCheck} label="Total risks" value={risks.length} />
             <MetricCard icon={AlertTriangle} label="High / Very High risks" value={highOrVeryHighRisks} tone="critical" />
             <MetricCard icon={ListChecks} label="Total actions" value={actions.length} />
@@ -1413,15 +1438,6 @@ export default function SafetyRiskModule() {
             <MetricCard icon={ClipboardList} label="QI awaiting decision" value={awaitingQi} tone="warning" />
             <MetricCard icon={Lightbulb} label="Bright Ideas awaiting review" value={awaitingIdeas} tone="warning" />
             <MetricCard icon={FileClock} label="Reviews overdue" value={overdueReviews} tone="critical" />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <AlertChip tone="critical" label={`${overdueReviews} reviews overdue`} />
-            <AlertChip tone="warning" label={`${dueSoonActions} actions due within ${dueSoonDays} days`} />
-            <AlertChip tone="warning" label={`${risksWithoutOwners} risks need clearer ownership`} />
-            <AlertChip tone="neutral" label={`${risksWithoutControls} risks missing controls`} />
-            <AlertChip tone="warning" label={`${awaitingQi} QI items awaiting decision`} />
-            <AlertChip tone="critical" label={`${aboveTarget} risks above target rating`} />
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
@@ -1504,7 +1520,7 @@ export default function SafetyRiskModule() {
           <RegisterTable
             title="Risk Register"
             icon={ShieldCheck}
-            columns={["ID", "Risk / summary", "Rating", "Owner / added by", "Review", "Status", ""]}
+            columns={["ID", "Risk / summary", "Current rating", "Target rating", "Owner", "Review", "Status", ""]}
             emptyLabel="No risks match the selected filters."
           >
             {filteredRisks.map((risk) => {
@@ -1526,15 +1542,9 @@ export default function SafetyRiskModule() {
                       <div className="font-medium">{risk.title}</div>
                       <div className="line-clamp-1 text-xs text-muted-foreground">{risk.summary}</div>
                     </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <RiskRatingBadge rating={risk.residualRating} />
-                        <div className="text-xs text-muted-foreground">Target {risk.targetRating}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <OwnerAndCreator owner={risk.owner} createdBy={risk.createdBy} />
-                    </TableCell>
+                    <TableCell><RiskRatingBadge rating={risk.residualRating} /></TableCell>
+                    <TableCell><RiskRatingBadge rating={risk.targetRating} /></TableCell>
+                    <TableCell>{risk.owner}</TableCell>
                     <TableCell><DueBadge state={risk.reviewState} label={risk.nextReview} /></TableCell>
                     <TableCell><StatusBadge status={risk.status} /></TableCell>
                     <TableCell className="text-right">
@@ -1560,7 +1570,7 @@ export default function SafetyRiskModule() {
                   {isExpanded && (
                     <ExpandedLinkedRecordsRow
                       id={`${risk.id}-links`}
-                      colSpan={7}
+                      colSpan={8}
                       sourceRecord={risk}
                       onOpenRecord={setActiveRecord}
                     />
@@ -1575,7 +1585,7 @@ export default function SafetyRiskModule() {
           <RegisterTable
             title="Actions"
             icon={ListChecks}
-            columns={["ID", "Action", "Owner / added by", "Due", "Status", ""]}
+            columns={["ID", "Action", "Owner", "Due", "Status", ""]}
             emptyLabel="No actions to show."
           >
             {actions.map((action) => {
@@ -1597,9 +1607,7 @@ export default function SafetyRiskModule() {
                       <div className="font-medium">{action.title}</div>
                       <div className="line-clamp-1 text-xs text-muted-foreground">{action.specific}</div>
                     </TableCell>
-                    <TableCell>
-                      <OwnerAndCreator owner={action.owner} createdBy={action.createdBy} />
-                    </TableCell>
+                    <TableCell>{action.owner}</TableCell>
                     <TableCell><DueBadge state={action.dueState} label={action.dueDate} /></TableCell>
                     <TableCell><StatusBadge status={action.status} /></TableCell>
                     <TableCell className="text-right">
@@ -1640,7 +1648,7 @@ export default function SafetyRiskModule() {
           <RegisterTable
             title="QI Register"
             icon={ClipboardCheck}
-            columns={["ID", "Improvement", "Priority", "Owner / added by", "Due", "Status", ""]}
+            columns={["ID", "Improvement", "Priority", "Owner", "Due", "Status", ""]}
             emptyLabel="No QI items to show."
           >
             {qiItems.map((item) => {
@@ -1663,9 +1671,7 @@ export default function SafetyRiskModule() {
                       <div className="line-clamp-1 text-xs text-muted-foreground">{item.issue}</div>
                     </TableCell>
                     <TableCell><PriorityBadge priority={item.priority} /></TableCell>
-                    <TableCell>
-                      <OwnerAndCreator owner={item.owner} createdBy={item.createdBy} />
-                    </TableCell>
+                    <TableCell>{item.owner}</TableCell>
                     <TableCell><DueBadge state={item.dueState} label={item.dueDate} /></TableCell>
                     <TableCell><StatusBadge status={item.status} /></TableCell>
                     <TableCell className="text-right">
@@ -1792,18 +1798,18 @@ export default function SafetyRiskModule() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-44 bg-muted/70 font-bold text-foreground">Likelihood</TableHead>
-                      {consequenceLabels.map((label) => (
+                      {consequenceDefinitions.map(({ name: label }) => (
                         <TableHead key={label} className="bg-muted/70 text-center font-bold text-foreground">{label}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {likelihoodLabels.map((likelihood, rowIndex) => (
+                    {likelihoodDefinitions.map(({ name: likelihood }, rowIndex) => (
                       <TableRow key={likelihood}>
                         <TableCell className="bg-muted/35 font-bold text-foreground">{likelihood}</TableCell>
                         {riskMatrix[rowIndex].map((rating, columnIndex) => (
                           <TableCell
-                            key={`${likelihood}-${consequenceLabels[columnIndex]}`}
+                            key={`${likelihood}-${consequenceDefinitions[columnIndex]?.name ?? columnIndex}`}
                             className={cn("border-2 text-center", ratingCellStyles[rating])}
                           >
                             <MatrixRatingLabel rating={rating} />
@@ -1814,6 +1820,22 @@ export default function SafetyRiskModule() {
                   </TableBody>
                 </Table>
               </div>
+              <RiskConfigurationEditor
+                associationId={selectedAssociation?.id}
+                clubId={selectedClub?.id}
+                likelihoods={likelihoodDefinitions}
+                consequences={consequenceDefinitions}
+                matrix={riskMatrix}
+                categories={configuredRiskCategories}
+                onSaved={async () => {
+                  const nextData = await loadSafetyHubData({
+                    associationId: selectedAssociation?.id,
+                    clubId: selectedClub?.id,
+                    teamId: selectedTeam?.id,
+                  });
+                  setSafetyData(nextData);
+                }}
+              />
               <Tabs defaultValue="likelihood" className="space-y-3">
                 <TabsList className="grid h-auto w-full grid-cols-2 gap-1 border bg-muted/80 p-1 md:grid-cols-3 xl:grid-cols-5">
                   {matrixGuidanceTabs.map((section) => (
@@ -1978,28 +2000,14 @@ function MetricCard({
 
   return (
     <Card>
-      <CardContent className="p-4">
+      <CardContent className="p-3">
         <div className="flex items-center justify-between gap-3">
-          <Icon className={cn("h-5 w-5", toneClass)} />
-          <span className="text-2xl font-semibold">{value}</span>
+          <Icon className={cn("h-4 w-4", toneClass)} />
+          <span className="text-xl font-semibold">{value}</span>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">{label}</p>
+        <p className="mt-1 text-xs leading-tight text-muted-foreground">{label}</p>
       </CardContent>
     </Card>
-  );
-}
-
-function AlertChip({ label, tone }: { label: string; tone: "neutral" | "warning" | "critical" }) {
-  const className = {
-    neutral: "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200",
-    warning: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200",
-    critical: "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200",
-  }[tone];
-
-  return (
-    <span className={cn("inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium", className)}>
-      {label}
-    </span>
   );
 }
 
@@ -2150,7 +2158,7 @@ function FilterBar({
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_150px_150px_180px_160px_160px_180px]">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-7">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
@@ -2289,14 +2297,14 @@ function RegisterTable({
 
   return (
     <Card className="min-w-0">
-      <CardHeader>
+      <CardHeader className="p-4 pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Icon className="h-4 w-4" />
           {title}
         </CardTitle>
       </CardHeader>
       <div className="overflow-x-auto">
-        <Table>
+        <Table className="[&_td]:py-2.5 [&_th]:h-10">
           <TableHeader>
             <TableRow>{columns.map((column) => <TableHead key={column} className="whitespace-nowrap">{column}</TableHead>)}</TableRow>
           </TableHeader>
@@ -2358,9 +2366,9 @@ const associationGroups: Array<{
 const associationSummaryGridClass = "grid-cols-[5.5rem_minmax(12rem,1fr)_9rem_10rem_9rem]";
 
 const associationColumnLabels: Record<CoreSafetyRecord["kind"], [string, string, string, string, string]> = {
-  risk: ["ID", "Risk / summary", "Rating", "Owner / added by", "Review"],
-  action: ["ID", "Action / summary", "Owner / added by", "Due", "Status"],
-  qi: ["ID", "QI item / summary", "Owner / added by", "Due", "Status"],
+  risk: ["ID", "Risk / summary", "Rating", "Owner", "Review"],
+  action: ["ID", "Action / summary", "Owner", "Due", "Status"],
+  qi: ["ID", "QI item / summary", "Owner", "Due", "Status"],
   idea: ["ID", "Bright Idea / summary", "Submitted by", "Decision", "Status"],
 };
 
@@ -2384,8 +2392,8 @@ function ExpandedLinkedRecordsRow({
 
   return (
     <TableRow id={id} className="bg-muted/35 hover:bg-muted/35">
-      <TableCell colSpan={colSpan} className="px-6 py-5">
-        <div className="space-y-5">
+      <TableCell colSpan={colSpan} className="px-4 py-3">
+        <div className="space-y-3">
           {visibleGroups.map((group) => (
             <AssociatedRecordSection
               key={group.kind}
@@ -2468,20 +2476,20 @@ function AssociatedRecordSummary({
       {record.kind === "risk" && (
         <>
           <span className="justify-self-start"><RiskRatingBadge rating={record.residualRating} /></span>
-          <OwnerAndCreator owner={record.owner} createdBy={record.createdBy} compact />
+          <span className="text-sm">{record.owner}</span>
           <CompactDueSummary state={record.reviewState} date={record.nextReview} />
         </>
       )}
       {record.kind === "action" && (
         <>
-          <OwnerAndCreator owner={record.owner} createdBy={record.createdBy} compact />
+          <span className="text-sm">{record.owner}</span>
           <CompactDueSummary state={record.dueState} date={record.dueDate} />
           <span className="justify-self-start"><StatusBadge status={record.status} /></span>
         </>
       )}
       {record.kind === "qi" && (
         <>
-          <OwnerAndCreator owner={record.owner} createdBy={record.createdBy} compact />
+          <span className="text-sm">{record.owner}</span>
           <CompactDueSummary state={record.dueState} date={record.dueDate} />
           <span className="justify-self-start"><StatusBadge status={record.status} /></span>
         </>
@@ -2505,27 +2513,6 @@ function CompactValue({ value }: { value: string }) {
   return (
     <span className="line-clamp-3 text-xs font-medium leading-4 text-foreground" title={value}>
       {value}
-    </span>
-  );
-}
-
-function OwnerAndCreator({
-  owner,
-  createdBy,
-  compact = false,
-}: {
-  owner: string;
-  createdBy?: string;
-  compact?: boolean;
-}) {
-  return (
-    <span className="block min-w-0" title={`${owner}; added by ${createdBy || "not recorded"}`}>
-      <span className={cn("block font-medium text-foreground", compact ? "line-clamp-2 text-xs leading-4" : "text-sm")}>
-        {owner}
-      </span>
-      <span className="mt-0.5 block line-clamp-2 text-xs leading-4 text-muted-foreground">
-        Added by {createdBy || "not recorded"}
-      </span>
     </span>
   );
 }
@@ -2630,6 +2617,232 @@ function MatrixRatingLabel({ rating }: { rating: RiskRating }) {
     >
       {rating}
     </Badge>
+  );
+}
+
+function RiskConfigurationEditor({
+  associationId,
+  clubId,
+  likelihoods,
+  consequences,
+  matrix,
+  categories,
+  onSaved,
+}: {
+  associationId?: string;
+  clubId?: string;
+  likelihoods: RiskConfigDefinition[];
+  consequences: RiskConfigDefinition[];
+  matrix: RiskRating[][];
+  categories: RiskConfigCategory[];
+  onSaved: () => Promise<void>;
+}) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [changeReason, setChangeReason] = useState("");
+  const [likelihoodDraft, setLikelihoodDraft] = useState<RiskConfigDefinition[]>([]);
+  const [consequenceDraft, setConsequenceDraft] = useState<RiskConfigDefinition[]>([]);
+  const [matrixDraft, setMatrixDraft] = useState<RiskRating[][]>([]);
+  const [categoryDraft, setCategoryDraft] = useState<RiskConfigCategory[]>([]);
+
+  const openEditor = () => {
+    setLikelihoodDraft(likelihoods.map((item) => ({ ...item })));
+    setConsequenceDraft(consequences.map((item) => ({ ...item })));
+    setMatrixDraft(matrix.map((row) => [...row]));
+    setCategoryDraft(categories.map((item) => ({ ...item })));
+    setChangeReason("");
+    setOpen(true);
+  };
+
+  const updateDefinition = (
+    type: "likelihood" | "consequence",
+    index: number,
+    field: "name" | "description",
+    value: string,
+  ) => {
+    const setter = type === "likelihood" ? setLikelihoodDraft : setConsequenceDraft;
+    setter((current) => current.map((item, itemIndex) => (
+      itemIndex === index ? { ...item, [field]: value } : item
+    )));
+  };
+
+  const saveConfiguration = async () => {
+    if (changeReason.trim().length < 3) {
+      toast({ title: "Change reason required", description: "Explain why this configuration is changing.", variant: "destructive" });
+      return;
+    }
+    if ([...likelihoodDraft, ...consequenceDraft, ...categoryDraft].some((item) => !item.name.trim())) {
+      toast({ title: "Name required", description: "Every likelihood, consequence and category needs a name.", variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const matrixPayload = matrixDraft.flatMap((row, rowIndex) => row.map((rating, columnIndex) => ({
+        likelihood: rowIndex + 1,
+        consequence: columnIndex + 1,
+        rating,
+      })));
+      const { error } = await supabase.rpc("save_safety_risk_configuration" as never, {
+        p_association_id: associationId ?? null,
+        p_club_id: clubId ?? null,
+        p_likelihoods: likelihoodDraft,
+        p_consequences: consequenceDraft,
+        p_matrix: matrixPayload,
+        p_categories: categoryDraft,
+        p_change_reason: changeReason.trim(),
+      } as never);
+      if (error) throw error;
+      await onSaved();
+      setOpen(false);
+      toast({ title: "Risk configuration saved", description: "The matrix, definitions and categories were updated and audited." });
+    } catch (error: unknown) {
+      toast({ title: "Could not save configuration", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border bg-muted/25 p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <div className="text-sm font-semibold">Organisation risk configuration</div>
+        <p className="text-xs text-muted-foreground">Edit the fixed 5×5 matrix, descriptors and permanent category list for this scope.</p>
+      </div>
+      <Button type="button" variant="outline" onClick={openEditor}>Configure</Button>
+      <Dialog open={open} onOpenChange={(nextOpen) => !saving && setOpen(nextOpen)}>
+        <DialogContent className="max-h-[92vh] max-w-6xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Configure risk matrix and categories</DialogTitle>
+            <DialogDescription>
+              Likelihood and consequence names can change. Category names become permanent after their first save; hide them when no longer used.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <DefinitionEditor title="Likelihoods" type="likelihood" items={likelihoodDraft} onChange={updateDefinition} />
+              <DefinitionEditor title="Consequences" type="consequence" items={consequenceDraft} onChange={updateDefinition} />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">5×5 rating matrix</h3>
+              <div className="overflow-x-auto rounded-md border">
+                <Table className="min-w-[760px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Likelihood</TableHead>
+                      {consequenceDraft.map((item, index) => <TableHead key={index}>{item.name || `Consequence ${index + 1}`}</TableHead>)}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {matrixDraft.map((row, rowIndex) => (
+                      <TableRow key={rowIndex}>
+                        <TableCell className="font-medium">{likelihoodDraft[rowIndex]?.name || `Likelihood ${rowIndex + 1}`}</TableCell>
+                        {row.map((rating, columnIndex) => (
+                          <TableCell key={columnIndex} className={cn("min-w-32", ratingCellStyles[rating])}>
+                            <Select
+                              value={rating}
+                              onValueChange={(value: RiskRating) => setMatrixDraft((current) => current.map((currentRow, currentRowIndex) => (
+                                currentRowIndex === rowIndex
+                                  ? currentRow.map((cell, currentColumnIndex) => currentColumnIndex === columnIndex ? value : cell)
+                                  : currentRow
+                              )))}
+                            >
+                              <SelectTrigger className="w-full bg-background/85"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {["Low", "Medium", "High", "Very High"].map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold">Risk categories</h3>
+                  <p className="text-xs text-muted-foreground">Descriptions stay editable. Saved category names cannot be renamed or deleted.</p>
+                </div>
+                <Button type="button" size="sm" variant="outline" onClick={() => setCategoryDraft((current) => [...current, { name: "", description: "", isActive: true }])}>
+                  <Plus className="mr-2 h-4 w-4" /> Add category
+                </Button>
+              </div>
+              {categoryDraft.length === 0 && <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">No categories configured for this scope yet.</p>}
+              {categoryDraft.map((category, index) => (
+                <div key={category.id ?? `new-${index}`} className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(12rem,0.7fr)_minmax(16rem,1.3fr)_auto] md:items-end">
+                  <div className="space-y-1.5">
+                    <Label>Category name</Label>
+                    <Input
+                      value={category.name}
+                      disabled={Boolean(category.id)}
+                      onChange={(event) => setCategoryDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Description</Label>
+                    <Input
+                      value={category.description}
+                      onChange={(event) => setCategoryDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item))}
+                    />
+                  </div>
+                  {category.id ? (
+                    <Button type="button" variant="outline" onClick={() => setCategoryDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, isActive: !item.isActive } : item))}>
+                      {category.isActive ? "Hide" : "Restore"}
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="ghost" onClick={() => setCategoryDraft((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remove draft</Button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="risk-config-reason">Change reason</Label>
+              <Input id="risk-config-reason" value={changeReason} onChange={(event) => setChangeReason(event.target.value)} placeholder="Why are these settings changing?" />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={saving} onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="button" disabled={saving} onClick={() => void saveConfiguration()}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save configuration
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function DefinitionEditor({
+  title,
+  type,
+  items,
+  onChange,
+}: {
+  title: string;
+  type: "likelihood" | "consequence";
+  items: RiskConfigDefinition[];
+  onChange: (type: "likelihood" | "consequence", index: number, field: "name" | "description", value: string) => void;
+}) {
+  return (
+    <div className="space-y-3 rounded-md border p-3">
+      <h3 className="text-sm font-semibold">{title}</h3>
+      {items.map((item, index) => (
+        <div key={index} className="grid gap-2 rounded-md bg-muted/25 p-2 sm:grid-cols-[9rem_minmax(0,1fr)]">
+          <Input value={item.name} onChange={(event) => onChange(type, index, "name", event.target.value)} aria-label={`${title} ${index + 1} name`} />
+          <Input value={item.description} onChange={(event) => onChange(type, index, "description", event.target.value)} aria-label={`${title} ${index + 1} description`} placeholder="Description" />
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -2937,12 +3150,7 @@ function BrightIdeaForm({
 }) {
   return (
     <div className="space-y-4">
-      <FormGrid>
-        <TextField label="Idea title" field="title" values={values} onValueChange={onValueChange} />
-        <AutomaticAddedByField />
-        <ReadOnlyField label="Organisation scope" value={values.scope || "Select an organisation"} />
-        <ReadOnlyField label="Status" value="Submitted" />
-      </FormGrid>
+      <TextField label="Idea title" field="title" values={values} onValueChange={onValueChange} />
       <TextAreaField label="Why it is needed" field="whyNeeded" values={values} onValueChange={onValueChange} />
       <TextAreaField label="Suggested implementation" field="suggestedImplementation" values={values} onValueChange={onValueChange} />
       <TextAreaField label="Suggested evaluation" field="suggestedEvaluation" values={values} onValueChange={onValueChange} />
@@ -3268,6 +3476,9 @@ function RiskDetail({
         <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "risk-review", context: { riskId: risk.id } })}>
           Record review
         </Button>
+        <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "link-records", context: { sourceRecordId: risk.id } })}>
+          Link another record
+        </Button>
       </DetailActions>
       <DetailGrid>
         <DetailField label="Category" value={risk.category} />
@@ -3317,6 +3528,9 @@ function ActionDetail({
         <Button size="sm" onClick={() => onOpenForm({ mode: "action", context: { actionId: action.id } })}>
           Edit action
         </Button>
+        <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "link-records", context: { sourceRecordId: action.id } })}>
+          Link another record
+        </Button>
       </DetailActions>
       <DetailGrid>
         <DetailField label="Owner" value={action.owner} />
@@ -3326,15 +3540,25 @@ function ActionDetail({
         <DetailField label="Risk link" value={action.linkedRiskId || "-"} />
         <DetailField label="QI link" value={action.linkedQiId || "-"} />
       </DetailGrid>
-      <DetailSection title="BE SMART">
-        <div className="grid gap-3">
-          <DetailField label="Baseline" value={action.baseline} />
-          <DetailField label="Evaluate" value={action.evaluate} />
-          <DetailField label="Specific" value={action.specific} />
-          <DetailField label="Measurable" value={action.measurable} />
-          <DetailField label="Achievable" value={action.achievable} />
-          <DetailField label="Relevant" value={action.relevant} />
-          <DetailField label="Time-bound" value={action.timeBound} />
+      <DetailSection title="BE SMART — Baseline, Evaluate, Specific, Measurable, Achievable, Relevant, Time-bound">
+        <div className="grid gap-2">
+          {[
+            ["B", "Baseline", action.baseline],
+            ["E", "Evaluate", action.evaluate],
+            ["S", "Specific", action.specific],
+            ["M", "Measurable", action.measurable],
+            ["A", "Achievable", action.achievable],
+            ["R", "Relevant", action.relevant],
+            ["T", "Time-bound", action.timeBound],
+          ].map(([letter, label, value]) => (
+            <div key={letter} className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-3 rounded-md border bg-muted/20 p-3">
+              <div className="text-center text-3xl font-black leading-none text-primary">{letter}</div>
+              <div>
+                <div className="text-xs font-semibold uppercase text-muted-foreground">{label}</div>
+                <div className="mt-1 text-sm">{value || "Not recorded"}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </DetailSection>
       <DetailSection title="Linked records">
@@ -3378,6 +3602,9 @@ function QiDetail({
             View originating Bright Idea
           </Button>
         )}
+        <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "link-records", context: { sourceRecordId: item.id } })}>
+          Link another record
+        </Button>
       </DetailActions>
       <DetailGrid>
         <DetailField label="Source" value={item.source} />
@@ -3430,6 +3657,9 @@ function BrightIdeaDetail({
         </Button>
         <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "action", context: { ideaId: idea.id } })}>
           Create linked action
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => onOpenForm({ mode: "link-records", context: { sourceRecordId: idea.id } })}>
+          Link another record
         </Button>
       </DetailActions>
       <DetailGrid>
@@ -3840,6 +4070,7 @@ async function loadSafetyHubData(scope: SafetyScopeSelection): Promise<SafetyHub
     auditResult,
     matrixResult,
     settingsResult,
+    dropdownResult,
     profileResult,
     associationResult,
     clubResult,
@@ -3854,6 +4085,7 @@ async function loadSafetyHubData(scope: SafetyScopeSelection): Promise<SafetyHub
     supabase.from("rg_audit_log").select("*").order("changed_at", { ascending: false }).limit(500),
     supabase.from("rg_risk_matrix").select("*").order("likelihood").order("consequence"),
     supabase.from("rg_risk_settings").select("*").eq("is_active", true),
+    supabase.from("rg_dropdown_values").select("*").order("category").order("sort_order"),
     supabase.from("profiles").select("id, first_name, last_name"),
     supabase.from("associations").select("id, name"),
     supabase.from("clubs").select("id, name, association_id"),
@@ -3870,6 +4102,7 @@ async function loadSafetyHubData(scope: SafetyScopeSelection): Promise<SafetyHub
     auditResult,
     matrixResult,
     settingsResult,
+    dropdownResult,
     profileResult,
     associationResult,
     clubResult,
@@ -3889,6 +4122,7 @@ async function loadSafetyHubData(scope: SafetyScopeSelection): Promise<SafetyHub
     auditRows: filterSafetyRows(auditResult.data ?? [], scope),
     matrixRows: matrixResult.data ?? [],
     settingsRows: settingsResult.data ?? [],
+    dropdownRows: dropdownResult.data ?? [],
     profiles: profileResult.data ?? [],
     associations: associationResult.data ?? [],
     clubs: clubResult.data ?? [],
@@ -3918,6 +4152,7 @@ function buildSafetyHubData({
   auditRows,
   matrixRows,
   settingsRows,
+  dropdownRows,
   profiles,
   associations,
   clubs,
@@ -3933,6 +4168,7 @@ function buildSafetyHubData({
   auditRows: SafetyAuditRow[];
   matrixRows: SafetyMatrixRow[];
   settingsRows: SafetySettingsRow[];
+  dropdownRows: SafetyDropdownRow[];
   profiles: ProfileSummary[];
   associations: AssociationSummary[];
   clubs: ClubSummary[];
@@ -4086,6 +4322,11 @@ function buildSafetyHubData({
     })
     .filter((event): event is AuditRecord => event !== null);
 
+  const effectiveSettings = getEffectiveRiskSettings(scope, settingsRows);
+  const scopedDropdowns = effectiveSettings
+    ? dropdownRows.filter((row) => row.settings_id === effectiveSettings.id)
+    : [];
+
   return {
     risks,
     actions,
@@ -4093,7 +4334,53 @@ function buildSafetyHubData({
     brightIdeas,
     auditEvents,
     riskMatrix: buildRiskMatrix(scope, settingsRows, matrixRows),
+    likelihoodDefinitions: buildRiskDefinitions(
+      scopedDropdowns,
+      "LIKELIHOOD",
+      defaultLikelihoodDefinitions,
+    ),
+    consequenceDefinitions: buildRiskDefinitions(
+      scopedDropdowns,
+      "CONSEQUENCE",
+      defaultConsequenceDefinitions,
+    ),
+    riskCategories: scopedDropdowns
+      .filter((row) => row.category === "RISK_CATEGORY")
+      .map((row) => ({
+        id: row.id,
+        name: row.label,
+        description: row.description ?? "",
+        isActive: row.is_active,
+      })),
   };
+}
+
+function getEffectiveRiskSettings(
+  scope: SafetyScopeSelection,
+  settingsRows: SafetySettingsRow[],
+) {
+  return (
+    (scope.clubId
+      ? settingsRows.find((row) => row.scope_level === "CLUB" && row.club_id === scope.clubId)
+      : undefined)
+    ?? (scope.associationId
+      ? settingsRows.find((row) => row.scope_level === "ASSOCIATION" && row.association_id === scope.associationId)
+      : undefined)
+    ?? settingsRows.find((row) => row.scope_level === "GLOBAL")
+  );
+}
+
+function buildRiskDefinitions(
+  rows: SafetyDropdownRow[],
+  category: "LIKELIHOOD" | "CONSEQUENCE",
+  defaults: RiskConfigDefinition[],
+) {
+  const configured = rows
+    .filter((row) => row.category === category && row.is_active)
+    .sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0))
+    .slice(0, 5)
+    .map((row) => ({ id: row.id, name: row.label, description: row.description ?? "" }));
+  return configured.length === 5 ? configured : defaults.map((definition) => ({ ...definition }));
 }
 
 function buildLinkedDisplayIds(
@@ -4130,15 +4417,7 @@ function buildRiskMatrix(
   settingsRows: SafetySettingsRow[],
   matrixRows: SafetyMatrixRow[],
 ): RiskRating[][] {
-  const settings = (
-    (scope.clubId
-      ? settingsRows.find((row) => row.scope_level === "CLUB" && row.club_id === scope.clubId)
-      : undefined)
-    ?? (scope.associationId
-      ? settingsRows.find((row) => row.scope_level === "ASSOCIATION" && row.association_id === scope.associationId)
-      : undefined)
-    ?? settingsRows.find((row) => row.scope_level === "GLOBAL")
-  );
+  const settings = getEffectiveRiskSettings(scope, settingsRows);
   const matrix = prototypeRiskMatrix.map((row) => [...row]);
   if (!settings) return matrix;
 

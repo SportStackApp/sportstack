@@ -6,6 +6,45 @@ The blocks below are completed in order where practical. Work starts on `dev`, i
 documented, then moves to `main` for staging. Production, DNS, redirects and destructive changes
 remain separately approval-gated.
 
+## Owner-test remediation package — implemented on Dev, owner verification pending
+
+The owner-test findings collected on 31 July and 1 August have been implemented in the locked
+order below. The package stays on `dev` until Aaron completes the integrated role and workflow
+test. `main`, `prod`, Production Supabase, domains and redirects are unchanged.
+
+1. **Permissions and data integrity:** scoped server functions, role hierarchy, Viewing-as data
+   restrictions, protected higher-role accounts, membership write guards, administration audit
+   history and a pre-cleanup duplicate-membership snapshot.
+2. **Stability and persistence:** route error recovery, URL-backed scope/tabs/filters, retained
+   drafts, restored chat context and account-backed theme preference.
+3. **Navigation and dashboards:** consistent dashboard/overview names, Team Overview cascade
+   behaviour, assigned-scope cascade options, scoped KPI links, compact menus and separate MVP and
+   Umpiring navigation.
+4. **Fixtures and communications:** working fixture view controls, readable competition/round/bye
+   display, immutable chat revision history, newest-first entry, 50-message upward pagination and
+   no self-notifications.
+5. **Player MVP Voting:** SportStack player identity and numbers, status/time remaining, complete
+   fixture details, selector deduplication, stronger result reporting and three separate analytics
+   tabs with persistent filters.
+6. **Umpire Match Voting:** one-character SportStack name suggestions, division-driven vote scheme,
+   round dates, inline ballot validation, acknowledged number-only warnings, retained Back state,
+   correction history/name fixes and persistent leaderboard scope.
+7. **Coaching and profile:** deduplicated Squad/Roster, relationship KPIs, shared canonical position
+   groups, Team Player Details, landscape/focus Formation Builder controls, scoped formation sharing
+   and complete role/scope display.
+8. **Safety Hub:** compact lists and KPIs, stable linked-record/edit routes, BE SMART layout,
+   multi-record links, simplified Bright Idea form and audited organisation-specific 5x5 matrix and
+   category configuration.
+9. **Committee Management:** Committee Work and Administration areas, meeting calendar/scheduling,
+   attendance/apologies/minutes/actions, searchable minutes, private 20 MB uploads, archived agenda
+   templates, reorderable sections and multi-record Safety Hub links.
+10. **Verification and handoff:** focused plan lint, TypeScript and build pass. The full lint backlog
+    is reported separately. Actual-role owner testing is still required before staging promotion.
+
+The duplicate-membership snapshot contains 201 duplicate user/team groups and 44 users with
+multiple active Primary memberships, covering 490 captured historical rows. New duplicates are
+blocked. No historical membership row has been changed; cleanup remains a separate approval gate.
+
 ## 1. Finish RevSports work — complete 1 August 2026
 
 - Repair the unfinished fixture importer file without losing valid work.

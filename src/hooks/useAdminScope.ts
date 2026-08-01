@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppMode, type AppMode } from "@/contexts/AppModeContext";
+import { useTeamContext } from "@/contexts/TeamContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = Database["public"]["Enums"]["user_role_enum"];
 
 interface ScopedRole {
   role: AppRole;
@@ -16,7 +18,9 @@ interface AdminScope {
   loading: boolean;
   scopeLoading: boolean;
   isSuperAdmin: boolean;
+  actualIsSuperAdmin: boolean;
   isAnyAdmin: boolean;
+  actorMode: AppMode;
   scopedRoles: ScopedRole[];
   scopedAssociationIds: string[];
   scopedClubIds: string[];
@@ -32,6 +36,8 @@ const ADMIN_ROLES: AppRole[] = ["SUPER_ADMIN", "ASSOCIATION_ADMIN", "CLUB_ADMIN"
 
 export function useAdminScope(): AdminScope {
   const { user } = useAuth();
+  const { mode, viewingAs } = useAppMode();
+  const { selectedAssociationId, selectedClubId, selectedTeamId } = useTeamContext();
   const [loading, setLoading] = useState(true);
   const [scopedRoles, setScopedRoles] = useState<ScopedRole[]>([]);
   const [allClubs, setAllClubs] = useState<{ id: string; association_id: string }[]>([]);
@@ -73,8 +79,10 @@ export function useAdminScope(): AdminScope {
     fetchScope();
   }, [fetchScope]);
 
-  const isSuperAdmin = scopedRoles.some((r) => r.role === "SUPER_ADMIN");
-  const isAnyAdmin = scopedRoles.some((r) => ADMIN_ROLES.includes(r.role));
+  const actualIsSuperAdmin = scopedRoles.some((r) => r.role === "SUPER_ADMIN");
+  const actorMode = mode === "super_admin" ? viewingAs : mode;
+  const isSuperAdmin = actualIsSuperAdmin && actorMode === "super_admin";
+  const isAnyAdmin = actorMode !== "player" && actorMode !== "coach";
 
   // Build scoped IDs (memoized to prevent infinite re-render loops)
   const { scopedAssociationIds, scopedClubIds, scopedTeamIds } = useMemo(() => {
@@ -83,7 +91,27 @@ export function useAdminScope(): AdminScope {
     const teamIds: string[] = [];
 
     if (!loading && !isSuperAdmin) {
-      for (const sr of scopedRoles) {
+      // A Super Admin using Viewing as is deliberately restricted to the
+      // selected cascade scope. Lower-role accounts use only the role that
+      // matches their active mode.
+      if (actualIsSuperAdmin) {
+        if (actorMode === "association" && selectedAssociationId) assocIds.push(selectedAssociationId);
+        if (actorMode === "club" && selectedClubId) clubIds.push(selectedClubId);
+        if (actorMode === "team_manager" && selectedTeamId) teamIds.push(selectedTeamId);
+      }
+
+      const roleForMode: Partial<Record<AppMode, AppRole>> = {
+        association: "ASSOCIATION_ADMIN",
+        club: "CLUB_ADMIN",
+        team_manager: "TEAM_MANAGER",
+        coach: "COACH",
+      };
+      const matchingRole = roleForMode[actorMode];
+      const activeScopedRoles = actualIsSuperAdmin
+        ? []
+        : scopedRoles.filter((role) => !matchingRole || role.role === matchingRole);
+
+      for (const sr of activeScopedRoles) {
         if (sr.role === "ASSOCIATION_ADMIN" && sr.association_id) {
           if (!assocIds.includes(sr.association_id)) {
             assocIds.push(sr.association_id);
@@ -118,8 +146,26 @@ export function useAdminScope(): AdminScope {
       }
     }
 
+    for (const club of allClubs) {
+      if (assocIds.includes(club.association_id) && !clubIds.includes(club.id)) clubIds.push(club.id);
+    }
+    for (const team of allTeams) {
+      if (clubIds.includes(team.club_id) && !teamIds.includes(team.id)) teamIds.push(team.id);
+    }
+
     return { scopedAssociationIds: assocIds, scopedClubIds: clubIds, scopedTeamIds: teamIds };
-  }, [scopedRoles, allClubs, allTeams, loading, isSuperAdmin]);
+  }, [
+    actorMode,
+    actualIsSuperAdmin,
+    scopedRoles,
+    allClubs,
+    allTeams,
+    loading,
+    isSuperAdmin,
+    selectedAssociationId,
+    selectedClubId,
+    selectedTeamId,
+  ]);
 
   const canManageAssociation = (id: string) => isSuperAdmin || scopedAssociationIds.includes(id);
   const canManageClub = (id: string) => isSuperAdmin || scopedClubIds.includes(id);
@@ -134,7 +180,9 @@ export function useAdminScope(): AdminScope {
     loading,
     scopeLoading: loading,
     isSuperAdmin,
+    actualIsSuperAdmin,
     isAnyAdmin,
+    actorMode,
     scopedRoles,
     scopedAssociationIds,
     scopedClubIds,

@@ -37,7 +37,7 @@ export function UmpireLinkedPlayerPicker({
   const listId = useId();
   const minimumSearchLength = simplifiedSuggestions ? 1 : 2;
   const inputPlaceholder = placeholder || (
-    simplifiedSuggestions ? "Start typing a player's name" : "Type at least two letters"
+    simplifiedSuggestions ? "Start typing a name" : "Type at least two letters"
   );
 
   const matches = useMemo(() => {
@@ -195,10 +195,9 @@ export function UmpireLinkedPlayerPicker({
               >
                 {simplifiedSuggestions ? (
                   <div className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">{option.name}</span>
-                    {option.source !== "unresolved" && option.contextLabel ? (
-                      <p className="truncate text-xs text-muted-foreground">{option.contextLabel}</p>
-                    ) : null}
+                    <span className="block truncate text-sm font-medium">
+                      {option.name}{option.number ? ` #${option.number}` : ""}
+                    </span>
                   </div>
                 ) : (
                   <>

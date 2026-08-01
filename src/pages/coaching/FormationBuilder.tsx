@@ -46,7 +46,7 @@ import {
   type TemplateQuickPick,
 } from "@/lib/formationLocalState";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Maximize2, Minus, Plus, RotateCw, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Focus, Maximize2, Minus, PanelLeftClose, PanelRightClose, Plus, RotateCw, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const supabase = typedSupabase as any;
@@ -211,6 +211,9 @@ export default function FormationBuilder() {
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [markerSize, setMarkerSize] = useState<MarkerSize>("medium");
   const [isRotatedView, setIsRotatedView] = useState(false);
+  const [showCanvasTools, setShowCanvasTools] = useState(true);
+  const [showInspector, setShowInspector] = useState(true);
+  const [focusMode, setFocusMode] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [selectedPositionKey, setSelectedPositionKey] = useState<string | null>(null);
   const [quickPicks, setQuickPicks] = useState<TemplateQuickPick[]>([]);
@@ -221,6 +224,24 @@ export default function FormationBuilder() {
     () => formationDraftKey(searchParams.get("formation") || searchParams.get("template") || "new"),
     [searchParams],
   );
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const saved = loadLocalJson<{ rotated?: boolean; tools?: boolean; inspector?: boolean }>(`formation-view:${user.id}`);
+    if (!saved) return;
+    setIsRotatedView(saved.rotated === true);
+    setShowCanvasTools(saved.tools !== false);
+    setShowInspector(saved.inspector !== false);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    saveLocalJson(`formation-view:${user.id}`, {
+      rotated: isRotatedView,
+      tools: showCanvasTools,
+      inspector: showInspector,
+    });
+  }, [isRotatedView, showCanvasTools, showInspector, user?.id]);
 
   const canUseScope = (scope: FormationOwnerScope) => {
     if (isSuperAdmin) return true;
@@ -894,6 +915,40 @@ export default function FormationBuilder() {
             <RotateCw className="h-4 w-4 mr-2" />
             Rotate view
           </Button>
+          <Button
+            variant={showCanvasTools ? "outline" : "secondary"}
+            onClick={() => {
+              setShowCanvasTools((current) => !current);
+              setFocusMode(false);
+            }}
+          >
+            <PanelLeftClose className="mr-2 h-4 w-4" />
+            Tools
+          </Button>
+          <Button
+            variant={showInspector ? "outline" : "secondary"}
+            onClick={() => {
+              setShowInspector((current) => !current);
+              setFocusMode(false);
+            }}
+          >
+            <PanelRightClose className="mr-2 h-4 w-4" />
+            Inspector
+          </Button>
+          <Button
+            variant={focusMode ? "default" : "outline"}
+            onClick={() => {
+              const next = !focusMode;
+              setFocusMode(next);
+              if (next) {
+                setShowCanvasTools(false);
+                setShowInspector(false);
+              }
+            }}
+          >
+            <Focus className="mr-2 h-4 w-4" />
+            Focus
+          </Button>
           <Button variant="outline" size="icon" onClick={zoomOut} title="Zoom out">
             <Minus className="h-4 w-4" />
           </Button>
@@ -915,8 +970,16 @@ export default function FormationBuilder() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)_340px]">
-        <Card className="order-2 lg:order-1">
+      <div
+        className={cn(
+          "grid gap-4",
+          showCanvasTools && showInspector && "lg:grid-cols-[320px_minmax(0,1fr)_340px]",
+          showCanvasTools && !showInspector && "lg:grid-cols-[320px_minmax(0,1fr)]",
+          !showCanvasTools && showInspector && "lg:grid-cols-[minmax(0,1fr)_340px]",
+          !showCanvasTools && !showInspector && "grid-cols-1",
+        )}
+      >
+        <Card className={cn("order-2 lg:order-1", !showCanvasTools && "hidden")}>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Canvas tools</CardTitle>
           </CardHeader>
@@ -1046,6 +1109,23 @@ export default function FormationBuilder() {
             <CardTitle className="text-base">Surface canvas</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {!showCanvasTools && quickPicks.length > 0 && (
+              <div className="flex flex-wrap gap-2 rounded-md border bg-muted/30 p-2" aria-label="Collapsed position tools">
+                {quickPicks.map((quickPick) => (
+                  <Button
+                    key={quickPick.id}
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 rounded-full"
+                    title={`${quickPick.name} (${quickPick.code})`}
+                    onClick={() => applyQuickPick(quickPick)}
+                  >
+                    {quickPick.symbol || quickPick.code}
+                  </Button>
+                ))}
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">Use Canvas tools to choose the next position, then click the surface to place it.</p>
             <SurfaceCanvas
               backgroundUrl={backgroundUrl}
@@ -1066,7 +1146,7 @@ export default function FormationBuilder() {
           </CardContent>
         </Card>
 
-        <Card className="order-3">
+        <Card className={cn("order-3", !showInspector && "hidden")}>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Inspector</CardTitle>
           </CardHeader>

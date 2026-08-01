@@ -8,6 +8,12 @@ import { useTeamContext } from "@/contexts/TeamContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
+import {
+  canonicalPositionLabels,
+  getCanonicalPositionGroup,
+  membershipPriority,
+  type CanonicalPositionGroup,
+} from "@/lib/playerPositions";
 
 interface RosterMember {
   user_id: string;
@@ -19,20 +25,13 @@ interface RosterMember {
   registered_club_id: string | null;
 }
 
-const positionGroups: Record<string, string[]> = {
-  Strikers: ["Left Wing", "Centre Forward", "Right Wing"],
-  Midfielders: ["Left Inside", "Centre Half", "Right Inside"],
-  Backs: ["Left Half", "Fullback", "Right Half"],
-  Goalkeeper: ["Goalkeeper"],
-};
-
 const Roster = () => {
   const { selectedTeamId, selectedTeam, selectedClub } = useTeamContext();
   const { toast } = useToast();
   const [members, setMembers] = useState<RosterMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<CanonicalPositionGroup | null>(null);
 
   useEffect(() => {
     const fetchRoster = async () => {
@@ -75,40 +74,43 @@ const Roster = () => {
           });
         }
 
-        const merged: RosterMember[] = membershipData.map((m) => {
+        const mergedByUser = new Map<string, RosterMember>();
+        membershipData.forEach((m) => {
           const profile = profiles?.find((p) => p.id === m.user_id);
-          const membershipType = profile?.registered_club_id
-            ? profile.registered_club_id === selectedTeam?.club_id
-              ? "PRIMARY"
-              : "SECONDARY"
-            : m.membership_type === "PRIMARY"
-              ? "PRIMARY"
-              : "SECONDARY";
-          return {
+          const candidate: RosterMember = {
             user_id: m.user_id,
             first_name: profile?.first_name || null,
             last_name: profile?.last_name || null,
             position: m.position,
             jersey_number: m.jersey_number,
-            membership_type: membershipType,
+            membership_type: m.membership_type,
             registered_club_id: profile?.registered_club_id || null,
           };
+          const current = mergedByUser.get(m.user_id);
+          if (!current || (membershipPriority[candidate.membership_type] || 0) > (membershipPriority[current.membership_type] || 0)) {
+            mergedByUser.set(m.user_id, candidate);
+          }
         });
-        setMembers(merged);
+        setMembers(Array.from(mergedByUser.values()));
       } else {
         setMembers([]);
       }
       setLoading(false);
     };
     fetchRoster();
-  }, [selectedTeam?.club_id, selectedTeamId, toast]);
+  }, [selectedTeamId, toast]);
 
   const filteredMembers = members.filter((m) => {
     const name = [m.first_name, m.last_name].filter(Boolean).join(" ");
     const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPosition = selectedPosition ? m.position === selectedPosition : true;
+    const matchesPosition = selectedPosition ? getCanonicalPositionGroup(m.position) === selectedPosition : true;
     return matchesSearch && matchesPosition;
   });
+
+  const membershipCounts = members.reduce(
+    (counts, member) => ({ ...counts, [member.membership_type]: (counts[member.membership_type] || 0) + 1 }),
+    {} as Record<string, number>,
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -119,6 +121,17 @@ const Roster = () => {
         <p className="text-muted-foreground mt-1">
           {selectedTeam?.name || "Select a team"} {selectedClub ? `• ${selectedClub.name}` : ""} • {members.length} players
         </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        {(["PRIMARY", "SECONDARY", "FILL_IN"] as const).map((type) => (
+          <Card key={type}>
+            <CardContent className="flex items-center justify-between p-3">
+              <MembershipTypeBadge membershipType={type} />
+              <span className="text-2xl font-semibold">{membershipCounts[type] || 0}</span>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -139,18 +152,14 @@ const Roster = () => {
           >
             All
           </Button>
-          {Object.keys(positionGroups).map((group) => (
+          {(Object.entries(canonicalPositionLabels) as [CanonicalPositionGroup, string][]).map(([group, label]) => (
             <Button
               key={group}
-              variant={
-                positionGroups[group].includes(selectedPosition || "")
-                  ? "default"
-                  : "outline"
-              }
+              variant={selectedPosition === group ? "default" : "outline"}
               size="sm"
-              onClick={() => setSelectedPosition(positionGroups[group][0])}
+              onClick={() => setSelectedPosition(group)}
             >
-              {group}
+              {label}
             </Button>
           ))}
         </div>

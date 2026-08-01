@@ -23,7 +23,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Users, ArrowLeft, Search, Check, X, UserPlus, FileSpreadsheet, Download, RefreshCw, Plus, AlertTriangle, Pencil, GitMerge, Eye, EyeOff } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
@@ -36,8 +36,10 @@ import { EditUserDetailsDialog, type AccessLinkReviewDetails } from "@/component
 import { ensurePlayerRoleForTeam } from "@/lib/playerRoles";
 import { MergeProfilesDialog } from "@/components/admin/MergeProfilesDialog";
 import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
+import type { AppMode } from "@/contexts/AppModeContext";
+import { useTeamContext } from "@/contexts/TeamContext";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = Database["public"]["Enums"]["user_role_enum"];
 type MembershipType = Database["public"]["Enums"]["membership_type"];
 type TeamOption = Pick<Database["public"]["Tables"]["teams"]["Row"], "id" | "name" | "club_id" | "division" | "division_id">;
 type ClubOption = Pick<Database["public"]["Tables"]["clubs"]["Row"], "id" | "name" | "association_id">;
@@ -87,7 +89,28 @@ interface RoleWithScope {
   team_id: string | null;
 }
 
-const ALL_ROLES: AppRole[] = ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "ASSOCIATION_ADMIN", "SUPER_ADMIN", "UMPIRE", "VOTER"];
+const ALL_ROLES: AppRole[] = ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "ASSOCIATION_ADMIN", "SUPER_ADMIN", "UMPIRE", "UMPIRE_ADMIN", "VOTER"];
+
+const ROLE_LEVEL: Record<AppRole, number> = {
+  SUPER_ADMIN: 6,
+  ASSOCIATION_ADMIN: 5,
+  CLUB_ADMIN: 4,
+  TEAM_MANAGER: 3,
+  COACH: 2,
+  UMPIRE_ADMIN: 2,
+  PLAYER: 1,
+  UMPIRE: 1,
+  VOTER: 1,
+};
+
+const MODE_LEVEL: Record<AppMode, number> = {
+  super_admin: 6,
+  association: 5,
+  club: 4,
+  team_manager: 3,
+  coach: 2,
+  player: 1,
+};
 
 const ROLES_NEEDING_SCOPE: Record<string, string> = {
   ASSOCIATION_ADMIN: "association",
@@ -115,9 +138,20 @@ const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
 
 const UsersManagement = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { selectedAssociationId, selectedClubId, selectedDivision, selectedTeamId } = useTeamContext();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { loading: scopeLoading, isSuperAdmin, isAnyAdmin, scopedTeamIds, scopedClubIds, scopedAssociationIds } = useAdminScope();
+  const {
+    loading: scopeLoading,
+    isSuperAdmin,
+    actualIsSuperAdmin,
+    isAnyAdmin,
+    actorMode,
+    scopedTeamIds,
+    scopedClubIds,
+    scopedAssociationIds,
+  } = useAdminScope();
 
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [teams, setTeams] = useState<TeamOption[]>([]);
@@ -126,13 +160,13 @@ const UsersManagement = () => {
   const [divisions, setDivisions] = useState<{ id: string; name: string }[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("query") || "");
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [associationFilter, setAssociationFilter] = useState<string>("all");
-  const [clubFilter, setClubFilter] = useState<string>("all");
-  const [divisionFilter, setDivisionFilter] = useState("all");
-  const [teamFilter, setTeamFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get("status") || "all");
+  const [associationFilter, setAssociationFilter] = useState<string>(searchParams.get("association") || selectedAssociationId || "all");
+  const [clubFilter, setClubFilter] = useState<string>(searchParams.get("club") || selectedClubId || "all");
+  const [divisionFilter, setDivisionFilter] = useState(searchParams.get("division") || selectedDivision || "all");
+  const [teamFilter, setTeamFilter] = useState(searchParams.get("team") || selectedTeamId || "all");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [totalUserCount, setTotalUserCount] = useState(0);
@@ -143,6 +177,23 @@ const UsersManagement = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter, associationFilter, clubFilter, divisionFilter, teamFilter, hidePlaceholders]);
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    const values = {
+      query: searchQuery,
+      status: statusFilter,
+      association: associationFilter,
+      club: clubFilter,
+      division: divisionFilter,
+      team: teamFilter,
+    };
+    for (const [key, value] of Object.entries(values)) {
+      if (!value || value === "all") next.delete(key);
+      else next.set(key, value);
+    }
+    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
+  }, [associationFilter, clubFilter, divisionFilter, searchParams, searchQuery, setSearchParams, statusFilter, teamFilter]);
 
   useEffect(() => {
     if (associationFilter === "all") {
@@ -180,6 +231,14 @@ const UsersManagement = () => {
   const [accessReviewRevSportsId, setAccessReviewRevSportsId] = useState("");
   
   const handleOpenEditDialog = (u: UserWithRoles) => {
+    if (!canEditUser(u)) {
+      toast({
+        title: "Read-only account",
+        description: "Your active role cannot edit an account at this level.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSelectedUser(u);
     setEditDialogOpen(true);
     void loadRoleState(u);
@@ -219,6 +278,16 @@ const UsersManagement = () => {
   const [assignTeamId, setAssignTeamId] = useState("");
   const [assignMembershipType, setAssignMembershipType] = useState<MembershipType>("PRIMARY");
   const [assignSaving, setAssignSaving] = useState(false);
+
+  const canEditUser = useCallback((target: UserWithRoles) => {
+    if (!isAnyAdmin) return false;
+    const targetLevel = target.roles.reduce((highest, role) => Math.max(highest, ROLE_LEVEL[role]), 0);
+    if (actorMode === "team_manager") {
+      const sharesAssignedTeam = target.memberships.some((membership) => scopedTeamIds.includes(membership.team_id));
+      return sharesAssignedTeam && MODE_LEVEL.team_manager > targetLevel;
+    }
+    return MODE_LEVEL[actorMode] > targetLevel || actorMode === "super_admin";
+  }, [actorMode, isAnyAdmin, scopedTeamIds]);
 
   useEffect(() => {
     if (!assignClubId) {
@@ -301,6 +370,36 @@ const UsersManagement = () => {
       if (divisionFilter !== "all") filteredTeamIds = filteredTeamIds.filter((id) => teamsList.find((team) => team.id === id)?.division_id === divisionFilter);
       if (teamFilter !== "all") filteredTeamIds = filteredTeamIds.filter((id) => id === teamFilter);
 
+      const visibleAssociationId = associationFilter !== "all"
+        ? associationFilter
+        : actorMode === "association" && scopedAssociationIds.length === 1
+          ? scopedAssociationIds[0]
+          : null;
+      const visibleClubId = clubFilter !== "all"
+        ? clubFilter
+        : actorMode === "club" && scopedClubIds.length === 1
+          ? scopedClubIds[0]
+          : null;
+      const visibleTeamId = teamFilter !== "all"
+        ? teamFilter
+        : actorMode === "team_manager" && scopedTeamIds.length === 1
+          ? scopedTeamIds[0]
+          : null;
+
+      const { data: visibleProfileRows, error: visibleProfilesError } = await supabase.rpc(
+        "admin_visible_profile_ids" as never,
+        {
+          p_actor_mode: actorMode,
+          p_association_id: visibleAssociationId,
+          p_club_id: visibleClubId,
+          p_team_id: visibleTeamId,
+        } as never,
+      );
+      if (visibleProfilesError) throw visibleProfilesError;
+      const serverVisibleUserIds = new Set(
+        ((visibleProfileRows || []) as { profile_id: string }[]).map((row) => row.profile_id),
+      );
+
       const constrainByMembership = !isSuperAdmin
         || associationFilter !== "all"
         || clubFilter !== "all"
@@ -308,7 +407,7 @@ const UsersManagement = () => {
         || teamFilter !== "all"
         || ["ACTIVE", "PENDING", "DECLINED"].includes(statusFilter);
 
-      let candidateUserIds: string[] | null = null;
+      let candidateUserIds: string[] | null = Array.from(serverVisibleUserIds);
       if (constrainByMembership) {
         if (filteredTeamIds.length === 0) {
           candidateUserIds = [];
@@ -319,7 +418,8 @@ const UsersManagement = () => {
           }
           const { data, error } = await candidateQuery;
           if (error) throw error;
-          candidateUserIds = [...new Set((data || []).map((membership) => membership.user_id))];
+          candidateUserIds = [...new Set((data || []).map((membership) => membership.user_id))]
+            .filter((profileId) => serverVisibleUserIds.has(profileId));
         }
       }
 
@@ -420,7 +520,22 @@ const UsersManagement = () => {
           };
         });
 
-      const membershipTeamIds = new Set(membershipRows.map((membership) => membership.team_id));
+      const membershipPriority = (membership: Membership) => {
+        const status = membership.status === "ACTIVE" ? 100 : membership.status === "PENDING" ? 50 : 0;
+        const type = membership.membership_type === "PRIMARY" ? 30 : membership.membership_type === "SECONDARY" ? 20 : 10;
+        return status + type;
+      };
+      const deduplicatedMemberships = Array.from(
+        membershipRows.reduce((byTeam, membership) => {
+          const existing = byTeam.get(membership.team_id);
+          if (!existing || membershipPriority(membership) > membershipPriority(existing)) {
+            byTeam.set(membership.team_id, membership);
+          }
+          return byTeam;
+        }, new Map<string, Membership>()).values(),
+      );
+
+      const membershipTeamIds = new Set(deduplicatedMemberships.map((membership) => membership.team_id));
       const roleOnlyMembershipRows = profileRoles
         .filter((role) => ["PLAYER", "COACH", "TEAM_MANAGER"].includes(role.role) && role.team_id && !membershipTeamIds.has(role.team_id))
         .map((role) => {
@@ -439,7 +554,7 @@ const UsersManagement = () => {
         ...profile,
         roles: Array.from(new Set(profileRoles.map((r) => r.role))),
         roleScopes: profileRoles,
-        memberships: [...membershipRows, ...roleOnlyMembershipRows],
+        memberships: [...deduplicatedMemberships, ...roleOnlyMembershipRows],
         pendingInvites: pendingInvitesData
         .filter((r) => r.target_user_id === profile.id)
         .map((r) => {
@@ -455,7 +570,7 @@ const UsersManagement = () => {
       };
       });
 
-      if (isSuperAdmin && usersWithRoles.length > 0) {
+      if (actualIsSuperAdmin && actorMode === "super_admin" && usersWithRoles.length > 0) {
       const { data: emailData, error: emailError } = await supabase.functions.invoke("get-user-emails", {
         body: { profileIds: usersWithRoles.map((item) => item.id) },
       });
@@ -479,7 +594,7 @@ const UsersManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [associationFilter, clubFilter, currentPage, divisionFilter, hidePlaceholders, isSuperAdmin, rowsPerPage, scopedTeamKey, searchQuery, statusFilter, teamFilter, toast]);
+  }, [actorMode, actualIsSuperAdmin, associationFilter, clubFilter, currentPage, divisionFilter, hidePlaceholders, isSuperAdmin, rowsPerPage, scopedAssociationIds, scopedClubIds, scopedTeamIds, scopedTeamKey, searchQuery, statusFilter, teamFilter, toast]);
 
   const fetchPrimaryRequests = async () => {
     const { data } = await supabase
@@ -654,7 +769,12 @@ const UsersManagement = () => {
 
   const handleApproveMembership = async (membershipId: string) => {
     const membership = selectedUser?.memberships.find((item) => item.id === membershipId);
-    const { error } = await supabase.from("team_memberships").update({ status: "ACTIVE" }).eq("id", membershipId);
+    const { error } = await supabase.rpc("admin_manage_team_membership" as never, {
+      p_membership_id: membershipId,
+      p_action: "APPROVE",
+      p_membership_type: null,
+      p_actor_mode: actorMode,
+    } as never);
     if (error) {
       toast({ title: "Error", description: "Failed to approve", variant: "destructive" });
     } else {
@@ -673,7 +793,12 @@ const UsersManagement = () => {
   };
 
   const handleDeclineMembership = async (membershipId: string) => {
-    const { error } = await supabase.from("team_memberships").update({ status: "DECLINED" }).eq("id", membershipId);
+    const { error } = await supabase.rpc("admin_manage_team_membership" as never, {
+      p_membership_id: membershipId,
+      p_action: "DECLINE",
+      p_membership_type: null,
+      p_actor_mode: actorMode,
+    } as never);
     if (error) {
       toast({ title: "Error", description: "Failed to decline", variant: "destructive" });
     } else {
@@ -833,6 +958,7 @@ const UsersManagement = () => {
       p_manager_scopes: p_manager_scopes.length > 0 ? p_manager_scopes : null,
       p_association_admin_associations: p_association_admin_associations.length > 0 ? p_association_admin_associations : null,
       p_club_admin_scopes: p_club_admin_scopes.length > 0 ? p_club_admin_scopes : null,
+      p_actor_mode: actorMode,
     });
 
     if (error) {
@@ -896,16 +1022,12 @@ const UsersManagement = () => {
         }
       }
 
-      const { error } = await supabase.from("requests" as any).insert({
-        request_type: "TEAM_INVITE",
-        requester_id: user?.id,
-        target_user_id: selectedUser.id,
-        team_id: assignTeamId,
-        association_id: assignAssociationId,
-        club_id: assignClubId,
-        membership_type: assignMembershipType,
-        status: "PENDING",
-      });
+      const { error } = await supabase.rpc("admin_create_team_invite" as never, {
+        p_target_user_id: selectedUser.id,
+        p_team_id: assignTeamId,
+        p_membership_type: assignMembershipType,
+        p_actor_mode: actorMode,
+      } as never);
 
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -933,26 +1055,15 @@ const UsersManagement = () => {
   const handleMakePrimary = async (membershipId: string) => {
     if (!selectedUser) return;
 
-    // Downgrade any existing PRIMARY to SECONDARY first
-    const { error: downgradeError } = await supabase
-      .from("team_memberships")
-      .update({ membership_type: "SECONDARY" })
-      .eq("user_id", selectedUser.id)
-      .eq("membership_type", "PRIMARY");
+    const { error } = await supabase.rpc("admin_manage_team_membership" as never, {
+      p_membership_id: membershipId,
+      p_action: "MAKE_PRIMARY",
+      p_membership_type: null,
+      p_actor_mode: actorMode,
+    } as never);
 
-    if (downgradeError) {
-      toast({ title: "Error", description: downgradeError.message, variant: "destructive" });
-      return;
-    }
-
-    // Upgrade the chosen membership to PRIMARY
-    const { error: upgradeError } = await supabase
-      .from("team_memberships")
-      .update({ membership_type: "PRIMARY" })
-      .eq("id", membershipId);
-
-    if (upgradeError) {
-      toast({ title: "Error", description: upgradeError.message, variant: "destructive" });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
 
@@ -961,10 +1072,12 @@ const UsersManagement = () => {
   };
 
   const handleRemoveMembership = async (membershipId: string) => {
-    const { error } = await supabase
-      .from("team_memberships")
-      .delete()
-      .eq("id", membershipId);
+    const { error } = await supabase.rpc("admin_manage_team_membership" as never, {
+      p_membership_id: membershipId,
+      p_action: "REMOVE",
+      p_membership_type: null,
+      p_actor_mode: actorMode,
+    } as never);
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -981,11 +1094,10 @@ const UsersManagement = () => {
   };
 
   const handleCancelInvite = async (requestId: string) => {
-    const { error } = await supabase
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .from("requests" as any)
-      .update({ status: "CANCELLED", cancelled_by: user?.id })
-      .eq("id", requestId);
+    const { error } = await supabase.rpc("admin_cancel_team_invite" as never, {
+      p_request_id: requestId,
+      p_actor_mode: actorMode,
+    } as never);
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -1925,7 +2037,13 @@ const UsersManagement = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(u)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenEditDialog(u)}
+                            disabled={!canEditUser(u)}
+                            title={!canEditUser(u) ? "Your active role cannot edit this account" : undefined}
+                          >
                             <Pencil className="mr-2 h-4 w-4" />
                             Edit Details
                           </Button>
@@ -1977,6 +2095,9 @@ const UsersManagement = () => {
           teamsContent={teamsTabContent}
           onSaveRoles={handleSaveRoles}
           rolesSaving={saving}
+          actorMode={actorMode}
+          canManageAuthentication={actualIsSuperAdmin && actorMode === "super_admin"}
+          membershipOnly={actorMode === "team_manager"}
           onSuccess={async () => {
             const freshUsers = await fetchUsers();
             setSelectedUser((prev) => {

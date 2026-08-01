@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 // Import the Supabase client from our integration package
 import { supabase as originalSupabase } from "@/integrations/supabase/client";
 // Import the custom hook to check user administration permissions and scopes
@@ -84,8 +85,13 @@ type SubmissionRow = {
   submitted_at: string;
 };
 
+type MvpAnalyticsView = "leaderboard" | "completion" | "individual";
+
+const readRounds = (value: string | null) => value ? value.split(",").filter(Boolean) : ["all"];
+
 export default function Analytics() {
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // 1. ACCESS CONTROL AND PERMISSIONS
   // Any user with administrative access (isAnyAdmin) is allowed on this page.
@@ -109,26 +115,87 @@ export default function Analytics() {
   const [allDivisions, setAllDivisions] = useState<any[]>([]);
   const [allTeams, setAllTeams] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const [analyticsCascade, setAnalyticsCascade] = useState<CascadeValue>(emptyCascadeValue);
+  const [analyticsCascade, setAnalyticsCascade] = useState<CascadeValue>({
+    associationId: searchParams.get("association") || ALL_CASCADE_VALUE,
+    clubId: searchParams.get("club") || ALL_CASCADE_VALUE,
+    divisionId: searchParams.get("division") || ALL_CASCADE_VALUE,
+    teamId: searchParams.get("team") || ALL_CASCADE_VALUE,
+  });
+  const [analyticsView, setAnalyticsView] = useState<MvpAnalyticsView>(() => {
+    const value = searchParams.get("view");
+    return value === "completion" || value === "individual" ? value : "leaderboard";
+  });
+
+  useEffect(() => {
+    if (!scopeLoading && !isPrivilegedAdmin && analyticsView === "individual") {
+      setAnalyticsView("leaderboard");
+    }
+  }, [analyticsView, isPrivilegedAdmin, scopeLoading]);
 
   // Filter states for the published aggregate view. Individual voter filters
   // belong only in the restricted raw-ballot audit below.
-  const [selectedGrade, setSelectedGrade] = useState<string>("all");
-  const [selectedRounds, setSelectedRounds] = useState<string[]>(["all"]);
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
-  const [selectedVotedFor, setSelectedVotedFor] = useState<string>("all");
+  const [selectedGrade, setSelectedGrade] = useState<string>(searchParams.get("grade") || "all");
+  const [selectedRounds, setSelectedRounds] = useState<string[]>(readRounds(searchParams.get("rounds")));
+  const [startDate, setStartDate] = useState<string>(searchParams.get("from") || "");
+  const [endDate, setEndDate] = useState<string>(searchParams.get("to") || "");
+  const [selectedVotedFor, setSelectedVotedFor] = useState<string>(searchParams.get("player") || "all");
 
   // Filter States for Individual Votes Log table: Grade, Rounds (multi-select), Date Range, Voter, and Voted For
-  const [logSelectedGrade, setLogSelectedGrade] = useState<string>("all");
-  const [logSelectedRounds, setLogSelectedRounds] = useState<string[]>(["all"]);
-  const [logStartDate, setLogStartDate] = useState<string>("");
-  const [logEndDate, setLogEndDate] = useState<string>("");
-  const [logSelectedVoter, setLogSelectedVoter] = useState<string>("all");
-  const [logSelectedVotedFor, setLogSelectedVotedFor] = useState<string>("all");
+  const [logSelectedGrade, setLogSelectedGrade] = useState<string>(searchParams.get("log_grade") || "all");
+  const [logSelectedRounds, setLogSelectedRounds] = useState<string[]>(readRounds(searchParams.get("log_rounds")));
+  const [logStartDate, setLogStartDate] = useState<string>(searchParams.get("log_from") || "");
+  const [logEndDate, setLogEndDate] = useState<string>(searchParams.get("log_to") || "");
+  const [logSelectedVoter, setLogSelectedVoter] = useState<string>(searchParams.get("voter") || "all");
+  const [logSelectedVotedFor, setLogSelectedVotedFor] = useState<string>(searchParams.get("log_player") || "all");
 
   // Search query for the individual votes log
-  const [individualSearchQuery, setIndividualSearchQuery] = useState<string>("");
+  const [individualSearchQuery, setIndividualSearchQuery] = useState<string>(searchParams.get("log_search") || "");
+
+  useEffect(() => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      const values: Record<string, string> = {
+        view: analyticsView,
+        association: analyticsCascade.associationId,
+        club: analyticsCascade.clubId,
+        division: analyticsCascade.divisionId,
+        team: analyticsCascade.teamId,
+        grade: selectedGrade,
+        rounds: selectedRounds.join(","),
+        from: startDate,
+        to: endDate,
+        player: selectedVotedFor,
+        log_grade: logSelectedGrade,
+        log_rounds: logSelectedRounds.join(","),
+        log_from: logStartDate,
+        log_to: logEndDate,
+        voter: logSelectedVoter,
+        log_player: logSelectedVotedFor,
+        log_search: individualSearchQuery,
+      };
+      Object.entries(values).forEach(([key, value]) => {
+        if (!value || value === "all" || value === ALL_CASCADE_VALUE) next.delete(key);
+        else next.set(key, value);
+      });
+      return next;
+    }, { replace: true });
+  }, [
+    analyticsCascade,
+    analyticsView,
+    endDate,
+    individualSearchQuery,
+    logEndDate,
+    logSelectedGrade,
+    logSelectedRounds,
+    logSelectedVotedFor,
+    logSelectedVoter,
+    logStartDate,
+    selectedGrade,
+    selectedRounds,
+    selectedVotedFor,
+    setSearchParams,
+    startDate,
+  ]);
 
   // 3. DATA FETCHING FUNCTION
   // Fetch all necessary rows from Supabase in separate clean queries to prevent join bugs,
@@ -843,10 +910,10 @@ export default function Analytics() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-gray-900 flex items-center gap-2">
-            <BarChart3 className="h-8 w-8 text-primary" /> Analytics
+            <BarChart3 className="h-8 w-8 text-primary" /> MVP Analytics
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Published team results only — closed sessions with no unresolved score concern
+            Player MVP leaderboards, completion and individual vote audit
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={loadData} disabled={dataLoading} className="self-start md:self-auto gap-2">
@@ -872,8 +939,16 @@ export default function Analytics() {
             </div>
           ) : (
             <>
+              <Tabs value={analyticsView} onValueChange={(value) => setAnalyticsView(value as MvpAnalyticsView)}>
+                <TabsList className={`grid w-full ${isPrivilegedAdmin ? "grid-cols-3" : "grid-cols-2"}`}>
+                  <TabsTrigger value="leaderboard">Player Leaderboard</TabsTrigger>
+                  <TabsTrigger value="completion">Vote Completion</TabsTrigger>
+                  {isPrivilegedAdmin && <TabsTrigger value="individual">Individual Votes Log</TabsTrigger>}
+                </TabsList>
+              </Tabs>
+
               {/* SECTION 1: SLICERS (FILTERS) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end bg-muted/30 p-4 rounded-xl border border-border shadow-sm">
+              <div className={`${analyticsView === "individual" ? "hidden" : "grid"} grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end bg-muted/30 p-4 rounded-xl border border-border shadow-sm`}>
                 <AdminCascadeFilters
                   associations={allAssociations}
                   clubs={allClubs}
@@ -1000,7 +1075,7 @@ export default function Analytics() {
               </div>
 
               {/* SECTION 2: STATS CARDS ROW */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className={`${analyticsView === "leaderboard" ? "grid" : "hidden"} grid-cols-1 md:grid-cols-3 gap-6`}>
                 
                 {/* Metric Card A: Total Votes */}
                 <Card className="shadow-sm border-border bg-card">
@@ -1037,7 +1112,7 @@ export default function Analytics() {
               </div>
 
               {/* SECTION 3: LEADERBOARD TABLE */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className={`${analyticsView === "leaderboard" ? "grid" : "hidden"} grid-cols-1 lg:grid-cols-3 gap-6`}>
                 
                 <Card className="shadow-sm border-border lg:col-span-2">
                   <CardHeader className="bg-muted/20 border-b py-4">
@@ -1113,7 +1188,7 @@ export default function Analytics() {
                 </Card>
               </div>
 
-              <Card className="shadow-sm border-border">
+              <Card className={analyticsView === "completion" ? "shadow-sm border-border" : "hidden"}>
                 <CardHeader className="bg-muted/20 border-b py-4">
                   <CardTitle className="text-lg font-bold flex items-center gap-2">
                     <ClipboardList className="h-5 w-5 text-primary" /> Vote Completion
@@ -1174,7 +1249,7 @@ export default function Analytics() {
               </Card>
 
               {/* SECTION 4: RESTRICTED INDIVIDUAL VOTES PANEL */}
-              {isPrivilegedAdmin && (
+              {isPrivilegedAdmin && analyticsView === "individual" && (
                 <Card className="shadow-sm border-border">
                   <CardHeader className="bg-muted/20 border-b py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>

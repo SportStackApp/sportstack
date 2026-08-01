@@ -17,12 +17,13 @@ import {
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Plus, Pencil, Trash2, Shield, ArrowLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import type { Database } from "@/integrations/supabase/types";
+import { useTeamContext } from "@/contexts/TeamContext";
 
 type Club = Database["public"]["Tables"]["clubs"]["Row"];
 type Association = Database["public"]["Tables"]["associations"]["Row"];
@@ -84,6 +85,8 @@ const sanitizeFileName = (filename: string) => filename.replace(/[^a-zA-Z0-9._-]
 
 const ClubsManagement = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { selectedAssociationId } = useTeamContext();
   const { toast } = useToast();
   const { loading: scopeLoading, isSuperAdmin, isAnyAdmin, scopedClubIds, scopedAssociationIds, canManageClub } = useAdminScope();
 
@@ -92,13 +95,18 @@ const ClubsManagement = () => {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [associations, setAssociations] = useState<Association[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterAssociation, setFilterAssociation] = useState<string>("all");
+  const [filterAssociation, setFilterAssociation] = useState<string>(searchParams.get("association") || selectedAssociationId || "all");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [filterAssociation]);
+
+  useEffect(() => {
+    const requested = searchParams.get("association") || selectedAssociationId;
+    if (requested) setFilterAssociation(requested);
+  }, [searchParams, selectedAssociationId]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClub, setEditingClub] = useState<Club | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -677,7 +685,13 @@ const ClubsManagement = () => {
       {(isSuperAdmin || scopedAssociationIds.length > 1) && (
         <div className="flex items-center gap-4">
           <Label>Filter by Association:</Label>
-          <Select value={filterAssociation} onValueChange={setFilterAssociation}>
+          <Select value={filterAssociation} onValueChange={(value) => {
+            setFilterAssociation(value);
+            const next = new URLSearchParams(searchParams);
+            if (value === "all") next.delete("association");
+            else next.set("association", value);
+            setSearchParams(next, { replace: true });
+          }}>
             <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Associations</SelectItem>

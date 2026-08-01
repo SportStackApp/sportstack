@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
+import { membershipPriority } from "@/lib/playerPositions";
 
 import { useTeamContext } from "@/contexts/TeamContext";
 
@@ -125,9 +126,10 @@ export default function CoachingSquad() {
         }, {});
 
         // Build players array
-        const builtPlayers: Player[] = (membersData || []).map((m: any) => {
+        const playersByUser = new Map<string, Player>();
+        (membersData || []).forEach((m: any) => {
           const profile = profileMap.get(m.user_id);
-          return {
+          const candidate: Player = {
             user_id: m.user_id,
             first_name: profile?.first_name || "Unknown",
             last_name: profile?.last_name || "",
@@ -136,7 +138,12 @@ export default function CoachingSquad() {
             membership_type: m.membership_type || "PRIMARY",
             assessments: (assessmentsByPlayer[m.user_id] || []).slice(0, 3)
           };
+          const current = playersByUser.get(m.user_id);
+          if (!current || (membershipPriority[candidate.membership_type] || 0) > (membershipPriority[current.membership_type] || 0)) {
+            playersByUser.set(m.user_id, candidate);
+          }
         });
+        const builtPlayers = Array.from(playersByUser.values());
 
         // Sort: Primary first, then alphabetically
         builtPlayers.sort((a, b) => {
@@ -199,11 +206,27 @@ export default function CoachingSquad() {
     );
   }
 
+  const membershipCounts = players.reduce(
+    (counts, player) => ({ ...counts, [player.membership_type]: (counts[player.membership_type] || 0) + 1 }),
+    {} as Record<string, number>,
+  );
+
   return (
     <div className="p-4 lg:p-8 space-y-8 max-w-7xl mx-auto">
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight uppercase">MY SQUAD</h1>
         {teamName && <p className="text-muted-foreground mt-1 text-lg">{teamName}</p>}
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        {(["PRIMARY", "SECONDARY", "FILL_IN"] as const).map((type) => (
+          <Card key={type}>
+            <CardContent className="flex items-center justify-between p-3">
+              <MembershipTypeBadge membershipType={type} />
+              <span className="text-2xl font-semibold">{membershipCounts[type] || 0}</span>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {players.length === 0 ? (

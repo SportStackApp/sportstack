@@ -71,6 +71,7 @@ import TeamDashboard from "./pages/TeamDashboard";
 // Layout
 import AppLayout from "./components/layout/AppLayout";
 import { GlobalLoadingBar } from "./components/GlobalLoadingBar";
+import { ThemeAccountSync } from "./components/ThemeAccountSync";
 
 // Auth
 import { AuthProvider } from "./contexts/AuthContext";
@@ -118,6 +119,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
+        <ThemeAccountSync />
         <TestRoleProvider>
           <AppModeProvider>
             <TeamProvider>

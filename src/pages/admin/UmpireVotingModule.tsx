@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   CalendarDays,
@@ -252,7 +253,11 @@ interface LeaderboardRow {
   threes: number;
   twos: number;
   ones: number;
+  divisionTotals: Record<string, number>;
 }
+
+const readQueryList = (value: string | null) =>
+  value ? value.split(",").map((item) => item.trim()).filter(Boolean) : [];
 
 interface EditHistoryRow {
   id: string;
@@ -376,6 +381,7 @@ const matchesVotingScope = (
 };
 
 export default function UmpireVotingModule() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const {
     loading: scopeLoading,
@@ -397,15 +403,19 @@ export default function UmpireVotingModule() {
   const [fixtures, setFixtures] = useState<FixtureRow[]>([]);
   const [seasons, setSeasons] = useState<SeasonRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [associationFilters, setAssociationFilters] = useState<string[]>([]);
-  const [seasonFilters, setSeasonFilters] = useState<string[]>([]);
-  const [clubFilters, setClubFilters] = useState<string[]>([]);
-  const [divisionFilters, setDivisionFilters] = useState<string[]>([]);
-  const [teamFilters, setTeamFilters] = useState<string[]>([]);
-  const [roundFilters, setRoundFilters] = useState<string[]>([]);
-  const [statusFilter, setStatusFilter] = useState<"PENDING" | "APPROVED" | "DELETED" | "ALL">("PENDING");
-  const [showDeleted, setShowDeleted] = useState(false);
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "dashboard");
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get("query") || "");
+  const [associationFilters, setAssociationFilters] = useState<string[]>(() => readQueryList(searchParams.get("associations")));
+  const [seasonFilters, setSeasonFilters] = useState<string[]>(() => readQueryList(searchParams.get("seasons")));
+  const [clubFilters, setClubFilters] = useState<string[]>(() => readQueryList(searchParams.get("clubs")));
+  const [divisionFilters, setDivisionFilters] = useState<string[]>(() => readQueryList(searchParams.get("divisions")));
+  const [teamFilters, setTeamFilters] = useState<string[]>(() => readQueryList(searchParams.get("teams")));
+  const [roundFilters, setRoundFilters] = useState<string[]>(() => readQueryList(searchParams.get("rounds")));
+  const [statusFilter, setStatusFilter] = useState<"PENDING" | "APPROVED" | "DELETED" | "ALL">(() => {
+    const value = searchParams.get("status");
+    return value === "APPROVED" || value === "DELETED" || value === "ALL" ? value : "PENDING";
+  });
+  const [showDeleted, setShowDeleted] = useState(() => searchParams.get("showDeleted") === "true");
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionRow | null>(null);
   const [updatingSubmissionId, setUpdatingSubmissionId] = useState<string | null>(null);
   const [reviewAction, setReviewAction] = useState<"SAVE" | "APPROVE" | "REOPEN" | null>(null);
@@ -494,6 +504,42 @@ export default function UmpireVotingModule() {
   useEffect(() => {
     if (hasAccess) loadData();
   }, [hasAccess, loadData]);
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    const setList = (key: string, values: string[]) => {
+      if (values.length > 0) next.set(key, values.join(","));
+      else next.delete(key);
+    };
+
+    next.set("tab", activeTab);
+    if (searchTerm.trim()) next.set("query", searchTerm.trim());
+    else next.delete("query");
+    setList("associations", associationFilters);
+    setList("seasons", seasonFilters);
+    setList("clubs", clubFilters);
+    setList("divisions", divisionFilters);
+    setList("teams", teamFilters);
+    setList("rounds", roundFilters);
+    next.set("status", statusFilter);
+    if (showDeleted) next.set("showDeleted", "true");
+    else next.delete("showDeleted");
+
+    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
+  }, [
+    activeTab,
+    associationFilters,
+    clubFilters,
+    divisionFilters,
+    roundFilters,
+    searchParams,
+    searchTerm,
+    seasonFilters,
+    setSearchParams,
+    showDeleted,
+    statusFilter,
+    teamFilters,
+  ]);
 
   const teamNameMap = useMemo(
     () => new Map(teams.map((team) => [team.id, getUmpireTeamLabel(team, clubs, divisions)])),
@@ -1014,16 +1060,22 @@ export default function UmpireVotingModule() {
           threes: 0,
           twos: 0,
           ones: 0,
+          divisionTotals: {},
         };
         existing.total += line.votes;
         if (line.votes === 3) existing.threes += 1;
         if (line.votes === 2) existing.twos += 1;
         if (line.votes === 1) existing.ones += 1;
+        const context = submissionContextMap.get(line.submission_id);
+        const divisionName = context?.divisionId
+          ? divisionNameMap.get(context.divisionId) || "Unknown division"
+          : "Unassigned division";
+        existing.divisionTotals[divisionName] = (existing.divisionTotals[divisionName] || 0) + line.votes;
         rows.set(playerKey, existing);
       });
 
     return Array.from(rows.values()).sort((a, b) => b.total - a.total || b.threes - a.threes || a.playerName.localeCompare(b.playerName));
-  }, [voteLines, approvedScopedSubmissionIds, teamNameMap]);
+  }, [voteLines, approvedScopedSubmissionIds, teamNameMap, submissionContextMap, divisionNameMap]);
 
   const dashboard = useMemo(() => {
     const eligibleFixtures = scopedFixtures.filter((fixture) => {
@@ -1290,7 +1342,11 @@ export default function UmpireVotingModule() {
           ? reviewDrafts.map((line) => ({
               line_id: line.id,
               profile_id: line.profileId,
-              player_name: line.playerName.trim(),
+              // Linked vote lines always store the SportStack display name. The raw
+              // submitted name remains available in the immutable correction audit.
+              player_name: line.profileId
+                ? profileNameMap.get(line.profileId) || line.playerName.trim()
+                : line.playerName.trim(),
               player_number: line.playerNumber.trim() === "" ? null : Number(line.playerNumber),
               team_id: line.teamId,
             }))
@@ -1472,7 +1528,7 @@ export default function UmpireVotingModule() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="dashboard" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid h-auto w-full grid-cols-3">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="submissions">Vote Submissions</TabsTrigger>
@@ -1756,7 +1812,17 @@ export default function UmpireVotingModule() {
                       <TableRow key={row.playerKey}>
                         <TableCell className="font-semibold">{index + 1}</TableCell>
                         <TableCell>{row.playerName}</TableCell>
-                        <TableCell>{row.teamName}</TableCell>
+                        <TableCell>
+                          <p>{row.teamName}</p>
+                          {Object.keys(row.divisionTotals).length > 1 && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {Object.entries(row.divisionTotals)
+                                .sort(([a], [b]) => a.localeCompare(b))
+                                .map(([division, total]) => `${division}: ${total}`)
+                                .join(" · ")}
+                            </p>
+                          )}
+                        </TableCell>
                         <TableCell className="text-center">{row.threes}</TableCell>
                         <TableCell className="text-center">{row.twos}</TableCell>
                         <TableCell className="text-center">{row.ones}</TableCell>
