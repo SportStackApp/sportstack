@@ -127,7 +127,7 @@ export default function CoachingSquad() {
 
         // Build players array
         const playersByUser = new Map<string, Player>();
-        (membersData || []).forEach((m: any) => {
+        (membersData || []).forEach((m) => {
           const profile = profileMap.get(m.user_id);
           const candidate: Player = {
             user_id: m.user_id,

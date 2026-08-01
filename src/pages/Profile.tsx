@@ -234,7 +234,7 @@ const Profile = () => {
 
         // Transform the data to match our interface
         const transformedByTeam = new Map<string, TeamMembershipData>();
-        membershipData.forEach((m: any) => {
+        membershipData.forEach((m) => {
           const teamObj = teamMap[m.team_id];
           // clubs could be an array or an object depending on PostgREST, but usually an object for many-to-one
           const club = Array.isArray(teamObj?.clubs) ? teamObj.clubs[0] : teamObj?.clubs;

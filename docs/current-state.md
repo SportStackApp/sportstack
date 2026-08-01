@@ -108,7 +108,7 @@ The 1 August Owner-Test remediation package adds nine Dev-only additive migratio
 frontend workflows. All new administration RPCs deny anonymous execution, all new public tables
 have Row Level Security enabled, and the `committee-files` bucket is private with a 20 MB limit.
 The package passes `npm run lint:dev-plan`, `npx tsc --noEmit` and `npm run build`. Repository-wide
-lint remains legacy debt: 440 current issues versus 442 before this package.
+lint remains legacy debt: 438 current issues versus 442 before this package.
 
 The approved Production compatibility release completed on 29 July 2026. Local and remote `dev`,
 `main` and `prod` were confirmed aligned at `53561de` before the 30 July Dev-only scraper-routine

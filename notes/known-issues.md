@@ -50,7 +50,7 @@ Still required before staging:
 - Test multi-team and multi-role cascade state through refresh, logout/login and incognito.
 - Test committee private uploads, Safety Hub matrix/link changes and the two voting workflows with
   clearly marked disposable Dev records.
-- Report repository-wide lint separately until its legacy 440-issue backlog is resolved.
+- Report repository-wide lint separately until its legacy 438-issue backlog is resolved.
 
 ## Email Template Polish
 **Logged:** 30 June 2026  

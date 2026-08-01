@@ -23,7 +23,7 @@ Future agents should start by reading these files in order:
   multiple active Primary memberships (490 captured rows). New invalid writes are blocked; no
   historical row was changed and cleanup still requires separate approval.
 - Quality status for the package: development-plan lint, TypeScript and production build pass.
-  Repository-wide lint is an existing backlog at 440 issues, down from the 442-issue start.
+  Repository-wide lint is an existing backlog at 438 issues, down from the 442-issue start.
 
 - A guarded, backup-first Umpire Portal Production release script and runbook are prepared for
   `dev` and `main` staging. The script is pinned to the exact Production Supabase project, two
