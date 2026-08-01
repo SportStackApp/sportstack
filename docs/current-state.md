@@ -104,11 +104,17 @@ The backend is Supabase: Postgres, Auth, Storage, Row Level Security, and Edge F
 
 ## Recently changed
 
-The 1 August Owner-Test remediation package adds nine Dev-only additive migrations and the matching
+The 1 August Owner-Test remediation package adds ten Dev-only additive migrations and the matching
 frontend workflows. All new administration RPCs deny anonymous execution, all new public tables
 have Row Level Security enabled, and the `committee-files` bucket is private with a 20 MB limit.
 The package passes `npm run lint:dev-plan`, `npx tsc --noEmit` and `npm run build`. Repository-wide
 lint remains legacy debt: 438 current issues versus 442 before this package.
+
+The first owner test exposed one live-schema drift in `admin_save_user_roles`: the function retained
+the old `public.app_role` name while Dev uses `public.user_role_enum`. Additive migration
+`20260801131220_fix_admin_role_enum_reference.sql` corrected only that reference. A Super Admin
+role save, including Association Admin scope, passed inside a rolled-back Dev transaction; no user
+or role data was changed by the verification.
 
 The approved Production compatibility release completed on 29 July 2026. Local and remote `dev`,
 `main` and `prod` were confirmed aligned at `53561de` before the 30 July Dev-only scraper-routine
@@ -147,6 +153,7 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 - The Owner-Test remediation package still needs its integrated actual-account test across all six
   roles, multi-team cascade state, incognito theme persistence, committee uploads and Safety Hub
   linking. Viewing-as checks alone do not close this item.
+- Refresh and repeat the Super Admin user-list and role-save test after the Dev enum-reference fix.
 - Historical duplicate membership cleanup remains parked. The immutable snapshot and dry-run totals
   are ready, but no row can be consolidated without Aaron approving the exact keep/remove report.
 - Umpire Portal staging is waiting at an explicit approval gate: the current `dev` package includes

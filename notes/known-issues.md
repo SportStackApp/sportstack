@@ -43,6 +43,10 @@ The locked remediation package is implemented across permissions, persistence, n
 Fixtures/Communications, Player MVP Voting, Umpire Match Voting, Coaching/Profile, Safety Hub and
 Committee Management. Focused plan lint, TypeScript and build pass.
 
+The first Super Admin test found and resolved a stale role-enum reference in the Dev
+`admin_save_user_roles` function. The database rollback test passes; browser confirmation after a
+refresh remains pending.
+
 Still required before staging:
 
 - Test with separate real Super Admin, Association Admin, Club Admin, Team Manager, Coach and Player

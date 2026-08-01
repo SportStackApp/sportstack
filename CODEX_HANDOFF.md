@@ -17,8 +17,12 @@ Future agents should start by reading these files in order:
   cascade/navigation, Fixtures and Communications, both voting modules, Coaching/Profile,
   Safety Hub and Committee Management. `main`, `prod`, Production Supabase, DNS and redirects are
   unchanged.
-- Nine additive Dev migrations were applied. All new public tables have RLS, new administrative
+- Ten additive Dev migrations were applied. All new public tables have RLS, new administrative
   functions reject anonymous execution, and private committee uploads are limited to 20 MB.
+- The first owner test found a stale `public.app_role` cast in `admin_save_user_roles`. Dev actually
+  uses `public.user_role_enum`; migration `20260801131220_fix_admin_role_enum_reference.sql` fixes
+  that single reference. The corrected save completed in a rolled-back Dev transaction and now
+  needs one browser refresh/retest.
 - The historical-membership snapshot contains 201 duplicate user/team groups and 44 users with
   multiple active Primary memberships (490 captured rows). New invalid writes are blocked; no
   historical row was changed and cleanup still requires separate approval.
