@@ -57,6 +57,11 @@ function-access checks, mode isolation and exact permission-group scope/member h
 checks pass. Seven isolated Dev role accounts are prepared; the actual-role browser matrix remains
 pending. Matching Dev commit `a06ae9a` and the two updated voting Edge Functions are live.
 
+The test accounts use one-time credentials that are not stored in the repository. The provisioner
+intentionally refuses to reset an existing identity, so the unattended agent cannot recover those
+credentials or honestly complete separate-login testing. Aaron must supply fresh authenticated
+sessions for the prepared accounts; no secret access or authentication bypass is acceptable.
+
 The 2 August hands-off pass traversed the main Dev modules without writing application data.
 Commits `879d184` and `5514996` added guards for deliberate Super Admin selection and passed their
 automated checks, but fresh deployed build `5514996` still redirects `/admin` to `/dashboard` and
@@ -98,6 +103,8 @@ is open. The pass also confirmed these remaining gaps:
   `Tom Batchelor`. The Line-up screen otherwise loaded its roster, availability labels, formation
   positions and Coach controls without a write. Historical membership cleanup remains separately
   approval-gated.
+- Fresh 1280 x 720 checks found no horizontal overflow on seven primary pages. Tablet/mobile
+  integrated testing remains pending because the authenticated in-app browser has a fixed viewport.
 - Team-chat unread counts exclude the sender and self-mentions are suppressed, but Club/Association
   broadcast notification and email recipient queries still include the author.
 

@@ -91,12 +91,21 @@ Future agents should start by reading these files in order:
 - Seven isolated Dev test accounts now exist for Association Admin, Club Admin, Team Manager,
   Coach, Player, Umpire and Voter testing. No credentials are stored in the repository. The safe
   duplicate-provisioning check returned `409` without resetting or rescoping the existing account.
+- A hands-off continuation confirmed those one-time credentials cannot be recovered from the
+  repository or provisioner: existing identities are intentionally rejected without a password
+  reset. Separate-login testing therefore needs Aaron to supply a fresh authenticated session for
+  each disposable account; no secret access or authentication bypass is permitted.
 - The historical-membership snapshot contains 201 duplicate user/team groups and 44 users with
   multiple active Primary memberships (490 captured rows). New invalid writes are blocked; no
   historical row was changed and cleanup still requires separate approval.
 - Quality status for the package: baseline-aware development-plan lint, TypeScript, production
   build and 30 focused migration/security tests pass. Repository-wide lint remains a separate baseline
   of 362 errors and 76 warnings.
+- On commit `4390b47`, 32 focused session-context, voting-module, Committee/Safety and SQL-safety
+  `unittest` checks passed. Full `npm run lint` still reports the same 362-error/76-warning baseline.
+  Fresh 1280 x 720 browser checks found no document-level horizontal overflow on My Dashboard,
+  Fixtures, Communications, Roster, Formation Library, Safety Hub or Committee Management. Tablet
+  and mobile widths remain unverified in the current fixed-width authenticated browser.
 
 - A guarded, backup-first Umpire Portal Production release script and runbook are prepared for
   `dev` and `main` staging. The script is pinned to the exact Production Supabase project, two

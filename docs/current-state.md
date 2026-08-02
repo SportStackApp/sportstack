@@ -62,6 +62,15 @@ MVP Analytics. The Umpire ballot authorises from stored account roles, while `us
 Team Manager as an admin and `/admin/analytics` has no direct module gate. Safety Hub rendered its
 empty scoped screen and Committee correctly reported no accessible committees in the same preview.
 
+A continuation on deployed build `4390b47` re-ran 32 focused session-context, voting-module,
+Committee/Safety and SQL-safety checks; all passed. Full lint remains at its known 362-error and
+76-warning baseline. Fresh 1280 x 720 checks found no document-level horizontal overflow on My
+Dashboard, Fixtures, Communications, Roster, Formation Library, Safety Hub or Committee
+Management. The authenticated in-app browser has a fixed viewport, so the current integrated
+tablet/mobile pass remains unproven. The seven prepared role accounts use one-time credentials that
+are not stored and the provisioner deliberately refuses resets; actual-role sign-ins require fresh
+owner-supplied authenticated sessions and must not be replaced with an authentication bypass.
+
 This package hardens scoped administration, preserves state consistently, separates Player MVP
 Voting from Umpire Match Voting, and completes the tested Fixtures, Communications, Coaching,
 Safety Hub and Committee workflows. It also adds recoverable route errors, immutable chat revision
