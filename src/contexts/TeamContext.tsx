@@ -79,6 +79,7 @@ interface TeamContextType {
   selectedClub: Club | undefined;
   selectedTeam: Team | undefined;
   loading: boolean;
+  selectionHydrated: boolean;
 }
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
@@ -121,13 +122,16 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [selectedDivision, setSelectedDivision] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectionHydrated, setSelectionHydrated] = useState(false);
 
   useEffect(() => {
+    setSelectionHydrated(false);
     if (!user?.id) {
       setSelectedAssociationId("");
       setSelectedClubId("");
       setSelectedTeamId("");
       setSelectedDivision("");
+      setSelectionHydrated(true);
       return;
     }
 
@@ -135,6 +139,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     setSelectedClubId(localStorage.getItem(selectionKey(user.id, "club")) || "");
     setSelectedDivision(localStorage.getItem(selectionKey(user.id, "division")) || "");
     setSelectedTeamId(localStorage.getItem(selectionKey(user.id, "team")) || "");
+    setSelectionHydrated(true);
   }, [user?.id]);
 
   useEffect(() => {
@@ -271,33 +276,37 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   }, [user?.id]);
 
   useEffect(() => {
+    if (loading) return;
     if (!selectedAssociationId) return;
     if (!associations.some((association) => association.id === selectedAssociationId)) {
       handleAssociationChange("");
     }
-  }, [associations, handleAssociationChange, selectedAssociationId]);
+  }, [associations, handleAssociationChange, loading, selectedAssociationId]);
 
   useEffect(() => {
+    if (loading) return;
     if (!selectedClubId) return;
     const selectedClub = clubs.find((club) => club.id === selectedClubId);
     if (!selectedClub || (selectedAssociationId && selectedClub.association_id !== selectedAssociationId)) {
       handleClubChange("");
     }
-  }, [clubs, handleClubChange, selectedAssociationId, selectedClubId]);
+  }, [clubs, handleClubChange, loading, selectedAssociationId, selectedClubId]);
 
   useEffect(() => {
+    if (loading) return;
     if (!selectedDivision) return;
     if (filteredDivisions.length > 0 && !filteredDivisions.some((division) => division.id === selectedDivision)) {
       handleDivisionChange("");
     }
-  }, [filteredDivisions, handleDivisionChange, selectedDivision]);
+  }, [filteredDivisions, handleDivisionChange, loading, selectedDivision]);
 
   useEffect(() => {
+    if (loading) return;
     if (!selectedTeamId) return;
     if (filteredTeams.length > 0 && !filteredTeams.some((team) => team.id === selectedTeamId)) {
       handleTeamChange("");
     }
-  }, [filteredTeams, handleTeamChange, selectedTeamId]);
+  }, [filteredTeams, handleTeamChange, loading, selectedTeamId]);
 
   // Team switching needs to change the full cascade together. Calling each
   // normal setter in sequence clears the levels below it and causes visible
@@ -406,6 +415,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         selectedClub,
         selectedTeam,
         loading,
+        selectionHydrated,
       }}
     >
       {children}

@@ -121,8 +121,8 @@ const App = () => (
       <AuthProvider>
         <ThemeAccountSync />
         <TestRoleProvider>
-          <AppModeProvider>
-            <TeamProvider>
+          <TeamProvider>
+            <AppModeProvider>
               <Toaster />
               <Sonner />
               <BrowserRouter>
@@ -200,8 +200,8 @@ const App = () => (
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
-            </TeamProvider>
-          </AppModeProvider>
+            </AppModeProvider>
+          </TeamProvider>
         </TestRoleProvider>
       </AuthProvider>
     </TooltipProvider>

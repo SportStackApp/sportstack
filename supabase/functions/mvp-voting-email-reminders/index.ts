@@ -37,6 +37,7 @@ type TeamScope = {
   mvp_notifications_enabled: boolean;
   club_id: string;
   association_id: string | null;
+  division_id: string | null;
   timezone: string;
 };
 
@@ -45,7 +46,15 @@ type TeamScopeRow = {
   mvp_enabled: boolean;
   mvp_notifications_enabled: boolean;
   club_id: string;
+  division_id: string | null;
   clubs: { association_id: string | null } | Array<{ association_id: string | null }> | null;
+};
+
+type ModuleScope = {
+  associationId: string | null;
+  clubId: string | null;
+  divisionId: string | null;
+  teamId: string | null;
 };
 
 type EligiblePlayer = {
@@ -303,7 +312,7 @@ async function loadTeamScopes(
 
   const { data, error } = await serviceClient
     .from("teams")
-    .select("id, mvp_enabled, mvp_notifications_enabled, club_id, clubs(association_id)")
+    .select("id, mvp_enabled, mvp_notifications_enabled, club_id, division_id, clubs(association_id)")
     .in("id", teamIds);
   if (error) throw error;
 
@@ -333,12 +342,69 @@ async function loadTeamScopes(
       mvp_notifications_enabled: Boolean(row.mvp_notifications_enabled),
       club_id: row.club_id,
       association_id: club?.association_id || null,
+      division_id: row.division_id,
       timezone: club?.association_id
         ? timezoneByAssociation.get(club.association_id) || MELBOURNE_TZ
         : MELBOURNE_TZ,
     });
   }
   return teams;
+}
+
+async function loadFixtureDivisions(
+  serviceClient: ServiceClient,
+  fixtureIds: string[],
+) {
+  const divisions = new Map<string, string | null>();
+  if (fixtureIds.length === 0) return divisions;
+
+  const { data, error } = await serviceClient
+    .from("fixtures")
+    .select("id, division_id")
+    .in("id", fixtureIds);
+  if (error) throw error;
+
+  ((data || []) as Array<{ id: string; division_id: string | null }>).forEach((fixture) => {
+    divisions.set(fixture.id, fixture.division_id);
+  });
+  return divisions;
+}
+
+async function scopeModuleEnabled(
+  serviceClient: ServiceClient,
+  moduleKey: "player_mvp" | "umpire_match_voting",
+  scope: ModuleScope,
+) {
+  const { data, error } = await serviceClient.rpc("resolve_module_enabled", {
+    p_module_key: moduleKey,
+    p_association_id: scope.associationId,
+    p_club_id: scope.clubId,
+    p_division_id: scope.divisionId,
+    p_team_id: scope.teamId,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
+async function currentSessionModuleEnabled(
+  req: Request,
+  moduleKey: "player_mvp" | "umpire_match_voting",
+  scope: ModuleScope,
+) {
+  const authHeader = req.headers.get("Authorization") || "";
+  const sessionClient = createClient(getEnv("SUPABASE_URL"), getEnv("SUPABASE_ANON_KEY"), {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await sessionClient.rpc("current_session_can_access_voting_module", {
+    p_module_key: moduleKey,
+    p_association_id: scope.associationId,
+    p_club_id: scope.clubId,
+    p_division_id: scope.divisionId,
+    p_team_id: scope.teamId,
+  });
+  if (error) return false;
+  return data === true;
 }
 
 function callerCanManageTeam(roles: CallerRole[], team: TeamScope) {
@@ -716,7 +782,11 @@ Deno.serve(async (req) => {
 
     const sessions = await loadSessions(serviceClient, action, payload.session_id);
     const teamIds = Array.from(new Set(sessions.map((session) => session.team_id).filter(Boolean))) as string[];
+    const fixtureIds = Array.from(
+      new Set(sessions.map((session) => session.fixture_id).filter(Boolean)),
+    ) as string[];
     const teamScopes = await loadTeamScopes(serviceClient, teamIds);
+    const fixtureDivisions = await loadFixtureDivisions(serviceClient, fixtureIds);
     const now = new Date();
     const totals = { sessions: 0, sent: 0, skipped: 0, failed: 0, deferred: 0 };
     const scheduledBudget: SendBudget | undefined = action === "scheduled"
@@ -729,6 +799,23 @@ Deno.serve(async (req) => {
       if (!team?.mvp_enabled) continue;
       if (!auth.isCron && !callerCanManageTeam(auth.roles, team)) {
         throw new RequestError("You do not manage this team.", 403);
+      }
+      const moduleScope: ModuleScope = {
+        associationId: team.association_id,
+        clubId: team.club_id,
+        divisionId: session.fixture_id
+          ? fixtureDivisions.get(session.fixture_id) || team.division_id
+          : team.division_id,
+        teamId: team.id,
+      };
+      const moduleEnabled = auth.isCron
+        ? await scopeModuleEnabled(serviceClient, "player_mvp", moduleScope)
+        : await currentSessionModuleEnabled(req, "player_mvp", moduleScope);
+      if (!moduleEnabled) {
+        if (!auth.isCron) {
+          throw new RequestError("Player MVP Voting is turned off for this scope.", 403);
+        }
+        continue;
       }
       if (!team.mvp_notifications_enabled) {
         if (!auth.isCron) {

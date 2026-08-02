@@ -36,7 +36,7 @@ const ADMIN_ROLES: AppRole[] = ["SUPER_ADMIN", "ASSOCIATION_ADMIN", "CLUB_ADMIN"
 
 export function useAdminScope(): AdminScope {
   const { user } = useAuth();
-  const { activeMode } = useAppMode();
+  const { activeMode, contextConfirmed, modeSyncError } = useAppMode();
   const { selectedAssociationId, selectedClubId, selectedTeamId } = useTeamContext();
   const [loading, setLoading] = useState(true);
   const [scopedRoles, setScopedRoles] = useState<ScopedRole[]>([]);
@@ -167,9 +167,13 @@ export function useAdminScope(): AdminScope {
     selectedTeamId,
   ]);
 
-  const canManageAssociation = (id: string) => isSuperAdmin || scopedAssociationIds.includes(id);
-  const canManageClub = (id: string) => isSuperAdmin || scopedClubIds.includes(id);
-  const canManageTeam = (id: string) => isSuperAdmin || scopedTeamIds.includes(id);
+  const scopeIsConfirmed = contextConfirmed && !modeSyncError;
+  const canManageAssociation = (id: string) => scopeIsConfirmed
+    && (isSuperAdmin || scopedAssociationIds.includes(id));
+  const canManageClub = (id: string) => scopeIsConfirmed
+    && (isSuperAdmin || scopedClubIds.includes(id));
+  const canManageTeam = (id: string) => scopeIsConfirmed
+    && (isSuperAdmin || scopedTeamIds.includes(id));
 
   const ROLE_HIERARCHY: AppRole[] = ["SUPER_ADMIN", "ASSOCIATION_ADMIN", "CLUB_ADMIN", "TEAM_MANAGER", "COACH", "PLAYER"];
   const highestScopedRole = scopedRoles.length > 0
@@ -178,10 +182,10 @@ export function useAdminScope(): AdminScope {
 
   return {
     loading,
-    scopeLoading: loading,
-    isSuperAdmin,
+    scopeLoading: loading || !scopeIsConfirmed,
+    isSuperAdmin: scopeIsConfirmed && isSuperAdmin,
     actualIsSuperAdmin,
-    isAnyAdmin,
+    isAnyAdmin: scopeIsConfirmed && isAnyAdmin,
     actorMode,
     scopedRoles,
     scopedAssociationIds,

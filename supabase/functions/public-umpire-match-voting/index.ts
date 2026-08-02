@@ -20,6 +20,16 @@ interface FixtureContext {
   schemeLines: VoteSchemeLine[];
 }
 
+class RequestError extends Error {
+  status: number;
+
+  constructor(message: string, status = 400) {
+    super(message);
+    this.name = "RequestError";
+    this.status = status;
+  }
+}
+
 const LOCAL_TURNSTILE_SECRET = "1x0000000000000000000000000000000AA";
 const DEV_PROJECT_REF = "icqegnpjbizccjebjfhb";
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -167,6 +177,25 @@ const loadAssociationStructure = async (serviceClient: any, associationId: strin
   return { clubs: clubs || [], teams: teams || [] };
 };
 
+const loadModuleEnabledFixtureIds = async (
+  serviceClient: any,
+  fixtureIds: string[],
+) => {
+  const enabledFixtureIds = new Set<string>();
+  for (const ids of chunksOf(Array.from(new Set(fixtureIds)), 500)) {
+    if (ids.length === 0) continue;
+    const { data, error } = await serviceClient.rpc(
+      "umpire_match_voting_enabled_fixture_ids",
+      { p_fixture_ids: ids },
+    );
+    if (error) throw error;
+    for (const row of data || []) {
+      if (isUuid(row?.fixture_id)) enabledFixtureIds.add(row.fixture_id);
+    }
+  }
+  return enabledFixtureIds;
+};
+
 const loadFixtureContext = async (
   serviceClient: any,
   association: { id: string; name: string },
@@ -220,6 +249,13 @@ const loadFixtureContext = async (
   }
   if (!fixtureIsEligible(fixture)) {
     throw new Error("Votes are not open for this fixture yet.");
+  }
+  const moduleEnabledFixtureIds = await loadModuleEnabledFixtureIds(
+    serviceClient,
+    [fixture.id],
+  );
+  if (!moduleEnabledFixtureIds.has(fixture.id)) {
+    throw new RequestError("Umpire Match Voting is turned off for this fixture.", 403);
   }
 
   const scheme = getScheme(division.name, division.age_group);
@@ -294,38 +330,43 @@ const loadMatchOptions = async (serviceClient: any, association: { id: string; n
     divisionRows.push(...(data || []));
   }
   const divisionMap = new Map(divisionRows.map((division) => [division.id, division]));
+  const moduleEnabledFixtureIds = await loadModuleEnabledFixtureIds(
+    serviceClient,
+    eligibleFixtures.map((fixture) => fixture.id),
+  );
 
-  return eligibleFixtures
-    .map((fixture) => {
-      const homeTeam = teamMap.get(fixture.home_team_id);
-      const awayTeam = teamMap.get(fixture.away_team_id);
-      const divisionId = fixture.division_id || homeTeam?.division_id || awayTeam?.division_id;
-      const division = divisionMap.get(divisionId);
-      if (!homeTeam || !awayTeam || !division) return null;
-      const scheme = getScheme(division.name, division.age_group);
-      return {
-        id: fixture.id,
-        roundNumber: fixture.round_number,
-        roundName: fixture.round_name,
-        divisionId: division.id,
-        divisionName: division.name,
-        homeTeamId: homeTeam.id,
-        homeTeamName: homeTeam.name,
-        awayTeamId: awayTeam.id,
-        awayTeamName: awayTeam.name,
-        fixtureDate: fixture.fixture_date,
-        status: fixture.status,
-        schemeKey: scheme.key,
-        schemeLines: scheme.lines,
-      };
-    })
-    .filter(Boolean)
-    .sort(
-      (left: any, right: any) =>
-        left.roundNumber - right.roundNumber ||
-        left.divisionName.localeCompare(right.divisionName) ||
-        left.homeTeamName.localeCompare(right.homeTeamName),
-    );
+  const options: Record<string, unknown>[] = [];
+  for (const fixture of eligibleFixtures) {
+    const homeTeam = teamMap.get(fixture.home_team_id);
+    const awayTeam = teamMap.get(fixture.away_team_id);
+    const divisionId = fixture.division_id || homeTeam?.division_id || awayTeam?.division_id;
+    const division = divisionMap.get(divisionId);
+    if (!homeTeam || !awayTeam || !division) continue;
+    if (!moduleEnabledFixtureIds.has(fixture.id)) continue;
+    const scheme = getScheme(division.name, division.age_group);
+    options.push({
+      id: fixture.id,
+      roundNumber: fixture.round_number,
+      roundName: fixture.round_name,
+      divisionId: division.id,
+      divisionName: division.name,
+      homeTeamId: homeTeam.id,
+      homeTeamName: homeTeam.name,
+      awayTeamId: awayTeam.id,
+      awayTeamName: awayTeam.name,
+      fixtureDate: fixture.fixture_date,
+      status: fixture.status,
+      schemeKey: scheme.key,
+      schemeLines: scheme.lines,
+    });
+  }
+
+  return options.sort(
+    (left: any, right: any) =>
+      left.roundNumber - right.roundNumber ||
+      left.divisionName.localeCompare(right.divisionName) ||
+      left.homeTeamName.localeCompare(right.homeTeamName),
+  );
 };
 
 const loadPlayerOptions = async (serviceClient: any, context: FixtureContext) => {
@@ -647,11 +688,21 @@ Deno.serve(async (req) => {
 
     const { data: existingRetry, error: retryError } = await serviceClient
       .from("player_vote_submissions")
-      .select("public_submission_reference")
+      .select("public_submission_reference, fixture_id")
       .eq("public_idempotency_key", idempotencyKey)
       .maybeSingle();
     if (retryError) throw retryError;
     if (existingRetry?.public_submission_reference) {
+      if (existingRetry.fixture_id !== fixtureId) {
+        return jsonResponse(req, { error: "The submission reference belongs to a different fixture." }, 409);
+      }
+      const moduleEnabledFixtureIds = await loadModuleEnabledFixtureIds(
+        serviceClient,
+        [fixtureId],
+      );
+      if (!moduleEnabledFixtureIds.has(fixtureId)) {
+        return jsonResponse(req, { error: "Umpire Match Voting is turned off for this fixture." }, 403);
+      }
       return jsonResponse(req, {
         reference: existingRetry.public_submission_reference,
         status: "PENDING",
@@ -662,6 +713,12 @@ Deno.serve(async (req) => {
     if (!attemptAllowed) {
       return jsonResponse(req, { error: "Too many submission attempts. Please wait 15 minutes and try again." }, 429);
     }
+
+    // Only resolve the complete fixture after the cheap idempotency and rate
+    // checks. This keeps legitimate retries stable and prevents invalid public
+    // requests from triggering the expensive context/player query path.
+    const context = await loadFixtureContext(serviceClient, association, fixtureId);
+
     const emailHash = await sha256(`email:${submitterEmail}`);
     const emailAllowed = await recordRateEvent(
       serviceClient,
@@ -679,7 +736,6 @@ Deno.serve(async (req) => {
       return jsonResponse(req, { error: "The security check expired or failed. Please try it again." }, 400);
     }
 
-    const context = await loadFixtureContext(serviceClient, association, fixtureId);
     if (votes.length !== context.schemeLines.length) {
       return jsonResponse(req, { error: "The vote card count does not match this division." }, 400);
     }
@@ -794,6 +850,6 @@ Deno.serve(async (req) => {
     console.error("public-umpire-match-voting:", error);
     return jsonResponse(req, {
       error: error instanceof Error ? error.message : "The portal could not complete this request.",
-    }, 500);
+    }, error instanceof RequestError ? error.status : 500);
   }
 });

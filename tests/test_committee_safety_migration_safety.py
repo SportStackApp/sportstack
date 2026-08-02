@@ -11,6 +11,9 @@ COMMITTEE_OPERATIONS = MIGRATIONS_DIR / "20260801070000_committee_operations.sql
 COMMITTEE_HARDENING = MIGRATIONS_DIR / "20260801071000_committee_operations_hardening.sql"
 SAFETY_SCOPE_FIX = MIGRATIONS_DIR / "20260801081000_safety_hub_linked_scope_fix.sql"
 COMMITTEE_SAFETY_LINKS = MIGRATIONS_DIR / "20260801082000_committee_safety_links.sql"
+MODULE_ENFORCEMENT = (
+    MIGRATIONS_DIR / "20260802114000_enforce_committee_safety_module_access.sql"
+)
 
 
 def normalised_sql(path: Path) -> str:
@@ -108,6 +111,57 @@ class CommitteeSafetyMigrationTests(unittest.TestCase):
             sql,
         )
         self.assertIn("from public, anon, authenticated", sql)
+
+    def test_module_enforcement_uses_the_validated_session_cascade(self) -> None:
+        sql = normalised_sql(MODULE_ENFORCEMENT)
+        helper = re.search(
+            r"create or replace function private\.module_allowed_in_accessible_scope_for_current_session\(.*?"
+            r"\$function\$(.*?)\$function\$;",
+            sql,
+        )
+        self.assertIsNotNone(helper)
+        body = helper.group(1)
+
+        self.assertIn("this migration depends on 20260802113500", sql)
+        self.assertIn("mode_row.root_mode", body)
+        for column in (
+            "mode_row.association_id",
+            "mode_row.club_id",
+            "mode_row.division_id",
+            "mode_row.team_id",
+        ):
+            self.assertIn(column, body)
+        self.assertNotIn("from public.user_roles role_row", body)
+        self.assertNotIn("from public.team_memberships membership", body)
+
+    def test_parent_records_keep_child_denies_and_super_admin_preview_scope(self) -> None:
+        sql = normalised_sql(MODULE_ENFORCEMENT)
+
+        self.assertIn(
+            "v_root_mode = 'super_admin' and v_mode = 'super_admin' and public.is_super_admin()",
+            sql,
+        )
+        self.assertIn("v_mode in ('team_manager', 'coach', 'player')", sql)
+        self.assertIn("v_requested_association_id is distinct from v_stored_association_id", sql)
+        self.assertIn("v_requested_club_id is distinct from v_stored_club_id", sql)
+        self.assertIn("v_requested_team_id is distinct from v_stored_team_id", sql)
+        self.assertIn("v_use_stored_scope :=", sql)
+        self.assertIn(
+            "case when v_use_stored_scope then v_stored_team_id else v_requested_team_id end",
+            sql,
+        )
+        self.assertIn(
+            "create or replace function private.module_allowed_in_stored_scope_for_current_session",
+            sql,
+        )
+        self.assertIn(
+            "private.active_permission_mode_for_current_session() in ('association', 'club')",
+            sql,
+        )
+        self.assertIn(
+            "and private.module_allowed_in_stored_scope_for_current_session( 'safety_risk' )",
+            sql,
+        )
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTestRole } from "@/contexts/TestRoleContext";
+import { useTeamContext, type TeamScopeSelection } from "@/contexts/TeamContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -56,6 +57,7 @@ interface AppModeContextType {
   setIsViewingAsOverridden: (value: boolean) => void;
   modeChanging: boolean;
   modeSyncError: string | null;
+  contextConfirmed: boolean;
 }
 
 const AppModeContext = createContext<AppModeContextType | undefined>(undefined);
@@ -68,28 +70,66 @@ const getStorageKey = (userId: string) => `${STORAGE_KEY}:${userId}`;
 const getViewingAsStorageKey = (userId: string) => `${VIEWING_AS_STORAGE_KEY}:${userId}`;
 const getModeSyncStorageKey = (userId: string) => `${MODE_SYNC_STORAGE_KEY}:${userId}`;
 
-interface ServerPermissionModeState {
+interface ServerPermissionContextState {
   root_mode: AppMode;
   active_mode: AppMode;
+  association_id: string | null;
+  club_id: string | null;
+  division_id: string | null;
+  team_id: string | null;
   revision: number;
 }
+
+const EMPTY_SCOPE: TeamScopeSelection = {
+  associationId: "",
+  clubId: "",
+  divisionId: "",
+  teamId: "",
+};
 
 const isAppMode = (value: unknown): value is AppMode =>
   typeof value === "string" && MODE_HIERARCHY.includes(value as AppMode);
 
-const parseServerModeState = (value: unknown): ServerPermissionModeState | null => {
+const isNullableId = (value: unknown): value is string | null =>
+  value === null || typeof value === "string";
+
+const parseServerContextState = (value: unknown): ServerPermissionContextState | null => {
   if (!value || typeof value !== "object") return null;
-  const candidate = value as Partial<ServerPermissionModeState>;
+  const candidate = value as Partial<ServerPermissionContextState>;
   if (!isAppMode(candidate.root_mode) || !isAppMode(candidate.active_mode)) return null;
+  if (!isNullableId(candidate.association_id)
+    || !isNullableId(candidate.club_id)
+    || !isNullableId(candidate.division_id)
+    || !isNullableId(candidate.team_id)) return null;
   if (!Number.isSafeInteger(candidate.revision) || (candidate.revision || 0) < 1) return null;
   if (candidate.root_mode !== "super_admin" && candidate.active_mode !== candidate.root_mode) return null;
-  return candidate as ServerPermissionModeState;
+  return candidate as ServerPermissionContextState;
 };
 
-const isServerModeAllowed = (
-  state: ServerPermissionModeState,
+const isServerContextAllowed = (
+  state: ServerPermissionContextState,
   allowedModes: AppMode[],
-) => allowedModes.includes(state.root_mode) && allowedModes.includes(state.active_mode);
+) => allowedModes.includes(state.root_mode)
+  && allowedModes.includes(state.active_mode)
+  && (
+    (state.root_mode === "super_admin" && state.active_mode === "super_admin")
+    || (state.active_mode === "association" && Boolean(state.association_id))
+    || (state.active_mode === "club" && Boolean(state.club_id))
+    || (["team_manager", "coach", "player"].includes(state.active_mode) && Boolean(state.team_id))
+  );
+
+const scopeFromServerState = (state: ServerPermissionContextState): TeamScopeSelection => ({
+  associationId: state.association_id || "",
+  clubId: state.club_id || "",
+  divisionId: state.division_id || "",
+  teamId: state.team_id || "",
+});
+
+const haveSameScope = (left: TeamScopeSelection, right: TeamScopeSelection) =>
+  left.associationId === right.associationId
+  && left.clubId === right.clubId
+  && left.divisionId === right.divisionId
+  && left.teamId === right.teamId;
 
 const chooseFallbackMode = (
   allowedModes: AppMode[],
@@ -116,7 +156,7 @@ const haveSameRoles = (left: AppRole[], right: AppRole[]) => {
     && Array.from(leftRoles).every((role) => rightRoles.has(role));
 };
 
-const publishModeState = (userId: string, state: ServerPermissionModeState) => {
+const publishContextState = (userId: string, state: ServerPermissionContextState) => {
   localStorage.setItem(getModeSyncStorageKey(userId), JSON.stringify({
     ...state,
     nonce: `${Date.now()}:${Math.random()}`,
@@ -125,14 +165,29 @@ const publishModeState = (userId: string, state: ServerPermissionModeState) => {
 
 const permissionModeClient = supabase as unknown as {
   rpc: (
-    functionName: "get_active_permission_mode" | "set_active_permission_mode",
-    args?: { p_root_mode: AppMode; p_active_mode: AppMode },
+    functionName: "get_active_permission_mode" | "set_active_permission_context",
+    args?: {
+      p_root_mode: AppMode;
+      p_active_mode: AppMode;
+      p_association_id: string | null;
+      p_club_id: string | null;
+      p_division_id: string | null;
+      p_team_id: string | null;
+    },
   ) => PromiseLike<{ data: unknown; error: { message?: string } | null }>;
 };
 
 export function AppModeProvider({ children }: { children: ReactNode }) {
   const { user, session } = useAuth();
   const { testRole } = useTestRole();
+  const {
+    selectedAssociationId,
+    selectedClubId,
+    selectedDivision,
+    selectedTeamId,
+    setSelectedScope,
+    selectionHydrated,
+  } = useTeamContext();
   const [dbRoles, setDbRoles] = useState<AppRole[]>([]);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [availableModes, setAvailableModes] = useState<AppMode[]>([]);
@@ -143,9 +198,26 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
   const [rolesLoadedForUser, setRolesLoadedForUser] = useState<string | null>(null);
   const [modeChanging, setModeChanging] = useState(false);
   const [modeSyncError, setModeSyncError] = useState<string | null>(null);
+  const [contextConfirmed, setContextConfirmed] = useState(false);
+  const [contextInitialisedForUser, setContextInitialisedForUser] = useState<string | null>(null);
   const lastModeRevisionRef = useRef(0);
+  const lastCanonicalContextRef = useRef<ServerPermissionContextState | null>(null);
+  const selectedScopeRef = useRef<TeamScopeSelection>(EMPTY_SCOPE);
+  const contextWriteChainRef = useRef<Promise<void>>(Promise.resolve());
   const userId = user?.id;
   const isLocalAuthBypass = import.meta.env.DEV && import.meta.env.VITE_BYPASS_AUTH === "true";
+
+  const selectedScope = useMemo<TeamScopeSelection>(() => ({
+    associationId: selectedAssociationId,
+    clubId: selectedClubId,
+    divisionId: selectedDivision,
+    teamId: selectedTeamId,
+  }), [selectedAssociationId, selectedClubId, selectedDivision, selectedTeamId]);
+  selectedScopeRef.current = selectedScope;
+  // A Super Admin can deliberately preview a lower role through Viewing as.
+  // Every runtime permission check must use this value rather than the
+  // account's highest stored role.
+  const activeMode = mode === "super_admin" ? viewingAs : mode;
 
   // Fetch roles
   useEffect(() => {
@@ -178,40 +250,46 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     };
   }, [userId]);
 
-  const readSessionMode = useCallback(async (): Promise<ServerPermissionModeState | null> => {
+  const readSessionContext = useCallback(async (): Promise<ServerPermissionContextState | null> => {
     if (!userId || !session) return null;
     const { data, error } = await permissionModeClient.rpc("get_active_permission_mode");
-    if (error) throw new Error(error.message || "The current mode could not be checked.");
+    if (error) throw new Error(error.message || "The current mode and scope could not be checked.");
     if (data === null) return null;
-    const parsed = parseServerModeState(data);
-    if (!parsed) throw new Error("The current mode response was not valid.");
+    const parsed = parseServerContextState(data);
+    if (!parsed) throw new Error("The current mode and scope response was not valid.");
     return parsed;
   }, [session, userId]);
 
-  const writeSessionMode = useCallback(async (
+  const writeSessionContext = useCallback(async (
     rootMode: AppMode,
     activeMode: AppMode,
-  ): Promise<ServerPermissionModeState> => {
+    scope: TeamScopeSelection,
+  ): Promise<ServerPermissionContextState> => {
     if (!userId || !session) throw new Error("The current authentication session is not available.");
-    const { data, error } = await permissionModeClient.rpc("set_active_permission_mode", {
+    const { data, error } = await permissionModeClient.rpc("set_active_permission_context", {
       p_root_mode: rootMode,
       p_active_mode: activeMode,
+      p_association_id: scope.associationId || null,
+      p_club_id: scope.clubId || null,
+      p_division_id: scope.divisionId || null,
+      p_team_id: scope.teamId || null,
     });
-    if (error) throw new Error(error.message || "The selected mode could not be confirmed.");
-    const parsed = parseServerModeState(data);
-    if (!parsed) throw new Error("The selected mode response was not valid.");
+    if (error) throw new Error(error.message || "The selected mode and scope could not be confirmed.");
+    const parsed = parseServerContextState(data);
+    if (!parsed) throw new Error("The selected mode and scope response was not valid.");
     return parsed;
   }, [session, userId]);
 
-  const adoptServerMode = useCallback((
-    state: ServerPermissionModeState,
+  const adoptServerContext = useCallback((
+    state: ServerPermissionContextState,
     allowedModes: AppMode[],
     broadcast: boolean,
   ): boolean => {
     if (!user || state.revision < lastModeRevisionRef.current) return false;
-    if (!allowedModes.includes(state.root_mode) || !allowedModes.includes(state.active_mode)) return false;
+    if (!isServerContextAllowed(state, allowedModes)) return false;
 
     lastModeRevisionRef.current = state.revision;
+    lastCanonicalContextRef.current = state;
     setModeState(state.root_mode);
     setViewingAsState(state.root_mode === "super_admin" ? state.active_mode : "super_admin");
     setIsViewingAsOverridden(state.root_mode === "super_admin" && state.active_mode !== "super_admin");
@@ -220,35 +298,46 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
       getViewingAsStorageKey(user.id),
       state.root_mode === "super_admin" ? state.active_mode : "super_admin",
     );
-    if (broadcast) publishModeState(user.id, state);
+    const serverScope = scopeFromServerState(state);
+    if (!haveSameScope(selectedScopeRef.current, serverScope)) {
+      selectedScopeRef.current = serverScope;
+      setSelectedScope(serverScope);
+    }
+    setContextConfirmed(true);
+    if (broadcast) publishContextState(user.id, state);
     return true;
-  }, [user]);
+  }, [setSelectedScope, user]);
 
-  const reconcileServerMode = useCallback(async (
-    state: ServerPermissionModeState | null,
+  const reconcileServerContext = useCallback(async (
+    state: ServerPermissionContextState | null,
     allowedModes: AppMode[],
     preferredRootMode: AppMode,
     preferredActiveMode: AppMode,
-  ): Promise<ServerPermissionModeState> => {
+    preferredScope: TeamScopeSelection,
+  ): Promise<ServerPermissionContextState> => {
     let canonical = state;
 
     // A role may have been revoked after this session mode was stored. Replace
     // that stale server value with the best mode still assigned to the account.
-    if (!canonical || !isServerModeAllowed(canonical, allowedModes)) {
+    if (!canonical || !isServerContextAllowed(canonical, allowedModes)) {
       const fallback = chooseFallbackMode(
         allowedModes,
         preferredRootMode,
         preferredActiveMode,
       );
-      canonical = await writeSessionMode(fallback.rootMode, fallback.activeMode);
+      canonical = await writeSessionContext(
+        fallback.rootMode,
+        fallback.activeMode,
+        canonical ? EMPTY_SCOPE : preferredScope,
+      );
     }
 
-    if (!isServerModeAllowed(canonical, allowedModes)) {
+    if (!isServerContextAllowed(canonical, allowedModes)) {
       throw new Error("The current session mode is no longer assigned to this account.");
     }
 
     return canonical;
-  }, [writeSessionMode]);
+  }, [writeSessionContext]);
 
   useEffect(() => {
     if (!user) {
@@ -258,11 +347,15 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
       setViewingAsState("super_admin");
       setIsViewingAsOverridden(false);
       setModeSyncError(null);
+      setContextConfirmed(false);
+      setContextInitialisedForUser(null);
       lastModeRevisionRef.current = 0;
+      lastCanonicalContextRef.current = null;
+      contextWriteChainRef.current = Promise.resolve();
       return;
     }
 
-    if (rolesLoadedForUser !== user.id) return;
+    if (rolesLoadedForUser !== user.id || !selectionHydrated) return;
 
     let active = true;
 
@@ -305,30 +398,35 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     const requestedActiveMode = initialMode === "super_admin" ? initialViewingAs : initialMode;
 
     setLoading(true);
+    setContextConfirmed(false);
+    setContextInitialisedForUser(null);
     void (async () => {
       try {
         if (isLocalAuthBypass && !session) {
           throw new Error("Local authentication bypass cannot open protected modules. Sign in with a Dev account.");
         }
-        const existing = await readSessionMode();
-        const canonical = await reconcileServerMode(
+        const existing = await readSessionContext();
+        const canonical = await reconcileServerContext(
           existing,
           ordered,
           initialMode,
           requestedActiveMode,
+          selectedScopeRef.current,
         );
         if (!active) return;
         // A newer cross-tab response may already have been adopted locally.
         if (canonical.revision >= lastModeRevisionRef.current
-          && !adoptServerMode(canonical, ordered, true)) {
-          throw new Error("The current session mode could not be applied.");
+          && !adoptServerContext(canonical, ordered, true)) {
+          throw new Error("The current session mode and scope could not be applied.");
         }
+        setContextInitialisedForUser(user.id);
         setModeSyncError(null);
       } catch (initialiseError) {
         if (!active) return;
         setModeSyncError(initialiseError instanceof Error
           ? initialiseError.message
-          : "The current mode could not be confirmed.");
+          : "The current mode and scope could not be confirmed.");
+        setContextConfirmed(false);
       } finally {
         if (active) setLoading(false);
       }
@@ -337,49 +435,124 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [adoptServerMode, dbRoles, isLocalAuthBypass, readSessionMode, reconcileServerMode, rolesLoadedForUser, session, testRole, user]);
+  }, [
+    adoptServerContext,
+    dbRoles,
+    isLocalAuthBypass,
+    readSessionContext,
+    reconcileServerContext,
+    rolesLoadedForUser,
+    selectionHydrated,
+    session,
+    testRole,
+    user,
+  ]);
 
   const setMode = useCallback(async (newMode: AppMode): Promise<boolean> => {
     if (!user || !availableModes.includes(newMode) || modeChanging) return false;
 
     setModeChanging(true);
+    setContextConfirmed(false);
     try {
-      const canonical = await writeSessionMode(newMode, newMode);
-      const adopted = adoptServerMode(canonical, availableModes, true);
+      await contextWriteChainRef.current;
+      const canonical = await writeSessionContext(newMode, newMode, selectedScopeRef.current);
+      const adopted = adoptServerContext(canonical, availableModes, true);
       const changed = adopted
         && canonical.root_mode === newMode
         && canonical.active_mode === newMode;
       setModeSyncError(changed ? null : "The mode was changed in another browser tab.");
       return changed;
     } catch (changeError) {
-      setModeSyncError(changeError instanceof Error ? changeError.message : "The selected mode could not be confirmed.");
+      setContextConfirmed(false);
+      setModeSyncError(changeError instanceof Error ? changeError.message : "The selected mode and scope could not be confirmed.");
       return false;
     } finally {
       setModeChanging(false);
     }
-  }, [adoptServerMode, availableModes, modeChanging, user, writeSessionMode]);
+  }, [adoptServerContext, availableModes, modeChanging, user, writeSessionContext]);
 
   const setViewingAs = useCallback(async (newMode: AppMode): Promise<boolean> => {
     if (!user || mode !== "super_admin" || !availableModes.includes(newMode) || modeChanging) return false;
 
     setModeChanging(true);
+    setContextConfirmed(false);
     try {
-      const canonical = await writeSessionMode("super_admin", newMode);
-      const adopted = adoptServerMode(canonical, availableModes, true);
+      await contextWriteChainRef.current;
+      const canonical = await writeSessionContext("super_admin", newMode, selectedScopeRef.current);
+      const adopted = adoptServerContext(canonical, availableModes, true);
       const changed = adopted
         && canonical.root_mode === "super_admin"
         && canonical.active_mode === newMode;
       setModeSyncError(changed ? null : "The mode was changed in another browser tab.");
       return changed;
     } catch (changeError) {
-      setModeSyncError(changeError instanceof Error ? changeError.message : "The selected mode could not be confirmed.");
+      setContextConfirmed(false);
+      setModeSyncError(changeError instanceof Error ? changeError.message : "The selected mode and scope could not be confirmed.");
       return false;
     } finally {
       setModeChanging(false);
     }
-  }, [adoptServerMode, availableModes, mode, modeChanging, user, writeSessionMode]);
+  }, [adoptServerContext, availableModes, mode, modeChanging, user, writeSessionContext]);
 
-  // Tabs using the same browser Auth session share one server-side mode row.
+  // Cascade changes and mode changes are stored as one server-side context.
+  // Writes are serialised so a slower, older selection cannot overwrite the
+  // last selection made in this tab. Until the server response is adopted,
+  // protected module controls remain closed.
+  useEffect(() => {
+    if (!user || !session || isLocalAuthBypass
+      || contextInitialisedForUser !== user.id || loading || modeChanging) return;
+
+    const canonical = lastCanonicalContextRef.current;
+    if (canonical
+      && canonical.root_mode === mode
+      && canonical.active_mode === activeMode
+      && haveSameScope(scopeFromServerState(canonical), selectedScope)) {
+      setContextConfirmed(true);
+      return;
+    }
+
+    let cancelled = false;
+    setContextConfirmed(false);
+    const queuedWrite = contextWriteChainRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        if (cancelled) return;
+        const desiredScope = selectedScopeRef.current;
+        const result = await writeSessionContext(mode, activeMode, desiredScope);
+        if (cancelled) return;
+        if (!adoptServerContext(result, availableModes, true)) {
+          throw new Error("The current session mode and scope could not be applied.");
+        }
+        setModeSyncError(null);
+      })
+      .catch((scopeError: unknown) => {
+        if (cancelled) return;
+        setContextConfirmed(false);
+        setModeSyncError(scopeError instanceof Error
+          ? scopeError.message
+          : "The selected scope could not be confirmed.");
+      });
+    contextWriteChainRef.current = queuedWrite;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeMode,
+    adoptServerContext,
+    availableModes,
+    contextInitialisedForUser,
+    isLocalAuthBypass,
+    loading,
+    mode,
+    modeChanging,
+    selectedScope,
+    session,
+    user,
+    writeSessionContext,
+  ]);
+
+  // Tabs using the same browser Auth session share one server-side context row.
   // A storage event only prompts a server read; local storage is never treated
   // as an authorisation decision. Server revisions discard delayed responses.
   useEffect(() => {
@@ -387,9 +560,10 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
 
     let active = true;
     let refreshInFlight = false;
-    const refreshCanonicalMode = () => {
+    const refreshCanonicalContext = () => {
       if (refreshInFlight) return;
       refreshInFlight = true;
+      setContextConfirmed(false);
 
       void (async () => {
         const { data: refreshedRoleRows, error: refreshedRolesError } = await supabase
@@ -408,21 +582,22 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        const canonical = await readSessionMode();
+        const canonical = await readSessionContext();
         if (!active) return;
         const preferredActiveMode = mode === "super_admin" ? viewingAs : mode;
-        const reconciled = await reconcileServerMode(
+        const reconciled = await reconcileServerContext(
           canonical,
           availableModes,
           mode,
           preferredActiveMode,
+          selectedScopeRef.current,
         );
         if (!active) return;
         // Ignore a delayed read when another tab has already supplied a newer
         // revision. Otherwise the reconciled state must be adopted successfully.
         if (reconciled.revision >= lastModeRevisionRef.current
-          && !adoptServerMode(reconciled, availableModes, true)) {
-          throw new Error("The current session mode could not be applied.");
+          && !adoptServerContext(reconciled, availableModes, true)) {
+          throw new Error("The current session mode and scope could not be applied.");
         }
         setModeSyncError(null);
       })()
@@ -430,7 +605,8 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
           if (!active) return;
           setModeSyncError(refreshError instanceof Error
             ? refreshError.message
-            : "The current mode could not be checked.");
+            : "The current mode and scope could not be checked.");
+          setContextConfirmed(false);
         })
         .finally(() => {
           refreshInFlight = false;
@@ -442,14 +618,14 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
       try {
         const payload = JSON.parse(event.newValue) as { revision?: number };
         if (!Number.isSafeInteger(payload.revision) || (payload.revision || 0) <= lastModeRevisionRef.current) return;
-        refreshCanonicalMode();
+        refreshCanonicalContext();
       } catch {
         // Ignore malformed cross-tab notifications.
       }
     };
-    const handleFocus = () => refreshCanonicalMode();
+    const handleFocus = () => refreshCanonicalContext();
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") refreshCanonicalMode();
+      if (document.visibilityState === "visible") refreshCanonicalContext();
     };
 
     window.addEventListener("storage", handleStorage);
@@ -461,12 +637,26 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [adoptServerMode, availableModes, dbRoles, isLocalAuthBypass, mode, readSessionMode, reconcileServerMode, session, user, viewingAs]);
+  }, [
+    adoptServerContext,
+    availableModes,
+    dbRoles,
+    isLocalAuthBypass,
+    mode,
+    readSessionContext,
+    reconcileServerContext,
+    session,
+    user,
+    viewingAs,
+  ]);
 
-  // A Super Admin can deliberately preview a lower role through Viewing as.
-  // Every runtime permission check must use this value rather than the
-  // account's highest stored role.
-  const activeMode = mode === "super_admin" ? viewingAs : mode;
+  const canonicalContext = lastCanonicalContextRef.current;
+  const confirmedContext = contextConfirmed
+    && canonicalContext !== null
+    && isServerContextAllowed(canonicalContext, availableModes)
+    && canonicalContext.root_mode === mode
+    && canonicalContext.active_mode === activeMode
+    && haveSameScope(scopeFromServerState(canonicalContext), selectedScope);
 
   return (
     <AppModeContext.Provider
@@ -486,6 +676,7 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
         setIsViewingAsOverridden,
         modeChanging,
         modeSyncError,
+        contextConfirmed: confirmedContext,
       }}
     >
       {children}

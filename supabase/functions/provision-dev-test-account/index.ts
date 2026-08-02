@@ -165,30 +165,11 @@ Deno.serve(async (req) => {
       teamId = team.id;
     }
 
-    let existingUserId: string | null = null;
-    for (let page = 1; page <= 10 && !existingUserId; page += 1) {
-      const { data: usersPage, error: usersError } = await serviceClient.auth.admin.listUsers({ page, perPage: 1000 });
-      if (usersError) return respond({ error: "Existing test accounts could not be checked." }, 500);
-      const existing = usersPage.users.find((user) => user.email?.toLowerCase() === email);
-      if (existing) {
-        if (existing.app_metadata?.sportstack_dev_test !== true) {
-          return respond({ error: "That email belongs to a non-test account." }, 409);
-        }
-        existingUserId = existing.id;
-      }
-      if (usersPage.users.length < 1000) break;
-    }
-
     // Existing Auth identities are deliberately not re-scoped or password-
-    // reset here. Reusing an identity can leave an older access token alive
-    // with newly elevated database access. Test accounts are created once;
-    // retiring/rotating one is a separate, explicit disposable-data action.
-    if (existingUserId) {
-      return respond({
-        error: "That Dev test account already exists and cannot be reset automatically.",
-      }, 409);
-    }
-
+    // reset here. Creating the fixed reserved email is atomic in Auth, so an
+    // existing identity is rejected without listing or changing any users.
+    // This also avoids Supabase Auth's list-users endpoint, which cannot scan
+    // the permanent banned_until = infinity values used by Dev placeholders.
     const { data: createdUser, error: createError } = await serviceClient.auth.admin.createUser({
       email,
       password: payload.password,
@@ -197,7 +178,12 @@ Deno.serve(async (req) => {
       app_metadata: { sportstack_dev_test: true },
     });
     if (createError || !createdUser.user) {
-      return respond({ error: createError?.message || "The Dev test account could not be created." }, 400);
+      const existingIdentity = createError?.code === "email_exists";
+      return respond({
+        error: existingIdentity
+          ? "That Dev test account already exists and cannot be reset automatically."
+          : createError?.message || "The Dev test account could not be created.",
+      }, existingIdentity ? 409 : 400);
     }
 
     const userId = createdUser.user.id;

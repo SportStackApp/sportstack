@@ -37,6 +37,7 @@ export function useModuleAvailability(moduleKeys: SportStackModuleKey[]) {
     activeMode,
     loading: modeLoading,
     modeSyncError,
+    contextConfirmed,
   } = useAppMode();
   const {
     selectedAssociationId,
@@ -97,6 +98,13 @@ export function useModuleAvailability(moduleKeys: SportStackModuleKey[]) {
       };
     }
 
+    if (!contextConfirmed) {
+      setResolvedSignature("");
+      return () => {
+        cancelled = true;
+      };
+    }
+
     void Promise.all(requestedKeys.map(async (moduleKey) => {
       const { data, error: resolveError } = await permissionClient.rpc("resolve_effective_permission_for_mode", {
         p_permission_key: `module.${moduleKey}.access`,
@@ -137,6 +145,7 @@ export function useModuleAvailability(moduleKeys: SportStackModuleKey[]) {
     };
   }, [
     activeMode,
+    contextConfirmed,
     modeLoading,
     modeSyncError,
     moduleKeySignature,
