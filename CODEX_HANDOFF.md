@@ -23,10 +23,16 @@ Future agents should start by reading these files in order:
   `/admin` to `/dashboard` and restores Team Manager after Super Admin is selected. The remaining
   session-context/navigation cause is open; do not record this workflow as passed.
 - The unattended pass found remaining product gaps: mode labels and direct-route restriction can
-  disagree with Viewing as; My Dashboard still misformats byes; fixture calendar switching was not
-  visible; legacy chat edits have no revisions; Player MVP Analytics lacks its third tab; Umpire
-  Match Voting search is too broad; and Squad/Roster do not provide the complete coach selection
-  and distribution workflow.
+  disagree with Viewing as; scoped user rows show global rather than contextual roles; My Dashboard
+  still misformats byes; the Fixtures calendar is only a grid view; legacy chat edits have no
+  revisions; Umpire Match Voting search is too broad; and Squad/Roster do not provide the complete
+  coach selection and distribution workflow. Source review confirms Player MVP Analytics already
+  has the requested three URL-backed tabs.
+- Exact source causes are now recorded: the Umpire ballot uses stored roles rather than active mode,
+  `/admin/analytics` lacks a direct module gate, the Admin badge uses the highest stored role,
+  Dashboard duplicates the bye formatter with unconditional fallbacks, and Umpire suggestions load
+  active memberships from every team in both fixture clubs. The user Edit Details action is an
+  in-page dialog, so its observed Dashboard return belongs to the remaining mode/navigation reset.
 - Read-only Dev checks found no configured permission groups, sets, assignments, overrides or
   module flags, and no communication revision rows. Membership integrity totals remain 201
   duplicate groups, 44 multiple-Primary users and 490 immutable snapshot rows. No database write,

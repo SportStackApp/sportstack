@@ -37,10 +37,11 @@ Admin, Association Admin, Club Admin, Team Manager, Coach and Player sessions be
 staging promotion.
 
 The 2 August unattended read-only pass has now exercised the main Dev screens and recorded its
-evidence in the matrix. It found genuine remaining gaps in mode labels/route restriction, the My
-Dashboard bye card, fixture calendar switching, legacy chat revisions, the third Player MVP
-Analytics tab, Umpire Match Voting identity filtering and the end-to-end coach team-selection
-workflow. Commits `879d184` and `5514996` added frontend guards for deliberate Super Admin mode
+evidence in the matrix. It found genuine remaining gaps in mode labels/route restriction, scoped
+role presentation, the My Dashboard bye card, true fixture calendar rendering, legacy chat
+revisions, Umpire Match Voting identity filtering and the end-to-end coach team-selection workflow.
+Source review has since confirmed that Player MVP Analytics already has the requested three
+URL-backed tabs. Commits `879d184` and `5514996` added frontend guards for deliberate Super Admin mode
 selection and passed unit, focused lint, TypeScript, build, Dev Quality and Vercel deployment
 checks. Fresh deployed build `5514996` still redirected `/admin` to `/dashboard` and restored Team
 Manager after Super Admin was selected. The session-context/navigation cause remains open.
@@ -192,19 +193,25 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 - There is no formal authenticated browser suite yet. The Dev Quality workflow now covers focused
   development-plan lint, TypeScript, the production build, 100 Python regression tests and all
   GitHub workflow definitions; role-based browser flows still need owner smoke testing.
-- Viewing-as is not yet a complete security preview: Player mode can still expose Umpiring menu
-  items held by the underlying account, an already-open Squad route can remain visible, and profile
-  or Admin Dashboard badges can disagree with the selected Association Admin mode.
+- Viewing-as is not yet a complete security preview: the Umpire ballot checks stored account roles
+  instead of active mode, `/admin/analytics` has no direct module gate, an already-open Squad route
+  can remain visible, and profile or Admin Dashboard badges can disagree with the selected
+  Association Admin mode. The badge currently uses the account's highest stored role.
 - The Fixtures page formats byes correctly, but My Dashboard still shows an upcoming bye as
-  `Team vs Unknown` with midnight and TBD. The calendar control did not visibly replace the list in
-  the unattended browser check.
+  `Team vs Unknown` with midnight and TBD because Dashboard uses a separate formatter with
+  unconditional fallbacks. The Fixtures calendar control only changes the cards to a two-column
+  grid and does not render a calendar.
 - Legacy edited chat messages have no stored revision rows, so the history dialog can show only the
   current version. New-edit revision capture still needs a disposable write test.
-- Player MVP Analytics currently has two tabs, not the required Player Leaderboard, Vote Completion
-  and Individual Votes Log trio. Some Player MVP and Umpire Match Voting identities still display
-  shortened scraped names.
-- Umpire Match Voting one-character search works, but suggestions are not sufficiently constrained
-  to the selected fixture/team and can include unrelated or shortened identities.
+- Player MVP Analytics has the required Player Leaderboard, Vote Completion and privileged
+  Individual Votes Log tabs with URL-backed views and filters. Some unlinked Player MVP and Umpire
+  Match Voting identities can still fall back to shortened scraped names.
+- Umpire Match Voting one-character search works, but suggestions are not sufficiently constrained:
+  the loader includes active memberships from every team in both fixture clubs and infers the
+  fixture side by club, so it can include unrelated players.
+- Scoped user rows render every stored role rather than only roles applicable to the selected
+  organisation/team. The Edit Details button is implemented as an in-page dialog; its observed
+  return to Dashboard is consistent with the unresolved mode/navigation reset.
 - Squad and Roster load and deduplicate visible players, but they do not yet provide the full coach
   workflow for selecting a fixture, reviewing availability, choosing the team, placing it on the
   pitch and distributing the line-up.

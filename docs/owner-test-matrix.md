@@ -32,14 +32,15 @@ change module rules, create Safety/Committee records or alter historical members
 
 | Area | Evidence collected | Result |
 |---|---|---|
-| Viewing-as and scope | Association Admin, Team Manager, Coach and Player modes were opened. Lower modes changed menus and scope, but Player still exposed Umpiring pages, an already-open Squad route remained accessible, and profile/Admin badges could still say Super Admin while Association Admin was selected. | **Fail — mode display and route restriction remain inconsistent** |
+| Viewing-as and scope | Association Admin, Team Manager, Coach and Player modes were opened. Lower modes changed menus and scope, but Player still exposed Umpiring pages, an already-open Squad route remained accessible, and profile/Admin badges could still say Super Admin while Association Admin was selected. Source review confirmed the Umpire ballot checks stored account roles rather than the active mode, `/admin/analytics` has no direct `ModuleGate`, and the Admin badge always reads the account's highest stored role. | **Fail — mode display and route restriction remain inconsistent** |
 | Deliberate Super Admin selection | Frontend guards `879d184` and `5514996` prevent the known local cascade races and pass unit, focused lint, TypeScript, build, Dev Quality and Vercel deployment checks. A fresh test on deployed build `5514996` selected Super Admin from `/admin`, waited 2.5 seconds, and observed a redirect to `/dashboard` with Team Manager restored. | **Fail — session-context/navigation reset remains** |
 | Scoped users and permissions | Lucas HC Admin Dashboard and its scoped user link retained the Lucas query and showed eight users. Higher-account editing was disabled. Roles & modules showed group/set/module controls and enabled scope actions only after Lucas was selected. Live Dev currently has no saved permission groups, sets, assignments, overrides or module flags. | **Read-only pass; actual-role write tests pending** |
+| Scoped dashboard and user details | Admin KPI links preserve the selected URL scope, but leaving the Lucas HC Admin Dashboard and returning through navigation can reopen My Dashboard. The scoped user table renders every stored account role rather than roles applicable to the selected scope. `Edit Details` is implemented as an in-page dialog, so the observed return to Dashboard is consistent with the unresolved mode/navigation reset rather than the button's intended handler. | **Fail — return state and contextual role presentation remain** |
 | Permission catalogue presentation | `AdvancedPermissionControls` filters the catalogue to `category === "MODULE"` for permission sets and direct exceptions. Action entries remain stored for future workflow integration but are not presented as enforceable controls in this release. | **Code-review pass** |
-| Fixtures and byes | Fixtures shows the full competition name, `Round 15` and `Lucas HC — Bye` without midnight/TBD. My Dashboard still shows `Lucas HC vs Unknown`, midnight and TBD. Calendar selection did not visibly replace the list. | **Partial fail** |
+| Fixtures and byes | Fixtures shows the full competition name, `Round 15` and `Lucas HC — Bye` without midnight/TBD. My Dashboard still shows `Lucas HC vs Unknown`, midnight and TBD because Dashboard duplicates the card formatter and supplies `Unknown`/`TBD` fallbacks unconditionally. The Fixtures calendar button only changes the existing cards to a two-column grid; it does not render a calendar. | **Partial fail — two exact frontend causes confirmed** |
 | Communications | Team Chat, replies, reactions, removed placeholders and the edit-history entry point loaded. Club/Association publish controls were absent in Player mode. Association tab and scope survived refresh. The edited legacy message showed only its current version; Dev has zero `communication_message_revisions`, so earlier edits are not backfilled. | **Partial pass; legacy history gap** |
-| Player MVP Voting | Admin sessions and detail pages showed dates, open/close status and completion. Some identities remain shortened, Player mode had no eligible attended session, and Analytics has only Player Leaderboard and Vote Completion rather than the required three tabs. | **Partial fail** |
-| Umpire Match Voting | Guided Round → Division → Fixture selection, round dates, current Round 12, completed-fixture eligibility, division scheme, inline missing-value validation, number-only warning/acknowledgement and one-character search all worked. Suggestions were too broad, included players outside the selected team and still contained shortened scraped names. No ballot was submitted. | **Partial pass** |
+| Player MVP Voting | Admin sessions and detail pages showed dates, open/close status and completion. Some identities remain shortened and Player mode had no eligible attended session. Source review confirms the requested Player Leaderboard, Vote Completion and privileged Individual Votes Log tabs now exist, their view and filters persist in the URL, and linked entries prefer full SportStack profile names. | **Partial pass; eligible real-player ballot still pending** |
+| Umpire Match Voting | Guided Round → Division → Fixture selection, round dates, current Round 12, completed-fixture eligibility, division scheme, inline missing-value validation, number-only warning/acknowledgement and one-character search all worked. Source review confirmed the broad suggestions come from every active membership across every team in both fixture clubs and then infer a fixture side by club, rather than limiting suggestions to the fixture roster plus the two fixture teams. No ballot was submitted. | **Partial pass — suggestion scope defect confirmed** |
 | Coaching, roster, formation and profile | Squad/Roster deduplicated visible cards and showed relationship KPIs; Formation Builder panel collapse, focus mode and landscape surface worked; Team Player Details and role/scope profile sections loaded. Squad/Roster do not yet provide the owner workflow for fixture availability, team selection, pitch assignment and distribution, and cards commonly lack positions/numbers. | **Partial pass; workflow gap** |
 | Safety Hub and Committee | Every tab loaded without a white screen. Matrix configuration exposed fixed 5×5 labels/descriptions/ratings and category controls. Committee Work/Admin split, calendar, restricted chat and private 20 MB document dialog loaded. Lucas had no Safety records and no disposable writes/uploads were made, so linked-record edits and storage authorisation remain unverified. | **Read-only pass; write-path tests pending** |
 | Dev integrity and quality | All relevant inspected tables have RLS. Live counts remain 201 duplicate active membership groups, 44 multiple-Primary users and the 490-row immutable snapshot. `npm run lint:dev-plan`, `npx tsc --noEmit`, `npm run build` and all 125 Python tests passed. Full lint remains at its known 362-error/76-warning baseline. | **Automated pass; cleanup approval-gated** |
@@ -79,7 +80,7 @@ as a focused security-review queue, not as proof that the RPCs are exploitable.
 | A direct user exception can override a group permission | Resolver returned `DIRECT_USER` over `SET_GROUP` in a rolled-back test | DB pass |
 | Every permission administration change is auditable | Save functions write to the administration audit log | DB pass; UI retest |
 | Action-level permissions must not be presented as enforced before their workflows use them | Permission sets and direct exceptions filter the catalogue to enforced `MODULE` entries; future `ACTION` entries are not selectable | Code-review pass |
-| Module OFF must remove normal app access while data remains protected | Menus and direct routes use the mode-aware server resolver; underlying tables and RPCs retain their existing Supabase RLS/authorisation and are not made public by a module switch | Dev present — route retest plus RLS audit |
+| Module OFF must remove normal app access while data remains protected | Most module routes use the mode-aware server resolver, but direct `/admin/analytics` is not wrapped in `ModuleGate`, and the Umpire ballot authorises stored account roles rather than the active Viewing-as mode. Underlying tables and RPCs retain their existing Supabase RLS/authorisation. | Code-review fail — direct-route repair and retest required |
 | Scoped admins can author permissions only inside their authority | Association and Club Admin mode writes/listing are hierarchy-checked server-side | DB pass; actual-role UI retest |
 | Test with real role accounts, not only Viewing as | Secure Dev-account provisioner v5 is deployed and the actual Admin Sportstack Super Admin is signed in | Ready — provision disposable accounts next |
 
@@ -119,15 +120,17 @@ actual-role tests must use the signed-in Admin Sportstack Super Admin account.
 | Select Club must not display associations | Cascade labels and option sources were separated | Dev present — retest |
 | Remove Quick Actions that duplicate KPI links | Duplicate actions were removed; unique members, feedback and error logs remain | Dev present — retest |
 | Add banner/branding space to scoped Admin Dashboards | Branding area is present | Dev present — retest |
+| Admin Dashboard badge must describe the active mode, not the account's highest role | The badge currently uses `highestScopedRole` across all stored roles, so a Super Admin previewing Association Admin still sees Super Admin | Code-review fail |
+| Scoped user rows show roles applicable to the selected organisation/team | The table currently renders the user's complete deduplicated role list without contextual scope filtering | Code-review fail |
 | Separate MVP Voting and Umpiring in the left menu | Player MVP Voting/Analytics and Umpire Ballot/Admin/Analytics are separate | Dev present — retest |
 
 ## 4. Fixtures, communications and notifications
 
 | Owner observation or requirement | Current position | Test status |
 |---|---|---|
-| Fixture list/calendar buttons visibly switch views | View controls are implemented | Dev present — retest |
+| Fixture list/calendar buttons visibly switch views | The list button works, but the calendar value only changes the same cards to a two-column grid; no calendar is rendered | Code-review fail |
 | Competition selector shows the full name | Selector width is increased | Dev present — retest |
-| Byes display as `Team — Bye` without Unknown, midnight or TBD | Bye presentation is implemented | Dev present — retest |
+| Byes display as `Team — Bye` without Unknown, midnight or TBD | Fixtures is correct; My Dashboard has a separate formatter that still emits Unknown, midnight and TBD | Partial fail |
 | Use `Round 15`, not `Rd 15` | Full round wording is implemented | Dev present — retest |
 | Anyone can inspect immutable edited-message history | Message revision history is present | Dev present — retest |
 | Removed messages keep a placeholder and restricted audit record | Removal behaviour remains | Previous owner pass — regression retest |
@@ -156,7 +159,7 @@ actual-role tests must use the signed-in Admin Sportstack Super Admin account.
 | Show goals and cards beside historical players | Historical stats are present | Dev present — retest |
 | Incorrect-result report names the full fixture and requires an explanation | Required report validation is present | Dev present — retest |
 | Selected ballot draft survives leaving and returning without submission | Passed in the earlier owner review | Previous owner pass — regression retest |
-| Split analytics into Player Leaderboard, Vote Completion and Individual Votes Log | Three persistent-filter tabs are present | Dev present — retest |
+| Split analytics into Player Leaderboard, Vote Completion and Individual Votes Log | Three tabs are present; view, scope and tab-specific filters are URL-backed. Individual Votes Log remains correctly limited to Super/Association Admin. | Code-review pass; browser retest |
 | Keep Umpire Match Voting data out of MVP Analytics | Separate data and navigation remain | Dev present — retest |
 
 ## 6. Umpire Match Voting
@@ -164,7 +167,7 @@ actual-role tests must use the signed-in Admin Sportstack Super Admin account.
 | Owner observation or requirement | Current position | Test status |
 |---|---|---|
 | Umpire and player suggestions start after one character | One-character suggestions are present | Dev present — retest |
-| Suggestions use full SportStack names but permit free text | Linked display/free-text flow is present | Dev present — retest |
+| Suggestions use full SportStack names but permit free text | Full profile names and free text are supported, but the candidate loader also includes active memberships from every team in both fixture clubs and therefore offers unrelated players | Partial fail |
 | Remove separate search buttons, Roster wording and duplicate team text | Ballot fields were simplified | Dev present — retest |
 | Round options show dates/date ranges and include the current started round | Round display and eligibility logic are present | Dev present — retest |
 | Only eligible completed fixtures can receive votes | Completed-fixture rule remains | Dev present — retest |

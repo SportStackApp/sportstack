@@ -63,12 +63,21 @@ automated checks, but fresh deployed build `5514996` still redirects `/admin` to
 restores Team Manager after Super Admin is selected. The remaining session-context/navigation reset
 is open. The pass also confirmed these remaining gaps:
 
-- Viewing-as labels, badges and direct-route access can disagree with the selected lower mode.
-- My Dashboard still formats a bye as Unknown/midnight/TBD, while Fixtures formats it correctly.
-- Fixture calendar selection did not visibly replace the list.
+- Viewing-as labels, badges and direct-route access can disagree with the selected lower mode. The
+  Umpire ballot checks stored roles rather than active mode, `/admin/analytics` lacks a direct
+  module gate, and the Admin Dashboard badge uses the account's highest stored role.
+- My Dashboard still formats a bye as Unknown/midnight/TBD because it duplicates the Fixtures
+  formatter and applies those fallbacks unconditionally.
+- Fixture calendar selection only changes the existing cards to a two-column grid; it does not
+  render a calendar.
 - Legacy chat edits have no revision rows and therefore no earlier version to display.
-- Player MVP Analytics has two tabs instead of the required three.
-- Umpire Match Voting search is too broad and still includes shortened/unrelated identities.
+- Player MVP Analytics now has the requested three URL-backed tabs. An eligible real-player ballot
+  and remaining unlinked/short-name fallbacks still need browser testing.
+- Umpire Match Voting search is too broad because it loads active memberships across every team in
+  both fixture clubs, not only the fixture roster and two fixture teams.
+- Scoped user rows show every stored role rather than only roles applicable to the selected scope.
+  The Edit Details handler is an in-page dialog, so the observed Dashboard return is part of the
+  unresolved mode/navigation reset rather than intended button behaviour.
 - Squad/Roster do not provide the full availability → selection → pitch → distribution workflow.
 
 Read-only Dev counts remain 201 duplicate membership groups, 44 multiple-Primary users and the
