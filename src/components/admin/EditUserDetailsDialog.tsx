@@ -64,6 +64,8 @@ interface EditUserDetailsDialogProps {
   teamsContent?: React.ReactNode;
   onSaveRoles?: () => void;
   rolesSaving?: boolean;
+  rolesLoading?: boolean;
+  rolesLoadError?: string | null;
   actorMode: AppMode;
   canManageAuthentication?: boolean;
   membershipOnly?: boolean;
@@ -80,6 +82,8 @@ export const EditUserDetailsDialog = ({
   teamsContent,
   onSaveRoles,
   rolesSaving = false,
+  rolesLoading = false,
+  rolesLoadError = null,
   actorMode,
   canManageAuthentication = false,
   membershipOnly = false,
@@ -463,11 +467,11 @@ export const EditUserDetailsDialog = ({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                 Cancel
               </Button>
-              {membershipOnly ? null : activeTab !== "details" && onSaveRoles ? (
-                <Button type="button" onClick={onSaveRoles} disabled={rolesSaving}>
-                  {rolesSaving ? "Saving..." : "Save Roles & Teams"}
+              {membershipOnly ? null : activeTab === "roles" && onSaveRoles ? (
+                <Button type="button" onClick={onSaveRoles} disabled={rolesSaving || rolesLoading || Boolean(rolesLoadError)}>
+                  {rolesLoading ? "Loading roles..." : rolesSaving ? "Saving..." : "Save Roles"}
                 </Button>
-              ) : (
+              ) : activeTab === "details" ? (
               <Button type="submit" disabled={saving}>
                 {saving ? (
                   <>
@@ -478,7 +482,7 @@ export const EditUserDetailsDialog = ({
                   "Save"
                 )}
               </Button>
-              )}
+              ) : null}
             </DialogFooter>
           </form>
         )}

@@ -24,6 +24,7 @@ import type { Tables } from "@/integrations/supabase/types";
 type ScopeType = "ASSOCIATION" | "CLUB" | "DIVISION" | "TEAM";
 type ModuleKey = "player_mvp" | "umpire_match_voting" | "committee" | "safety_risk" | "hockey_trace";
 type ModuleFlag = Tables<"module_feature_flags">;
+type TeamDivisionOption = Pick<Tables<"team_divisions">, "team_id" | "division_id">;
 
 interface AssociationOption {
   id: string;
@@ -109,6 +110,7 @@ export function ModuleControlsCard() {
   const [clubs, setClubs] = useState<ClubOption[]>([]);
   const [divisions, setDivisions] = useState<DivisionOption[]>([]);
   const [teams, setTeams] = useState<TeamOption[]>([]);
+  const [teamDivisions, setTeamDivisions] = useState<TeamDivisionOption[]>([]);
   const [flags, setFlags] = useState<ModuleFlag[]>([]);
   const [scopeType, setScopeType] = useState<ScopeType>("ASSOCIATION");
   const [associationId, setAssociationId] = useState("");
@@ -123,14 +125,15 @@ export function ModuleControlsCard() {
   const loadData = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
-    const [associationResult, clubResult, divisionResult, teamResult, flagResult] = await Promise.all([
+    const [associationResult, clubResult, divisionResult, teamResult, teamDivisionResult, flagResult] = await Promise.all([
       supabase.from("associations").select("id, name").order("name"),
       supabase.from("clubs").select("id, name, association_id").order("name"),
       supabase.from("divisions").select("id, name, association_id").order("name"),
       supabase.from("teams").select("id, name, club_id, division_id").order("name"),
+      supabase.from("team_divisions").select("team_id, division_id"),
       supabase.from("module_feature_flags").select("*").order("module_key"),
     ]);
-    const failure = [associationResult, clubResult, divisionResult, teamResult, flagResult]
+    const failure = [associationResult, clubResult, divisionResult, teamResult, teamDivisionResult, flagResult]
       .find((result) => result.error)?.error;
     if (failure) {
       setLoadError(failure.message);
@@ -141,6 +144,7 @@ export function ModuleControlsCard() {
     setClubs(clubResult.data || []);
     setDivisions(divisionResult.data || []);
     setTeams(teamResult.data || []);
+    setTeamDivisions(teamDivisionResult.data || []);
     setFlags(flagResult.data || []);
     setLoading(false);
   }, []);
@@ -166,10 +170,23 @@ export function ModuleControlsCard() {
   useEffect(() => {
     if (!associationId && availableAssociations.length > 0) {
       setAssociationId(availableAssociations[0].id);
+      setClubId("");
+      setDivisionId("");
+      setTeamId("");
     } else if (associationId && !availableAssociations.some((association) => association.id === associationId)) {
       setAssociationId(availableAssociations[0]?.id || "");
+      setClubId("");
+      setDivisionId("");
+      setTeamId("");
     }
   }, [associationId, availableAssociations]);
+
+  const handleAssociationChange = (value: string) => {
+    setAssociationId(value);
+    setClubId("");
+    setDivisionId("");
+    setTeamId("");
+  };
 
   const canManageAssociation = isSuperAdmin || scopedAssociationIds.includes(associationId);
   const availableScopeTypes = useMemo<ScopeType[]>(
@@ -180,7 +197,12 @@ export function ModuleControlsCard() {
   );
 
   useEffect(() => {
-    if (!availableScopeTypes.includes(scopeType)) setScopeType(availableScopeTypes[0]);
+    if (!availableScopeTypes.includes(scopeType)) {
+      setScopeType(availableScopeTypes[0]);
+      setClubId("");
+      setDivisionId("");
+      setTeamId("");
+    }
   }, [availableScopeTypes, scopeType]);
 
   const availableClubs = useMemo(
@@ -191,41 +213,102 @@ export function ModuleControlsCard() {
     [associationId, canManageAssociation, clubs, scopedClubIds],
   );
 
-  const availableDivisions = useMemo(
-    () => canManageAssociation
-      ? divisions.filter((division) => division.association_id === associationId)
-      : [],
-    [associationId, canManageAssociation, divisions],
+  const associationDivisions = useMemo(
+    () => divisions.filter((division) => division.association_id === associationId),
+    [associationId, divisions],
   );
 
-  const availableTeams = useMemo(() => {
-    const allowedClubIds = new Set(availableClubs.map((club) => club.id));
-    return teams.filter((team) => allowedClubIds.has(team.club_id));
-  }, [availableClubs, teams]);
+  const availableDivisions = useMemo(() => {
+    if (scopeType !== "TEAM" || !clubId) return associationDivisions;
+    const clubTeamIds = new Set(teams.filter((team) => team.club_id === clubId).map((team) => team.id));
+    const clubDivisionIds = new Set(
+      teamDivisions
+        .filter((item) => clubTeamIds.has(item.team_id))
+        .map((item) => item.division_id),
+    );
+    teams.forEach((team) => {
+      if (team.club_id === clubId && team.division_id) clubDivisionIds.add(team.division_id);
+    });
+    return associationDivisions.filter((division) => clubDivisionIds.has(division.id));
+  }, [associationDivisions, clubId, scopeType, teamDivisions, teams]);
+
+  const availableTeams = useMemo(
+    () => !clubId || !divisionId
+      ? []
+      : teams.filter((team) => team.club_id === clubId && (
+        team.division_id === divisionId
+        || teamDivisions.some((item) => item.team_id === team.id && item.division_id === divisionId)
+      )),
+    [clubId, divisionId, teamDivisions, teams],
+  );
 
   useEffect(() => {
-    if (!availableClubs.some((club) => club.id === clubId)) setClubId(availableClubs[0]?.id || "");
-    if (!availableDivisions.some((division) => division.id === divisionId)) setDivisionId(availableDivisions[0]?.id || "");
-    if (!availableTeams.some((team) => team.id === teamId)) setTeamId(availableTeams[0]?.id || "");
-  }, [availableClubs, availableDivisions, availableTeams, clubId, divisionId, teamId]);
+    if (clubId && !availableClubs.some((club) => club.id === clubId)) {
+      setClubId("");
+      setDivisionId("");
+      setTeamId("");
+    }
+  }, [availableClubs, clubId]);
 
+  useEffect(() => {
+    if (divisionId && !availableDivisions.some((division) => division.id === divisionId)) {
+      setDivisionId("");
+      setTeamId("");
+    }
+  }, [availableDivisions, divisionId]);
+
+  useEffect(() => {
+    if (teamId && !availableTeams.some((team) => team.id === teamId)) setTeamId("");
+  }, [availableTeams, teamId]);
+
+  const handleScopeTypeChange = (value: string) => {
+    const nextScopeType = value as ScopeType;
+    setScopeType(nextScopeType);
+    setClubId("");
+    setDivisionId("");
+    setTeamId("");
+  };
+
+  const handleClubChange = (value: string) => {
+    setClubId(value);
+    setDivisionId("");
+    setTeamId("");
+  };
+
+  const handleDivisionChange = (value: string) => {
+    setDivisionId(value);
+    setTeamId("");
+  };
+
+  const selectedTeam = teams.find((team) => team.id === teamId);
+  const selectedTeamMatchesScope = Boolean(selectedTeam && clubId && divisionId
+    && selectedTeam.club_id === clubId
+    && (selectedTeam.division_id === divisionId
+      || teamDivisions.some((item) => item.team_id === selectedTeam.id && item.division_id === divisionId)));
   const selectedScopeId = scopeType === "ASSOCIATION"
     ? associationId
     : scopeType === "CLUB"
       ? clubId
       : scopeType === "DIVISION"
         ? divisionId
-        : teamId;
+        : selectedTeamMatchesScope ? teamId : "";
 
-  const selectedTeam = teams.find((team) => team.id === teamId);
-  const selectedTeamClub = selectedTeam ? clubs.find((club) => club.id === selectedTeam.club_id) : undefined;
+  const selectedTeamClub = selectedTeamMatchesScope
+    ? clubs.find((club) => club.id === clubId)
+    : undefined;
+  const selectedTeamDivision = selectedTeamMatchesScope
+    ? divisions.find((division) => division.id === divisionId)
+    : undefined;
+  const selectedAssociation = associations.find((association) => association.id === associationId);
   const selectedScopeName = scopeType === "ASSOCIATION"
-    ? associations.find((association) => association.id === associationId)?.name
+    ? selectedAssociation?.name
     : scopeType === "CLUB"
       ? clubs.find((club) => club.id === clubId)?.name
       : scopeType === "DIVISION"
         ? divisions.find((division) => division.id === divisionId)?.name
-        : selectedTeam?.name;
+        : [selectedAssociation?.name, selectedTeamClub?.name, selectedTeamDivision?.name, selectedTeam?.name]
+          .filter(Boolean)
+          .join(" / ");
 
   const resolveStates = useCallback(async () => {
     if (!selectedScopeId) {
@@ -241,7 +324,11 @@ export function ModuleControlsCard() {
       ? associationId
       : selectedClub?.association_id || associationId;
     const scopeClubId = selectedClub?.id;
-    const scopeDivisionId = scopeType === "DIVISION" ? divisionId : selectedTeam?.division_id || undefined;
+    const scopeDivisionId = scopeType === "DIVISION"
+      ? divisionId
+      : scopeType === "TEAM" && selectedTeamMatchesScope
+        ? divisionId
+        : undefined;
     const scopeTeamId = scopeType === "TEAM" ? teamId : undefined;
 
     setResolving(true);
@@ -258,7 +345,7 @@ export function ModuleControlsCard() {
     }));
     setResolvedStates(Object.fromEntries(results) as Record<ModuleKey, boolean>);
     setResolving(false);
-  }, [associationId, clubId, clubs, divisionId, scopeType, selectedScopeId, selectedTeam, selectedTeamClub, teamId]);
+  }, [associationId, clubId, clubs, divisionId, scopeType, selectedScopeId, selectedTeamClub, selectedTeamMatchesScope, teamId]);
 
   useEffect(() => {
     void resolveStates().catch((error: unknown) => {
@@ -337,10 +424,10 @@ export function ModuleControlsCard() {
             </div>
           )}
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className={`grid gap-4 sm:grid-cols-2 ${scopeType === "TEAM" ? "xl:grid-cols-5" : "lg:grid-cols-3"}`}>
             <div className="space-y-2">
               <Label>Association</Label>
-              <Select value={associationId} onValueChange={setAssociationId}>
+              <Select value={associationId} onValueChange={handleAssociationChange}>
                 <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue placeholder="Select association" /></SelectTrigger>
                 <SelectContent>
                   {availableAssociations.map((association) => (
@@ -351,7 +438,7 @@ export function ModuleControlsCard() {
             </div>
             <div className="space-y-2">
               <Label>Control level</Label>
-              <Select value={scopeType} onValueChange={(value) => setScopeType(value as ScopeType)}>
+              <Select value={scopeType} onValueChange={handleScopeTypeChange}>
                 <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {availableScopeTypes.map((type) => (
@@ -362,12 +449,14 @@ export function ModuleControlsCard() {
             </div>
             <ScopeItemSelect
               scopeType={scopeType}
-              value={selectedScopeId}
+              clubId={clubId}
+              divisionId={divisionId}
+              teamId={teamId}
               clubs={availableClubs}
               divisions={availableDivisions}
               teams={availableTeams}
-              onClubChange={setClubId}
-              onDivisionChange={setDivisionId}
+              onClubChange={handleClubChange}
+              onDivisionChange={handleDivisionChange}
               onTeamChange={setTeamId}
             />
           </div>
@@ -466,7 +555,9 @@ export function ModuleControlsCard() {
 
 function ScopeItemSelect({
   scopeType,
-  value,
+  clubId,
+  divisionId,
+  teamId,
   clubs,
   divisions,
   teams,
@@ -475,7 +566,9 @@ function ScopeItemSelect({
   onTeamChange,
 }: {
   scopeType: ScopeType;
-  value: string;
+  clubId: string;
+  divisionId: string;
+  teamId: string;
   clubs: ClubOption[];
   divisions: DivisionOption[];
   teams: TeamOption[];
@@ -492,13 +585,64 @@ function ScopeItemSelect({
     );
   }
 
-  const options = scopeType === "CLUB" ? clubs : scopeType === "DIVISION" ? divisions : teams;
-  const handleChange = scopeType === "CLUB" ? onClubChange : scopeType === "DIVISION" ? onDivisionChange : onTeamChange;
+  if (scopeType === "TEAM") {
+    return (
+      <>
+        <ScopeSelect label="Club" value={clubId} placeholder="Select club" options={clubs} onChange={onClubChange} />
+        <ScopeSelect
+          label="Division"
+          value={divisionId}
+          placeholder={clubId ? "Select division" : "Select a club first"}
+          options={divisions}
+          onChange={onDivisionChange}
+          disabled={!clubId}
+        />
+        <ScopeSelect
+          label="Team"
+          value={teamId}
+          placeholder={divisionId ? "Select team" : "Select a division first"}
+          options={teams}
+          onChange={onTeamChange}
+          disabled={!clubId || !divisionId}
+        />
+      </>
+    );
+  }
+
+  const value = scopeType === "CLUB" ? clubId : divisionId;
+  const options = scopeType === "CLUB" ? clubs : divisions;
+  const handleChange = scopeType === "CLUB" ? onClubChange : onDivisionChange;
+  return (
+    <ScopeSelect
+      label={scopeType.charAt(0) + scopeType.slice(1).toLowerCase()}
+      value={value}
+      placeholder={`Select ${scopeType.toLowerCase()}`}
+      options={options}
+      onChange={handleChange}
+    />
+  );
+}
+
+function ScopeSelect({
+  label,
+  value,
+  placeholder,
+  options,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  options: Array<{ id: string; name: string }>;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
   return (
     <div className="space-y-2">
-      <Label>{scopeType.charAt(0) + scopeType.slice(1).toLowerCase()}</Label>
-      <Select value={value} onValueChange={handleChange}>
-        <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue placeholder={`Select ${scopeType.toLowerCase()}`} /></SelectTrigger>
+      <Label>{label}</Label>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue placeholder={placeholder} /></SelectTrigger>
         <SelectContent>
           {options.map((option) => <SelectItem key={option.id} value={option.id}>{option.name}</SelectItem>)}
         </SelectContent>

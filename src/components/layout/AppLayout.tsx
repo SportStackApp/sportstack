@@ -527,7 +527,7 @@ const AppLayout = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { mode, setMode, availableModes, canSwitchMode, modeLabel, roles, viewingAs, setViewingAs, isViewingAsOverridden, setIsViewingAsOverridden } = useAppMode();
+  const { mode, activeMode, setMode, availableModes, canSwitchMode, modeLabel, roles, viewingAs, setViewingAs, isViewingAsOverridden, setIsViewingAsOverridden, modeChanging, modeSyncError } = useAppMode();
   const {
     associations,
     selectedAssociationId,
@@ -574,7 +574,16 @@ const AppLayout = () => {
 
   const isVoterOnly = roles.length === 1 && roles[0] === "VOTER";
   const isBrandNewUser = roles.length === 0;
-  const isTeamScopedMode = mode === "player" || mode === "team_manager" || mode === "coach";
+  const isTeamScopedMode = activeMode === "player" || activeMode === "team_manager" || activeMode === "coach";
+
+  useEffect(() => {
+    if (!modeSyncError) return;
+    toast({
+      title: "Mode was not changed",
+      description: modeSyncError,
+      variant: "destructive",
+    });
+  }, [modeSyncError, toast]);
 
 
   // Keep the bell current without requiring a page refresh.
@@ -713,7 +722,7 @@ const AppLayout = () => {
   // Fetch pending request count for admin badge
   useEffect(() => {
     if (!user) return;
-    const isAdmin = mode === "super_admin" || mode === "association" || mode === "club";
+    const isAdmin = activeMode === "super_admin" || activeMode === "association" || activeMode === "club";
     if (!isAdmin) { setPendingRequestCount(0); return; }
     const fetchCount = async () => {
       const requestCountClient = supabase as unknown as RequestCountClient;
@@ -730,7 +739,7 @@ const AppLayout = () => {
       setPendingRequestCount((membershipRequests.count || 0) + (primaryRequests.count || 0));
     };
     fetchCount();
-  }, [user, mode]);
+  }, [user, activeMode]);
 
   // Fetch user avatar
   useEffect(() => {
@@ -773,7 +782,7 @@ const AppLayout = () => {
 
     const fetchPlayerHeaderContext = async () => {
       const now = new Date().toISOString();
-      const scopedRole = mode === "team_manager" ? "TEAM_MANAGER" : mode === "coach" ? "COACH" : null;
+      const scopedRole = activeMode === "team_manager" ? "TEAM_MANAGER" : activeMode === "coach" ? "COACH" : null;
       const [regularResult, fillInResult, profileResult, roleResult] = await Promise.all([
         supabase
           .from("team_memberships")
@@ -855,7 +864,7 @@ const AppLayout = () => {
           const matchingMembership = regularMemberships.find((item) => item?.teamId === roleMembership.teamId);
           return matchingMembership || roleMembership;
         });
-      const accessibleMemberships = mode === "player"
+      const accessibleMemberships = activeMode === "player"
         ? [...regularMemberships, ...fillInMemberships]
         : roleMemberships;
       const memberships = accessibleMemberships
@@ -882,7 +891,7 @@ const AppLayout = () => {
 
       setVoterTeamMemberships(memberships);
 
-      const contextSessionKey = `${mode}-primary-context:${user.id}`;
+      const contextSessionKey = `${activeMode}-primary-context:${user.id}`;
       const primaryMembership =
         memberships.find((membership) => membership.isDefaultTeam)
         || memberships.find((membership) => membership.membershipType === "PRIMARY")
@@ -923,7 +932,7 @@ const AppLayout = () => {
   }, [
     fillInRefreshTick,
     isTeamScopedMode,
-    mode,
+    activeMode,
     user,
     selectedTeamId,
     setSelectedScope,
@@ -934,17 +943,18 @@ const AppLayout = () => {
   useEffect(() => {
     if (mode !== "super_admin") return;
     if (isViewingAsOverridden) return;
+    if (modeChanging) return;
+    if (modeSyncError) return;
 
-    if (selectedTeamId) {
-      setViewingAs("team_manager");
-    } else if (selectedClubId) {
-      setViewingAs("club");
-    } else if (selectedAssociationId) {
-      setViewingAs("association");
-    } else {
-      setViewingAs("super_admin");
-    }
-  }, [selectedAssociationId, selectedClubId, selectedTeamId, isViewingAsOverridden, mode, setViewingAs]);
+    const cascadeMode: AppMode = selectedTeamId
+      ? "team_manager"
+      : selectedClubId
+        ? "club"
+        : selectedAssociationId
+          ? "association"
+          : "super_admin";
+    if (viewingAs !== cascadeMode) void setViewingAs(cascadeMode);
+  }, [selectedAssociationId, selectedClubId, selectedTeamId, isViewingAsOverridden, mode, modeChanging, modeSyncError, setViewingAs, viewingAs]);
 
   const handleAssociationChange = (associationId: string) => {
     setSelectedAssociationId(associationId);
@@ -952,11 +962,11 @@ const AppLayout = () => {
     navigate(`/associations/${associationId}`);
   };
 
-  const baseSections = NAV_SETS[mode === "super_admin" ? viewingAs : mode];
-  // Show selectors based on mode
-  const showAssociationSelector = mode === "super_admin";
-  const showClubSelector = mode === "super_admin" || mode === "association" || mode === "club";
-  const showAdminDropdown = mode === "super_admin" || mode === "association" || mode === "club";
+  const baseSections = NAV_SETS[activeMode];
+  // Viewing as is an actual data/action restriction, not only a navigation skin.
+  const showAssociationSelector = activeMode === "super_admin";
+  const showClubSelector = activeMode === "super_admin" || activeMode === "association" || activeMode === "club";
+  const showAdminDropdown = activeMode === "super_admin" || activeMode === "association" || activeMode === "club";
   const isModulePathEnabled = (path: string) => {
     if (path === "/mvp-votes" || path === "/admin/mvp-voting") return moduleEnabled.player_mvp;
     if (path === "/umpire/vote" || path === "/admin/umpire-voting") return moduleEnabled.umpire_match_voting;
@@ -981,7 +991,7 @@ const AppLayout = () => {
       return true;
     }),
   })).filter((section) => section.items.length > 0);
-  const mobileNavItems = isBrandNewUser ? MOBILE_NAV.player.filter((item) => item.path === "/dashboard") : MOBILE_NAV[mode];
+  const mobileNavItems = isBrandNewUser ? MOBILE_NAV.player.filter((item) => item.path === "/dashboard") : MOBILE_NAV[activeMode];
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleNotificationClick = async (notification: Notification) => {
@@ -1019,8 +1029,8 @@ const AppLayout = () => {
     items: section.items.filter((item) => {
       if (!showAdminDropdown) return false;
       if (!isModulePathEnabled(item.path)) return false;
-      if (mode === "association" && !ASSOCIATION_ADMIN_DROPDOWN_PATHS.has(item.path)) return false;
-      if (mode === "club" && !CLUB_ADMIN_DROPDOWN_PATHS.has(item.path)) return false;
+      if (activeMode === "association" && !ASSOCIATION_ADMIN_DROPDOWN_PATHS.has(item.path)) return false;
+      if (activeMode === "club" && !CLUB_ADMIN_DROPDOWN_PATHS.has(item.path)) return false;
       return true;
     }),
   })).filter((section) => section.items.length > 0);
@@ -1097,7 +1107,7 @@ const AppLayout = () => {
     }
   }, [
     location.pathname,
-    mode,
+    activeMode,
     isTeamScopedMode,
     clubs,
     teams,
@@ -1122,8 +1132,9 @@ const AppLayout = () => {
     navigate("/");
   };
 
-  const handleModeSwitch = (newMode: AppMode) => {
-    setMode(newMode);
+  const handleModeSwitch = async (newMode: AppMode) => {
+    const changed = await setMode(newMode);
+    if (!changed) return;
     setIsModeSwitcherOpen(false);
     const landing = newMode === "super_admin" || newMode === "association" || newMode === "club" ? "/admin" : "/dashboard";
     navigate(landing);
@@ -1262,14 +1273,12 @@ const AppLayout = () => {
           <p className="text-xs font-medium text-primary-foreground/75 mb-1 px-1">Viewing as</p>
           <select
             value={viewingAs}
+            disabled={modeChanging}
             onChange={(e) => {
               const selected = e.target.value as AppMode;
-              if (selected === "super_admin") {
-                setIsViewingAsOverridden(false);
-                setViewingAs("super_admin");
-              } else {
-                setViewingAs(selected);
-              }
+              void setViewingAs(selected).then((changed) => {
+                if (changed) setIsViewingAsOverridden(selected !== "super_admin");
+              });
             }}
             className="w-full rounded-md border border-border bg-background text-foreground text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
           >
@@ -1338,6 +1347,7 @@ const AppLayout = () => {
           <div className="relative">
             <button
               onClick={() => setIsModeSwitcherOpen(!isModeSwitcherOpen)}
+              disabled={modeChanging}
               className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-lg text-sm font-medium text-primary-foreground/95 hover:bg-primary-foreground/10 transition-all border border-primary-foreground/20"
             >
               <span className="truncate">{modeLabel}</span>
@@ -1349,7 +1359,8 @@ const AppLayout = () => {
                 {availableModes.map((m) => (
                   <button
                     key={m}
-                    onClick={() => handleModeSwitch(m)}
+                    onClick={() => void handleModeSwitch(m)}
+                    disabled={modeChanging}
                     className={cn(
                       "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
                       m === mode
@@ -1586,7 +1597,7 @@ const AppLayout = () => {
                           setSelectedDivision("");
                           setSelectedTeamId("");
                           setIsAssociationPopoverOpen(false);
-                          navigate(mode === "super_admin" || mode === "association" || mode === "club" ? "/admin" : "/dashboard");
+                          navigate(activeMode === "super_admin" || activeMode === "association" || activeMode === "club" ? "/admin" : "/dashboard");
                         }}
                         className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left transition-colors hover:bg-muted text-foreground"
                       >
@@ -1625,7 +1636,7 @@ const AppLayout = () => {
                     setSelectedClubId("");
                     setSelectedDivision("");
                     setSelectedTeamId("");
-                    navigate(mode === "super_admin" || mode === "association" || mode === "club" ? "/admin" : "/dashboard");
+                    navigate(activeMode === "super_admin" || activeMode === "association" || activeMode === "club" ? "/admin" : "/dashboard");
                   }}>
                     <X className="h-3 w-3" />
                   </Button>

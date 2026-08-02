@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAppMode } from "@/contexts/AppModeContext";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -9,15 +10,34 @@ export type SportStackModuleKey =
   | "safety_risk"
   | "hockey_trace";
 
-const DEFAULT_MODULE_STATE: Record<SportStackModuleKey, boolean> = {
-  player_mvp: true,
-  umpire_match_voting: true,
-  committee: true,
-  safety_risk: true,
+const CLOSED_MODULE_STATE: Record<SportStackModuleKey, boolean> = {
+  player_mvp: false,
+  umpire_match_voting: false,
+  committee: false,
+  safety_risk: false,
   hockey_trace: false,
 };
 
+const permissionClient = supabase as unknown as {
+  rpc: (
+    functionName: "resolve_effective_permission_for_mode",
+    args: {
+      p_permission_key: string;
+      p_actor_mode: string;
+      p_association_id?: string;
+      p_club_id?: string;
+      p_division_id?: string;
+      p_team_id?: string;
+    },
+  ) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+};
+
 export function useModuleAvailability(moduleKeys: SportStackModuleKey[]) {
+  const {
+    activeMode,
+    loading: modeLoading,
+    modeSyncError,
+  } = useAppMode();
   const {
     selectedAssociationId,
     selectedClubId,
@@ -25,7 +45,16 @@ export function useModuleAvailability(moduleKeys: SportStackModuleKey[]) {
     selectedTeamId,
   } = useTeamContext();
   const moduleKeySignature = moduleKeys.join(",");
-  const [enabled, setEnabled] = useState<Record<SportStackModuleKey, boolean>>(DEFAULT_MODULE_STATE);
+  const requestSignature = [
+    moduleKeySignature,
+    activeMode,
+    selectedAssociationId,
+    selectedClubId,
+    selectedDivision,
+    selectedTeamId,
+  ].join("|");
+  const [enabled, setEnabled] = useState<Record<SportStackModuleKey, boolean>>(CLOSED_MODULE_STATE);
+  const [resolvedSignature, setResolvedSignature] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,32 +62,71 @@ export function useModuleAvailability(moduleKeys: SportStackModuleKey[]) {
     let cancelled = false;
     const requestedKeys = moduleKeySignature.split(",").filter(Boolean) as SportStackModuleKey[];
     if (requestedKeys.length === 0) {
+      setResolvedSignature(requestSignature);
       setLoading(false);
       return;
     }
 
     setLoading(true);
     setError(null);
+    // A requested module stays unavailable until its permission has been
+    // confirmed. This avoids briefly exposing a module when the resolver is
+    // slow or unavailable.
+    setEnabled((current) => ({
+      ...current,
+      ...Object.fromEntries(requestedKeys.map((key) => [key, false])),
+    }));
+
+    // The database data gates are bound to the active Auth session mode. Do
+    // not resolve or render a module until AppModeContext has confirmed that
+    // mode with Supabase; otherwise the first page query can race ahead of the
+    // session initialisation and fail without a useful retry.
+    if (modeLoading) {
+      setResolvedSignature("");
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (modeSyncError) {
+      setError(modeSyncError);
+      setResolvedSignature(requestSignature);
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     void Promise.all(requestedKeys.map(async (moduleKey) => {
-      const { data, error: resolveError } = await supabase.rpc("resolve_module_enabled", {
-        p_module_key: moduleKey,
+      const { data, error: resolveError } = await permissionClient.rpc("resolve_effective_permission_for_mode", {
+        p_permission_key: `module.${moduleKey}.access`,
+        p_actor_mode: activeMode,
         p_association_id: selectedAssociationId || undefined,
         p_club_id: selectedClubId || undefined,
         p_division_id: selectedDivision || undefined,
         p_team_id: selectedTeamId || undefined,
       });
       if (resolveError) throw resolveError;
-      return [moduleKey, data] as const;
+      const result = data as { allowed?: boolean } | null;
+      // A missing or malformed response is not permission. Only an explicit
+      // true from the mode-aware server resolver opens a module.
+      return [moduleKey, result?.allowed === true] as const;
     }))
       .then((results) => {
         if (cancelled) return;
         setEnabled((current) => ({ ...current, ...Object.fromEntries(results) }));
+        setResolvedSignature(requestSignature);
       })
       .catch((resolveError: unknown) => {
         if (cancelled) return;
         setError(resolveError instanceof Error ? resolveError.message : "Module status could not be checked.");
-        // Keep current modules available if the status service is temporarily unavailable.
-        setEnabled(DEFAULT_MODULE_STATE);
+        // Fail closed for the requested modules. Existing Supabase RLS remains
+        // the data-security boundary, but a resolver failure must not expose UI.
+        setEnabled((current) => ({
+          ...current,
+          ...Object.fromEntries(requestedKeys.map((key) => [key, false])),
+        }));
+        setResolvedSignature(requestSignature);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -67,7 +135,22 @@ export function useModuleAvailability(moduleKeys: SportStackModuleKey[]) {
     return () => {
       cancelled = true;
     };
-  }, [moduleKeySignature, selectedAssociationId, selectedClubId, selectedDivision, selectedTeamId]);
+  }, [
+    activeMode,
+    modeLoading,
+    modeSyncError,
+    moduleKeySignature,
+    requestSignature,
+    selectedAssociationId,
+    selectedClubId,
+    selectedDivision,
+    selectedTeamId,
+  ]);
 
-  return { enabled, loading, error };
+  const isCurrentRequest = resolvedSignature === requestSignature;
+  return {
+    enabled: isCurrentRequest ? enabled : CLOSED_MODULE_STATE,
+    loading: loading || !isCurrentRequest,
+    error: isCurrentRequest ? error : null,
+  };
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +40,8 @@ import type { AppMode } from "@/contexts/AppModeContext";
 import { useTeamContext } from "@/contexts/TeamContext";
 
 type AppRole = Database["public"]["Enums"]["user_role_enum"];
-type MembershipType = Database["public"]["Enums"]["membership_type"];
+type MembershipType = Database["public"]["Enums"]["membership_type_enum"];
+type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 type TeamOption = Pick<Database["public"]["Tables"]["teams"]["Row"], "id" | "name" | "club_id" | "division" | "division_id">;
 type ClubOption = Pick<Database["public"]["Tables"]["clubs"]["Row"], "id" | "name" | "association_id">;
 type MembershipRow = Pick<Database["public"]["Tables"]["team_memberships"]["Row"], "id" | "user_id" | "team_id" | "status" | "membership_type">;
@@ -262,8 +263,11 @@ const UsersManagement = () => {
   };
   const [revsportsPlayerIdDraft, setRevsportsPlayerIdDraft] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
-  const [coachScopes, setCoachScopes] = useState<{ id: string, association_id: string, club_id: string, team_id: string }[]>([]);
-  const [managerScopes, setManagerScopes] = useState<{ id: string, association_id: string, club_id: string, team_id: string }[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesLoadError, setRolesLoadError] = useState<string | null>(null);
+  const roleLoadRequestRef = useRef(0);
+  const [coachScopes, setCoachScopes] = useState<{ id: string, association_id: string, club_id: string, division_id: string, team_id: string }[]>([]);
+  const [managerScopes, setManagerScopes] = useState<{ id: string, association_id: string, club_id: string, division_id: string, team_id: string }[]>([]);
   const [assocAdminScopes, setAssocAdminScopes] = useState<{ id: string, association_id: string }[]>([]);
   const [clubAdminScopes, setClubAdminScopes] = useState<{ id: string, association_id: string, club_id: string }[]>([]);
   const [saving, setSaving] = useState(false);
@@ -405,7 +409,7 @@ const UsersManagement = () => {
         || clubFilter !== "all"
         || divisionFilter !== "all"
         || teamFilter !== "all"
-        || ["ACTIVE", "PENDING", "DECLINED"].includes(statusFilter);
+        || ["ACTIVE", "PENDING"].includes(statusFilter);
 
       let candidateUserIds: string[] | null = Array.from(serverVisibleUserIds);
       if (constrainByMembership) {
@@ -413,8 +417,8 @@ const UsersManagement = () => {
           candidateUserIds = [];
         } else {
           let candidateQuery = supabase.from("team_memberships").select("user_id").in("team_id", filteredTeamIds);
-          if (["ACTIVE", "PENDING", "DECLINED"].includes(statusFilter)) {
-            candidateQuery = candidateQuery.eq("status", statusFilter as "ACTIVE" | "PENDING" | "DECLINED");
+          if (["ACTIVE", "PENDING"].includes(statusFilter)) {
+            candidateQuery = candidateQuery.eq("status", statusFilter as "ACTIVE" | "PENDING");
           }
           const { data, error } = await candidateQuery;
           if (error) throw error;
@@ -535,26 +539,14 @@ const UsersManagement = () => {
         }, new Map<string, Membership>()).values(),
       );
 
-      const membershipTeamIds = new Set(deduplicatedMemberships.map((membership) => membership.team_id));
-      const roleOnlyMembershipRows = profileRoles
-        .filter((role) => ["PLAYER", "COACH", "TEAM_MANAGER"].includes(role.role) && role.team_id && !membershipTeamIds.has(role.team_id))
-        .map((role) => {
-          const team = teamsList.find((t) => t.id === role.team_id);
-          return {
-            id: `role-${profile.id}-${role.role}-${role.team_id}`,
-            team_id: role.team_id as string,
-            status: "ACTIVE",
-            membership_type: "PRIMARY",
-            team_name: team?.name,
-            club_id: team?.club_id || role.club_id || undefined,
-          };
-        });
-
       return {
         ...profile,
         roles: Array.from(new Set(profileRoles.map((r) => r.role))),
         roleScopes: profileRoles,
-        memberships: [...deduplicatedMemberships, ...roleOnlyMembershipRows],
+        // Team access roles and player memberships are separate concepts.
+        // Coach and Team Manager scopes stay in roleScopes and must never be
+        // presented as synthetic Primary player memberships.
+        memberships: deduplicatedMemberships,
         pendingInvites: pendingInvitesData
         .filter((r) => r.target_user_id === profile.id)
         .map((r) => {
@@ -813,12 +805,35 @@ const UsersManagement = () => {
   };
 
   const loadRoleState = async (u: UserWithRoles) => {
+    const requestId = ++roleLoadRequestRef.current;
+    setRolesLoading(true);
+    setRolesLoadError(null);
     setSelectedUser(u);
     setRevsportsPlayerIdDraft(u.revsports_player_id || "");
-    const { data: rolesData } = await supabase
+    // Clear the previous user's draft immediately so a slow request can never
+    // expose or save stale role data for the newly selected user.
+    setSelectedRoles([]);
+    setCoachScopes([]);
+    setManagerScopes([]);
+    setAssocAdminScopes([]);
+    setClubAdminScopes([]);
+
+    const { data: rolesData, error: rolesError } = await supabase
       .from("user_roles")
       .select("role, association_id, club_id, team_id")
       .eq("user_id", u.id);
+
+    if (requestId !== roleLoadRequestRef.current) return false;
+    if (rolesError) {
+      setRolesLoading(false);
+      setRolesLoadError(rolesError.message);
+      toast({
+        title: "Roles could not load",
+        description: rolesError.message,
+        variant: "destructive",
+      });
+      return false;
+    }
 
     const roles = new Set<AppRole>();
     const cScopes: any[] = [];
@@ -852,11 +867,12 @@ const UsersManagement = () => {
     setAssignDivision("");
     setAssignTeamId("");
     setAssignMembershipType("PRIMARY");
+    setRolesLoading(false);
+    return true;
   };
 
   const handleOpenRoleDialog = async (u: UserWithRoles) => {
-    await loadRoleState(u);
-    setRoleDialogOpen(true);
+    if (await loadRoleState(u)) setRoleDialogOpen(true);
   };
 
   const handleToggleRole = (role: AppRole) => {
@@ -905,20 +921,60 @@ const UsersManagement = () => {
   };
 
   const handleSaveRoles = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser || rolesLoading) return;
+    if (rolesLoadError) {
+      toast({
+        title: "Roles are unavailable",
+        description: "Close this window and try again before saving role changes.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSaving(true);
 
-    if (isSuperAdmin) {
-      const cleanRevSportsId = revsportsPlayerIdDraft.trim();
-      const profileUpdate: Partial<Profile> = { revsports_player_id: cleanRevSportsId || null };
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update(profileUpdate)
-        .eq("id", selectedUser.id);
+    const stopForInvalidScope = (description: string) => {
+      toast({ title: "Complete the role scope", description, variant: "destructive" });
+      setSaving(false);
+    };
+    const hasDuplicates = (values: string[]) => new Set(values).size !== values.length;
 
-      if (profileError) {
-        toast({ title: "Error", description: profileError.message, variant: "destructive" });
-        setSaving(false);
+    if (selectedRoles.includes("ASSOCIATION_ADMIN")) {
+      if (assocAdminScopes.length === 0 || assocAdminScopes.some((scope) => !scope.association_id)) {
+        stopForInvalidScope("Select an association for every Association Admin row.");
+        return;
+      }
+      if (hasDuplicates(assocAdminScopes.map((scope) => scope.association_id))) {
+        stopForInvalidScope("The same association cannot be assigned twice to Association Admin.");
+        return;
+      }
+    }
+    if (selectedRoles.includes("CLUB_ADMIN")) {
+      if (clubAdminScopes.length === 0 || clubAdminScopes.some((scope) => !scope.association_id || !scope.club_id)) {
+        stopForInvalidScope("Select an association and club for every Club Admin row.");
+        return;
+      }
+      if (hasDuplicates(clubAdminScopes.map((scope) => scope.club_id))) {
+        stopForInvalidScope("The same club cannot be assigned twice to Club Admin.");
+        return;
+      }
+    }
+    if (selectedRoles.includes("COACH")) {
+      if (coachScopes.length === 0 || coachScopes.some((scope) => !scope.association_id || !scope.club_id || !scope.division_id || !scope.team_id)) {
+        stopForInvalidScope("Select an association, club, division and team for every Coach row.");
+        return;
+      }
+      if (hasDuplicates(coachScopes.map((scope) => scope.team_id))) {
+        stopForInvalidScope("The same team cannot be assigned twice to Coach.");
+        return;
+      }
+    }
+    if (selectedRoles.includes("TEAM_MANAGER")) {
+      if (managerScopes.length === 0 || managerScopes.some((scope) => !scope.association_id || !scope.club_id || !scope.division_id || !scope.team_id)) {
+        stopForInvalidScope("Select an association, club, division and team for every Team Manager row.");
+        return;
+      }
+      if (hasDuplicates(managerScopes.map((scope) => scope.team_id))) {
+        stopForInvalidScope("The same team cannot be assigned twice to Team Manager.");
         return;
       }
     }
@@ -967,9 +1023,36 @@ const UsersManagement = () => {
       return;
     }
 
-    toast({ title: "Success", description: "User roles updated" });
+    // Keep the RevSports identity update behind the authoritative role save.
+    // A failed role change must never alter the user's external identity link.
+    let revSportsLinkError: string | null = null;
+    if (isSuperAdmin) {
+      const cleanRevSportsId = revsportsPlayerIdDraft.trim();
+      const profileUpdate: ProfileUpdate = { revsports_player_id: cleanRevSportsId || null };
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update(profileUpdate)
+        .eq("id", selectedUser.id);
+
+      if (profileError) {
+        revSportsLinkError = profileError.message;
+      }
+    }
+
+    if (revSportsLinkError) {
+      toast({
+        title: "Roles saved; RevSports link not saved",
+        description: revSportsLinkError,
+        variant: "destructive",
+      });
+    } else {
+      toast({ title: "Success", description: "User roles updated" });
+    }
+    const freshUsers = await fetchUsers();
+    const updatedUser = freshUsers.find((user) => user.id === selectedUser.id);
+    if (updatedUser) setSelectedUser({ ...updatedUser });
     setRoleDialogOpen(false);
-    fetchUsers();
+    setEditDialogOpen(false);
     setSaving(false);
   };
 
@@ -1146,7 +1229,7 @@ const UsersManagement = () => {
       if (cleanRevSportsId !== (selectedUser.revsports_player_id || "")) {
         const { error: profileError } = await supabase
           .from("profiles")
-          .update({ revsports_player_id: cleanRevSportsId || null } as Partial<Profile>)
+          .update({ revsports_player_id: cleanRevSportsId || null } satisfies ProfileUpdate)
           .eq("id", selectedUser.id);
 
         if (profileError) {
@@ -1435,7 +1518,16 @@ const UsersManagement = () => {
     return scopeText || "All allowed scope";
   };
 
-  const rolesTabContent = (
+  const rolesTabContent = rolesLoading ? (
+    <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+      <RefreshCw className="h-4 w-4 animate-spin" />
+      Loading this user's roles...
+    </div>
+  ) : rolesLoadError ? (
+    <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-3 text-sm text-destructive">
+      Roles could not load. Close this window and try again before making changes.
+    </div>
+  ) : (
     <div className="space-y-4">
       <div className="space-y-2">
         <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">RevSports Link</h4>
@@ -1494,7 +1586,7 @@ const UsersManagement = () => {
   const teamsTabContent = (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Team Memberships</h4>
+        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Player Team Memberships</h4>
         <Button type="button" variant="outline" size="sm" onClick={() => setShowTeamAssign(!showTeamAssign)}>
           <Plus className="h-3 w-3 mr-1" />
           Assign Team
@@ -1724,7 +1816,6 @@ const UsersManagement = () => {
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="PENDING">Pending</SelectItem>
               <SelectItem value="ACTIVE">Active</SelectItem>
-              <SelectItem value="DECLINED">Declined</SelectItem>
               {isSuperAdmin && <SelectItem value="unassigned">Unassigned</SelectItem>}
               <SelectItem value="duplicates">Duplicates</SelectItem>
             </SelectContent>
@@ -2087,7 +2178,14 @@ const UsersManagement = () => {
 
         <EditUserDetailsDialog
           open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) {
+              roleLoadRequestRef.current += 1;
+              setRolesLoading(false);
+              setRolesLoadError(null);
+            }
+          }}
           user={selectedUser}
           onSendAccessLink={handleRequestAccessLinkReview}
           accessLinkSending={accessSending}
@@ -2095,6 +2193,8 @@ const UsersManagement = () => {
           teamsContent={teamsTabContent}
           onSaveRoles={handleSaveRoles}
           rolesSaving={saving}
+          rolesLoading={rolesLoading}
+          rolesLoadError={rolesLoadError}
           actorMode={actorMode}
           canManageAuthentication={actualIsSuperAdmin && actorMode === "super_admin"}
           membershipOnly={actorMode === "team_manager"}
@@ -2319,7 +2419,17 @@ const UsersManagement = () => {
         />
 
         {/* Role Management Dialog */}
-        <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
+        <Dialog
+          open={roleDialogOpen}
+          onOpenChange={(open) => {
+            setRoleDialogOpen(open);
+            if (!open) {
+              roleLoadRequestRef.current += 1;
+              setRolesLoading(false);
+              setRolesLoadError(null);
+            }
+          }}
+        >
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Manage Roles & Teams</DialogTitle>
@@ -2397,7 +2507,7 @@ const UsersManagement = () => {
               <TabsContent value="teams" className="mt-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Team Memberships</h4>
+                <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Player Team Memberships</h4>
                 <Button
                   variant="outline"
                   size="sm"
@@ -2599,7 +2709,7 @@ const UsersManagement = () => {
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSaveRoles} disabled={saving}>
+              <Button onClick={handleSaveRoles} disabled={saving || rolesLoading || Boolean(rolesLoadError)}>
                 {saving ? "Saving..." : "Save Roles"}
               </Button>
             </DialogFooter>

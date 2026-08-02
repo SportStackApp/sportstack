@@ -36,7 +36,7 @@ const ADMIN_ROLES: AppRole[] = ["SUPER_ADMIN", "ASSOCIATION_ADMIN", "CLUB_ADMIN"
 
 export function useAdminScope(): AdminScope {
   const { user } = useAuth();
-  const { mode, viewingAs } = useAppMode();
+  const { activeMode } = useAppMode();
   const { selectedAssociationId, selectedClubId, selectedTeamId } = useTeamContext();
   const [loading, setLoading] = useState(true);
   const [scopedRoles, setScopedRoles] = useState<ScopedRole[]>([]);
@@ -80,7 +80,7 @@ export function useAdminScope(): AdminScope {
   }, [fetchScope]);
 
   const actualIsSuperAdmin = scopedRoles.some((r) => r.role === "SUPER_ADMIN");
-  const actorMode = mode === "super_admin" ? viewingAs : mode;
+  const actorMode = activeMode;
   const isSuperAdmin = actualIsSuperAdmin && actorMode === "super_admin";
   const isAnyAdmin = actorMode !== "player" && actorMode !== "coach";
 

@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Lock, Shield } from "lucide-react";
+import { ArrowLeft, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AdvancedPermissionControls } from "@/components/admin/AdvancedPermissionControls";
+import { DevTestAccountProvisioner } from "@/components/admin/DevTestAccountProvisioner";
 import { ModuleControlsCard } from "@/components/admin/ModuleControlsCard";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { ROLE_PERMISSION_SUMMARIES } from "@/lib/rolePermissions";
@@ -45,31 +46,13 @@ const RolesPermissions = () => {
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Roles, permissions & modules</h1>
-          <p className="text-muted-foreground">Review role boundaries and control modules by organisation scope.</p>
+          <p className="text-muted-foreground">Control modules and reusable permissions by organisation, role, group or user.</p>
         </div>
       </div>
 
+      {isSuperAdmin && <DevTestAccountProvisioner />}
       <ModuleControlsCard />
-
-      {isSuperAdmin && <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5" />
-            Custom role switches
-          </CardTitle>
-          <CardDescription>
-            These broad action switches remain display-only. Live module enable and disable controls are available above.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-3">
-          {["View", "Create", "Edit", "Delete", "Approve", "Export"].map((label) => (
-            <div key={label} className="flex items-center justify-between rounded-lg border p-3">
-              <span className="text-sm font-medium">{label}</span>
-              <Switch checked disabled />
-            </div>
-          ))}
-        </CardContent>
-      </Card>}
+      <AdvancedPermissionControls />
 
       <div className="grid gap-4 lg:grid-cols-2">
         {ROLE_PERMISSION_SUMMARIES.map((role) => (

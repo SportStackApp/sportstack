@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.public-umpire-match-voting]
 verify_jwt = false
+
+[functions.provision-dev-test-account]
+verify_jwt = true
