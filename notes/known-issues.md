@@ -63,12 +63,17 @@ automated checks, but fresh deployed build `5514996` still redirects `/admin` to
 restores Team Manager after Super Admin is selected. The remaining session-context/navigation reset
 is open. The pass also confirmed these remaining gaps:
 
-- Viewing-as labels, badges and direct-route access can disagree with the selected lower mode. The
-  Umpire ballot checks stored roles rather than active mode, `/admin/analytics` lacks a direct
-  module gate, and the Admin Dashboard badge uses the account's highest stored role. A fresh
-  deployed-build check confirmed `team_manager` remained selected while Profile said `Viewing as
-  Super Admin`, the Lucas HC Admin Dashboard showed a `Super Admin` badge and Profile rendered one
-  unnamed role/scope line.
+- Viewing-as labels, badges and direct-route access can disagree with the active lower preview. A
+  fresh deployed-build check confirmed `team_manager` remained the active **Viewing as** value
+  while Profile incorrectly said `Viewing as Super Admin` and the Lucas HC Admin Dashboard
+  incorrectly showed a `Super Admin` badge. Source review confirmed Profile reads the root
+  `modeLabel`, the Admin badge reads the account's highest stored role and Profile's unnamed
+  role/scope line is caused by its local label maps omitting `UMPIRE_ADMIN`. These display defects do
+  not prove the active preview reset.
+- Direct navigation while previewing Team Manager rendered Umpire Match Voting and MVP Analytics.
+  The Umpire ballot checks stored account roles rather than active mode, `useAdminScope` treats Team
+  Manager as an admin and `/admin/analytics` lacks a direct module gate. Safety Hub rendered its
+  empty scoped screen and Committee correctly reported no accessible committees.
 - Back navigation from Team Chat briefly restores `/admin`, then the application asynchronously
   replaces it with `/dashboard` while Team Manager remains selected. This confirms the reported
   Admin Dashboard return-state defect independently of the Edit Details dialog.

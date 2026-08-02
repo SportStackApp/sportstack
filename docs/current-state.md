@@ -40,11 +40,14 @@ The 2 August unattended read-only pass has now exercised the main Dev screens an
 evidence in the matrix. It found genuine remaining gaps in mode labels/route restriction, scoped
 role presentation, the My Dashboard bye card, true fixture calendar rendering, legacy chat
 revisions, broadcast self-notification suppression and Umpire Match Voting identity filtering.
-Fresh read-only browser evidence on deployed build `9949d2b` confirmed Team Manager can remain the
-actual selected mode while Profile and Admin Dashboard label the session Super Admin. Returning
-from Team Chat briefly restores `/admin` before the app asynchronously replaces it with
-`/dashboard`. The Lucas HC fixture detail also repeated two availability identities, while its
-Line-up screen loaded Coach controls, availability, formation positions and roster relationships.
+Fresh read-only browser evidence on deployed build `9949d2b` confirmed the active **Viewing as**
+preview can remain Team Manager while Profile and Admin Dashboard incorrectly label the account
+Super Admin. Source review confirmed Profile reads the root `modeLabel`, the Admin badge reads the
+highest stored scoped role and the unnamed Profile role line is an unlabelled `UMPIRE_ADMIN` value.
+These are display defects, not evidence that the active preview reset. Returning from Team Chat
+briefly restores `/admin` before the app asynchronously replaces it with `/dashboard`. The Lucas HC
+fixture detail also repeated two availability identities, while its Line-up screen loaded Coach
+controls, availability, formation positions and roster relationships.
 Source review has since confirmed that Player MVP Analytics already has the requested three
 URL-backed tabs and that the availability-to-line-up workflow exists through My Dashboard, fixture
 detail and Line-up. The line-up access helper still uses stored roles rather than the active
@@ -53,6 +56,11 @@ added frontend guards for deliberate Super Admin mode selection and passed unit,
 TypeScript, build, Dev Quality and Vercel deployment checks. Fresh deployed build `5514996` still
 redirected `/admin` to `/dashboard` and restored Team Manager after Super Admin was selected. The
 session-context/navigation cause remains open.
+
+Direct-route checks while the active preview was Team Manager also rendered Umpire Match Voting and
+MVP Analytics. The Umpire ballot authorises from stored account roles, while `useAdminScope` treats
+Team Manager as an admin and `/admin/analytics` has no direct module gate. Safety Hub rendered its
+empty scoped screen and Committee correctly reported no accessible committees in the same preview.
 
 This package hardens scoped administration, preserves state consistently, separates Player MVP
 Voting from Umpire Match Voting, and completes the tested Fixtures, Communications, Coaching,

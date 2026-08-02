@@ -30,15 +30,19 @@ Future agents should start by reading these files in order:
   URL-backed tabs. It also confirms the availability-to-line-up workflow exists through My
   Dashboard, fixture detail and Line-up, but its access helper uses stored roles rather than the
   active Viewing-as mode.
-- A final read-only browser check on deployed build `9949d2b` confirmed the selector remained Team
-  Manager while Profile said `Viewing as Super Admin` and the Lucas HC Admin Dashboard showed a
-  `Super Admin` badge. Back from Team Chat briefly restored `/admin`, then the application
-  asynchronously replaced it with `/dashboard`. Profile also rendered one unnamed role/scope line.
+- A final read-only browser check on deployed build `9949d2b` confirmed the active **Viewing as**
+  preview remained Team Manager while Profile incorrectly said `Viewing as Super Admin` and the
+  Lucas HC Admin Dashboard incorrectly showed a `Super Admin` badge. Source review confirmed these
+  labels show the root account mode/highest stored role instead of `activeMode`; this is a display
+  defect, not evidence that the active preview reset. Profile also rendered one unnamed role/scope
+  line because its local role label maps omit the existing `UMPIRE_ADMIN` enum value. Back from Team
+  Chat briefly restored `/admin`, then the application asynchronously replaced it with `/dashboard`.
 - The Lucas HC fixture detail repeated `James V` and `Tom Batchelor` in availability. The Line-up
   page loaded Coach controls, availability labels, formation positions and Primary/Secondary
   roster relationships; no selection was saved or published.
 - Exact source causes are now recorded: the Umpire ballot uses stored roles rather than active mode,
-  `/admin/analytics` lacks a direct module gate, the Admin badge uses the highest stored role,
+  `/admin/analytics` lacks a direct module gate, Team Manager is treated as an admin by
+  `useAdminScope`, the Admin badge uses the highest stored role and Profile uses the root mode label,
   Dashboard duplicates the bye formatter with unconditional fallbacks, and Umpire suggestions load
   active memberships from every team in both fixture clubs. The user Edit Details action is an
   in-page dialog, so its observed Dashboard return belongs to the remaining mode/navigation reset.
