@@ -1,6 +1,6 @@
 # SportStack Owner-Test Matrix
 
-Last updated: 2 August 2026
+Last updated: 3 August 2026
 
 This is the single checklist matching the 31 July to 2 August owner review against the Dev
 implementation. It separates what is present from what has actually been tested.
@@ -14,13 +14,13 @@ implementation. It separates what is present from what has actually been tested.
   `20260802108000_harden_permission_group_assignments.sql`,
   `20260802109000_authorise_dev_test_provisioning_session.sql` and
   `20260802110000_mode_aware_runtime_permissions.sql` are applied.
-- `provision-dev-test-account` version 6 is deployed to Dev with JWT verification enabled. It
-  validates the live authenticated session and current Super Admin role before creating an account,
-  and refuses to reset an existing identity.
+- `provision-dev-test-account` version 7 is deployed to Dev with JWT verification enabled. It
+  validates the live authenticated session and current Super Admin role before creating or
+  explicitly resetting one of the seven exact metadata-marked reserved Dev identities.
 - Seven disposable role profiles exist for Association Admin, Club Admin, Team Manager, Coach,
-  Player, Umpire and Voter testing. Their credentials were not available to the unattended browser
-  session, so the separate-login actual-role workflow matrix still needs to run. No authentication
-  bypass is permitted.
+  Player, Umpire and Voter testing. Aaron has authorised hands-off password resets and recoverable
+  Dev-only test changes for these accounts. Credentials remain ephemeral and the separate-login
+  actual-role workflow matrix is now unblocked. No authentication bypass is permitted.
 - Historical membership cleanup, staging acceptance and every Production/domain change remain
   outside this run.
 
@@ -83,7 +83,7 @@ as a focused security-review queue, not as proof that the RPCs are exploitable.
 | Action-level permissions must not be presented as enforced before their workflows use them | Permission sets and direct exceptions filter the catalogue to enforced `MODULE` entries; future `ACTION` entries are not selectable | Code-review pass |
 | Module OFF must remove normal app access while data remains protected | Most module routes use the mode-aware server resolver, but direct `/admin/analytics` is not wrapped in `ModuleGate`, and the Umpire ballot authorises stored account roles rather than the active Viewing-as mode. Underlying tables and RPCs retain their existing Supabase RLS/authorisation. | Code-review fail — direct-route repair and retest required |
 | Scoped admins can author permissions only inside their authority | Association and Club Admin mode writes/listing are hierarchy-checked server-side | DB pass; actual-role UI retest |
-| Test with real role accounts, not only Viewing as | Secure Dev-account provisioner v5 is deployed and the actual Admin Sportstack Super Admin is signed in | Ready — provision disposable accounts next |
+| Test with real role accounts, not only Viewing as | Secure Dev-account provisioner v7 can explicitly reset the seven reserved identities; the actual Admin Sportstack Super Admin is signed in | Ready — reset accounts and run actual-role tests |
 
 Important boundary: the earlier general account could display Super Admin mode without holding the
 actual `SUPER_ADMIN` database role. It remains unsuitable for security testing. Provisioning and

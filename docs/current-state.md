@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-08-02
+Last updated: 2026-08-03
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -67,9 +67,11 @@ Committee/Safety and SQL-safety checks; all passed. Full lint remains at its kno
 76-warning baseline. Fresh 1280 x 720 checks found no document-level horizontal overflow on My
 Dashboard, Fixtures, Communications, Roster, Formation Library, Safety Hub or Committee
 Management. The authenticated in-app browser has a fixed viewport, so the current integrated
-tablet/mobile pass remains unproven. The seven prepared role accounts use one-time credentials that
-are not stored and the provisioner deliberately refuses resets; actual-role sign-ins require fresh
-owner-supplied authenticated sessions and must not be replaced with an authentication bypass.
+tablet/mobile pass remains unproven. Aaron has now authorised password resets for the seven
+reserved disposable Dev role accounts and recoverable Dev-only testing changes. A service-only
+reserved-identity lookup and explicit Super Admin reset flow are deployed to Dev, so the
+actual-role browser matrix can continue without storing credentials or adding an authentication
+bypass.
 
 This package hardens scoped administration, preserves state consistently, separates Player MVP
 Voting from Umpire Match Voting, and completes the tested Fixtures, Communications, Coaching,
@@ -128,6 +130,9 @@ The backend is Supabase: Postgres, Auth, Storage, Row Level Security, and Edge F
 - Non-destructive work on Development is pre-approved. Additive Dev-only migrations, RLS/Auth,
   Edge Function and role-enum work may proceed with live-schema verification, dry-run or rollback
   testing and documented results.
+- Disposable SportStack Dev accounts and test data are an owner-approved sandbox. Test-account
+  creation/password resets and recoverable Dev-only Auth, database, RLS and Edge Function changes
+  may proceed hands-off. Temporary credentials must never be committed or documented.
 - Still confirm before destructive database work, secrets work, any `prod` promotion and every
   Production change. Force-pushes, history rewrites, branch deletion and check bypass remain
   separately restricted.
@@ -157,8 +162,11 @@ passed rollback compile/runtime checks and are applied to Dev. They add transact
 account and role guards, mode-aware permission reads, writes, listings and runtime resolution,
 live-session provisioning authorisation, and exact group-scope/member-hierarchy checks. Duplicate
 role rejection, function-access checks and mode isolation passed. The actual Admin Sportstack
-`SUPER_ADMIN` account is signed in, and the secured `provision-dev-test-account` Edge Function is
-active as version 6 with JWT verification, live-session validation and create-once behaviour.
+`SUPER_ADMIN` account is signed in. Additive migration
+`20260802231405_reserved_dev_test_account_lookup.sql` and `provision-dev-test-account` version 7
+add an explicit reset operation limited to the seven exact metadata-marked Dev identities. JWT,
+live-session and current Super Admin checks remain required; ordinary and Production users cannot
+be targeted.
 
 The final session/module enforcement migrations ending `113500`, `114000` and `115000` are applied
 to Dev. Matching commit `a06ae9a` is live at the Dev address. `mvp-voting-email-reminders` version 4

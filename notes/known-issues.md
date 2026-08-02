@@ -51,16 +51,16 @@ The first Super Admin test found and resolved a stale role-enum reference in the
 The actual Admin Sportstack `SUPER_ADMIN` account is now signed into Dev. Follow-up migrations
 ending `105000`, `106000`, `107000`, `108000`, `109000`, `110000`, `113500`, `114000` and `115000`
 passed rollback compile/runtime checks and are applied to Dev. The secure Dev-account provisioner
-is active as version 6 with JWT verification enabled, live-session validation and create-once
-behaviour. Duplicate role rejection,
+is active as version 7 with JWT verification, live-session validation and an explicit reset path
+limited to the seven exact metadata-marked disposable Dev identities. Duplicate role rejection,
 function-access checks, mode isolation and exact permission-group scope/member hierarchy
 checks pass. Seven isolated Dev role accounts are prepared; the actual-role browser matrix remains
 pending. Matching Dev commit `a06ae9a` and the two updated voting Edge Functions are live.
 
-The test accounts use one-time credentials that are not stored in the repository. The provisioner
-intentionally refuses to reset an existing identity, so the unattended agent cannot recover those
-credentials or honestly complete separate-login testing. Aaron must supply fresh authenticated
-sessions for the prepared accounts; no secret access or authentication bypass is acceptable.
+The test accounts use temporary credentials that are not stored in the repository. Aaron has
+authorised password resets and recoverable Dev-only test changes for these disposable identities,
+so the actual-role browser matrix can continue hands-off. Production, secrets and historical
+membership cleanup remain outside this authority, and no authentication bypass is acceptable.
 
 The 2 August hands-off pass traversed the main Dev modules without writing application data.
 Commits `879d184` and `5514996` added guards for deliberate Super Admin selection and passed their

@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-02
+Last updated: 2026-08-03
 
 Future agents should start by reading these files in order:
 
@@ -89,12 +89,13 @@ Future agents should start by reading these files in order:
   `a06ae9a` is live, `mvp-voting-email-reminders` version 4 and
   `public-umpire-match-voting` version 5 are active, and their HTTP boundary checks passed.
 - Seven isolated Dev test accounts now exist for Association Admin, Club Admin, Team Manager,
-  Coach, Player, Umpire and Voter testing. No credentials are stored in the repository. The safe
-  duplicate-provisioning check returned `409` without resetting or rescoping the existing account.
-- A hands-off continuation confirmed those one-time credentials cannot be recovered from the
-  repository or provisioner: existing identities are intentionally rejected without a password
-  reset. Separate-login testing therefore needs Aaron to supply a fresh authenticated session for
-  each disposable account; no secret access or authentication bypass is permitted.
+  Coach, Player, Umpire and Voter testing. No credentials are stored in the repository. Aaron has
+  authorised hands-off password resets and recoverable Dev-only testing changes for these
+  disposable identities. Migration `20260802231405_reserved_dev_test_account_lookup.sql` and
+  `provision-dev-test-account` version 7 provide an explicit reset path limited to the seven exact
+  metadata-marked accounts and still require a current Super Admin session.
+- Temporary credentials must remain ephemeral. This standing Dev sandbox authority does not cover
+  Production, `prod`, domains, secrets, force-pushes or historical membership cleanup.
 - The historical-membership snapshot contains 201 duplicate user/team groups and 44 users with
   multiple active Primary memberships (490 captured rows). New invalid writes are blocked; no
   historical row was changed and cleanup still requires separate approval.

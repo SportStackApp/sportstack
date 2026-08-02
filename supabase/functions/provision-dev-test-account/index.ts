@@ -39,6 +39,7 @@ const TEST_ROLE_CONFIG = {
 };
 
 interface TestAccountPayload {
+  operation?: "create" | "reset";
   email: string;
   password: string;
   role: string;
@@ -101,10 +102,11 @@ Deno.serve(async (req) => {
       { p_user_id: callerId, p_session_id: callerSessionId },
     );
     if (callerAuthorisationError || callerAuthorised !== true) {
-      return respond({ error: "Only a Super Admin can create Dev test accounts." }, 403);
+      return respond({ error: "Only a Super Admin can manage Dev test accounts." }, 403);
     }
 
     const payload = (await req.json()) as TestAccountPayload;
+    const operation = payload.operation || "create";
     const email = payload.email?.trim().toLowerCase();
     const role = payload.role?.trim().toUpperCase();
     const roleConfig = role
@@ -112,6 +114,9 @@ Deno.serve(async (req) => {
       : undefined;
     if (!roleConfig) {
       return respond({ error: "That test role is not supported." }, 400);
+    }
+    if (!["create", "reset"].includes(operation)) {
+      return respond({ error: "That Dev test account operation is not supported." }, 400);
     }
     if (!email || email !== roleConfig.email) {
       return respond({ error: "The reserved Dev test email does not match the selected role." }, 400);
@@ -165,28 +170,58 @@ Deno.serve(async (req) => {
       teamId = team.id;
     }
 
-    // Existing Auth identities are deliberately not re-scoped or password-
-    // reset here. Creating the fixed reserved email is atomic in Auth, so an
-    // existing identity is rejected without listing or changing any users.
-    // This also avoids Supabase Auth's list-users endpoint, which cannot scan
-    // the permanent banned_until = infinity values used by Dev placeholders.
-    const { data: createdUser, error: createError } = await serviceClient.auth.admin.createUser({
-      email,
-      password: payload.password,
-      email_confirm: true,
-      user_metadata: { first_name: "Codex", last_name: testLastName },
-      app_metadata: { sportstack_dev_test: true },
-    });
-    if (createError || !createdUser.user) {
-      const existingIdentity = createError?.code === "email_exists";
-      return respond({
-        error: existingIdentity
-          ? "That Dev test account already exists and cannot be reset automatically."
-          : createError?.message || "The Dev test account could not be created.",
-      }, existingIdentity ? 409 : 400);
-    }
+    let userId: string;
+    let created = false;
 
-    const userId = createdUser.user.id;
+    if (operation === "reset") {
+      // The service-only lookup returns an ID only when both the reserved
+      // email/role pair and the immutable Dev-test app metadata match.
+      const { data: existingUserId, error: lookupError } = await serviceClient.rpc(
+        "get_reserved_dev_test_account_id",
+        { p_email: email, p_role: role },
+      );
+      if (lookupError) {
+        return respond({ error: "The reserved Dev test account could not be verified." }, 400);
+      }
+      if (!existingUserId) {
+        return respond({ error: "That reserved Dev test account does not exist yet." }, 404);
+      }
+
+      const { data: existingUser, error: existingUserError } = await serviceClient.auth.admin
+        .getUserById(existingUserId);
+      const existingEmail = existingUser.user?.email?.trim().toLowerCase();
+      const markedAsDevTest = existingUser.user?.app_metadata?.sportstack_dev_test === true;
+      if (existingUserError || existingEmail !== email || !markedAsDevTest) {
+        return respond({ error: "The reserved Dev test account could not be verified." }, 400);
+      }
+
+      const { error: passwordError } = await serviceClient.auth.admin.updateUserById(
+        existingUserId,
+        { password: payload.password },
+      );
+      if (passwordError) {
+        return respond({ error: passwordError.message || "The Dev test password could not be reset." }, 400);
+      }
+      userId = existingUserId;
+    } else {
+      const { data: createdUser, error: createError } = await serviceClient.auth.admin.createUser({
+        email,
+        password: payload.password,
+        email_confirm: true,
+        user_metadata: { first_name: "Codex", last_name: testLastName },
+        app_metadata: { sportstack_dev_test: true },
+      });
+      if (createError || !createdUser.user) {
+        const existingIdentity = createError?.code === "email_exists";
+        return respond({
+          error: existingIdentity
+            ? "That Dev test account already exists. Use Reset account instead."
+            : createError?.message || "The Dev test account could not be created.",
+        }, existingIdentity ? 409 : 400);
+      }
+      userId = createdUser.user.id;
+      created = true;
+    }
 
     const rollbackNewUser = async () => {
       const { error: rollbackError } = await serviceClient.auth.admin.deleteUser(userId);
@@ -211,7 +246,7 @@ Deno.serve(async (req) => {
         p_association_id: associationId,
         p_club_id: clubId,
         p_team_id: teamId,
-        p_created: true,
+        p_created: created,
       },
     );
     if (provisionError) {
@@ -219,13 +254,14 @@ Deno.serve(async (req) => {
         code: provisionError.code,
         message: provisionError.message,
       });
-      await rollbackNewUser();
+      if (created) await rollbackNewUser();
       return respond({ error: "The Dev test account data could not be saved." }, 500);
     }
 
     return respond({
       success: true,
-      created: true,
+      created,
+      reset: !created,
       user_id: userId,
       email,
       role,

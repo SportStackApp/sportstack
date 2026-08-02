@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { APP_ENVIRONMENT } from "@/lib/appVersion";
 
 type TestRole = "ASSOCIATION_ADMIN" | "CLUB_ADMIN" | "TEAM_MANAGER" | "COACH" | "PLAYER" | "UMPIRE" | "VOTER";
+type AccountOperation = "create" | "reset";
 
 interface AssociationOption { id: string; name: string }
 interface ClubOption { id: string; name: string; association_id: string }
@@ -77,6 +78,8 @@ export function DevTestAccountProvisioner() {
   const [password, setPassword] = useState(createTemporaryPassword);
   const [showPassword, setShowPassword] = useState(false);
   const [provisioned, setProvisioned] = useState(false);
+  const [completedOperation, setCompletedOperation] = useState<AccountOperation | null>(null);
+  const [pendingOperation, setPendingOperation] = useState<AccountOperation>("create");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const exactDevProject = APP_ENVIRONMENT === "DEV"
@@ -168,12 +171,13 @@ export function DevTestAccountProvisioner() {
     }
   };
 
-  const provisionAccount = async () => {
+  const provisionAccount = async (operation: AccountOperation) => {
     if (!scopeReady) return;
     setSaving(true);
     setProvisioned(false);
     const { data, error } = await supabase.functions.invoke("provision-dev-test-account", {
       body: {
+        operation,
         email,
         password,
         role,
@@ -193,8 +197,9 @@ export function DevTestAccountProvisioner() {
     }
     setConfirmOpen(false);
     setProvisioned(true);
+    setCompletedOperation(operation);
     toast({
-      title: "Dev test account created",
+      title: operation === "reset" ? "Dev test account reset" : "Dev test account created",
       description: `${roleOption.label} is ready for actual-role testing.`,
     });
   };
@@ -209,7 +214,7 @@ export function DevTestAccountProvisioner() {
           Dev test accounts
         </CardTitle>
         <CardDescription>
-          Create one disposable account with one real role. Each reserved role account is created once in SportStack Dev by an actual Super Admin.
+          Create or reset one reserved disposable account with one real role in SportStack Dev. Only an actual Super Admin can use this tool.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -284,7 +289,9 @@ export function DevTestAccountProvisioner() {
               <Alert>
                 <UserPlus className="h-4 w-4" />
                 <AlertTitle>Account ready</AlertTitle>
-                <AlertDescription>Copy the credentials now. Existing test identities are never re-scoped or password-reset automatically.</AlertDescription>
+                <AlertDescription>
+                  The account was {completedOperation === "reset" ? "reset" : "created"}. Copy the temporary credentials now; they are not stored.
+                </AlertDescription>
               </Alert>
             )}
 
@@ -292,7 +299,10 @@ export function DevTestAccountProvisioner() {
               <Button type="button" variant="outline" onClick={copyCredentials} disabled={!provisioned}>
                 <Copy className="mr-2 h-4 w-4" /> Copy credentials
               </Button>
-              <Button type="button" onClick={() => setConfirmOpen(true)} disabled={!scopeReady || saving}>
+              <Button type="button" variant="outline" onClick={() => { setPendingOperation("reset"); setConfirmOpen(true); }} disabled={!scopeReady || saving}>
+                <RefreshCw className="mr-2 h-4 w-4" /> Reset account
+              </Button>
+              <Button type="button" onClick={() => { setPendingOperation("create"); setConfirmOpen(true); }} disabled={!scopeReady || saving}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
                 {saving ? "Provisioning..." : "Create account"}
               </Button>
@@ -301,14 +311,17 @@ export function DevTestAccountProvisioner() {
             <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Create this Dev test account?</AlertDialogTitle>
+                  <AlertDialogTitle>{pendingOperation === "reset" ? "Reset this Dev test account?" : "Create this Dev test account?"}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This creates the reserved {roleOption.label} account once. Existing identities are rejected without changing their password or scope. Selected scope: {scopeSummary}. This never targets a normal user or Production.
+                    {pendingOperation === "reset"
+                      ? `This replaces the temporary password and restores the reserved ${roleOption.label} account to the selected disposable role and scope: ${scopeSummary}. The change is audited.`
+                      : `This creates the reserved ${roleOption.label} account once with the selected scope: ${scopeSummary}. Existing identities are rejected.`}
+                    {" "}This never targets a normal user or Production.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => void provisionAccount()}>Continue</AlertDialogAction>
+                  <AlertDialogAction onClick={() => void provisionAccount(pendingOperation)}>Continue</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
