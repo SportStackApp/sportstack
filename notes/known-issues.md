@@ -37,15 +37,27 @@ proposal is a separate destructive data task and needs Aaron's approval.
 ## Owner-Test Remediation Verification
 
 **Logged:** 1 August 2026
-**Status:** Implemented on Dev — actual-role owner test pending
+**Updated:** 2 August 2026
+**Status:** Implemented on Dev — actual-role owner test active
 
 The locked remediation package is implemented across permissions, persistence, navigation,
 Fixtures/Communications, Player MVP Voting, Umpire Match Voting, Coaching/Profile, Safety Hub and
-Committee Management. Focused plan lint, TypeScript and build pass.
+Committee Management. Focused lint, TypeScript, build and 30 focused Python migration/security
+tests pass.
 
 The first Super Admin test found and resolved a stale role-enum reference in the Dev
-`admin_save_user_roles` function. The database rollback test passes; browser confirmation after a
-refresh remains pending.
+`admin_save_user_roles` function. The database rollback test passes.
+
+The actual Admin Sportstack `SUPER_ADMIN` account is now signed into Dev. Follow-up migrations
+ending `105000`, `106000`, `107000`, `108000`, `109000`, `110000`, `113500`, `114000` and `115000`
+passed rollback compile/runtime checks and are applied to Dev. The secure Dev-account provisioner
+is active as version 6 with JWT verification enabled, live-session validation and create-once
+behaviour. Duplicate role rejection,
+function-access checks, mode isolation and exact permission-group scope/member hierarchy
+checks pass. Seven isolated Dev role accounts are prepared; the actual-role browser matrix remains
+pending. Matching Dev commit `a06ae9a` and the two updated voting Edge Functions are live.
+
+The detailed observation-to-test mapping is `docs/owner-test-matrix.md`.
 
 Still required before staging:
 
@@ -54,7 +66,7 @@ Still required before staging:
 - Test multi-team and multi-role cascade state through refresh, logout/login and incognito.
 - Test committee private uploads, Safety Hub matrix/link changes and the two voting workflows with
   clearly marked disposable Dev records.
-- Report repository-wide lint separately until its legacy 438-issue backlog is resolved.
+- Report repository-wide lint separately while its baseline remains 362 errors and 76 warnings.
 
 ## Email Template Polish
 **Logged:** 30 June 2026  
@@ -72,7 +84,8 @@ The Supabase emails for password resets, placeholder claim links, and welcome me
 
 ## Permission, Modules, and Parked Feedback Items
 **Logged:** 3 July 2026  
-**Status:** In progress - scoped module controls implemented on Dev 1 August 2026
+**Updated:** 2 August 2026
+**Status:** Scoped group, set, role and user module controls implemented on Dev
 
 **Do:**
 - Add separate permission concepts for Player MVP Voting submission/result visibility and Umpire Match Voting submission/result visibility, plus committee access and committee president access.
@@ -86,10 +99,20 @@ The Supabase emails for password resets, placeholder claim links, and welcome me
 - Super and Association Admins can manage all four levels in scope; Club Admins can manage their
   club and teams. Every override has a warning and can return to inherited mode.
 - Signed-in navigation and direct routes enforce the effective module setting.
+- Administrators can create named groups and reusable module-access permission sets, then assign a
+  set to a role, group or individual user.
+- Reasoned direct user/group/role exceptions override a permission set at the same scope.
+- Server functions enforce administrator hierarchy and scope, archive configuration instead of
+  hard-deleting it and write every change to the administration audit log.
+- Rolled-back Dev tests passed for group deny, direct-user precedence and Club Admin higher-role
+  protection. No validation records were retained.
+- Mode-aware permission reads, writes and listings are implemented for module visibility and
+  management, alongside the existing workflow RLS.
 
 **Still parked in this item:**
-- Fine-grained per-person submission and result visibility beyond the existing module-specific RLS.
-- Any role-enum change or custom View/Create/Edit/Delete/Approve/Export switch system.
+- Action-level submission, result, View/Create/Edit/Delete/Approve/Export permissions beyond the
+  existing workflow RLS. Catalogue foundations exist, but the UI hides these entries until every
+  affected server workflow enforces them end to end.
 
 **Do not:**
 - Add one-off hard-coded permission checks that will need to be unwound during the re-scope.

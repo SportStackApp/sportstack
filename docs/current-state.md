@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-08-01
+Last updated: 2026-08-02
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -31,8 +31,10 @@ Update this file after every meaningful Codex task, pull request, schema change,
 ## Current priority
 
 The locked Owner-Test remediation package is implemented on the Dev database and `dev` code path.
-The immediate priority is integrated owner verification using real Super Admin, Association Admin,
-Club Admin, Team Manager, Coach and Player accounts before any `main` staging promotion.
+Every observation from the 31 July to 2 August review is now mapped in
+`docs/owner-test-matrix.md`. The immediate priority is integrated verification using real Super
+Admin, Association Admin, Club Admin, Team Manager, Coach and Player sessions before any `main`
+staging promotion.
 
 This package hardens scoped administration, preserves state consistently, separates Player MVP
 Voting from Umpire Match Voting, and completes the tested Fixtures, Communications, Coaching,
@@ -104,11 +106,31 @@ The backend is Supabase: Postgres, Auth, Storage, Row Level Security, and Edge F
 
 ## Recently changed
 
-The 1 August Owner-Test remediation package adds ten Dev-only additive migrations and the matching
-frontend workflows. All new administration RPCs deny anonymous execution, all new public tables
-have Row Level Security enabled, and the `committee-files` bucket is private with a 20 MB limit.
-The package passes `npm run lint:dev-plan`, `npx tsc --noEmit` and `npm run build`. Repository-wide
-lint remains legacy debt: 438 current issues versus 442 before this package.
+The Owner-Test remediation package now includes its complete Dev-only additive migration set and
+matching frontend workflows. The 2 August extension adds reusable permission groups, module-access
+sets, role/group/user assignments and direct exceptions at association, club, division and team
+scope. All new administration RPCs deny anonymous execution, all new public tables have Row Level
+Security enabled, and the `committee-files` bucket is private with a 20 MB limit.
+
+Rolled-back Dev checks confirm group denial, direct-user precedence, administrator hierarchy and
+zero retained validation records. Migration `20260802102000_harden_is_super_admin_search_path.sql`
+schema-qualifies the existing Super Admin helper so it remains reliable inside hardened RPCs with
+an empty search path.
+
+The six follow-up migrations ending `105000`, `106000`, `107000`, `108000`, `109000` and `110000`
+passed rollback compile/runtime checks and are applied to Dev. They add transactional disposable-
+account and role guards, mode-aware permission reads, writes, listings and runtime resolution,
+live-session provisioning authorisation, and exact group-scope/member-hierarchy checks. Duplicate
+role rejection, function-access checks and mode isolation passed. The actual Admin Sportstack
+`SUPER_ADMIN` account is signed in, and the secured `provision-dev-test-account` Edge Function is
+active as version 6 with JWT verification, live-session validation and create-once behaviour.
+
+The final session/module enforcement migrations ending `113500`, `114000` and `115000` are applied
+to Dev. Matching commit `a06ae9a` is live at the Dev address. `mvp-voting-email-reminders` version 4
+and `public-umpire-match-voting` version 5 are active. Post-rollout checks confirmed 13 module-gate
+policies, authenticated-only session/mode resolvers, the intentional public Player MVP token checks,
+and the unchanged 201 duplicate groups, 44 multiple-Primary users and 490-row historical snapshot.
+Seven isolated Dev role accounts are prepared; the actual-role browser matrix remains pending.
 
 The first owner test exposed one live-schema drift in `admin_save_user_roles`: the function retained
 the old `public.app_role` name while Dev uses `public.user_role_enum`. Additive migration
@@ -128,6 +150,9 @@ Known recent themes:
 - Production scraper backups still need a guarded retention pass; no Production object has been
   deleted during the 30 July audit.
 - The repository-wide lint backlog remains separate from focused changed-file checks.
+- Baseline-aware development-plan lint, TypeScript, the production build and 30 focused Python
+  migration tests pass. Full repository lint remains at the separate baseline of 362 errors and
+  76 warnings.
 
 ## Known broken / uncertain
 
@@ -150,10 +175,16 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 - There is no formal authenticated browser suite yet. The Dev Quality workflow now covers focused
   development-plan lint, TypeScript, the production build, 100 Python regression tests and all
   GitHub workflow definitions; role-based browser flows still need owner smoke testing.
-- The Owner-Test remediation package still needs its integrated actual-account test across all six
-  roles, multi-team cascade state, incognito theme persistence, committee uploads and Safety Hub
-  linking. Viewing-as checks alone do not close this item.
-- Refresh and repeat the Super Admin user-list and role-save test after the Dev enum-reference fix.
+- The Owner-Test remediation package still needs its integrated actual-account test using the Admin
+  Sportstack Super Admin control plus disposable Association Admin, Club Admin, Team Manager,
+  Coach, Player and Umpire accounts, multi-team cascade state, incognito theme persistence,
+  committee uploads and Safety Hub linking. Viewing-as checks alone do not close this item.
+- The actual Admin Sportstack `SUPER_ADMIN` account is signed in and seven isolated Dev role
+  accounts are prepared. The full actual-role browser matrix still needs to be run; Viewing-as
+  checks alone do not close this item.
+- Advanced permission management currently exposes only module-access keys because those are
+  enforced through mode-aware route/navigation resolution and existing workflow RLS. Action-level
+  catalogue keys remain hidden until each domain write path enforces them end to end.
 - Historical duplicate membership cleanup remains parked. The immutable snapshot and dry-run totals
   are ready, but no row can be consolidated without Aaron approving the exact keep/remove report.
 - Umpire Portal staging is waiting at an explicit approval gate: the current `dev` package includes

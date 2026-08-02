@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-01
+Last updated: 2026-08-02
 
 Future agents should start by reading these files in order:
 
@@ -12,22 +12,47 @@ Future agents should start by reading these files in order:
 
 ## Current release state
 
-- The locked Owner-Test remediation package is implemented against SportStack Dev and prepared on
-  `dev` for integrated owner testing. It covers scoped administration and audit, state persistence,
-  cascade/navigation, Fixtures and Communications, both voting modules, Coaching/Profile,
-  Safety Hub and Committee Management. `main`, `prod`, Production Supabase, DNS and redirects are
-  unchanged.
-- Ten additive Dev migrations were applied. All new public tables have RLS, new administrative
+- The locked Owner-Test remediation package is implemented against SportStack Dev and mapped in
+  `docs/owner-test-matrix.md` for integrated owner testing. It covers scoped administration and
+  audit, state persistence, cascade/navigation, Fixtures and Communications, both voting modules,
+  Coaching/Profile, Safety Hub and Committee Management. `main`, `prod`, Production Supabase, DNS
+  and redirects are unchanged.
+- All additive Dev migrations in the remediation package are applied. All new public tables have RLS, new administrative
   functions reject anonymous execution, and private committee uploads are limited to 20 MB.
+- The 2 August permission extension adds scoped named groups, reusable module-access sets,
+  assignments to roles/groups/users and reasoned direct exceptions. Rolled-back Dev tests passed
+  for group denial, direct-user precedence, Club Admin hierarchy and clean rollback. The existing
+  `is_super_admin()` helper was schema-qualified for reliable use inside hardened functions.
+- The actual Admin Sportstack account is now signed into Dev and confirmed as a real `SUPER_ADMIN`.
+  The secure `provision-dev-test-account` Edge Function is active as version 6 with JWT verification
+  enabled. It validates the live Auth session and current Super Admin role, creates accounts once
+  and refuses to reset an existing identity; no authentication bypass was added.
 - The first owner test found a stale `public.app_role` cast in `admin_save_user_roles`. Dev actually
-  uses `public.user_role_enum`; migration `20260801131220_fix_admin_role_enum_reference.sql` fixes
-  that single reference. The corrected save completed in a rolled-back Dev transaction and now
-  needs one browser refresh/retest.
+  uses `public.user_role_enum`; migration `20260801131220_fix_admin_role_enum_reference.sql` fixed
+  that single reference. The corrected save passed its rolled-back Dev transaction check.
+- Follow-up migrations `20260802105000_transactional_dev_account_and_role_guards.sql`,
+  `20260802106000_mode_aware_permission_management.sql` and
+  `20260802107000_mode_aware_permission_listing.sql`, plus
+  `20260802108000_harden_permission_group_assignments.sql`,
+  `20260802109000_authorise_dev_test_provisioning_session.sql` and
+  `20260802110000_mode_aware_runtime_permissions.sql`, passed rollback compile/runtime checks and
+  are applied to Dev. Duplicate role rejection, function-access checks and mode isolation passed.
+  Mode-aware permission reads and writes are implemented, and group assignments enforce exact
+  scope and member hierarchy; the actual-role browser matrix is still pending.
+- Migrations `20260802113500_session_bound_permission_context.sql`,
+  `20260802114000_enforce_committee_safety_module_access.sql` and
+  `20260802115000_enforce_voting_module_access.sql` are applied to Dev. Matching Dev commit
+  `a06ae9a` is live, `mvp-voting-email-reminders` version 4 and
+  `public-umpire-match-voting` version 5 are active, and their HTTP boundary checks passed.
+- Seven isolated Dev test accounts now exist for Association Admin, Club Admin, Team Manager,
+  Coach, Player, Umpire and Voter testing. No credentials are stored in the repository. The safe
+  duplicate-provisioning check returned `409` without resetting or rescoping the existing account.
 - The historical-membership snapshot contains 201 duplicate user/team groups and 44 users with
   multiple active Primary memberships (490 captured rows). New invalid writes are blocked; no
   historical row was changed and cleanup still requires separate approval.
-- Quality status for the package: development-plan lint, TypeScript and production build pass.
-  Repository-wide lint is an existing backlog at 438 issues, down from the 442-issue start.
+- Quality status for the package: baseline-aware development-plan lint, TypeScript, production
+  build and 30 focused migration/security tests pass. Repository-wide lint remains a separate baseline
+  of 362 errors and 76 warnings.
 
 - A guarded, backup-first Umpire Portal Production release script and runbook are prepared for
   `dev` and `main` staging. The script is pinned to the exact Production Supabase project, two
@@ -162,16 +187,17 @@ Future agents should start by reading these files in order:
 
 ## Best next owner test
 
-1. Run the integrated Owner-Test plan on Dev with separate actual-role accounts, starting with Club
-   Admin user visibility and protection of higher-role accounts.
-2. Test multi-team cascade selection, Team Overview, tabs, filters, drafts, refresh and incognito
+1. Use the prepared isolated Dev accounts to follow `docs/owner-test-matrix.md` one line at a time.
+2. Start with the new permission groups, module sets, role/group/user assignments and direct exceptions,
+   then confirm Club Admin user visibility and higher-role protection.
+3. Test multi-team cascade selection, Team Overview, tabs, filters, drafts, refresh and incognito
    theme persistence.
-3. Test Fixtures/bye display, chat history/pagination, Player MVP identity and status, and Umpire
+4. Test Fixtures/bye display, chat history/pagination, Player MVP identity and status, and Umpire
    Match Voting number-only validation.
-4. Test one disposable Safety Hub matrix/link workflow and one Committee meeting, upload, agenda,
+5. Test one disposable Safety Hub matrix/link workflow and one Committee meeting, upload, agenda,
    minutes and linked-record workflow.
-5. Keep the 201 duplicate membership groups unchanged until Aaron approves the exact cleanup report.
-6. Only after acceptance, promote the reviewed package to `main`. Production and domain work remain
+6. Keep the 201 duplicate membership groups unchanged until Aaron approves the exact cleanup report.
+7. Only after acceptance, promote the reviewed package to `main`. Production and domain work remain
    separately approval-gated.
 
 Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace remains experimental and

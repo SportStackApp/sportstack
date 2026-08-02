@@ -6,15 +6,17 @@ The blocks below are completed in order where practical. Work starts on `dev`, i
 documented, then moves to `main` for staging. Production, DNS, redirects and destructive changes
 remain separately approval-gated.
 
-## Owner-test remediation package — implemented on Dev, owner verification pending
+## Owner-test remediation package — implemented on Dev, integrated verification active
 
-The owner-test findings collected on 31 July and 1 August have been implemented in the locked
-order below. The package stays on `dev` until Aaron completes the integrated role and workflow
-test. `main`, `prod`, Production Supabase, domains and redirects are unchanged.
+The owner-test findings collected from 31 July to 2 August are matched line by line in
+`docs/owner-test-matrix.md`. The package stays on `dev` until the integrated actual-role and
+workflow test is complete. `main`, `prod`, Production Supabase, domains and redirects are
+unchanged.
 
 1. **Permissions and data integrity:** scoped server functions, role hierarchy, Viewing-as data
    restrictions, protected higher-role accounts, membership write guards, administration audit
-   history and a pre-cleanup duplicate-membership snapshot.
+   history, a pre-cleanup duplicate-membership snapshot, and reusable module permission groups,
+   sets, role/user assignments and direct exceptions.
 2. **Stability and persistence:** route error recovery, URL-backed scope/tabs/filters, retained
    drafts, restored chat context and account-backed theme preference.
 3. **Navigation and dashboards:** consistent dashboard/overview names, Team Overview cascade
@@ -38,8 +40,11 @@ test. `main`, `prod`, Production Supabase, domains and redirects are unchanged.
 9. **Committee Management:** Committee Work and Administration areas, meeting calendar/scheduling,
    attendance/apologies/minutes/actions, searchable minutes, private 20 MB uploads, archived agenda
    templates, reorderable sections and multi-record Safety Hub links.
-10. **Verification and handoff:** focused plan lint, TypeScript and build pass. The full lint backlog
-    is reported separately. Actual-role owner testing is still required before staging promotion.
+10. **Verification and handoff:** the advanced permission resolver, hierarchy and mode-aware
+    read/write/listing/runtime paths have passed rolled-back Dev checks. Duplicate role rejection,
+    live-session provisioning authorisation and function-access checks pass. Baseline-aware plan
+    lint, TypeScript, build and 30 focused migration/security tests pass; actual-role browser testing
+    is still required before staging.
 
 The duplicate-membership snapshot contains 201 duplicate user/team groups and 44 users with
 multiple active Primary memberships, covering 490 captured historical rows. New duplicates are
@@ -158,6 +163,23 @@ Management, Risk and Quality Improvement, and the experimental Hockey Trace Lab.
 Club administrators can create confirmed child overrides only inside their managed scope, restore
 inheritance and see the effective result. Signed-in routes and menus apply the closest team,
 division, club or association setting; the existing modules remain enabled by default.
+
+The 2 August extension adds named permission groups, reusable module-access sets, assignments to a
+role/group/user and reasoned direct exceptions. The server enforces scope and administrator
+hierarchy, archives instead of hard-deleting configuration and audits every change. Rolled-back Dev
+tests confirm a direct user exception overrides a group set and Club Admin mode cannot target
+Super, Association or Club Admin accounts. Action-level catalogue entries remain hidden until their
+individual workflow write paths enforce them end to end.
+
+The follow-up Dev migrations ending `105000`, `106000`, `107000`, `108000`, `109000`, `110000`,
+`113500`, `114000` and `115000` are applied after successful rollback compile/runtime checks. The
+actual Admin Sportstack `SUPER_ADMIN` is signed in, and the secured version 6 Dev-account
+provisioner has JWT verification enabled, checks the live session and refuses to reset existing
+identities. Module visibility and
+active Viewing-as mode now use the mode-aware application resolver alongside existing workflow
+RLS; permission groups also enforce exact scope and member hierarchy. Full action-level permission
+wiring remains future work. Seven isolated Dev role accounts are prepared; the actual-role browser
+matrix is pending.
 
 ## 11. Committee setup — implemented on Dev, owner smoke pending
 
