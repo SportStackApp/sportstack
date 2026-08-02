@@ -40,9 +40,10 @@ The 2 August unattended read-only pass has now exercised the main Dev screens an
 evidence in the matrix. It found genuine remaining gaps in mode labels/route restriction, the My
 Dashboard bye card, fixture calendar switching, legacy chat revisions, the third Player MVP
 Analytics tab, Umpire Match Voting identity filtering and the end-to-end coach team-selection
-workflow. Commit `879d184` fixes deliberate Super Admin mode selection and passed unit, focused
-lint, TypeScript, build, Dev Quality and Vercel deployment checks. A fresh browser must still prove
-the fix because the existing test tab retained cached build `526c0d3`.
+workflow. Commits `879d184` and `5514996` added frontend guards for deliberate Super Admin mode
+selection and passed unit, focused lint, TypeScript, build, Dev Quality and Vercel deployment
+checks. Fresh deployed build `5514996` still redirected `/admin` to `/dashboard` and restored Team
+Manager after Super Admin was selected. The session-context/navigation cause remains open.
 
 This package hardens scoped administration, preserves state consistently, separates Player MVP
 Voting from Umpire Match Voting, and completes the tested Fixtures, Communications, Coaching,

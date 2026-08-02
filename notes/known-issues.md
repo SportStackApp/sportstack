@@ -58,8 +58,10 @@ checks pass. Seven isolated Dev role accounts are prepared; the actual-role brow
 pending. Matching Dev commit `a06ae9a` and the two updated voting Edge Functions are live.
 
 The 2 August hands-off pass traversed the main Dev modules without writing application data.
-Commit `879d184` fixes deliberate Super Admin mode selection and passed its automated checks. The
-pass also confirmed these remaining gaps:
+Commits `879d184` and `5514996` added guards for deliberate Super Admin selection and passed their
+automated checks, but fresh deployed build `5514996` still redirects `/admin` to `/dashboard` and
+restores Team Manager after Super Admin is selected. The remaining session-context/navigation reset
+is open. The pass also confirmed these remaining gaps:
 
 - Viewing-as labels, badges and direct-route access can disagree with the selected lower mode.
 - My Dashboard still formats a bye as Unknown/midnight/TBD, while Fixtures formats it correctly.

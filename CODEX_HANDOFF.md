@@ -17,10 +17,11 @@ Future agents should start by reading these files in order:
   Coaching/Profile, Formation, Safety Hub and Committee screens without changing test data. The
   detailed matrix distinguishes read-only passes, partial failures and actual-role/write tests that
   are still required.
-- Commit `879d184` fixes the mode bootstrap that could immediately replace a deliberate Super Admin
-  selection when a lower cascade scope was active. Unit, focused lint, TypeScript, build, Dev
-  Quality run `30746490223` and the Vercel deployment passed. The original browser tab remained on
-  cached build `526c0d3`; confirm the version and behaviour in a fresh browser before closing it.
+- Commits `879d184` and `5514996` add frontend guards against the cascade replacing a deliberate
+  Super Admin selection. Unit, focused lint, TypeScript, build, Dev Quality runs `30746490223` and
+  `30747852160`, and both Vercel deployments passed. Fresh deployed build `5514996` still redirects
+  `/admin` to `/dashboard` and restores Team Manager after Super Admin is selected. The remaining
+  session-context/navigation cause is open; do not record this workflow as passed.
 - The unattended pass found remaining product gaps: mode labels and direct-route restriction can
   disagree with Viewing as; My Dashboard still misformats byes; fixture calendar switching was not
   visible; legacy chat edits have no revisions; Player MVP Analytics lacks its third tab; Umpire
