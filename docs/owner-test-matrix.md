@@ -14,13 +14,39 @@ implementation. It separates what is present from what has actually been tested.
   `20260802108000_harden_permission_group_assignments.sql`,
   `20260802109000_authorise_dev_test_provisioning_session.sql` and
   `20260802110000_mode_aware_runtime_permissions.sql` are applied.
-- `provision-dev-test-account` version 5 is deployed to Dev with JWT verification enabled. It
+- `provision-dev-test-account` version 6 is deployed to Dev with JWT verification enabled. It
   validates the live authenticated session and current Super Admin role before creating an account,
   and refuses to reset an existing identity.
-- Disposable role accounts still need to be provisioned and the actual-role workflow matrix still
-  needs to run. No authentication bypass is permitted.
+- Seven disposable role profiles exist for Association Admin, Club Admin, Team Manager, Coach,
+  Player, Umpire and Voter testing. Their credentials were not available to the unattended browser
+  session, so the separate-login actual-role workflow matrix still needs to run. No authentication
+  bypass is permitted.
 - Historical membership cleanup, staging acceptance and every Production/domain change remain
   outside this run.
+
+## Hands-off Dev evidence — 2 August 2026
+
+The unattended pass used the signed-in Admin Sportstack Super Admin account, read-only Dev database
+checks and safe browser navigation. It did not submit ballots, publish messages, upload files,
+change module rules, create Safety/Committee records or alter historical memberships.
+
+| Area | Evidence collected | Result |
+|---|---|---|
+| Viewing-as and scope | Association Admin, Team Manager, Coach and Player modes were opened. Lower modes changed menus and scope, but Player still exposed Umpiring pages, an already-open Squad route remained accessible, and profile/Admin badges could still say Super Admin while Association Admin was selected. | **Fail — mode display and route restriction remain inconsistent** |
+| Deliberate Super Admin selection | Source fix `879d184` makes an explicit Super Admin selection authoritative even when a lower cascade scope is selected. Unit, focused lint, TypeScript, build, Dev Quality and Vercel deployment checks passed. The existing browser tab remained on cached build `526c0d3`, so a fresh-browser visual check is still required. | **Automated pass; fresh-build browser retest** |
+| Scoped users and permissions | Lucas HC Admin Dashboard and its scoped user link retained the Lucas query and showed eight users. Higher-account editing was disabled. Roles & modules showed group/set/module controls and enabled scope actions only after Lucas was selected. Live Dev currently has no saved permission groups, sets, assignments, overrides or module flags. | **Read-only pass; actual-role write tests pending** |
+| Fixtures and byes | Fixtures shows the full competition name, `Round 15` and `Lucas HC — Bye` without midnight/TBD. My Dashboard still shows `Lucas HC vs Unknown`, midnight and TBD. Calendar selection did not visibly replace the list. | **Partial fail** |
+| Communications | Team Chat, replies, reactions, removed placeholders and the edit-history entry point loaded. Club/Association publish controls were absent in Player mode. Association tab and scope survived refresh. The edited legacy message showed only its current version; Dev has zero `communication_message_revisions`, so earlier edits are not backfilled. | **Partial pass; legacy history gap** |
+| Player MVP Voting | Admin sessions and detail pages showed dates, open/close status and completion. Some identities remain shortened, Player mode had no eligible attended session, and Analytics has only Player Leaderboard and Vote Completion rather than the required three tabs. | **Partial fail** |
+| Umpire Match Voting | Guided Round → Division → Fixture selection, round dates, current Round 12, completed-fixture eligibility, division scheme, inline missing-value validation, number-only warning/acknowledgement and one-character search all worked. Suggestions were too broad, included players outside the selected team and still contained shortened scraped names. No ballot was submitted. | **Partial pass** |
+| Coaching, roster, formation and profile | Squad/Roster deduplicated visible cards and showed relationship KPIs; Formation Builder panel collapse, focus mode and landscape surface worked; Team Player Details and role/scope profile sections loaded. Squad/Roster do not yet provide the owner workflow for fixture availability, team selection, pitch assignment and distribution, and cards commonly lack positions/numbers. | **Partial pass; workflow gap** |
+| Safety Hub and Committee | Every tab loaded without a white screen. Matrix configuration exposed fixed 5×5 labels/descriptions/ratings and category controls. Committee Work/Admin split, calendar, restricted chat and private 20 MB document dialog loaded. Lucas had no Safety records and no disposable writes/uploads were made, so linked-record edits and storage authorisation remain unverified. | **Read-only pass; write-path tests pending** |
+| Dev integrity and quality | All relevant inspected tables have RLS. Live counts remain 201 duplicate active membership groups, 44 multiple-Primary users and the 490-row immutable snapshot. `npm run lint:dev-plan`, `npx tsc --noEmit`, `npm run build` and all 125 Python tests passed. Full lint remains at its known 362-error/76-warning baseline. | **Automated pass; cleanup approval-gated** |
+
+The Supabase security adviser also listed several authenticated `SECURITY DEFINER` RPCs. Code review
+confirmed the permission and module writers validate `auth.uid()`, active Auth session, selected
+mode, organisation scope and manageable subject hierarchy before writing. Treat the adviser output
+as a focused security-review queue, not as proof that the RPCs are exploitable.
 
 ## Status key
 

@@ -38,7 +38,7 @@ proposal is a separate destructive data task and needs Aaron's approval.
 
 **Logged:** 1 August 2026
 **Updated:** 2 August 2026
-**Status:** Implemented on Dev — actual-role owner test active
+**Status:** Dev hands-off pass recorded — actual-role and write-path tests remain
 
 The locked remediation package is implemented across permissions, persistence, navigation,
 Fixtures/Communications, Player MVP Voting, Umpire Match Voting, Coaching/Profile, Safety Hub and
@@ -56,6 +56,22 @@ behaviour. Duplicate role rejection,
 function-access checks, mode isolation and exact permission-group scope/member hierarchy
 checks pass. Seven isolated Dev role accounts are prepared; the actual-role browser matrix remains
 pending. Matching Dev commit `a06ae9a` and the two updated voting Edge Functions are live.
+
+The 2 August hands-off pass traversed the main Dev modules without writing application data.
+Commit `879d184` fixes deliberate Super Admin mode selection and passed its automated checks. The
+pass also confirmed these remaining gaps:
+
+- Viewing-as labels, badges and direct-route access can disagree with the selected lower mode.
+- My Dashboard still formats a bye as Unknown/midnight/TBD, while Fixtures formats it correctly.
+- Fixture calendar selection did not visibly replace the list.
+- Legacy chat edits have no revision rows and therefore no earlier version to display.
+- Player MVP Analytics has two tabs instead of the required three.
+- Umpire Match Voting search is too broad and still includes shortened/unrelated identities.
+- Squad/Roster do not provide the full availability → selection → pitch → distribution workflow.
+
+Read-only Dev counts remain 201 duplicate membership groups, 44 multiple-Primary users and the
+490-row snapshot. Permission groups/sets/assignments/overrides/module flags and chat revisions are
+currently empty, so those write paths still need disposable actual-role tests.
 
 The detailed observation-to-test mapping is `docs/owner-test-matrix.md`.
 

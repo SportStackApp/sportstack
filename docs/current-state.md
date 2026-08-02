@@ -36,6 +36,14 @@ Every observation from the 31 July to 2 August review is now mapped in
 Admin, Association Admin, Club Admin, Team Manager, Coach and Player sessions before any `main`
 staging promotion.
 
+The 2 August unattended read-only pass has now exercised the main Dev screens and recorded its
+evidence in the matrix. It found genuine remaining gaps in mode labels/route restriction, the My
+Dashboard bye card, fixture calendar switching, legacy chat revisions, the third Player MVP
+Analytics tab, Umpire Match Voting identity filtering and the end-to-end coach team-selection
+workflow. Commit `879d184` fixes deliberate Super Admin mode selection and passed unit, focused
+lint, TypeScript, build, Dev Quality and Vercel deployment checks. A fresh browser must still prove
+the fix because the existing test tab retained cached build `526c0d3`.
+
 This package hardens scoped administration, preserves state consistently, separates Player MVP
 Voting from Umpire Match Voting, and completes the tested Fixtures, Communications, Coaching,
 Safety Hub and Committee workflows. It also adds recoverable route errors, immutable chat revision
@@ -132,6 +140,14 @@ policies, authenticated-only session/mode resolvers, the intentional public Play
 and the unchanged 201 duplicate groups, 44 multiple-Primary users and 490-row historical snapshot.
 Seven isolated Dev role accounts are prepared; the actual-role browser matrix remains pending.
 
+The 2 August hands-off checkpoint used the signed-in Admin Sportstack account without mutating test
+data. Fixtures, Communications, both voting modules, Coaching/Profile, Formation Builder, Safety
+Hub and Committee Management were traversed. Read-only Dev checks confirmed zero configured
+permission groups/sets/assignments/overrides/module flags, zero stored chat revisions, 15
+administration audit rows and unchanged membership integrity totals. Development-plan lint,
+TypeScript, build and all 125 Python tests pass. The detailed pass/fail evidence is in
+`docs/owner-test-matrix.md`.
+
 The first owner test exposed one live-schema drift in `admin_save_user_roles`: the function retained
 the old `public.app_role` name while Dev uses `public.user_role_enum`. Additive migration
 `20260801131220_fix_admin_role_enum_reference.sql` corrected only that reference. A Super Admin
@@ -175,6 +191,22 @@ Treat these as current caution areas unless a newer live check proves otherwise:
 - There is no formal authenticated browser suite yet. The Dev Quality workflow now covers focused
   development-plan lint, TypeScript, the production build, 100 Python regression tests and all
   GitHub workflow definitions; role-based browser flows still need owner smoke testing.
+- Viewing-as is not yet a complete security preview: Player mode can still expose Umpiring menu
+  items held by the underlying account, an already-open Squad route can remain visible, and profile
+  or Admin Dashboard badges can disagree with the selected Association Admin mode.
+- The Fixtures page formats byes correctly, but My Dashboard still shows an upcoming bye as
+  `Team vs Unknown` with midnight and TBD. The calendar control did not visibly replace the list in
+  the unattended browser check.
+- Legacy edited chat messages have no stored revision rows, so the history dialog can show only the
+  current version. New-edit revision capture still needs a disposable write test.
+- Player MVP Analytics currently has two tabs, not the required Player Leaderboard, Vote Completion
+  and Individual Votes Log trio. Some Player MVP and Umpire Match Voting identities still display
+  shortened scraped names.
+- Umpire Match Voting one-character search works, but suggestions are not sufficiently constrained
+  to the selected fixture/team and can include unrelated or shortened identities.
+- Squad and Roster load and deduplicate visible players, but they do not yet provide the full coach
+  workflow for selecting a fixture, reviewing availability, choosing the team, placing it on the
+  pitch and distributing the line-up.
 - The Owner-Test remediation package still needs its integrated actual-account test using the Admin
   Sportstack Super Admin control plus disposable Association Admin, Club Admin, Team Manager,
   Coach, Player and Umpire accounts, multi-team cascade state, incognito theme persistence,

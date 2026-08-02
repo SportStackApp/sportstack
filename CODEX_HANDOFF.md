@@ -12,6 +12,27 @@ Future agents should start by reading these files in order:
 
 ## Current release state
 
+- The 2 August unattended Dev pass is recorded in `docs/owner-test-matrix.md`. It traversed the
+  primary permission, navigation, Fixtures, Communications, Player MVP Voting, Umpire Match Voting,
+  Coaching/Profile, Formation, Safety Hub and Committee screens without changing test data. The
+  detailed matrix distinguishes read-only passes, partial failures and actual-role/write tests that
+  are still required.
+- Commit `879d184` fixes the mode bootstrap that could immediately replace a deliberate Super Admin
+  selection when a lower cascade scope was active. Unit, focused lint, TypeScript, build, Dev
+  Quality run `30746490223` and the Vercel deployment passed. The original browser tab remained on
+  cached build `526c0d3`; confirm the version and behaviour in a fresh browser before closing it.
+- The unattended pass found remaining product gaps: mode labels and direct-route restriction can
+  disagree with Viewing as; My Dashboard still misformats byes; fixture calendar switching was not
+  visible; legacy chat edits have no revisions; Player MVP Analytics lacks its third tab; Umpire
+  Match Voting search is too broad; and Squad/Roster do not provide the complete coach selection
+  and distribution workflow.
+- Read-only Dev checks found no configured permission groups, sets, assignments, overrides or
+  module flags, and no communication revision rows. Membership integrity totals remain 201
+  duplicate groups, 44 multiple-Primary users and 490 immutable snapshot rows. No database write,
+  cleanup, `main`, `prod`, Production, domain or redirect change was made during the unattended pass.
+- Current quality checks pass: development-plan lint, TypeScript, production build and all 125
+  Python tests. Full repository lint remains at its known 362-error/76-warning baseline.
+
 - The locked Owner-Test remediation package is implemented against SportStack Dev and mapped in
   `docs/owner-test-matrix.md` for integrated owner testing. It covers scoped administration and
   audit, state persistence, cascade/navigation, Fixtures and Communications, both voting modules,
