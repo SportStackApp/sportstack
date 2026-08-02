@@ -30,6 +30,13 @@ Future agents should start by reading these files in order:
   URL-backed tabs. It also confirms the availability-to-line-up workflow exists through My
   Dashboard, fixture detail and Line-up, but its access helper uses stored roles rather than the
   active Viewing-as mode.
+- A final read-only browser check on deployed build `9949d2b` confirmed the selector remained Team
+  Manager while Profile said `Viewing as Super Admin` and the Lucas HC Admin Dashboard showed a
+  `Super Admin` badge. Back from Team Chat briefly restored `/admin`, then the application
+  asynchronously replaced it with `/dashboard`. Profile also rendered one unnamed role/scope line.
+- The Lucas HC fixture detail repeated `James V` and `Tom Batchelor` in availability. The Line-up
+  page loaded Coach controls, availability labels, formation positions and Primary/Secondary
+  roster relationships; no selection was saved or published.
 - Exact source causes are now recorded: the Umpire ballot uses stored roles rather than active mode,
   `/admin/analytics` lacks a direct module gate, the Admin badge uses the highest stored role,
   Dashboard duplicates the bye formatter with unconditional fallbacks, and Umpire suggestions load

@@ -65,7 +65,13 @@ is open. The pass also confirmed these remaining gaps:
 
 - Viewing-as labels, badges and direct-route access can disagree with the selected lower mode. The
   Umpire ballot checks stored roles rather than active mode, `/admin/analytics` lacks a direct
-  module gate, and the Admin Dashboard badge uses the account's highest stored role.
+  module gate, and the Admin Dashboard badge uses the account's highest stored role. A fresh
+  deployed-build check confirmed `team_manager` remained selected while Profile said `Viewing as
+  Super Admin`, the Lucas HC Admin Dashboard showed a `Super Admin` badge and Profile rendered one
+  unnamed role/scope line.
+- Back navigation from Team Chat briefly restores `/admin`, then the application asynchronously
+  replaces it with `/dashboard` while Team Manager remains selected. This confirms the reported
+  Admin Dashboard return-state defect independently of the Edit Details dialog.
 - My Dashboard still formats a bye as Unknown/midnight/TBD because it duplicates the Fixtures
   formatter and applies those fallbacks unconditionally.
 - Fixture calendar selection only changes the existing cards to a two-column grid; it does not
@@ -83,6 +89,10 @@ is open. The pass also confirmed these remaining gaps:
   coach/manager assignment or suggestions, publishes the saved line-up and exposes it to linked
   players. Its access helper still reads stored roles directly instead of the active Viewing-as
   mode, so a higher-role account can retain edit access while testing a lower mode.
+- The Lucas HC fixture detail still displayed repeated availability identities for `James V` and
+  `Tom Batchelor`. The Line-up screen otherwise loaded its roster, availability labels, formation
+  positions and Coach controls without a write. Historical membership cleanup remains separately
+  approval-gated.
 - Team-chat unread counts exclude the sender and self-mentions are suppressed, but Club/Association
   broadcast notification and email recipient queries still include the author.
 
