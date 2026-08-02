@@ -345,8 +345,10 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     setModeChanging(true);
     try {
       const canonical = await writeSessionMode(newMode, newMode);
-      adoptServerMode(canonical, availableModes, true);
-      const changed = canonical.root_mode === newMode && canonical.active_mode === newMode;
+      const adopted = adoptServerMode(canonical, availableModes, true);
+      const changed = adopted
+        && canonical.root_mode === newMode
+        && canonical.active_mode === newMode;
       setModeSyncError(changed ? null : "The mode was changed in another browser tab.");
       return changed;
     } catch (changeError) {
@@ -363,8 +365,10 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     setModeChanging(true);
     try {
       const canonical = await writeSessionMode("super_admin", newMode);
-      adoptServerMode(canonical, availableModes, true);
-      const changed = canonical.root_mode === "super_admin" && canonical.active_mode === newMode;
+      const adopted = adoptServerMode(canonical, availableModes, true);
+      const changed = adopted
+        && canonical.root_mode === "super_admin"
+        && canonical.active_mode === newMode;
       setModeSyncError(changed ? null : "The mode was changed in another browser tab.");
       return changed;
     } catch (changeError) {
