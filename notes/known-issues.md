@@ -78,7 +78,13 @@ is open. The pass also confirmed these remaining gaps:
 - Scoped user rows show every stored role rather than only roles applicable to the selected scope.
   The Edit Details handler is an in-page dialog, so the observed Dashboard return is part of the
   unresolved mode/navigation reset rather than intended button behaviour.
-- Squad/Roster do not provide the full availability → selection → pitch → distribution workflow.
+- The availability → selection → pitch → distribution workflow exists through My Dashboard,
+  fixture detail and Line-up rather than Squad/Roster. It loads fixture availability, supports
+  coach/manager assignment or suggestions, publishes the saved line-up and exposes it to linked
+  players. Its access helper still reads stored roles directly instead of the active Viewing-as
+  mode, so a higher-role account can retain edit access while testing a lower mode.
+- Team-chat unread counts exclude the sender and self-mentions are suppressed, but Club/Association
+  broadcast notification and email recipient queries still include the author.
 
 Read-only Dev counts remain 201 duplicate membership groups, 44 multiple-Primary users and the
 490-row snapshot. Permission groups/sets/assignments/overrides/module flags and chat revisions are

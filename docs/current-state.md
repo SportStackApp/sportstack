@@ -39,12 +39,15 @@ staging promotion.
 The 2 August unattended read-only pass has now exercised the main Dev screens and recorded its
 evidence in the matrix. It found genuine remaining gaps in mode labels/route restriction, scoped
 role presentation, the My Dashboard bye card, true fixture calendar rendering, legacy chat
-revisions, Umpire Match Voting identity filtering and the end-to-end coach team-selection workflow.
+revisions, broadcast self-notification suppression and Umpire Match Voting identity filtering.
 Source review has since confirmed that Player MVP Analytics already has the requested three
-URL-backed tabs. Commits `879d184` and `5514996` added frontend guards for deliberate Super Admin mode
-selection and passed unit, focused lint, TypeScript, build, Dev Quality and Vercel deployment
-checks. Fresh deployed build `5514996` still redirected `/admin` to `/dashboard` and restored Team
-Manager after Super Admin was selected. The session-context/navigation cause remains open.
+URL-backed tabs and that the availability-to-line-up workflow exists through My Dashboard, fixture
+detail and Line-up. The line-up access helper still uses stored roles rather than the active
+Viewing-as mode, so lower-mode restriction remains unresolved. Commits `879d184` and `5514996`
+added frontend guards for deliberate Super Admin mode selection and passed unit, focused lint,
+TypeScript, build, Dev Quality and Vercel deployment checks. Fresh deployed build `5514996` still
+redirected `/admin` to `/dashboard` and restored Team Manager after Super Admin was selected. The
+session-context/navigation cause remains open.
 
 This package hardens scoped administration, preserves state consistently, separates Player MVP
 Voting from Umpire Match Voting, and completes the tested Fixtures, Communications, Coaching,

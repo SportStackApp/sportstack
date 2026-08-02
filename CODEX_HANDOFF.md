@@ -25,14 +25,19 @@ Future agents should start by reading these files in order:
 - The unattended pass found remaining product gaps: mode labels and direct-route restriction can
   disagree with Viewing as; scoped user rows show global rather than contextual roles; My Dashboard
   still misformats byes; the Fixtures calendar is only a grid view; legacy chat edits have no
-  revisions; Umpire Match Voting search is too broad; and Squad/Roster do not provide the complete
-  coach selection and distribution workflow. Source review confirms Player MVP Analytics already
-  has the requested three URL-backed tabs.
+  revisions; broadcast notification recipients include the author; and Umpire Match Voting search
+  is too broad. Source review confirms Player MVP Analytics already has the requested three
+  URL-backed tabs. It also confirms the availability-to-line-up workflow exists through My
+  Dashboard, fixture detail and Line-up, but its access helper uses stored roles rather than the
+  active Viewing-as mode.
 - Exact source causes are now recorded: the Umpire ballot uses stored roles rather than active mode,
   `/admin/analytics` lacks a direct module gate, the Admin badge uses the highest stored role,
   Dashboard duplicates the bye formatter with unconditional fallbacks, and Umpire suggestions load
   active memberships from every team in both fixture clubs. The user Edit Details action is an
   in-page dialog, so its observed Dashboard return belongs to the remaining mode/navigation reset.
+  Communications loads the newest 50 messages, paginates earlier batches of 50, excludes the
+  sender from Team Chat unread counts and records future edits in immutable revision history.
+  Account theme persistence uses `profiles.theme_preference` with local storage only as fallback.
 - Read-only Dev checks found no configured permission groups, sets, assignments, overrides or
   module flags, and no communication revision rows. Membership integrity totals remain 201
   duplicate groups, 44 multiple-Primary users and 490 immutable snapshot rows. No database write,
