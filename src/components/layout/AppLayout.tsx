@@ -1276,10 +1276,12 @@ const AppLayout = () => {
             disabled={modeChanging}
             onChange={(e) => {
               const selected = e.target.value as AppMode;
+              // Claim the manual override before the async server write starts.
+              // Otherwise the cascade effect can enqueue its automatic team
+              // mode during this render and immediately replace the choice.
+              setIsViewingAsOverridden(true);
               void setViewingAs(selected).then((changed) => {
-                // Every deliberate choice must persist. Treating Super Admin
-                // as automatic allowed the cascade to immediately replace it.
-                if (changed) setIsViewingAsOverridden(true);
+                if (!changed) setIsViewingAsOverridden(false);
               });
             }}
             className="w-full rounded-md border border-border bg-background text-foreground text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"

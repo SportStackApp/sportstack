@@ -158,7 +158,10 @@ class SessionPermissionContextFrontendTests(unittest.TestCase):
             'setisviewingasoverridden(state.root_mode === "super_admin")',
             context,
         )
-        self.assertIn("if (changed) setisviewingasoverridden(true)", layout)
+        manual_override = layout.index("setisviewingasoverridden(true)")
+        server_write = layout.index("void setviewingas(selected)", manual_override)
+        self.assertLess(manual_override, server_write)
+        self.assertIn("if (!changed) setisviewingasoverridden(false)", layout)
         self.assertNotIn(
             'setisviewingasoverridden(selected !== "super_admin")',
             layout,
