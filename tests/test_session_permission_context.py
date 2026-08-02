@@ -15,6 +15,7 @@ MIGRATION = (
 )
 APP = ROOT / "src" / "App.tsx"
 APP_MODE_CONTEXT = ROOT / "src" / "contexts" / "AppModeContext.tsx"
+APP_LAYOUT = ROOT / "src" / "components" / "layout" / "AppLayout.tsx"
 TEAM_CONTEXT = ROOT / "src" / "contexts" / "TeamContext.tsx"
 MODULE_AVAILABILITY = ROOT / "src" / "hooks" / "useModuleAvailability.ts"
 ADMIN_SCOPE = ROOT / "src" / "hooks" / "useAdminScope.ts"
@@ -148,6 +149,20 @@ class SessionPermissionContextFrontendTests(unittest.TestCase):
         self.assertIn('state.active_mode === "club" && boolean(state.club_id)', source)
         self.assertIn('boolean(state.team_id)', source)
         self.assertNotIn('rpc("set_active_permission_mode"', source)
+
+    def test_deliberate_super_admin_view_is_not_replaced_by_cascade(self) -> None:
+        context = normalised(APP_MODE_CONTEXT)
+        layout = normalised(APP_LAYOUT)
+
+        self.assertIn(
+            'setisviewingasoverridden(state.root_mode === "super_admin")',
+            context,
+        )
+        self.assertIn("if (changed) setisviewingasoverridden(true)", layout)
+        self.assertNotIn(
+            'setisviewingasoverridden(selected !== "super_admin")',
+            layout,
+        )
 
     def test_team_selection_hydration_and_protected_hooks_fail_closed(self) -> None:
         team = normalised(TEAM_CONTEXT)

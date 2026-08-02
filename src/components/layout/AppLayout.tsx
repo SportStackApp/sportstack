@@ -1277,7 +1277,9 @@ const AppLayout = () => {
             onChange={(e) => {
               const selected = e.target.value as AppMode;
               void setViewingAs(selected).then((changed) => {
-                if (changed) setIsViewingAsOverridden(selected !== "super_admin");
+                // Every deliberate choice must persist. Treating Super Admin
+                // as automatic allowed the cascade to immediately replace it.
+                if (changed) setIsViewingAsOverridden(true);
               });
             }}
             className="w-full rounded-md border border-border bg-background text-foreground text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"

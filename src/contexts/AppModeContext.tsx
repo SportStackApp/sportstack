@@ -292,7 +292,10 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     lastCanonicalContextRef.current = state;
     setModeState(state.root_mode);
     setViewingAsState(state.root_mode === "super_admin" ? state.active_mode : "super_admin");
-    setIsViewingAsOverridden(state.root_mode === "super_admin" && state.active_mode !== "super_admin");
+    // The server-confirmed selection is authoritative for a Super Admin,
+    // including an explicit choice to remain in Super Admin mode while a
+    // lower-level cascade scope is selected.
+    setIsViewingAsOverridden(state.root_mode === "super_admin");
     localStorage.setItem(getStorageKey(user.id), state.root_mode);
     localStorage.setItem(
       getViewingAsStorageKey(user.id),
