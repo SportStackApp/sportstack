@@ -689,7 +689,7 @@ const Chat = () => {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{own ? "You" : profiles[message.author_id] || "Member"}</span>
                         <span className="text-xs text-muted-foreground">{formatTime(message.created_at)}</span>
-                        {message.edited_at && (
+                        {message.edited_at && (!message.removed_at || canModerate) && (
                           <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={() => void openEditHistory(message)}>
                             Edited · view history
                           </button>
