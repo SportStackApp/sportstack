@@ -30,3 +30,13 @@ def test_unresolved_saved_fixture_has_a_recoverable_loading_state() -> None:
     assert "Restoring saved ballot" in source
     assert "Your entered votes are being kept while the fixture reloads." in source
     assert "Choose another fixture" in source
+
+
+def test_missing_cascade_parents_are_restored_from_the_saved_fixture() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+
+    assert "const restoreFixtureParents = async () =>" in source
+    assert '.select("round_number, division_id, divisions!inner(association_id)")' in source
+    assert "setSelectedAssociationId((current) => current || associationId);" in source
+    assert "setSelectedRound((current) => current || String(data.round_number));" in source
+    assert "setSelectedDivisionId((current) => current || data.division_id);" in source

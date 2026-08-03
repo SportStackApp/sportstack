@@ -236,6 +236,52 @@ export default function UmpireVoteSubmit() {
     voteCards,
   ]);
 
+  useEffect(() => {
+    if (
+      !draftHydrated ||
+      !selectedFixtureId ||
+      (selectedAssociationId && selectedRound && selectedDivisionId)
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const restoreFixtureParents = async () => {
+      const { data, error } = await supabase
+        .from("fixtures")
+        .select("round_number, division_id, divisions!inner(association_id)")
+        .eq("id", selectedFixtureId)
+        .maybeSingle();
+
+      if (cancelled || error || !data?.division_id || data.round_number === null) return;
+
+      const divisionRelation = data.divisions as unknown as
+        | { association_id: string }
+        | { association_id: string }[];
+      const associationId = Array.isArray(divisionRelation)
+        ? divisionRelation[0]?.association_id
+        : divisionRelation?.association_id;
+
+      if (!associationId) return;
+      setSelectedAssociationId((current) => current || associationId);
+      setSelectedRound((current) => current || String(data.round_number));
+      setSelectedDivisionId((current) => current || data.division_id);
+    };
+
+    void restoreFixtureParents();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    draftHydrated,
+    selectedAssociationId,
+    selectedDivisionId,
+    selectedFixtureId,
+    selectedRound,
+  ]);
+
   // Role Access Protection check
   const isUmpire =
     (roles as string[]).some((role) => ["UMPIRE", "UMPIRE_ADMIN", "SUPER_ADMIN"].includes(role));
