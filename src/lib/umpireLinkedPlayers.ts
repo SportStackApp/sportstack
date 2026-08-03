@@ -61,11 +61,6 @@ export async function loadUmpireLinkedPlayers(
   const fixtureTeamById = new Map(
     ((fixtureTeams || []) as TeamOptionRow[]).map((team) => [team.id, team]),
   );
-  const homeTeam = fixtureTeamById.get(context.homeTeamId);
-  const awayTeam = fixtureTeamById.get(context.awayTeamId);
-  const clubIds = Array.from(
-    new Set([homeTeam?.club_id, awayTeam?.club_id].filter((id): id is string => Boolean(id))),
-  );
 
   const rosterRows = context.fixtureId
     ? await supabase
@@ -119,28 +114,11 @@ export async function loadUmpireLinkedPlayers(
     (data || []).forEach((profile) => profilesById.set(profile.id, profile));
   }
 
-  let clubTeams: TeamOptionRow[] = [];
-  if (clubIds.length > 0) {
-    const { data, error } = await supabase
-      .from("teams")
-      .select("id, name, club_id")
-      .in("club_id", clubIds);
-    if (error) throw error;
-    clubTeams = (data || []) as TeamOptionRow[];
-  }
-
-  const clubTeamById = new Map(clubTeams.map((team) => [team.id, team]));
-  const memberships =
-    clubTeams.length > 0
-      ? await supabase
-          .from("team_memberships")
-          .select("user_id, team_id, jersey_number")
-          .in(
-            "team_id",
-            clubTeams.map((team) => team.id),
-          )
-          .eq("status", "ACTIVE")
-      : { data: [], error: null };
+  const memberships = await supabase
+    .from("team_memberships")
+    .select("user_id, team_id, jersey_number")
+    .in("team_id", fixtureTeamIds)
+    .eq("status", "ACTIVE");
 
   if (memberships.error) throw memberships.error;
 
@@ -223,7 +201,7 @@ export async function loadUmpireLinkedPlayers(
 
   membershipRows.forEach((membership) => {
     const profile = profilesById.get(membership.user_id);
-    const membershipTeam = clubTeamById.get(membership.team_id);
+    const membershipTeam = fixtureTeamById.get(membership.team_id);
     if (!profile || !membershipTeam) return;
 
     let teamId: string | null = null;
@@ -234,13 +212,6 @@ export async function loadUmpireLinkedPlayers(
     } else if (membership.team_id === context.awayTeamId) {
       teamId = context.awayTeamId;
       teamLabel = context.awayTeamLabel;
-    } else {
-      const matchesHomeClub = membershipTeam.club_id === homeTeam?.club_id;
-      const matchesAwayClub = membershipTeam.club_id === awayTeam?.club_id;
-      if (matchesHomeClub !== matchesAwayClub) {
-        teamId = matchesHomeClub ? context.homeTeamId : context.awayTeamId;
-        teamLabel = matchesHomeClub ? context.homeTeamLabel : context.awayTeamLabel;
-      }
     }
 
     addCandidate({
