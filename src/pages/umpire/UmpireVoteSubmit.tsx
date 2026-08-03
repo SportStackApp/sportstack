@@ -359,7 +359,6 @@ export default function UmpireVoteSubmit() {
   useEffect(() => {
     if (!isUmpire || !selectedAssociationId) {
       setRounds([]);
-      setSelectedRound("");
       return;
     }
 
@@ -409,7 +408,6 @@ export default function UmpireVoteSubmit() {
   useEffect(() => {
     if (!selectedRound || !selectedAssociationId) {
       setDivisions([]);
-      setSelectedDivisionId("");
       return;
     }
 
@@ -469,7 +467,6 @@ export default function UmpireVoteSubmit() {
   useEffect(() => {
     if (!selectedRound || !selectedDivisionId || !selectedAssociationId) {
       setFixtures([]);
-      setSelectedFixtureId("");
       return;
     }
 
@@ -910,6 +907,38 @@ export default function UmpireVoteSubmit() {
         </Card>
       ) : (
         <Card className="shadow-md">
+          {/* A saved draft can reach Step 2 or 3 before its fixture data has reloaded. */}
+          {step > 1 && !selectedFixture && (
+            <>
+              <CardHeader>
+                <CardTitle className="text-xl">Restoring saved ballot</CardTitle>
+                <CardDescription>
+                  SportStack is reloading the saved round, division and fixture.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="flex items-center gap-3 rounded-lg border border-border/70 bg-muted/25 p-4 text-sm text-muted-foreground">
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" />
+                  <span>Your entered votes are being kept while the fixture reloads.</span>
+                </div>
+                <div className="flex justify-start border-t border-border pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setStep(1);
+                      setSelectedFixtureId("");
+                      setSelectedFixture(null);
+                      setVoteCards([]);
+                      setNumberOnlyAcknowledged(false);
+                    }}
+                  >
+                    Choose another fixture
+                  </Button>
+                </div>
+              </CardContent>
+            </>
+          )}
+
           {/* STEP 1: Match Info */}
           {step === 1 && (
             <>
