@@ -341,7 +341,7 @@ const GameDetail = () => {
       )}
 
       {/* Actions */}
-      {lineupAccess?.canView && (lineupAccess.canEdit || hasVisibleLineup) && (
+      {!isBye && lineupAccess?.canView && (lineupAccess.canEdit || hasVisibleLineup) && (
         <div className="flex gap-3">
           <Link to={`/games/${id}/lineup`} className="flex-1">
             <Button variant="default" className="w-full">
