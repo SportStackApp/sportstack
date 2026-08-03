@@ -7,6 +7,11 @@ import { format } from "date-fns";
 import type { LadderRow } from "@/lib/ladder";
 import type { EntityUpdate } from "@/lib/entityDashboard";
 import { cn } from "@/lib/utils";
+import {
+  getFixtureDisplayStatus,
+  getFixtureMatchupLabel,
+  isByeFixtureDisplay,
+} from "@/lib/fixtureDisplay";
 
 interface GameSummary {
   id: string;
@@ -255,8 +260,13 @@ const EntityDashboard = ({
           ) : (
             <div className="space-y-3">
               {upcomingGames.map((game) => {
-                const homeTeam = game.home_team?.name ?? "Unknown";
-                const awayTeam = game.away_team?.name ?? "Unknown";
+                const fixtureDisplay = {
+                  fixtureDate: game.fixture_date,
+                  status: game.status,
+                  homeTeam: game.home_team,
+                  awayTeam: game.away_team,
+                };
+                const isBye = isByeFixtureDisplay(fixtureDisplay);
                 const venueName = game.venue?.name ?? "TBD";
                 const divisionName = game.divisions?.name;
 
@@ -267,27 +277,31 @@ const EntityDashboard = ({
                         <div className="text-xs text-muted-foreground">
                           {format(new Date(game.fixture_date), "MMM d")}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {format(new Date(game.fixture_date), "h:mm a")}
-                        </div>
+                        {!isBye && (
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(game.fixture_date), "h:mm a")}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <div className="font-medium">
-                          {homeTeam} vs {awayTeam}
+                          {getFixtureMatchupLabel(fixtureDisplay)}
                         </div>
                         {divisionName && (
                           <div className="text-xs text-muted-foreground">
                             {divisionName}
                           </div>
                         )}
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <MapPin className="h-3 w-3" />
-                          {venueName}
-                        </div>
+                        {!isBye && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3" />
+                            {venueName}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <Badge variant="secondary" className="shrink-0">
-                      {game.status}
+                      {getFixtureDisplayStatus(fixtureDisplay)}
                     </Badge>
                   </div>
                 );

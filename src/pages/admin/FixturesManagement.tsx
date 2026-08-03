@@ -28,6 +28,7 @@ import {
   type CascadeValue,
 } from "@/lib/adminCascade";
 import * as XLSX from "xlsx";
+import { getFixtureDisplayStatus } from "@/lib/fixtureDisplay";
 
 interface FixtureRow {
   id: string;
@@ -379,8 +380,7 @@ const FixturesManagement = () => {
 
   const getFixtureTeamLabel = (team: FixtureTeam | undefined, fallback = "Unknown") => {
     if (!team) return fallback;
-    const club = clubById.get(team.club_id);
-    return [club?.name, team.name].filter(Boolean).join(" - ");
+    return team.name;
   };
 
   const getTeamLabel = (teamId: string | null | undefined, fallback = "BYE") => {
@@ -410,7 +410,12 @@ const FixturesManagement = () => {
         "Away Team": getTeamLabel(fixture.away_team_id, fixture.away_team?.name ?? "BYE"),
         Venue: getFixtureLocationLabel(fixture),
         Round: fixture.round_number ?? "",
-        Status: fixture.status,
+        Status: getFixtureDisplayStatus({
+          fixtureDate: fixture.fixture_date,
+          status: fixture.status,
+          homeTeam: fixture.home_team,
+          awayTeam: fixture.away_team,
+        }),
         "Home Score": fixture.home_score ?? "",
         "Away Score": fixture.away_score ?? "",
         Notes: fixture.notes || "",
@@ -859,7 +864,12 @@ const FixturesManagement = () => {
                     const tz = "Australia/Melbourne";
                     const isBye = isByeFixture(fixture);
                     const venueName = getFixtureLocationLabel(fixture);
-                    const statusLabel = formatStatusLabel(fixture.status);
+                    const statusLabel = formatStatusLabel(getFixtureDisplayStatus({
+                      fixtureDate: fixture.fixture_date,
+                      status: fixture.status,
+                      homeTeam: fixture.home_team,
+                      awayTeam: fixture.away_team,
+                    }));
 
                     return (
                       <TableRow key={fixture.id}>
@@ -867,9 +877,11 @@ const FixturesManagement = () => {
                           {date ? (
                             <div className="flex flex-col">
                               <span>{date.toLocaleDateString("en-AU", { day: "2-digit", month: "short", timeZone: tz })}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {isBye ? "Round date" : date.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: tz })}
-                              </span>
+                              {!isBye && (
+                                <span className="text-xs text-muted-foreground">
+                                  {date.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: tz })}
+                                </span>
+                              )}
                             </div>
                           ) : "TBD"}
                         </TableCell>

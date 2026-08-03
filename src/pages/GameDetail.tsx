@@ -21,6 +21,11 @@ import { useTeamContext } from "@/contexts/TeamContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { getLineupAccess, type LineupAccess } from "@/lib/lineupAccess";
+import {
+  getFixtureDisplayStatus,
+  getFixtureMatchupLabel,
+  isByeFixtureDisplay,
+} from "@/lib/fixtureDisplay";
 
 type AvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
 
@@ -28,8 +33,8 @@ interface GameRow {
   id: string;
   fixture_date: string;
   status: string;
-  home_team_id: string;
-  away_team_id: string;
+  home_team_id: string | null;
+  away_team_id: string | null;
   venue_id: string | null;
   home_team: { id: string; name: string } | null;
   away_team: { id: string; name: string } | null;
@@ -105,7 +110,11 @@ const GameDetail = () => {
         const membershipTeamId =
           selectedTeam?.id === fixture.home_team_id || selectedTeam?.id === fixture.away_team_id
             ? selectedTeam.id
-            : fixture.home_team_id;
+            : fixture.home_team_id ?? fixture.away_team_id;
+        if (!membershipTeamId) {
+          setLoading(false);
+          return;
+        }
         const { data: members } = await supabase
           .from("team_memberships")
           .select("user_id, position, jersey_number")
@@ -203,8 +212,14 @@ const GameDetail = () => {
     );
   }
 
-  const homeTeam = game.home_team?.name ?? "Unknown";
-  const awayTeam = game.away_team?.name ?? "Unknown";
+  const fixtureDisplay = {
+    fixtureDate: game.fixture_date,
+    status: game.status,
+    homeTeam: game.home_team,
+    awayTeam: game.away_team,
+  };
+  const isBye = isByeFixtureDisplay(fixtureDisplay);
+  const displayStatus = getFixtureDisplayStatus(fixtureDisplay);
   const venueName = game.venue?.name ?? "TBD";
   const gameDate = new Date(game.fixture_date);
 
@@ -222,42 +237,54 @@ const GameDetail = () => {
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <span />
-            <Badge variant={game.status === "scheduled" ? "scheduled" : "finalised"}>
-              {game.status}
+            <Badge variant={displayStatus === "SCHEDULED" ? "scheduled" : "finalised"}>
+              {displayStatus}
             </Badge>
           </div>
 
-          <div className="text-center py-8">
-            <p className="font-display text-3xl md:text-4xl text-foreground">{homeTeam}</p>
-            <p className="text-muted-foreground text-xl my-3">vs</p>
-            <p className="font-display text-3xl md:text-4xl text-foreground">{awayTeam}</p>
+          <div className="py-8 text-center">
+            {isBye ? (
+              <p className="font-display text-3xl text-foreground md:text-4xl">
+                {getFixtureMatchupLabel(fixtureDisplay)}
+              </p>
+            ) : (
+              <>
+                <p className="font-display text-3xl text-foreground md:text-4xl">{game.home_team?.name ?? "Unknown"}</p>
+                <p className="my-3 text-xl text-muted-foreground">vs</p>
+                <p className="font-display text-3xl text-foreground md:text-4xl">{game.away_team?.name ?? "Unknown"}</p>
+              </>
+            )}
           </div>
 
-          <div className="grid grid-cols-3 gap-4 text-center py-4 border-t border-border">
+          <div className={cn("grid gap-4 border-t border-border py-4 text-center", isBye ? "grid-cols-1" : "grid-cols-3")}>
             <div>
               <Calendar className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
               <p className="text-sm font-medium text-foreground">
                 {gameDate.toLocaleDateString("en-AU", { weekday: "short", month: "short", day: "numeric" })}
               </p>
             </div>
-            <div>
-              <Clock className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-              <p className="text-sm font-medium text-foreground">
-                {gameDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
-              </p>
-            </div>
-            <div>
-              <MapPin className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-              <p className="text-sm font-medium text-foreground truncate px-2">
-                {venueName}
-              </p>
-            </div>
+            {!isBye && (
+              <>
+                <div>
+                  <Clock className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                  <p className="text-sm font-medium text-foreground">
+                    {gameDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+                <div>
+                  <MapPin className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                  <p className="text-sm font-medium text-foreground truncate px-2">
+                    {venueName}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Availability Section */}
-      {game.status === "scheduled" && (
+      {displayStatus === "SCHEDULED" && !isBye && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Your Availability</CardTitle>
@@ -276,7 +303,7 @@ const GameDetail = () => {
       )}
 
       {/* Team Members & Availability */}
-      {teamMembers.length > 0 && (
+      {teamMembers.length > 0 && !isBye && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Team Availability</CardTitle>

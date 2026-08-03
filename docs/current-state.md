@@ -36,6 +36,15 @@ Every observation from the 31 July to 2 August review is now mapped in
 Admin, Association Admin, Club Admin, Team Manager, Coach and Player sessions before any `main`
 staging promotion.
 
+The 3 August owner fixture walkthrough confirmed the normal Team Manager fixture list formats
+byes correctly, while entity Overviews, the individual fixture page and Admin Fixtures still used
+inconsistent fallbacks. A contained Dev-only presentation repair now shares one bye rule across
+those screens: `Team — Bye`, no invented time or venue, and a past bye displays as Completed
+without rewriting its imported database record. Admin fixture rows also use the team name without
+duplicating the club name. Deployment and browser retesting are the next checkpoint. The larger
+calendar navigation and completed-match participant/statistics work remain deferred for owner-led
+design.
+
 The 2 August unattended read-only pass has now exercised the main Dev screens and recorded its
 evidence in the matrix. It found genuine remaining gaps in mode labels/route restriction, scoped
 role presentation, the My Dashboard bye card, true fixture calendar rendering, legacy chat

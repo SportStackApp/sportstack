@@ -12,6 +12,14 @@ Future agents should start by reading these files in order:
 
 ## Current release state
 
+- The 3 August owner fixture walkthrough passed the Team Manager fixture list but found that entity
+  Overviews and fixture detail still displayed byes as `Team vs Unknown` with midnight/TBD, while
+  Admin Fixtures duplicated club/team labels and showed a fake `Round date` time plus Scheduled for
+  past byes. A contained Dev-only UI repair now centralises the bye label/status rule, suppresses
+  fake bye time/venue details and uses team-only labels in Admin Fixtures. It does not update fixture
+  rows. Deployment and browser retesting are still required; calendar navigation and completed-game
+  participant/statistics design remain deferred.
+
 - The 3 August separate-account discovery found direct-route and contextual-menu failures that a
   Viewing-as preview had not safely proved: Team Manager could open broad admin pages, Coach and
   Player could reach a blank Roles & modules route, Player exposed Umpire administration, Coach
