@@ -343,8 +343,6 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Umpiring",
       items: [
         { path: "/umpire/vote", label: "Umpire Match Ballot", icon: ClipboardList },
-        { path: "/admin/umpire-voting", label: "Umpire Match Voting", icon: Vote },
-        { path: "/admin/umpire-voting?tab=leaderboard", label: "Umpire Analytics", icon: BarChart3 },
       ],
     },
     {
@@ -566,6 +564,7 @@ const AppLayout = () => {
   const [playerTeamName, setPlayerTeamName] = useState("");
   const [playerLogoUrl, setPlayerLogoUrl] = useState<string | null>(null);
   const [voterTeamMemberships, setVoterTeamMemberships] = useState<VoterTeamMembership[]>([]);
+  const [hasCurrentCommitteeMembership, setHasCurrentCommitteeMembership] = useState(false);
   const [fillInRefreshTick, setFillInRefreshTick] = useState(0);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -575,6 +574,38 @@ const AppLayout = () => {
   const isVoterOnly = roles.length === 1 && roles[0] === "VOTER";
   const isBrandNewUser = roles.length === 0;
   const isTeamScopedMode = activeMode === "player" || activeMode === "team_manager" || activeMode === "coach";
+
+  useEffect(() => {
+    if (!user) {
+      setHasCurrentCommitteeMembership(false);
+      return;
+    }
+
+    let active = true;
+    const loadCommitteeMembership = async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data, error } = await supabase
+        .from("committee_members")
+        .select("id")
+        .eq("user_id", user.id)
+        .lte("start_date", today)
+        .or(`end_date.is.null,end_date.gte.${today}`)
+        .limit(1);
+
+      if (!active) return;
+      if (error) {
+        setHasCurrentCommitteeMembership(false);
+        return;
+      }
+
+      setHasCurrentCommitteeMembership((data || []).length > 0);
+    };
+
+    void loadCommitteeMembership();
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     if (!modeSyncError) return;
@@ -983,7 +1014,13 @@ const AppLayout = () => {
       if (isVoterOnly && !["/dashboard", "/mvp-votes"].includes(item.path)) return false;
       if (isBrandNewUser && item.path !== "/dashboard") return false;
       if (!isModulePathEnabled(item.path)) return false;
-      if (item.path === "/umpire/vote" && !roles.some((role) => role === "UMPIRE" || role === "SUPER_ADMIN")) return false;
+      if (item.path === "/mvp-votes" && !roles.some((role) => role === "PLAYER" || role === "VOTER" || role === "SUPER_ADMIN")) return false;
+      if (item.path === "/umpire/vote"
+        && activeMode === "player"
+        && !roles.includes("UMPIRE")) return false;
+      if (item.path === "/committee"
+        && !["super_admin", "association", "club"].includes(activeMode)
+        && !hasCurrentCommitteeMembership) return false;
       if (selectedAssociationId && item.path === "/admin/associations") return false;
       if (selectedClubId && item.path === "/admin/clubs") return false;
       if (selectedTeamId && item.path === "/admin/teams") return false;

@@ -57,6 +57,17 @@ TypeScript, build, Dev Quality and Vercel deployment checks. Fresh deployed buil
 redirected `/admin` to `/dashboard` and restored Team Manager after Super Admin was selected. The
 session-context/navigation cause remains open.
 
+The first separate-account pass on 3 August confirmed Association and Club scope broadly worked,
+but found that Team Manager could directly open broad administration routes, Coach and Player
+could reach a blank Roles & modules page, Player navigation exposed Umpire administration, Coach
+showed Edit branding, and the isolated Umpire/Voter identities had no team context. A verified
+local repair now gates every administration route by the server-confirmed active mode, returns a
+recoverable error instead of a blank page, filters lower-mode menus, restricts the Umpire ballot to
+an Association/Super Admin mode or an actual Umpire role, and removes Edit branding from Coach and
+Team Manager modes. Additive Dev migration `20260803090000_scope_reserved_umpire_voter_accounts.sql`
+and `provision-dev-test-account` version 8 are active in Dev. The matching frontend deployment and
+actual-role browser retest are the immediate next checkpoint.
+
 Direct-route checks while the active preview was Team Manager also rendered Umpire Match Voting and
 MVP Analytics. The Umpire ballot authorises from stored account roles, while `useAdminScope` treats
 Team Manager as an admin and `/admin/analytics` has no direct module gate. Safety Hub rendered its

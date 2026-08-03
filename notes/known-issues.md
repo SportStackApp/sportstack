@@ -37,8 +37,8 @@ proposal is a separate destructive data task and needs Aaron's approval.
 ## Owner-Test Remediation Verification
 
 **Logged:** 1 August 2026
-**Updated:** 2 August 2026
-**Status:** Dev hands-off pass recorded — actual-role and write-path tests remain
+**Updated:** 3 August 2026
+**Status:** Actual-role discovery complete — repaired Dev build retest and write paths remain
 
 The locked remediation package is implemented across permissions, persistence, navigation,
 Fixtures/Communications, Player MVP Voting, Umpire Match Voting, Coaching/Profile, Safety Hub and
@@ -56,6 +56,15 @@ limited to the seven exact metadata-marked disposable Dev identities. Duplicate 
 function-access checks, mode isolation and exact permission-group scope/member hierarchy
 checks pass. Seven isolated Dev role accounts are prepared; the actual-role browser matrix remains
 pending. Matching Dev commit `a06ae9a` and the two updated voting Edge Functions are live.
+
+The first separate-account pass found that Team Manager could directly open broad administration
+routes, Coach and Player reached a blank Roles & modules route, Player navigation exposed Umpire
+administration, Coach showed Edit branding and isolated Umpire/Voter identities had no team
+context. The local repair gates admin routes using the server-confirmed active mode, supplies a
+recoverable non-blank failure screen, filters the lower-mode menu and supports team-scoped reserved
+Umpire/Voter resets. Migration `20260803090000_scope_reserved_umpire_voter_accounts.sql` is applied
+to Dev and `provision-dev-test-account` version 8 is active. The frontend deployment and
+separate-account retest remain pending.
 
 The test accounts use temporary credentials that are not stored in the repository. Aaron has
 authorised password resets and recoverable Dev-only test changes for these disposable identities,

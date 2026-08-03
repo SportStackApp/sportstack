@@ -16,6 +16,7 @@ MIGRATION = (
 APP = ROOT / "src" / "App.tsx"
 APP_MODE_CONTEXT = ROOT / "src" / "contexts" / "AppModeContext.tsx"
 APP_LAYOUT = ROOT / "src" / "components" / "layout" / "AppLayout.tsx"
+MODE_ROUTE_GATE = ROOT / "src" / "components" / "auth" / "ModeRouteGate.tsx"
 TEAM_CONTEXT = ROOT / "src" / "contexts" / "TeamContext.tsx"
 MODULE_AVAILABILITY = ROOT / "src" / "hooks" / "useModuleAvailability.ts"
 ADMIN_SCOPE = ROOT / "src" / "hooks" / "useAdminScope.ts"
@@ -183,6 +184,43 @@ class SessionPermissionContextFrontendTests(unittest.TestCase):
         )
         self.assertIn("const scopeisconfirmed = contextconfirmed && !modesyncerror", admin)
         self.assertIn("scopeloading: loading || !scopeisconfirmed", admin)
+
+    def test_admin_routes_use_the_confirmed_active_mode(self) -> None:
+        app = normalised(APP)
+        gate = normalised(MODE_ROUTE_GATE)
+
+        self.assertIn("const { activemode, loading, contextconfirmed, modesyncerror", gate)
+        self.assertIn("if (!allowedmodes.includes(activemode) || !hasrequiredplayerrole)", gate)
+        self.assertIn("requiredroleforplayermode", gate)
+        self.assertIn("roles.includes(requiredroleforplayermode)", gate)
+        self.assertIn("return <navigate to={fallback} replace />", gate)
+        self.assertIn("if (!contextconfirmed)", gate)
+        self.assertIn("access could not be confirmed", gate)
+
+        for path in (
+            "/admin",
+            "/admin/users",
+            "/admin/roles-permissions",
+            "/admin/analytics",
+            "/admin/umpire-voting",
+        ):
+            self.assertRegex(
+                app,
+                rf'<route path="{re.escape(path)}" element={{<moderoutegate allowedmodes=',
+            )
+
+    def test_player_navigation_does_not_expose_umpire_administration(self) -> None:
+        app = normalised(APP)
+        layout = normalised(APP_LAYOUT)
+        player_section = layout.split("player: [", 1)[1].split("], };", 1)[0]
+
+        self.assertIn('path: "/umpire/vote"', player_section)
+        self.assertNotIn('path: "/admin/umpire-voting"', player_section)
+        self.assertIn('requiredroleforplayermode="umpire"', app)
+        self.assertIn(
+            'item.path === "/committee" && !["super_admin", "association", "club"].includes(activemode)',
+            layout,
+        )
 
 
 if __name__ == "__main__":

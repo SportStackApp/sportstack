@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     }
     const testLastName = `${roleConfig.label} Test`;
 
-    const teamScopedRole = ["TEAM_MANAGER", "COACH", "PLAYER"].includes(role);
+    const teamScopedRole = ["TEAM_MANAGER", "COACH", "PLAYER", "UMPIRE", "VOTER"].includes(role);
     if (
       (role === "ASSOCIATION_ADMIN" && !payload.association_id)
       || (role === "CLUB_ADMIN" && (!payload.association_id || !payload.club_id))
@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
     // transaction. The newly-created Auth user is removed if that transaction
     // fails, so an account is never left without its intended database scope.
     const { data: provisionedAccount, error: provisionError } = await serviceClient.rpc(
-      "provision_dev_test_account_data",
+      "provision_dev_test_account_data_scoped",
       {
         p_actor_id: callerId,
         p_user_id: userId,

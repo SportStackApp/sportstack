@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "20260802231405_reserved_dev_test_account_lookup.sql"
+SCOPED_MIGRATION = ROOT / "supabase" / "migrations" / "20260803090000_scope_reserved_umpire_voter_accounts.sql"
 EDGE_FUNCTION = ROOT / "supabase" / "functions" / "provision-dev-test-account" / "index.ts"
 PROVISIONER = ROOT / "src" / "components" / "admin" / "DevTestAccountProvisioner.tsx"
 
@@ -48,6 +49,19 @@ class DevTestAccountResetTests(unittest.TestCase):
         self.assertIn("auth.admin.updateuserbyid", source)
         self.assertIn("p_created: created", source)
         self.assertIn("if (created) await rollbacknewuser()", source)
+        self.assertIn('"provision_dev_test_account_data_scoped"', source)
+        self.assertIn('"umpire", "voter"', source)
+
+    def test_umpire_and_voter_resets_receive_team_context_without_player_role(self) -> None:
+        sql = normalised(SCOPED_MIGRATION)
+        source = normalised(PROVISIONER)
+
+        self.assertIn("create or replace function public.provision_dev_test_account_data_scoped", sql)
+        self.assertIn("v_role not in ('umpire', 'voter')", sql)
+        self.assertIn("'dev_test_account_scope_attached'", sql)
+        self.assertIn("delete from public.user_roles", sql)
+        self.assertIn("role_row.role::text = 'player'", sql)
+        self.assertIn('"team_manager", "coach", "player", "umpire", "voter"', source)
 
     def test_frontend_requires_an_explicit_confirmed_reset(self) -> None:
         source = normalised(PROVISIONER)

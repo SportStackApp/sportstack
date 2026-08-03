@@ -137,7 +137,7 @@ export function DevTestAccountProvisioner() {
   const email = `codex.${roleOption.slug}.dev@sportstackapp.com.au`;
   const needsAssociation = role === "ASSOCIATION_ADMIN";
   const needsClub = role === "CLUB_ADMIN";
-  const needsTeam = ["TEAM_MANAGER", "COACH", "PLAYER"].includes(role);
+  const needsTeam = ["TEAM_MANAGER", "COACH", "PLAYER", "UMPIRE", "VOTER"].includes(role);
   const scopeReady = (!needsAssociation || Boolean(associationId))
     && (!needsClub || Boolean(clubId))
     && (!needsTeam || Boolean(teamId));

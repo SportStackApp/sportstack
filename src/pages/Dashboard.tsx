@@ -37,6 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { cn, getTeamDisplayName } from "@/lib/utils";
 import { useAdminScope } from "@/hooks/useAdminScope";
+import { useAppMode } from "@/contexts/AppModeContext";
 import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
 
 type AvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
@@ -162,6 +163,7 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { canManageClub, canManageTeam } = useAdminScope();
+  const { activeMode } = useAppMode();
   const [games, setGames] = useState<GameRow[]>([]);
   const [calendarGames, setCalendarGames] = useState<CalendarGameRow[]>([]);
   const [availability, setAvailability] = useState<Record<string, AvailabilityStatus>>({});
@@ -974,7 +976,8 @@ const Dashboard = () => {
               <p className="mt-1 text-sm">Select an association, club and team to open its dashboard.</p>
             )}
           </div>
-          {(canEditCurrentClub || canManageCurrentTeam) && (
+          {["super_admin", "association", "club"].includes(activeMode)
+            && (canEditCurrentClub || canManageCurrentTeam) && (
             <Link to={canManageCurrentTeam ? "/admin/teams" : "/admin/clubs"} className="hidden sm:block">
               <Button size="sm" variant="secondary" className="gap-2">
                 <Pencil className="h-4 w-4" /> Edit branding

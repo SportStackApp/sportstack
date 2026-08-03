@@ -12,6 +12,14 @@ Future agents should start by reading these files in order:
 
 ## Current release state
 
+- The 3 August separate-account discovery found direct-route and contextual-menu failures that a
+  Viewing-as preview had not safely proved: Team Manager could open broad admin pages, Coach and
+  Player could reach a blank Roles & modules route, Player exposed Umpire administration, Coach
+  showed Edit branding, and Umpire/Voter identities lacked team context. A local active-mode route
+  gate, non-blank fail-closed screen, contextual menu filtering and Umpire/Voter scoped reset pass
+  focused lint, TypeScript, build and 16 regression tests. Additive migration
+  `20260803090000_scope_reserved_umpire_voter_accounts.sql` is applied and the reset Edge Function
+  is active as version 8. The frontend still needs its `dev` deployment and actual-role retest.
 - The 2 August unattended Dev pass is recorded in `docs/owner-test-matrix.md`. It traversed the
   primary permission, navigation, Fixtures, Communications, Player MVP Voting, Umpire Match Voting,
   Coaching/Profile, Formation, Safety Hub and Committee screens without changing test data. The
