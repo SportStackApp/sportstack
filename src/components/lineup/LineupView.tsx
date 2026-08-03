@@ -364,7 +364,14 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
     });
 
     setAssignments(nextAssignments);
-    setBenchIds(roster.filter((player) => !used.has(player.id)).map((player) => player.id));
+    // A suggested line-up must not silently select someone who has said they
+    // are unavailable. Coaches can still review the full availability list on
+    // the fixture before making a deliberate manual change.
+    setBenchIds(
+      roster
+        .filter((player) => !used.has(player.id) && player.availability !== "UNAVAILABLE")
+        .map((player) => player.id),
+    );
     toast.success("Suggested line-up created. Review it before saving.");
   };
 
