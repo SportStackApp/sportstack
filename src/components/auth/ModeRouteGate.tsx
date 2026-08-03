@@ -44,15 +44,16 @@ export function ModeRouteGate({
     );
   }
 
-  const hasRequiredPlayerRole = activeMode !== "player"
-    || !requiredRoleForPlayerMode
-    || roles.includes(requiredRoleForPlayerMode);
-
-  if (!allowedModes.includes(activeMode) || !hasRequiredPlayerRole) {
-    return <Navigate to={fallback} replace />;
-  }
-
   if (!contextConfirmed) {
+    if (!modeSyncError) {
+      return (
+        <div className="space-y-4" aria-label="Confirming access">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      );
+    }
+
     return (
       <Alert variant="destructive" className="mx-auto max-w-2xl">
         <AlertTriangle className="h-4 w-4" />
@@ -62,6 +63,14 @@ export function ModeRouteGate({
         </AlertDescription>
       </Alert>
     );
+  }
+
+  const hasRequiredPlayerRole = activeMode !== "player"
+    || !requiredRoleForPlayerMode
+    || roles.includes(requiredRoleForPlayerMode);
+
+  if (!allowedModes.includes(activeMode) || !hasRequiredPlayerRole) {
+    return <Navigate to={fallback} replace />;
   }
 
   return <>{children}</>;

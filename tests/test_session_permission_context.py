@@ -209,6 +209,14 @@ class SessionPermissionContextFrontendTests(unittest.TestCase):
                 rf'<route path="{re.escape(path)}" element={{<moderoutegate allowedmodes=',
             )
 
+    def test_route_gate_waits_for_confirmed_context_before_redirecting(self) -> None:
+        gate = normalised(MODE_ROUTE_GATE)
+
+        confirmation = gate.index("if (!contextconfirmed)")
+        redirect = gate.index("if (!allowedmodes.includes(activemode)")
+        self.assertLess(confirmation, redirect)
+        self.assertIn("if (!modesyncerror)", gate)
+
     def test_player_navigation_does_not_expose_umpire_administration(self) -> None:
         app = normalised(APP)
         layout = normalised(APP_LAYOUT)
