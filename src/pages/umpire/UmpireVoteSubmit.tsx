@@ -650,12 +650,14 @@ export default function UmpireVoteSubmit() {
       return;
     }
 
-    const division = divisions.find((item) => item.id === selectedFixture.division_id);
-    initialiseVoteCards(division || {
-      id: selectedFixture.division_id,
-      name: selectedFixture.divisionName,
-      umpire_vote_scheme_key: getDefaultUmpireVoteScheme(selectedFixture.divisionName).key,
-    });
+    if (voteCards.length === 0) {
+      const division = divisions.find((item) => item.id === selectedFixture.division_id);
+      initialiseVoteCards(division || {
+        id: selectedFixture.division_id,
+        name: selectedFixture.divisionName,
+        umpire_vote_scheme_key: getDefaultUmpireVoteScheme(selectedFixture.divisionName).key,
+      });
+    }
     setStep(2);
   };
 
@@ -1088,7 +1090,13 @@ export default function UmpireVoteSubmit() {
                       </label>
                       <Select
                         value={selectedFixtureId}
-                        onValueChange={setSelectedFixtureId}
+                        onValueChange={(value) => {
+                          if (value !== selectedFixtureId) {
+                            setVoteCards([]);
+                            setNumberOnlyAcknowledged(false);
+                          }
+                          setSelectedFixtureId(value);
+                        }}
                         disabled={fixturesLoading}
                       >
                         <SelectTrigger className="w-full">
