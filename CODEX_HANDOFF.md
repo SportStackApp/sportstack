@@ -22,14 +22,20 @@ Future agents should start by reading these files in order:
   original ownership. Live rollback tests and Supabase advisers passed. Production is untouched.
   The next checkpoint is Aaron's signed-in Dev workflow test described in `docs/current-state.md`.
 
-- The 3 August fixture batch now centralises bye presentation, adds calendar previous/next/current
-  month navigation and historical colours, and expands completed fixture detail with RevSports
+- The fixture batch now centralises bye presentation, adds calendar previous/next/current month
+  navigation, and colours historical results green/red/orange for the selected team's win/loss/draw
+  with its score on the card. It expands completed fixture detail with RevSports
   participants, goals and cards joined to full SportStack profiles where linked. Regular players
   who played appear first, participating fill-ins second and remaining eligible players last.
   Admin Fixtures now mirrors active cascade values in its labelled filters, lower cascade levels
   are not predictively selected, and shared competition lists use senior/Open/Women then descending
-  junior order. No fixture or membership database rows were changed. Deployment and browser
-  retesting remain required.
+  junior order. Fixture Management routes and navigation are limited to Super/Association Admin;
+  additive Dev RLS restricts mutations to true Super Admin mode or the selected Association Admin
+  scope. No fixture or membership rows were changed. Deployment and browser retesting remain required.
+
+- The Dev feedback log was re-read on 4 August. The newest competition-ordering request is covered
+  by this fixture batch, pasted feedback images were already implemented, and no additional fixture
+  blocker was found. The other open feedback remains part of the longer development plan.
 
 - The 3 August separate-account discovery found direct-route and contextual-menu failures that a
   Viewing-as preview had not safely proved: Team Manager could open broad admin pages, Coach and

@@ -252,6 +252,7 @@ const Games = () => {
           games={games}
           month={calendarMonth}
           onMonthChange={changeCalendarMonth}
+          selectedTeamId={selectedTeamId}
         />
       ) : (
         <Tabs value={fixtureTab} onValueChange={(value) => { const next = value as "upcoming" | "past"; setFixtureTab(next); updateUrlState({ tab: next }); }} className="w-full">
@@ -295,9 +296,32 @@ interface FixtureCalendarViewProps {
   games: GameRow[];
   month: Date;
   onMonthChange: (month: Date) => void;
+  selectedTeamId: string;
 }
 
-const FixtureCalendarView = ({ games, month, onMonthChange }: FixtureCalendarViewProps) => {
+type FixtureResult = "win" | "loss" | "draw";
+
+const getFixtureResult = (game: GameRow, selectedTeamId: string): FixtureResult | null => {
+  if (game.home_score === null || game.away_score === null) return null;
+
+  const selectedTeamIsHome = game.home_team_id === selectedTeamId;
+  const selectedTeamIsAway = game.away_team_id === selectedTeamId;
+  if (!selectedTeamIsHome && !selectedTeamIsAway) return null;
+
+  const selectedTeamScore = selectedTeamIsHome ? game.home_score : game.away_score;
+  const opponentScore = selectedTeamIsHome ? game.away_score : game.home_score;
+  if (selectedTeamScore === opponentScore) return "draw";
+  return selectedTeamScore > opponentScore ? "win" : "loss";
+};
+
+const getSelectedTeamScore = (game: GameRow, selectedTeamId: string) => {
+  if (game.home_score === null || game.away_score === null) return null;
+  if (game.home_team_id === selectedTeamId) return `${game.home_score}–${game.away_score}`;
+  if (game.away_team_id === selectedTeamId) return `${game.away_score}–${game.home_score}`;
+  return null;
+};
+
+const FixtureCalendarView = ({ games, month, onMonthChange, selectedTeamId }: FixtureCalendarViewProps) => {
   const monthGames = useMemo(
     () => games.filter((game) => {
       const date = new Date(game.fixture_date);
@@ -367,6 +391,17 @@ const FixtureCalendarView = ({ games, month, onMonthChange }: FixtureCalendarVie
                               const matchup = isBye
                                 ? `${knownTeam} — Bye`
                                 : `${game.home_team?.name} vs ${game.away_team?.name}`;
+                              const result = isPast && !isBye
+                                ? getFixtureResult(game, selectedTeamId)
+                                : null;
+                              const score = result ? getSelectedTeamScore(game, selectedTeamId) : null;
+                              const resultLabel = result === "win"
+                                ? "Win"
+                                : result === "loss"
+                                  ? "Loss"
+                                  : result === "draw"
+                                    ? "Draw"
+                                    : null;
 
                               return (
                                 <Link
@@ -374,15 +409,22 @@ const FixtureCalendarView = ({ games, month, onMonthChange }: FixtureCalendarVie
                                   to={`/games/${game.id}`}
                                   className={cn(
                                     "block rounded-md border p-1.5 text-[11px] transition-colors",
-                                    isPast
-                                      ? "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-800"
-                                      : "border-primary/20 bg-primary/5 hover:bg-primary/10",
+                                    result === "win" && "border-green-300 bg-green-100 text-green-950 hover:bg-green-200 dark:border-green-700 dark:bg-green-950/60 dark:text-green-100 dark:hover:bg-green-950/80",
+                                    result === "loss" && "border-red-300 bg-red-100 text-red-950 hover:bg-red-200 dark:border-red-700 dark:bg-red-950/60 dark:text-red-100 dark:hover:bg-red-950/80",
+                                    result === "draw" && "border-orange-300 bg-orange-100 text-orange-950 hover:bg-orange-200 dark:border-orange-700 dark:bg-orange-950/60 dark:text-orange-100 dark:hover:bg-orange-950/80",
+                                    isPast && !result && "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-800",
+                                    !isPast && "border-primary/20 bg-primary/5 hover:bg-primary/10",
                                   )}
                                 >
                                   {game.round_number !== null && game.round_number !== undefined && (
                                     <p className={cn("font-medium", isPast ? "text-muted-foreground" : "text-primary")}>Round {game.round_number}</p>
                                   )}
                                   <p className="truncate font-medium text-foreground" title={matchup}>{matchup}</p>
+                                  {resultLabel && score && (
+                                    <p className="font-semibold" aria-label={`${resultLabel}, ${score}`}>
+                                      {resultLabel} {score}
+                                    </p>
+                                  )}
                                   {!isBye && (
                                     <p className="text-muted-foreground">
                                       {new Date(game.fixture_date).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}

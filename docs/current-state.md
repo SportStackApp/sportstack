@@ -36,14 +36,24 @@ Every observation from the 31 July to 2 August review is now mapped in
 Admin, Association Admin, Club Admin, Team Manager, Coach and Player sessions before any `main`
 staging promotion.
 
-The 3 August fixture continuation now includes the previously deferred calendar and completed-match
-work. Calendar view has URL-backed previous/next/current-month navigation and visually muted
-historical fixtures. Completed fixture detail combines SportStack profiles with RevSports
+The fixture continuation now includes the previously deferred calendar and completed-match work.
+Calendar view has URL-backed previous/next/current-month navigation. Historical results are green
+for a selected-team win, red for a loss and orange for a draw, with the selected team's score shown
+on each result card; past byes or fixtures without a score remain muted. Completed fixture detail combines SportStack profiles with RevSports
 appearances and statistics, displays the score, round, goals and cards, and orders regular players,
 participating fill-ins and other eligible players in that order. Admin Fixtures mirrors the active
 cascade in its filter labels, and the cascade no longer predictively selects a sole lower-level
 division or team. Shared competition ordering now places senior divisions first, Open before Women,
-then junior groups from oldest to youngest. These changes are awaiting deployed owner retesting.
+then junior groups from oldest to youngest. Fixture Management is now available only in active Super
+Admin or Association Admin mode. Its Dev RLS policy also restricts writes to true Super Admin mode or
+the selected Association Admin scope; Club Admin and lower modes retain read-only team Fixtures.
+These changes are awaiting deployed owner retesting.
+
+The Dev feedback log was reviewed again on 4 August. Its newest open request for consistent
+senior/Open/Women/junior team ordering is covered by the shared competition ordering above, and
+paste-to-feedback image support was already delivered in the existing feedback composer. The
+remaining open feedback is already represented by the longer owner-test and development-plan
+follow-ups; no additional fixture blocker was found.
 
 The 2 August unattended read-only pass has now exercised the main Dev screens and recorded its
 evidence in the matrix. It found genuine remaining gaps in mode labels/route restriction, scoped

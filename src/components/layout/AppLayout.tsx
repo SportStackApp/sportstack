@@ -251,7 +251,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Core",
       items: [
         { path: "/admin", label: "Admin Dashboard", icon: LayoutDashboard },
-        { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
+        { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/chat", label: "Communications", icon: MessageCircle },
       ],
     },
@@ -379,7 +379,7 @@ const CLUB_ADMIN_DROPDOWN_PATHS = new Set([
   "/admin",
   "/admin/divisions",
   "/admin/teams",
-  "/admin/fixtures",
+  "/games",
   "/admin/users",
   "/admin/requests",
   "/admin/mvp-voting",

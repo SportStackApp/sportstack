@@ -33,6 +33,12 @@ SCOPED_MUTATIONS_MIGRATION = (
     / "migrations"
     / "20260803101000_include_role_scoped_admin_mutations.sql"
 )
+FIXTURE_MANAGEMENT_MIGRATION = (
+    ROOT
+    / "supabase"
+    / "migrations"
+    / "20260804084438_restrict_fixture_management_to_association_admins.sql"
+)
 
 
 def normalised(path: Path) -> str:
@@ -42,6 +48,21 @@ def normalised(path: Path) -> str:
 
 
 class SessionPermissionContextMigrationTests(unittest.TestCase):
+    def test_fixture_mutations_follow_active_super_or_association_scope(self) -> None:
+        sql = normalised(FIXTURE_MANAGEMENT_MIGRATION)
+
+        self.assertIn("drop policy if exists fixtures_write on public.fixtures", sql)
+        self.assertIn("for all to authenticated", sql)
+        self.assertIn(
+            "administration_scope_allows('super_admin', null, null, null)",
+            sql,
+        )
+        self.assertIn("administration_scope_allows( 'association'", sql)
+        self.assertIn("join public.clubs home_club", sql)
+        self.assertIn("join public.clubs away_club", sql)
+        self.assertIn("with check", sql)
+        self.assertNotIn("'club'", sql)
+
     def test_session_row_stores_the_full_selected_cascade(self) -> None:
         sql = normalised(MIGRATION)
 
@@ -221,6 +242,18 @@ class SessionPermissionContextFrontendTests(unittest.TestCase):
                 app,
                 rf'<route path="{re.escape(path)}" element={{<moderoutegate allowedmodes=',
             )
+
+    def test_fixture_management_is_limited_to_super_and_association_modes(self) -> None:
+        app = normalised(APP)
+        layout = normalised(APP_LAYOUT)
+
+        self.assertIn(
+            '<route path="/admin/fixtures" element={<moderoutegate allowedmodes={association_admin_modes}>',
+            app,
+        )
+        club_navigation = layout.split("club: [", 1)[1].split("team_manager: [", 1)[0]
+        self.assertIn('{ path: "/games", label: "fixtures"', club_navigation)
+        self.assertNotIn('{ path: "/admin/fixtures", label: "fixtures"', club_navigation)
 
     def test_route_gate_waits_for_confirmed_context_before_redirecting(self) -> None:
         gate = normalised(MODE_ROUTE_GATE)
