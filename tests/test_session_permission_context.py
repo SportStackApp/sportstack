@@ -27,6 +27,12 @@ SCOPED_USERS_MIGRATION = (
     / "migrations"
     / "20260803100000_include_role_scoped_admin_users.sql"
 )
+SCOPED_MUTATIONS_MIGRATION = (
+    ROOT
+    / "supabase"
+    / "migrations"
+    / "20260803101000_include_role_scoped_admin_mutations.sql"
+)
 
 
 def normalised(path: Path) -> str:
@@ -269,6 +275,22 @@ class ScopedAdministrationUserListTests(unittest.TestCase):
         self.assertIn("p_team_id is null or scope.team_id = p_team_id", sql)
         self.assertIn("revoke all on function public.admin_visible_profile_ids", sql)
         self.assertIn("grant execute on function public.admin_visible_profile_ids", sql)
+
+    def test_role_only_accounts_can_be_mutated_only_inside_actor_scope(self) -> None:
+        sql = normalised(SCOPED_MUTATIONS_MIGRATION)
+
+        self.assertIn(
+            "create or replace function public.administration_target_profile_in_scope",
+            sql,
+        )
+        self.assertIn("from public.team_memberships membership", sql)
+        self.assertIn("from public.user_roles role_row", sql)
+        self.assertGreaterEqual(sql.count("public.administration_scope_allows"), 2)
+        self.assertIn("scope.association_id is not null", sql)
+        self.assertIn(
+            "revoke all on function public.administration_target_profile_in_scope",
+            sql,
+        )
 
 
 if __name__ == "__main__":
