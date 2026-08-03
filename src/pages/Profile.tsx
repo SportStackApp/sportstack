@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -764,7 +764,10 @@ const Profile = () => {
   };
 
   // Transform memberships for TeamMembershipSection
-  const approvedMemberships = memberships.filter((m) => m.status === "ACTIVE");
+  const approvedMemberships = useMemo(
+    () => memberships.filter((membership) => membership.status === "ACTIVE"),
+    [memberships],
+  );
   const primaryMembership = approvedMemberships.find((m) => m.membership_type === "PRIMARY");
   const extraMemberships = approvedMemberships.filter((m) => m.membership_type !== "PRIMARY");
   const pendingMemberships = memberships.filter((m) => m.status === "PENDING");
@@ -829,14 +832,18 @@ const Profile = () => {
   const gamesPlayed = playerHistory.length;
   const goalsScored = playerHistory.reduce((sum, game) => sum + game.goals, 0);
   const teamsRepresented = new Set(playerHistory.map((game) => `${game.clubName}:${game.teamName}`)).size;
-  const regularPositionTeams = approvedMemberships.map((membership) => ({
-      membershipId: membership.id,
-      teamId: membership.team_id,
-      teamName: membership.team.name,
-      clubName: membership.team.club.name,
-      membershipType: membership.membership_type,
-      jerseyNumber: membership.jersey_number,
-    }));
+  const regularPositionTeams = useMemo(
+    () =>
+      approvedMemberships.map((membership) => ({
+        membershipId: membership.id,
+        teamId: membership.team_id,
+        teamName: membership.team.name,
+        clubName: membership.team.club.name,
+        membershipType: membership.membership_type,
+        jerseyNumber: membership.jersey_number,
+      })),
+    [approvedMemberships],
+  );
   const gameRecords = playerHistory.map((game) => ({
     id: game.id,
     date: game.date,
