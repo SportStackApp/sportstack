@@ -113,7 +113,21 @@ const GameDetail = () => {
           .eq("status", "ACTIVE");
 
         if (members && members.length > 0) {
-          const userIds = members.map((m) => m.user_id);
+          // Historical Dev data can contain duplicate active memberships. Keep one
+          // visible player while preserving any useful number or position stored on
+          // either row. Database guards prevent new duplicates from being created.
+          const uniqueMembers = Array.from(
+            members.reduce((byUser, member) => {
+              const existing = byUser.get(member.user_id);
+              byUser.set(member.user_id, {
+                user_id: member.user_id,
+                position: existing?.position || member.position,
+                jersey_number: existing?.jersey_number || member.jersey_number,
+              });
+              return byUser;
+            }, new Map<string, (typeof members)[number]>()),
+          ).map(([, member]) => member);
+          const userIds = uniqueMembers.map((m) => m.user_id);
 
           const [profilesRes, availRes] = await Promise.all([
             supabase.from("profiles").select("id, first_name, last_name").in("id", userIds),
@@ -123,7 +137,7 @@ const GameDetail = () => {
           const profiles = profilesRes.data || [];
           const avails = availRes.data || [];
 
-          const merged: TeamMember[] = members.map((m) => {
+          const merged: TeamMember[] = uniqueMembers.map((m) => {
             const profile = profiles.find((p) => p.id === m.user_id);
             const avail = avails.find((a) => a.user_id === m.user_id);
             return {
