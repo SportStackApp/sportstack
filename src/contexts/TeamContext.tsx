@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { compareCompetitionNames, compareNames } from "@/lib/competitionOrder";
 
 interface Association {
   id: string;
@@ -211,19 +212,23 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     clubTeams.forEach((team) => {
       if (team.division_id) activeDivisionIds.add(team.division_id);
     });
-    return divisions.filter((division) => activeDivisionIds.has(division.id));
+    return divisions
+      .filter((division) => activeDivisionIds.has(division.id))
+      .sort((left, right) => compareCompetitionNames(left.name, right.name));
   }, [divisions, selectedAssociationId, selectedClubId, teamDivisions, teams]);
 
   // Filter teams by club AND verify they belong to the selected division via team_divisions
-  const filteredTeams = useMemo(() => teams.filter((team) => {
-    if (team.club_id !== selectedClubId) return false;
-    if (selectedDivision) {
-      const isInDivision = team.division_id === selectedDivision
-        || teamDivisions.some((item) => item.team_id === team.id && item.division_id === selectedDivision);
-      if (!isInDivision) return false;
-    }
-    return true;
-  }), [selectedClubId, selectedDivision, teamDivisions, teams]);
+  const filteredTeams = useMemo(() => teams
+    .filter((team) => {
+      if (team.club_id !== selectedClubId) return false;
+      if (selectedDivision) {
+        const isInDivision = team.division_id === selectedDivision
+          || teamDivisions.some((item) => item.team_id === team.id && item.division_id === selectedDivision);
+        if (!isInDivision) return false;
+      }
+      return true;
+    })
+    .sort((left, right) => compareNames(left.name, right.name)), [selectedClubId, selectedDivision, teamDivisions, teams]);
 
   const handleAssociationChange = useCallback((id: string) => {
     setSelectedAssociationId(id);

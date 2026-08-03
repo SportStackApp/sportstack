@@ -1073,8 +1073,9 @@ const AppLayout = () => {
   })).filter((section) => section.items.length > 0);
 
   const selectedDivisionObj = filteredDivisions.find((division) => division.id === selectedDivision);
-  const cascadeDivisionId =
-    selectedDivision || (filteredDivisions.length === 1 ? filteredDivisions[0].id : "");
+  // A single available option is still a choice. Do not make a lower cascade
+  // level look selected until the user or an explicit entity route selects it.
+  const cascadeDivisionId = selectedDivision;
   const cascadeTeams = selectedClubId && cascadeDivisionId
     ? teams.filter((team) => {
         if (team.club_id !== selectedClubId) return false;
@@ -1594,7 +1595,6 @@ const AppLayout = () => {
                     <Select
                       value={selectedTeamId || undefined}
                       onValueChange={(v) => {
-                        if (!selectedDivision && cascadeDivisionId) setSelectedDivision(cascadeDivisionId);
                         setSelectedTeamId(v);
                         setIsCascadePopoverOpen(false);
                         navigate(`/teams/${v}`);
@@ -1836,7 +1836,7 @@ const AppLayout = () => {
             {/* Division Selector */}
             {showClubSelector && selectedClubId && filteredDivisions.length > 0 && (
               <div className="flex items-center gap-1">
-                {filteredDivisions.length === 1 ? (
+                {filteredDivisions.length === 1 && selectedDivision ? (
                   <button type="button" className={staticCascadeClass} title={`Open ${selectedDivisionObj?.name || filteredDivisions[0].name} overview`} onClick={() => navigate(`/divisions/${selectedDivisionObj?.id || filteredDivisions[0].id}`)}>
                     {selectedDivisionObj?.name || filteredDivisions[0].name}
                   </button>
@@ -1872,13 +1872,12 @@ const AppLayout = () => {
             {/* Team Selector */}
             {showClubSelector && selectedClubId && cascadeDivisionId && cascadeTeams.length > 0 && (
               <div className="flex items-center gap-1">
-                {cascadeTeams.length === 1 ? (
+                {cascadeTeams.length === 1 && selectedTeamId ? (
                   <button type="button" className={staticCascadeClass} title={`Open ${getTeamDisplayName(selectedTeam || cascadeTeams[0])} overview`} onClick={() => navigate(`/teams/${selectedTeam?.id || cascadeTeams[0].id}`)}>
                     {getTeamDisplayName(selectedTeam || cascadeTeams[0])}
                   </button>
                 ) : (
                   <Select key={selectedClubId + cascadeDivisionId} value={selectedTeamId || undefined} onValueChange={(v) => {
-                    if (!selectedDivision && cascadeDivisionId) setSelectedDivision(cascadeDivisionId);
                     setSelectedTeamId(v);
                     navigate(`/teams/${v}`);
                   }}>

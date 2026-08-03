@@ -1,3 +1,5 @@
+import { compareCompetitionNames, compareNames } from "@/lib/competitionOrder";
+
 export const ALL_CASCADE_VALUE = "ALL";
 
 export interface CascadeAssociation {
@@ -56,25 +58,31 @@ export const getCascadeOptions = ({
   const filteredClubs =
     value.associationId === ALL_CASCADE_VALUE
       ? []
-      : clubs.filter((club) => club.association_id === value.associationId);
+      : clubs
+          .filter((club) => club.association_id === value.associationId)
+          .sort((left, right) => compareNames(left.name, right.name));
 
   const filteredDivisions =
     value.clubId === ALL_CASCADE_VALUE
       ? []
-      : divisions.filter((division) =>
-          teams.some((team) => team.club_id === value.clubId && team.division_id === division.id),
-        );
+      : divisions
+          .filter((division) =>
+            teams.some((team) => team.club_id === value.clubId && team.division_id === division.id),
+          )
+          .sort((left, right) => compareCompetitionNames(left.name, right.name));
 
   const filteredTeams =
     value.clubId === ALL_CASCADE_VALUE || value.divisionId === ALL_CASCADE_VALUE
       ? []
-      : teams.filter((team) => {
-          if (team.division_id !== value.divisionId) return false;
-          return team.club_id === value.clubId;
-        });
+      : teams
+          .filter((team) => {
+            if (team.division_id !== value.divisionId) return false;
+            return team.club_id === value.clubId;
+          })
+          .sort((left, right) => compareNames(left.name, right.name));
 
   return {
-    associations,
+    associations: [...associations].sort((left, right) => compareNames(left.name, right.name)),
     clubs: filteredClubs,
     divisions: filteredDivisions,
     teams: filteredTeams,

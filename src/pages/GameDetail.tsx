@@ -41,18 +41,40 @@ interface GameRow {
   venue: { id: string; name: string } | null;
   home_score: number | null;
   away_score: number | null;
+  round_number: number | null;
 }
 
 const FIXTURE_SELECT =
-  "id, fixture_date, status, home_score, away_score, venue_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
+  "id, fixture_date, status, home_score, away_score, round_number, venue_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
 
 interface TeamMember {
-  user_id: string;
+  row_id: string;
+  user_id: string | null;
   first_name: string | null;
   last_name: string | null;
   position: string | null;
-  jersey_number: number | null;
+  jersey_number: string | number | null;
+  membership_type: string | null;
+  played: boolean;
+  is_fill_in: boolean;
+  goals: number;
+  green_cards: number;
+  yellow_cards: number;
+  red_cards: number;
   availability_status: AvailabilityStatus;
+}
+
+interface MatchAppearance {
+  id: string;
+  player_name: string;
+  profile_id: string | null;
+  jersey: string | null;
+  team_side: string | null;
+  is_fillin: boolean;
+  goals: number | null;
+  green_cards: number | null;
+  yellow_cards: number | null;
+  red_cards: number | null;
 }
 
 const GameDetail = () => {
@@ -115,13 +137,33 @@ const GameDetail = () => {
           setLoading(false);
           return;
         }
-        const { data: members } = await supabase
+        const side = membershipTeamId === fixture.home_team_id ? "home" : "away";
+        const [membersResult, fillInsResult, appearancesResult] = await Promise.all([
+          supabase
           .from("team_memberships")
-          .select("user_id, position, jersey_number")
+          .select("user_id, position, jersey_number, membership_type")
           .eq("team_id", membershipTeamId)
-          .eq("status", "ACTIVE");
+          .eq("status", "ACTIVE"),
+          supabase
+            .from("fixture_fill_ins")
+            .select("id, player_id")
+            .eq("fixture_id", id)
+            .eq("team_id", membershipTeamId)
+            .eq("status", "SELECTED"),
+          supabase
+            .from("revsports_players")
+            .select("id, player_name, profile_id, jersey, team_side, is_fillin, goals, green_cards, yellow_cards, red_cards")
+            .eq("fixture_id", id)
+            .eq("team_side", side)
+            .eq("attended", true)
+            .eq("is_removed", false),
+        ]);
 
-        if (members && members.length > 0) {
+        const members = membersResult.data || [];
+        const fillIns = fillInsResult.data || [];
+        const appearances = (appearancesResult.data || []) as MatchAppearance[];
+
+        if (members.length > 0 || fillIns.length > 0 || appearances.length > 0) {
           // Historical Dev data can contain duplicate active memberships. Keep one
           // visible player while preserving any useful number or position stored on
           // either row. Database guards prevent new duplicates from being created.
@@ -132,33 +174,95 @@ const GameDetail = () => {
                 user_id: member.user_id,
                 position: existing?.position || member.position,
                 jersey_number: existing?.jersey_number || member.jersey_number,
+                membership_type: existing?.membership_type || member.membership_type,
               });
               return byUser;
             }, new Map<string, (typeof members)[number]>()),
           ).map(([, member]) => member);
-          const userIds = uniqueMembers.map((m) => m.user_id);
+          const userIds = Array.from(new Set([
+            ...uniqueMembers.map((member) => member.user_id),
+            ...fillIns.map((fillIn) => fillIn.player_id),
+            ...appearances.map((appearance) => appearance.profile_id).filter(Boolean) as string[],
+          ]));
 
           const [profilesRes, availRes] = await Promise.all([
-            supabase.from("profiles").select("id, first_name, last_name").in("id", userIds),
-            supabase.from("fixture_availability").select("user_id, status").eq("fixture_id", id).in("user_id", userIds),
+            userIds.length > 0
+              ? supabase.from("profiles").select("id, first_name, last_name").in("id", userIds)
+              : Promise.resolve({ data: [], error: null }),
+            userIds.length > 0
+              ? supabase.from("fixture_availability").select("user_id, status").eq("fixture_id", id).in("user_id", userIds)
+              : Promise.resolve({ data: [], error: null }),
           ]);
 
           const profiles = profilesRes.data || [];
           const avails = availRes.data || [];
 
-          const merged: TeamMember[] = uniqueMembers.map((m) => {
-            const profile = profiles.find((p) => p.id === m.user_id);
-            const avail = avails.find((a) => a.user_id === m.user_id);
+          const appearanceByProfile = new Map(
+            appearances
+              .filter((appearance) => appearance.profile_id)
+              .map((appearance) => [appearance.profile_id as string, appearance]),
+          );
+          const fillInIds = new Set(fillIns.map((fillIn) => fillIn.player_id));
+          const membershipByUser = new Map(uniqueMembers.map((member) => [member.user_id, member]));
+
+          const linkedMembers: TeamMember[] = userIds.map((userId) => {
+            const m = membershipByUser.get(userId);
+            const profile = profiles.find((p) => p.id === userId);
+            const avail = avails.find((a) => a.user_id === userId);
+            const appearance = appearanceByProfile.get(userId);
+            const isFillIn = fillInIds.has(userId) || appearance?.is_fillin === true;
             return {
-              user_id: m.user_id,
+              row_id: `profile-${userId}`,
+              user_id: userId,
               first_name: profile?.first_name || null,
               last_name: profile?.last_name || null,
-              position: m.position,
-              jersey_number: m.jersey_number,
+              position: m?.position || null,
+              jersey_number: m?.jersey_number || appearance?.jersey || null,
+              membership_type: m?.membership_type || null,
+              played: Boolean(appearance),
+              is_fill_in: isFillIn,
+              goals: appearance?.goals || 0,
+              green_cards: appearance?.green_cards || 0,
+              yellow_cards: appearance?.yellow_cards || 0,
+              red_cards: appearance?.red_cards || 0,
               availability_status: (avail?.status as AvailabilityStatus) || "PENDING",
             };
           });
-          setTeamMembers(merged);
+
+          const unlinkedAppearances: TeamMember[] = appearances
+            .filter((appearance) => !appearance.profile_id)
+            .map((appearance) => {
+              const nameParts = appearance.player_name.trim().split(/\s+/);
+              return {
+                row_id: `appearance-${appearance.id}`,
+                user_id: null,
+                first_name: nameParts.shift() || appearance.player_name,
+                last_name: nameParts.join(" ") || null,
+                position: null,
+                jersey_number: appearance.jersey,
+                membership_type: null,
+                played: true,
+                is_fill_in: appearance.is_fillin,
+                goals: appearance.goals || 0,
+                green_cards: appearance.green_cards || 0,
+                yellow_cards: appearance.yellow_cards || 0,
+                red_cards: appearance.red_cards || 0,
+                availability_status: "PENDING",
+              };
+            });
+
+          const orderedMembers = [...linkedMembers, ...unlinkedAppearances].sort((a, b) => {
+            const group = (member: TeamMember) => member.played ? (member.is_fill_in ? 1 : 0) : 2;
+            const groupDifference = group(a) - group(b);
+            if (groupDifference !== 0) return groupDifference;
+            return `${a.first_name || ""} ${a.last_name || ""}`.localeCompare(
+              `${b.first_name || ""} ${b.last_name || ""}`,
+              "en-AU",
+            );
+          });
+          setTeamMembers(orderedMembers);
+        } else {
+          setTeamMembers([]);
         }
       }
       setLoading(false);
@@ -184,6 +288,9 @@ const GameDetail = () => {
       });
     } else {
       setAvailability(status);
+      setTeamMembers((current) => current.map((member) => (
+        member.user_id === user.id ? { ...member, availability_status: status } : member
+      )));
       toast({
         title: "Availability Updated",
         description: `You are now marked as ${status.toLowerCase()}.`,
@@ -222,6 +329,7 @@ const GameDetail = () => {
   const displayStatus = getFixtureDisplayStatus(fixtureDisplay);
   const venueName = game.venue?.name ?? "TBD";
   const gameDate = new Date(game.fixture_date);
+  const isCompleted = displayStatus === "COMPLETED" || displayStatus === "FINALISED";
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -243,6 +351,11 @@ const GameDetail = () => {
           </div>
 
           <div className="py-8 text-center">
+            {game.round_number !== null && game.round_number !== undefined && (
+              <p className="mb-3 text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                Round {game.round_number}
+              </p>
+            )}
             {isBye ? (
               <p className="font-display text-3xl text-foreground md:text-4xl">
                 {getFixtureMatchupLabel(fixtureDisplay)}
@@ -250,7 +363,13 @@ const GameDetail = () => {
             ) : (
               <>
                 <p className="font-display text-3xl text-foreground md:text-4xl">{game.home_team?.name ?? "Unknown"}</p>
-                <p className="my-3 text-xl text-muted-foreground">vs</p>
+                {isCompleted && game.home_score !== null && game.away_score !== null ? (
+                  <p className="my-3 font-display text-4xl text-foreground">
+                    {game.home_score} – {game.away_score}
+                  </p>
+                ) : (
+                  <p className="my-3 text-xl text-muted-foreground">vs</p>
+                )}
                 <p className="font-display text-3xl text-foreground md:text-4xl">{game.away_team?.name ?? "Unknown"}</p>
               </>
             )}
@@ -306,12 +425,12 @@ const GameDetail = () => {
       {teamMembers.length > 0 && !isBye && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Team Availability</CardTitle>
+            <CardTitle className="text-lg">{isCompleted ? "Match Players & Availability" : "Team Availability"}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               {teamMembers.map((member) => (
-                <div key={member.user_id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                <div key={member.row_id} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-semibold">
                       {member.jersey_number || "?"}
@@ -321,6 +440,22 @@ const GameDetail = () => {
                         {[member.first_name, member.last_name].filter(Boolean).join(" ") || "Unknown"}
                       </p>
                       <p className="text-xs text-muted-foreground">{member.position || "No position"}</p>
+                      {isCompleted && (
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                          {member.played && <Badge variant="available">Played</Badge>}
+                          {member.is_fill_in && <Badge variant="secondary">Fill-in</Badge>}
+                          {member.goals > 0 && <Badge variant="outline">{member.goals} goal{member.goals === 1 ? "" : "s"}</Badge>}
+                          {member.green_cards > 0 && <Badge variant="outline" className="border-green-600 text-green-700">{member.green_cards} green</Badge>}
+                          {member.yellow_cards > 0 && <Badge variant="outline" className="border-yellow-500 text-yellow-700">{member.yellow_cards} yellow</Badge>}
+                          {member.red_cards > 0 && <Badge variant="outline" className="border-red-600 text-red-700">{member.red_cards} red</Badge>}
+                          {!member.played && member.availability_status === "AVAILABLE" && (
+                            <Badge variant="outline">Available • not selected</Badge>
+                          )}
+                          {member.played && member.availability_status === "PENDING" && (
+                            <Badge variant="outline">Played • no response</Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <Badge

@@ -36,14 +36,14 @@ Every observation from the 31 July to 2 August review is now mapped in
 Admin, Association Admin, Club Admin, Team Manager, Coach and Player sessions before any `main`
 staging promotion.
 
-The 3 August owner fixture walkthrough confirmed the normal Team Manager fixture list formats
-byes correctly, while entity Overviews, the individual fixture page and Admin Fixtures still used
-inconsistent fallbacks. A contained Dev-only presentation repair now shares one bye rule across
-those screens: `Team — Bye`, no invented time or venue, and a past bye displays as Completed
-without rewriting its imported database record. Admin fixture rows also use the team name without
-duplicating the club name. Deployment and browser retesting are the next checkpoint. The larger
-calendar navigation and completed-match participant/statistics work remain deferred for owner-led
-design.
+The 3 August fixture continuation now includes the previously deferred calendar and completed-match
+work. Calendar view has URL-backed previous/next/current-month navigation and visually muted
+historical fixtures. Completed fixture detail combines SportStack profiles with RevSports
+appearances and statistics, displays the score, round, goals and cards, and orders regular players,
+participating fill-ins and other eligible players in that order. Admin Fixtures mirrors the active
+cascade in its filter labels, and the cascade no longer predictively selects a sole lower-level
+division or team. Shared competition ordering now places senior divisions first, Open before Women,
+then junior groups from oldest to youngest. These changes are awaiting deployed owner retesting.
 
 The 2 August unattended read-only pass has now exercised the main Dev screens and recorded its
 evidence in the matrix. It found genuine remaining gaps in mode labels/route restriction, scoped

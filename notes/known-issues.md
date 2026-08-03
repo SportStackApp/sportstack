@@ -93,8 +93,10 @@ is open. The pass also confirmed these remaining gaps:
   Admin Dashboard return-state defect independently of the Edit Details dialog.
 - My Dashboard still formats a bye as Unknown/midnight/TBD because it duplicates the Fixtures
   formatter and applies those fallbacks unconditionally.
-- Fixture calendar selection only changes the existing cards to a two-column grid; it does not
-  render a calendar.
+- Fixture calendar month navigation, historical colouring and completed-game player/stat display
+  are implemented in the current Dev batch and await deployed owner retesting. Completed games can
+  only show RevSports participants and statistics after that fixture has been scraped; unlinked
+  appearances deliberately fall back to their raw scraped name.
 - Legacy chat edits have no revision rows and therefore no earlier version to display.
 - Player MVP Analytics now has the requested three URL-backed tabs. An eligible real-player ballot
   and remaining unlinked/short-name fallbacks still need browser testing.

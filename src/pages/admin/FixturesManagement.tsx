@@ -169,7 +169,7 @@ const toDbStatus = (status: string) => status.toUpperCase();
 const FixturesManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { selectedTeamId, selectedAssociationId } = useTeamContext();
+  const { selectedTeamId, selectedAssociationId, selectedClubId, selectedDivision } = useTeamContext();
   const { scopedTeamIds } = useAdminScope();
   const [fixtures, setFixtures] = useState<FixtureRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -218,6 +218,15 @@ const FixturesManagement = () => {
       : [],
     [selectedTeamId, scopedTeamIds],
   );
+
+  useEffect(() => {
+    setFixtureCascade({
+      associationId: selectedAssociationId || ALL_CASCADE_VALUE,
+      clubId: selectedClubId || ALL_CASCADE_VALUE,
+      divisionId: selectedDivision || ALL_CASCADE_VALUE,
+      teamId: selectedTeamId || ALL_CASCADE_VALUE,
+    });
+  }, [selectedAssociationId, selectedClubId, selectedDivision, selectedTeamId]);
 
   useEffect(() => {
     const loadRefData = async () => {
@@ -700,9 +709,8 @@ const FixturesManagement = () => {
     );
   };
 
-  const homePlayers = rosterPlayers
-    .filter((p) => p.team_side === "home" && p.attended === true)
-    .sort((a, b) => {
+  const sortPlayers = (a: RevSportsPlayer, b: RevSportsPlayer) => {
+      if (a.is_fillin !== b.is_fillin) return a.is_fillin ? 1 : -1;
       const numA = parseInt(a.jersey, 10);
       const numB = parseInt(b.jersey, 10);
       const hasA = !isNaN(numA);
@@ -711,20 +719,15 @@ const FixturesManagement = () => {
       if (hasA) return -1;
       if (hasB) return 1;
       return (a.player_name || "").localeCompare(b.player_name || "");
-    });
+  };
+
+  const homePlayers = rosterPlayers
+    .filter((p) => p.team_side === "home" && p.attended === true)
+    .sort(sortPlayers);
 
   const awayPlayers = rosterPlayers
     .filter((p) => p.team_side === "away" && p.attended === true)
-    .sort((a, b) => {
-      const numA = parseInt(a.jersey, 10);
-      const numB = parseInt(b.jersey, 10);
-      const hasA = !isNaN(numA);
-      const hasB = !isNaN(numB);
-      if (hasA && hasB) return numA - numB;
-      if (hasA) return -1;
-      if (hasB) return 1;
-      return (a.player_name || "").localeCompare(b.player_name || "");
-    });
+    .sort(sortPlayers);
 
   const umpire1 = rosterPlayers.length > 0 ? rosterPlayers[0].umpire_1 : null;
   const umpire2 = rosterPlayers.length > 0 ? rosterPlayers[0].umpire_2 : null;
@@ -785,7 +788,7 @@ const FixturesManagement = () => {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <AdminCascadeFilters
           associations={fixtureCascadeOptions.associations}
           clubs={allClubs}
@@ -793,13 +796,13 @@ const FixturesManagement = () => {
           teams={allAssocTeams}
           value={fixtureCascade}
           onChange={setFixtureCascade}
-          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-          triggerClassName="w-48 min-w-0 overflow-hidden"
+          className="contents"
+          triggerClassName="w-full min-w-0 overflow-hidden"
         />
-        <div className="flex items-center gap-2">
-          <Label>Status:</Label>
+        <div className="space-y-2">
+          <Label>Status</Label>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All</SelectItem>
               <SelectItem value="SCHEDULED">Scheduled</SelectItem>
@@ -811,10 +814,10 @@ const FixturesManagement = () => {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
-          <Label>Round:</Label>
+        <div className="space-y-2">
+          <Label>Round</Label>
           <Input
-            className="h-9 w-20"
+            className="h-9 w-full"
             type="number"
             placeholder="All"
             value={filterRound}

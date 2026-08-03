@@ -16,6 +16,7 @@ import {
   Calendar,
   MapPin,
   Clock,
+  ChevronLeft,
   ChevronRight,
   CalendarDays,
   List,
@@ -103,10 +104,9 @@ const Games = () => {
         return;
       }
       setLoading(true);
-      let query = (supabase
-        // The live fixtures relation includes joined fields not yet present in generated types.
-        .from("fixtures" as any)
-        .select(FIXTURE_SELECT) as any)
+      let query = supabase
+        .from("fixtures")
+        .select(FIXTURE_SELECT)
         .or(`home_team_id.eq.${selectedTeamId},away_team_id.eq.${selectedTeamId}`)
         .order("fixture_date", { ascending: true });
 
@@ -124,6 +124,29 @@ const Games = () => {
   const now = new Date();
   const upcomingGames = games.filter((g) => new Date(g.fixture_date) >= now);
   const pastGames = games.filter((g) => new Date(g.fixture_date) < now);
+
+  const calendarMonth = (() => {
+    const requestedMonth = searchParams.get("month");
+    if (requestedMonth && /^\d{4}-\d{2}$/.test(requestedMonth)) {
+      const [year, month] = requestedMonth.split("-").map(Number);
+      if (month >= 1 && month <= 12) return new Date(year, month - 1, 1);
+    }
+
+    const nextFixture = games.find((game) => new Date(game.fixture_date) >= now);
+    const focusDate = nextFixture
+      ? new Date(nextFixture.fixture_date)
+      : games.length > 0
+        ? new Date(games[games.length - 1].fixture_date)
+        : now;
+    return new Date(focusDate.getFullYear(), focusDate.getMonth(), 1);
+  })();
+
+  const changeCalendarMonth = (month: Date) => {
+    updateUrlState({
+      view: "calendar",
+      month: `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`,
+    });
+  };
 
   const teamName = selectedTeam ? getTeamDisplayName(selectedTeam) : "Team";
   const clubName = selectedClub?.name || "";
@@ -224,6 +247,12 @@ const Games = () => {
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
+      ) : viewMode === "calendar" ? (
+        <FixtureCalendarView
+          games={games}
+          month={calendarMonth}
+          onMonthChange={changeCalendarMonth}
+        />
       ) : (
         <Tabs value={fixtureTab} onValueChange={(value) => { const next = value as "upcoming" | "past"; setFixtureTab(next); updateUrlState({ tab: next }); }} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
@@ -236,8 +265,6 @@ const Games = () => {
           <TabsContent value="upcoming" className="mt-4">
             {upcomingGames.length === 0 ? (
               <EmptyState message="No upcoming games scheduled." />
-            ) : viewMode === "calendar" ? (
-              <FixtureCalendarView games={upcomingGames} />
             ) : (
               <div className="space-y-3">
                 {upcomingGames.map((game, index) => (
@@ -250,8 +277,6 @@ const Games = () => {
           <TabsContent value="past" className="mt-4">
             {pastGames.length === 0 ? (
               <EmptyState message="No past games yet." />
-            ) : viewMode === "calendar" ? (
-              <FixtureCalendarView games={pastGames} isPast />
             ) : (
               <div className="space-y-3">
                 {pastGames.map((game, index) => (
@@ -266,36 +291,54 @@ const Games = () => {
   );
 };
 
-const FixtureCalendarView = ({ games, isPast = false }: { games: GameRow[]; isPast?: boolean }) => {
-  const months = useMemo(() => {
-    const grouped = new Map<string, { month: Date; games: GameRow[] }>();
+interface FixtureCalendarViewProps {
+  games: GameRow[];
+  month: Date;
+  onMonthChange: (month: Date) => void;
+}
 
-    games.forEach((game) => {
+const FixtureCalendarView = ({ games, month, onMonthChange }: FixtureCalendarViewProps) => {
+  const monthGames = useMemo(
+    () => games.filter((game) => {
       const date = new Date(game.fixture_date);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      const group = grouped.get(key) || {
-        month: new Date(date.getFullYear(), date.getMonth(), 1),
-        games: [],
-      };
-      group.games.push(game);
-      grouped.set(key, group);
-    });
+      return date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth();
+    }),
+    [games, month],
+  );
+  const leadingDays = (month.getDay() + 6) % 7;
+  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
 
-    return Array.from(grouped.values()).sort((a, b) => a.month.getTime() - b.month.getTime());
-  }, [games]);
+  const shiftMonth = (offset: number) => {
+    onMonthChange(new Date(month.getFullYear(), month.getMonth() + offset, 1));
+  };
 
   return (
-    <div className="space-y-4">
-      {months.map(({ month, games: monthGames }) => {
-        const leadingDays = (month.getDay() + 6) % 7;
-        const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-
-        return (
-          <Card key={month.toISOString()}>
-            <CardContent className="p-4">
-              <h2 className="mb-3 font-display text-xl text-foreground">
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <Button variant="outline" size="icon-sm" onClick={() => shiftMonth(-1)} aria-label="Previous month">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="text-center">
+            <h2 className="font-display text-xl text-foreground">
                 {month.toLocaleDateString("en-AU", { month: "long", year: "numeric" })}
-              </h2>
+            </h2>
+            <Button
+              variant="link"
+              size="sm"
+              className="h-auto p-0 text-xs"
+              onClick={() => {
+                const today = new Date();
+                onMonthChange(new Date(today.getFullYear(), today.getMonth(), 1));
+              }}
+            >
+              Current month
+            </Button>
+          </div>
+          <Button variant="outline" size="icon-sm" onClick={() => shiftMonth(1)} aria-label="Next month">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
               <div className="overflow-x-auto">
                 <div className="min-w-[700px]">
                   <div className="grid grid-cols-7 gap-px overflow-hidden rounded-t-lg border bg-border">
@@ -319,6 +362,7 @@ const FixtureCalendarView = ({ games, isPast = false }: { games: GameRow[]; isPa
                           <div className="space-y-1">
                             {dayGames.map((game) => {
                               const isBye = !game.home_team || !game.away_team;
+                              const isPast = new Date(game.fixture_date) < new Date();
                               const knownTeam = game.home_team?.name || game.away_team?.name || "Team";
                               const matchup = isBye
                                 ? `${knownTeam} — Bye`
@@ -329,12 +373,14 @@ const FixtureCalendarView = ({ games, isPast = false }: { games: GameRow[]; isPa
                                   key={game.id}
                                   to={`/games/${game.id}`}
                                   className={cn(
-                                    "block rounded-md border bg-primary/5 p-1.5 text-[11px] transition-colors hover:bg-primary/10",
-                                    isPast && "opacity-75",
+                                    "block rounded-md border p-1.5 text-[11px] transition-colors",
+                                    isPast
+                                      ? "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-800"
+                                      : "border-primary/20 bg-primary/5 hover:bg-primary/10",
                                   )}
                                 >
                                   {game.round_number !== null && game.round_number !== undefined && (
-                                    <p className="font-medium text-primary">Round {game.round_number}</p>
+                                    <p className={cn("font-medium", isPast ? "text-muted-foreground" : "text-primary")}>Round {game.round_number}</p>
                                   )}
                                   <p className="truncate font-medium text-foreground" title={matchup}>{matchup}</p>
                                   {!isBye && (
@@ -352,11 +398,8 @@ const FixtureCalendarView = ({ games, isPast = false }: { games: GameRow[]; isPa
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 
