@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "20260802115000_enforce_voting_module_access.sql"
+UMPIRE_ROLE_SCOPE_FIX = ROOT / "supabase" / "migrations" / "20260803104000_allow_umpire_role_fixture_scope.sql"
 MVP_REMINDERS = ROOT / "supabase" / "functions" / "mvp-voting-email-reminders" / "index.ts"
 PUBLIC_UMPIRE = ROOT / "supabase" / "functions" / "public-umpire-match-voting" / "index.ts"
 
@@ -175,6 +176,30 @@ class VotingModuleEnforcementTests(unittest.TestCase):
         self.assertIn("or private.module_allowed_for_current_session", fixture_helper)
         self.assertNotIn("and private.module_allowed_for_current_session", fixture_helper)
         self.assertIn("return v_team_scope_allowed", sql)
+
+    def test_umpire_role_can_use_its_association_without_inheriting_player_team_scope(self) -> None:
+        sql = compact(UMPIRE_ROLE_SCOPE_FIX)
+        self.assertIn("v_active_mode text := private.active_permission_mode_for_current_session()", sql)
+        self.assertIn("v_active_mode <> 'player'", sql)
+        self.assertIn("role_row.role::text in ('umpire', 'umpire_admin')", sql)
+        self.assertIn(
+            "role_row.association_id in (v_home_association_id, v_away_association_id)",
+            sql,
+        )
+        self.assertIn(
+            "public.resolve_effective_permission_for_mode_unchecked( 'module.umpire_match_voting.access'",
+            sql,
+        )
+        self.assertIn("v_home_permission->>'allowed'", sql)
+        self.assertIn("or coalesce((v_away_permission->>'allowed')::boolean, false)", sql)
+
+    def test_umpire_role_scope_fix_preserves_the_standard_session_scope_path(self) -> None:
+        sql = compact(UMPIRE_ROLE_SCOPE_FIX)
+        standard_path = sql.find("if private.module_allowed_for_current_session")
+        umpire_role_path = sql.find("role_row.role::text in ('umpire', 'umpire_admin')")
+        self.assertGreater(standard_path, -1)
+        self.assertGreater(umpire_role_path, -1)
+        self.assertLess(standard_path, umpire_role_path)
 
     def test_wrapper_parameter_names_remain_postgrest_compatible(self) -> None:
         sql = compact(MIGRATION)
