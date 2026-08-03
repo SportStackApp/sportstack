@@ -149,6 +149,7 @@ export default function MvpVoteCast() {
 
   const [votes, setVotes] = useState({ vote3: "__none__", vote2: "__none__", vote1: "__none__" });
   const [shoutout, setShoutout] = useState("");
+  const [draftHydrated, setDraftHydrated] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -156,6 +157,9 @@ export default function MvpVoteCast() {
 
   useEffect(() => {
     if (!ballotDraftKey) return;
+    setDraftHydrated(false);
+    setVotes({ vote3: "__none__", vote2: "__none__", vote1: "__none__" });
+    setShoutout("");
     try {
       const saved = window.localStorage.getItem(ballotDraftKey);
       if (!saved) return;
@@ -164,13 +168,15 @@ export default function MvpVoteCast() {
       if (typeof draft.shoutout === "string") setShoutout(draft.shoutout);
     } catch {
       window.localStorage.removeItem(ballotDraftKey);
+    } finally {
+      setDraftHydrated(true);
     }
   }, [ballotDraftKey]);
 
   useEffect(() => {
-    if (!ballotDraftKey || success) return;
+    if (!ballotDraftKey || !draftHydrated || success) return;
     window.localStorage.setItem(ballotDraftKey, JSON.stringify({ votes, shoutout }));
-  }, [ballotDraftKey, shoutout, success, votes]);
+  }, [ballotDraftKey, draftHydrated, shoutout, success, votes]);
 
   const refreshResultCheckState = useCallback(async () => {
     if (!sessionId) return;
@@ -197,8 +203,6 @@ export default function MvpVoteCast() {
       setAssociationContext(null);
       setAssociationTimeZone(DEFAULT_ASSOCIATION_TIMEZONE);
       setSuccess(false);
-      setVotes({ vote3: "__none__", vote2: "__none__", vote1: "__none__" });
-      setShoutout("");
       setSubmitting(false);
       setResultCheck(normaliseMvpResultCheckState(null));
       setCheckingResult(false);
