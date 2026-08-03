@@ -9,6 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { getRoleDisplayName, getRoleBadgeColor } from "@/hooks/useUserRole";
 import { useTeamContext } from "@/contexts/TeamContext";
+import { useAppMode } from "@/contexts/AppModeContext";
+
+const ADMIN_MODE_ROLE = {
+  super_admin: "SUPER_ADMIN",
+  association: "ASSOCIATION_ADMIN",
+  club: "CLUB_ADMIN",
+} as const;
 
 interface Stats {
   associations: number;
@@ -23,6 +30,7 @@ interface Stats {
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { loading: scopeLoading, isSuperAdmin, isAnyAdmin, highestScopedRole, scopedAssociationIds, scopedClubIds, scopedTeamIds } = useAdminScope();
+  const { activeMode } = useAppMode();
   const {
     selectedAssociationId,
     selectedClubId,
@@ -66,6 +74,10 @@ const AdminDashboard = () => {
     : contextLevel === "club" ? "Club stats and activity"
     : contextLevel === "association" ? "Association stats and activity"
     : "Manage your organization's structure and users";
+
+  const activeAdminRole = activeMode in ADMIN_MODE_ROLE
+    ? ADMIN_MODE_ROLE[activeMode as keyof typeof ADMIN_MODE_ROLE]
+    : null;
 
   useEffect(() => {
     if (!scopeLoading && !isAnyAdmin) {
@@ -258,10 +270,10 @@ const AdminDashboard = () => {
             {dashboardSubtitle}
           </p>
         </div>
-        {highestScopedRole && (
-          <Badge className={getRoleBadgeColor(highestScopedRole)}>
+        {activeAdminRole && (
+          <Badge className={getRoleBadgeColor(activeAdminRole)}>
             <Crown className="mr-1 h-3 w-3" />
-            {getRoleDisplayName(highestScopedRole)}
+            {getRoleDisplayName(activeAdminRole)}
           </Badge>
         )}
       </div>

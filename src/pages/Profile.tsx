@@ -24,7 +24,7 @@ import { ProfilePhotoCropper } from "@/components/profile/ProfilePhotoCropper";
 import { StatsDetailDialog } from "@/components/profile/StatsDetailDialog";
 import { SetPrimaryTeamDialog } from "@/components/profile/SetPrimaryTeamDialog";
 import { PlayerPositionPreferences } from "@/components/profile/PlayerPositionPreferences";
-import { useAppMode } from "@/contexts/AppModeContext";
+import { useAppMode, type AppMode } from "@/contexts/AppModeContext";
 import { membershipPriority } from "@/lib/playerPositions";
 import { uploadAvatar, deleteAvatar } from "@/lib/uploadAvatar";
 import { useTestRole } from "@/contexts/TestRoleContext";
@@ -40,6 +40,15 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 type MembershipType = Database["public"]["Enums"]["membership_type"];
 
 const ALL_ROLES: AppRole[] = ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "ASSOCIATION_ADMIN", "SUPER_ADMIN", "UMPIRE", "VOTER"];
+
+const APP_MODE_LABELS: Record<AppMode, string> = {
+  super_admin: "Super Admin",
+  association: "Association Admin",
+  club: "Club Admin",
+  team_manager: "Team Manager",
+  coach: "Coach",
+  player: "Player",
+};
 
 const getRoleDisplayName = (role: AppRole): string => {
   const names: Record<AppRole, string> = {
@@ -126,7 +135,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { modeLabel, roles } = useAppMode();
+  const { activeMode, roles } = useAppMode();
   const { testRole, setTestRole } = useTestRole();
   const returnTo = getSafeAppPath(searchParams.get("returnTo"), "");
   
@@ -930,7 +939,7 @@ const Profile = () => {
         
         {/* Active mode and every assigned role remain visible together. */}
         <div className="mt-3 space-y-2">
-          <Badge className="text-xs">Viewing as {modeLabel}</Badge>
+          <Badge className="text-xs">Viewing as {APP_MODE_LABELS[activeMode]}</Badge>
           <div className="flex flex-wrap justify-center gap-2">
             {roleScopes.length > 0
               ? roleScopes.map((item, index) => (

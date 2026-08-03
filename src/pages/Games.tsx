@@ -105,9 +105,7 @@ const Games = () => {
       setLoading(true);
       let query = (supabase
         // The live fixtures relation includes joined fields not yet present in generated types.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .from("fixtures" as any)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .select(FIXTURE_SELECT) as any)
         .or(`home_team_id.eq.${selectedTeamId},away_team_id.eq.${selectedTeamId}`)
         .order("fixture_date", { ascending: true });

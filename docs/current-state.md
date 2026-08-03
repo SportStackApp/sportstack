@@ -3107,6 +3107,39 @@ Risk level:
 - Low. This adds documentation tooling and a reversible current-user scheduled task. It makes no
   application, database, Supabase Storage, secret or Production change.
 
+## 3 August 2026 - contained owner-test follow-up
+
+What changed:
+
+- Confirmed on deployed Dev build `1d4bd20` that an actual disposable Player can clear a team
+  player number and that the blank value survives reload.
+- Confirmed with an actual disposable Coach that Pumas Squad and Roster each show 25 unique
+  players with matching compact totals: 22 Primary, 3 Secondary and 0 Fill-in.
+- Changed the Admin Dashboard badge to describe the confirmed active mode rather than the
+  account's highest stored role.
+- Changed the Profile "Viewing as" badge to describe the active mode while retaining all assigned
+  role/scope badges separately.
+- Removed two stale Games lint-suppression comments that caused the focused Dev-plan lint gate to
+  report a false new-debt failure.
+
+Checks run:
+
+- `npx tsc --noEmit`, `npm run build`, `npm run lint:dev-plan` and `git diff --check` passed.
+- Full `npm run lint` remains at its recorded unrelated baseline of 362 errors and 76 warnings.
+
+What Aaron should test next:
+
+- On Dev, use Super Admin "Viewing as Association Admin" and confirm the Admin Dashboard badge
+  says Association Admin.
+- Open Profile in that same active mode and confirm its "Viewing as" badge also says Association
+  Admin while the role list still shows every assigned role.
+- Use the Lucas HC My Dashboard to confirm its bye card says `Lucas HC — Bye` without midnight or
+  TBD details.
+
+Risk level:
+
+- Low. These are contained display/documentation changes with no migration or Production change.
+
 ## How to update this file
 
 When Codex finishes a task, add a dated entry with:
