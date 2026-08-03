@@ -1493,8 +1493,18 @@ const AppLayout = () => {
                         </SelectTrigger>
                         <SelectContent className="bg-background border-border">
                           {voterTeamMemberships.map((membership) => (
-                            <SelectItem key={membership.teamId} value={membership.teamId}>
-                              {membership.teamName} ({membership.membershipType === "PRIMARY" ? "Primary" : membership.membershipType === "FILL_IN" ? "Fill-in" : "Secondary"})
+                            <SelectItem
+                              key={membership.teamId}
+                              value={membership.teamId}
+                              onPointerDown={() => {
+                                if (membership.teamId === selectedTeamId) {
+                                  handleVoterTeamChange(membership.teamId);
+                                  setIsCascadePopoverOpen(false);
+                                }
+                              }}
+                            >
+                              {membership.teamName}
+                              {activeMode === "player" && ` (${membership.membershipType === "PRIMARY" ? "Primary" : membership.membershipType === "FILL_IN" ? "Fill-in" : "Secondary"})`}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1595,7 +1605,16 @@ const AppLayout = () => {
                       </SelectTrigger>
                       <SelectContent className="bg-background border-border">
                         {cascadeTeams.map((team) => (
-                          <SelectItem key={team.id} value={team.id}>
+                          <SelectItem
+                            key={team.id}
+                            value={team.id}
+                            onPointerDown={() => {
+                              if (team.id === selectedTeamId) {
+                                setIsCascadePopoverOpen(false);
+                                navigate(`/teams/${team.id}`);
+                              }
+                            }}
+                          >
                             {getTeamDisplayName(team)}
                           </SelectItem>
                         ))}
@@ -1734,8 +1753,17 @@ const AppLayout = () => {
                       </SelectTrigger>
                       <SelectContent className="bg-background border-border">
                         {voterTeamMemberships.map((membership) => (
-                          <SelectItem key={membership.teamId} value={membership.teamId}>
-                            {membership.teamName} ({membership.membershipType === "PRIMARY" ? "Primary" : membership.membershipType === "FILL_IN" ? "Fill-in" : "Secondary"})
+                          <SelectItem
+                            key={membership.teamId}
+                            value={membership.teamId}
+                            onPointerDown={() => {
+                              if (membership.teamId === selectedTeamId) {
+                                handleVoterTeamChange(membership.teamId);
+                              }
+                            }}
+                          >
+                            {membership.teamName}
+                            {activeMode === "player" && ` (${membership.membershipType === "PRIMARY" ? "Primary" : membership.membershipType === "FILL_IN" ? "Fill-in" : "Secondary"})`}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1859,7 +1887,13 @@ const AppLayout = () => {
                     </SelectTrigger>
                     <SelectContent className="bg-background border-border">
                       {cascadeTeams.map((team) => (
-                        <SelectItem key={team.id} value={team.id}>
+                        <SelectItem
+                          key={team.id}
+                          value={team.id}
+                          onPointerDown={() => {
+                            if (team.id === selectedTeamId) navigate(`/teams/${team.id}`);
+                          }}
+                        >
                           {getTeamDisplayName(team)}
                         </SelectItem>
                       ))}

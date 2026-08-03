@@ -243,6 +243,16 @@ class SessionPermissionContextFrontendTests(unittest.TestCase):
             layout,
         )
 
+    def test_reselecting_the_active_team_reopens_its_overview(self) -> None:
+        layout = normalised(APP_LAYOUT)
+
+        self.assertGreaterEqual(layout.count("onpointerdown"), 4)
+        self.assertIn("membership.teamid === selectedteamid", layout)
+        self.assertIn("handlevoterteamchange(membership.teamid)", layout)
+        self.assertIn("team.id === selectedteamid", layout)
+        self.assertIn("navigate(`/teams/${team.id}`)", layout)
+        self.assertIn('activemode === "player" &&', layout)
+
     def test_full_name_search_requires_each_word_across_profile_fields(self) -> None:
         source = normalised(USERS_MANAGEMENT)
 
