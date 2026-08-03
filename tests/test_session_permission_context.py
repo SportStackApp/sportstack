@@ -20,6 +20,13 @@ MODE_ROUTE_GATE = ROOT / "src" / "components" / "auth" / "ModeRouteGate.tsx"
 TEAM_CONTEXT = ROOT / "src" / "contexts" / "TeamContext.tsx"
 MODULE_AVAILABILITY = ROOT / "src" / "hooks" / "useModuleAvailability.ts"
 ADMIN_SCOPE = ROOT / "src" / "hooks" / "useAdminScope.ts"
+USERS_MANAGEMENT = ROOT / "src" / "pages" / "admin" / "UsersManagement.tsx"
+SCOPED_USERS_MIGRATION = (
+    ROOT
+    / "supabase"
+    / "migrations"
+    / "20260803100000_include_role_scoped_admin_users.sql"
+)
 
 
 def normalised(path: Path) -> str:
@@ -229,6 +236,39 @@ class SessionPermissionContextFrontendTests(unittest.TestCase):
             'item.path === "/committee" && !["super_admin", "association", "club"].includes(activemode)',
             layout,
         )
+
+    def test_full_name_search_requires_each_word_across_profile_fields(self) -> None:
+        source = normalised(USERS_MANAGEMENT)
+
+        self.assertIn(".split(/\\s+/)", source)
+        self.assertIn("for (const term of searchterms)", source)
+        self.assertIn("first_name.ilike.%${term}%", source)
+        self.assertIn("last_name.ilike.%${term}%", source)
+        self.assertIn("const constrainbymembershipstatus", source)
+        self.assertIn("const constrainbydivision", source)
+        self.assertNotIn("const constrainbymembership = !issuperadmin", source)
+        self.assertIn('.from("user_roles")', source)
+
+
+class ScopedAdministrationUserListTests(unittest.TestCase):
+    def test_role_only_accounts_are_included_with_membership_accounts(self) -> None:
+        sql = normalised(SCOPED_USERS_MIGRATION)
+
+        self.assertIn("create or replace function public.admin_visible_profile_ids", sql)
+        self.assertIn("membership_profiles as", sql)
+        self.assertIn("role_profiles as", sql)
+        self.assertIn("from public.user_roles role_row", sql)
+        self.assertIn("select role_profiles.profile_id from role_profiles", sql)
+        self.assertIn("public.administration_scope_allows", sql)
+
+    def test_role_scope_respects_requested_cascade_filters(self) -> None:
+        sql = normalised(SCOPED_USERS_MIGRATION)
+
+        self.assertIn("p_association_id is null or scope.association_id = p_association_id", sql)
+        self.assertIn("p_club_id is null or scope.club_id = p_club_id", sql)
+        self.assertIn("p_team_id is null or scope.team_id = p_team_id", sql)
+        self.assertIn("revoke all on function public.admin_visible_profile_ids", sql)
+        self.assertIn("grant execute on function public.admin_visible_profile_ids", sql)
 
 
 if __name__ == "__main__":

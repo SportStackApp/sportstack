@@ -404,25 +404,36 @@ const UsersManagement = () => {
         ((visibleProfileRows || []) as { profile_id: string }[]).map((row) => row.profile_id),
       );
 
-      const constrainByMembership = !isSuperAdmin
-        || associationFilter !== "all"
-        || clubFilter !== "all"
-        || divisionFilter !== "all"
-        || teamFilter !== "all"
-        || ["ACTIVE", "PENDING"].includes(statusFilter);
+      // Association, club and team containment is already enforced by the
+      // server RPC for both memberships and scoped roles. Only a division
+      // filter needs an extra team-based pass because the RPC has no division
+      // argument. Membership status filters intentionally remain membership-only.
+      const constrainByMembershipStatus = ["ACTIVE", "PENDING"].includes(statusFilter);
+      const constrainByDivision = divisionFilter !== "all";
 
       let candidateUserIds: string[] | null = Array.from(serverVisibleUserIds);
-      if (constrainByMembership) {
+      if (constrainByMembershipStatus || constrainByDivision) {
         if (filteredTeamIds.length === 0) {
           candidateUserIds = [];
         } else {
           let candidateQuery = supabase.from("team_memberships").select("user_id").in("team_id", filteredTeamIds);
-          if (["ACTIVE", "PENDING"].includes(statusFilter)) {
+          if (constrainByMembershipStatus) {
             candidateQuery = candidateQuery.eq("status", statusFilter as "ACTIVE" | "PENDING");
           }
           const { data, error } = await candidateQuery;
           if (error) throw error;
-          candidateUserIds = [...new Set((data || []).map((membership) => membership.user_id))]
+          const filteredProfileIds = new Set((data || []).map((membership) => membership.user_id));
+
+          if (constrainByDivision && !constrainByMembershipStatus) {
+            const { data: roleRows, error: roleError } = await supabase
+              .from("user_roles")
+              .select("user_id")
+              .in("team_id", filteredTeamIds);
+            if (roleError) throw roleError;
+            (roleRows || []).forEach((roleRow) => filteredProfileIds.add(roleRow.user_id));
+          }
+
+          candidateUserIds = [...filteredProfileIds]
             .filter((profileId) => serverVisibleUserIds.has(profileId));
         }
       }
@@ -462,9 +473,18 @@ const UsersManagement = () => {
       let profilesQuery = supabase.from("profiles").select("*", { count: "exact" });
       if (candidateUserIds) profilesQuery = profilesQuery.in("id", candidateUserIds);
       if (hidePlaceholders) profilesQuery = profilesQuery.eq("is_placeholder", false);
-      const cleanSearch = searchQuery.trim().replace(/[,%()]/g, " ");
-      if (cleanSearch) {
-        profilesQuery = profilesQuery.or(`first_name.ilike.%${cleanSearch}%,last_name.ilike.%${cleanSearch}%,revsports_player_id.ilike.%${cleanSearch}%`);
+      const searchTerms = searchQuery
+        .trim()
+        .replace(/[,%()]/g, " ")
+        .split(/\s+/)
+        .filter(Boolean);
+      for (const term of searchTerms) {
+        // Each word may match either part of the person's name or their
+        // RevSports registration ID. Repeating .or() makes all words required,
+        // so a full name can span first_name and last_name.
+        profilesQuery = profilesQuery.or(
+          `first_name.ilike.%${term}%,last_name.ilike.%${term}%,revsports_player_id.ilike.%${term}%`,
+        );
       }
       const pageStart = (currentPage - 1) * rowsPerPage;
       const { data: profilesData, count, error: profilesError } = await profilesQuery
