@@ -1033,8 +1033,9 @@ const Dashboard = () => {
               ) : (
                 games.slice(0, 5).map((game) => {
                   const gameDate = new Date(game.fixture_date);
-                  const homeTeam = game.home_team?.name ?? "Unknown";
-                  const awayTeam = game.away_team?.name ?? "Unknown";
+                  const isBye = !game.home_team || !game.away_team;
+                  const knownTeam = game.home_team?.name || game.away_team?.name || "Team";
+                  const matchup = isBye ? `${knownTeam} — Bye` : `${game.home_team?.name} vs ${game.away_team?.name}`;
                   const venueName = game.venue?.name ?? "TBD";
                   const divisionName = game.divisions?.name;
                   const avail = availability[game.id];
@@ -1056,9 +1057,7 @@ const Dashboard = () => {
                                 </Badge>
                                 {divisionName && <span className="text-xs text-primary-foreground/70">{divisionName}</span>}
                               </div>
-                              <p className="text-sm font-medium text-primary-foreground">
-                                {homeTeam} vs {awayTeam}
-                              </p>
+                              <p className="text-sm font-medium text-primary-foreground">{matchup}</p>
                             </div>
                             <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-primary-foreground/50" />
                           </div>
@@ -1067,14 +1066,14 @@ const Dashboard = () => {
                               <Calendar className="h-3 w-3" />
                               {gameDate.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}
                             </span>
-                            <span className="flex items-center gap-1">
+                            {!isBye && <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
                               {gameDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                            <span className="flex min-w-0 items-center gap-1">
+                            </span>}
+                            {!isBye && <span className="flex min-w-0 items-center gap-1">
                               <MapPin className="h-3 w-3 shrink-0" />
                               <span className="truncate">{venueName}</span>
-                            </span>
+                            </span>}
                           </div>
                         </Link>
                       ) : (
@@ -1085,11 +1084,11 @@ const Dashboard = () => {
                             </Badge>
                             {divisionName && <span className="text-xs text-primary-foreground/70">{divisionName}</span>}
                           </div>
-                          <p className="text-sm font-medium text-primary-foreground">{homeTeam} vs {awayTeam}</p>
+                          <p className="text-sm font-medium text-primary-foreground">{matchup}</p>
                           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-primary-foreground/75">
                             <span>{gameDate.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}</span>
-                            <span>{gameDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</span>
-                            <span className="truncate">{venueName}</span>
+                            {!isBye && <span>{gameDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</span>}
+                            {!isBye && <span className="truncate">{venueName}</span>}
                           </div>
                         </div>
                       )}
@@ -1198,28 +1197,30 @@ const Dashboard = () => {
 
               {selectedDayFixtures.length > 0 && (
                 <div className="mt-3 space-y-2 border-t border-primary-foreground/20 pt-3">
-                  {selectedDayFixtures.map((fixture) => (
-                    <div key={fixture.id} className="rounded-md bg-primary-foreground/10 p-2 text-xs">
+                  {selectedDayFixtures.map((fixture) => {
+                    const isBye = !fixture.home_team || !fixture.away_team;
+                    const knownTeam = fixture.home_team?.name || fixture.away_team?.name || "Team";
+                    return <div key={fixture.id} className="rounded-md bg-primary-foreground/10 p-2 text-xs">
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate font-medium">
-                          {fixture.home_team?.name || "Unknown"} vs {fixture.away_team?.name || "Unknown"}
+                          {isBye ? `${knownTeam} — Bye` : `${fixture.home_team?.name} vs ${fixture.away_team?.name}`}
                         </span>
                         <MembershipTypeBadge membershipType={fixture.membershipType} compact />
                       </div>
-                      <p className="mt-1 text-primary-foreground/75">
+                      {!isBye && <p className="mt-1 text-primary-foreground/75">
                         {new Date(fixture.fixture_date).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
                         {` • ${availabilityLabel(availability[fixture.id])}`}
-                      </p>
-                      <div className="mt-2">
+                      </p>}
+                      {!isBye && <div className="mt-2">
                         <AvailabilityControls
                           current={availability[fixture.id]}
                           saving={availabilitySaving.has(fixture.id)}
                           compact
                           onChange={(status) => void handleAvailabilityChange(fixture.id, status)}
                         />
-                      </div>
-                    </div>
-                  ))}
+                      </div>}
+                    </div>;
+                  })}
                 </div>
               )}
             </CardContent>

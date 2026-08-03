@@ -104,7 +104,10 @@ const Games = () => {
       }
       setLoading(true);
       let query = (supabase
+        // The live fixtures relation includes joined fields not yet present in generated types.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .from("fixtures" as any)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .select(FIXTURE_SELECT) as any)
         .or(`home_team_id.eq.${selectedTeamId},away_team_id.eq.${selectedTeamId}`)
         .order("fixture_date", { ascending: true });
@@ -235,8 +238,10 @@ const Games = () => {
           <TabsContent value="upcoming" className="mt-4">
             {upcomingGames.length === 0 ? (
               <EmptyState message="No upcoming games scheduled." />
+            ) : viewMode === "calendar" ? (
+              <FixtureCalendarView games={upcomingGames} />
             ) : (
-               <div className={cn(viewMode === "calendar" ? "grid gap-3 md:grid-cols-2" : "space-y-3")}>
+              <div className="space-y-3">
                 {upcomingGames.map((game, index) => (
                   <GameCard key={game.id} game={game} index={index} />
                 ))}
@@ -247,8 +252,10 @@ const Games = () => {
           <TabsContent value="past" className="mt-4">
             {pastGames.length === 0 ? (
               <EmptyState message="No past games yet." />
+            ) : viewMode === "calendar" ? (
+              <FixtureCalendarView games={pastGames} isPast />
             ) : (
-               <div className={cn(viewMode === "calendar" ? "grid gap-3 md:grid-cols-2" : "space-y-3")}>
+              <div className="space-y-3">
                 {pastGames.map((game, index) => (
                   <GameCard key={game.id} game={game} index={index} isPast />
                 ))}
@@ -257,6 +264,100 @@ const Games = () => {
           </TabsContent>
         </Tabs>
       )}
+    </div>
+  );
+};
+
+const FixtureCalendarView = ({ games, isPast = false }: { games: GameRow[]; isPast?: boolean }) => {
+  const months = useMemo(() => {
+    const grouped = new Map<string, { month: Date; games: GameRow[] }>();
+
+    games.forEach((game) => {
+      const date = new Date(game.fixture_date);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      const group = grouped.get(key) || {
+        month: new Date(date.getFullYear(), date.getMonth(), 1),
+        games: [],
+      };
+      group.games.push(game);
+      grouped.set(key, group);
+    });
+
+    return Array.from(grouped.values()).sort((a, b) => a.month.getTime() - b.month.getTime());
+  }, [games]);
+
+  return (
+    <div className="space-y-4">
+      {months.map(({ month, games: monthGames }) => {
+        const leadingDays = (month.getDay() + 6) % 7;
+        const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+
+        return (
+          <Card key={month.toISOString()}>
+            <CardContent className="p-4">
+              <h2 className="mb-3 font-display text-xl text-foreground">
+                {month.toLocaleDateString("en-AU", { month: "long", year: "numeric" })}
+              </h2>
+              <div className="overflow-x-auto">
+                <div className="min-w-[700px]">
+                  <div className="grid grid-cols-7 gap-px overflow-hidden rounded-t-lg border bg-border">
+                    {(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const).map((day) => (
+                      <div key={day} className="bg-muted px-2 py-2 text-center text-xs font-medium text-muted-foreground">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-px overflow-hidden rounded-b-lg border border-t-0 bg-border">
+                    {Array.from({ length: leadingDays }, (_, index) => (
+                      <div key={`leading-${index}`} className="min-h-28 bg-muted/30" aria-hidden="true" />
+                    ))}
+                    {Array.from({ length: daysInMonth }, (_, index) => {
+                      const day = index + 1;
+                      const dayGames = monthGames.filter((game) => new Date(game.fixture_date).getDate() === day);
+
+                      return (
+                        <div key={day} className="min-h-28 bg-background p-1.5">
+                          <p className="mb-1 text-xs font-medium text-muted-foreground">{day}</p>
+                          <div className="space-y-1">
+                            {dayGames.map((game) => {
+                              const isBye = !game.home_team || !game.away_team;
+                              const knownTeam = game.home_team?.name || game.away_team?.name || "Team";
+                              const matchup = isBye
+                                ? `${knownTeam} — Bye`
+                                : `${game.home_team?.name} vs ${game.away_team?.name}`;
+
+                              return (
+                                <Link
+                                  key={game.id}
+                                  to={`/games/${game.id}`}
+                                  className={cn(
+                                    "block rounded-md border bg-primary/5 p-1.5 text-[11px] transition-colors hover:bg-primary/10",
+                                    isPast && "opacity-75",
+                                  )}
+                                >
+                                  {game.round_number !== null && game.round_number !== undefined && (
+                                    <p className="font-medium text-primary">Round {game.round_number}</p>
+                                  )}
+                                  <p className="truncate font-medium text-foreground" title={matchup}>{matchup}</p>
+                                  {!isBye && (
+                                    <p className="text-muted-foreground">
+                                      {new Date(game.fixture_date).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
+                                    </p>
+                                  )}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };
