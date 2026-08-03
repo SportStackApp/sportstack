@@ -31,6 +31,11 @@ import UmpirePortalLanding from "./pages/umpire/UmpirePortalLanding";
 import PublicUmpireVote from "./pages/umpire/PublicUmpireVote";
 import MvpVotes from "./pages/MvpVotes";
 import MvpVoteCast from "./pages/MvpVoteCast";
+import ExpenseDashboard from "./pages/expense-hub/ExpenseDashboard";
+import ExpensesPage from "./pages/expense-hub/ExpensesPage";
+import ExpenseEditorPage from "./pages/expense-hub/ExpenseEditorPage";
+import SuppliersPage from "./pages/expense-hub/SuppliersPage";
+import ExpenseReportsPage from "./pages/expense-hub/ExpenseReportsPage";
 
 
 
@@ -83,6 +88,8 @@ import { TestRoleProvider } from "./contexts/TestRoleContext";
 import { TeamProvider } from "./contexts/TeamContext";
 import { AppModeProvider } from "./contexts/AppModeContext";
 import { isUmpirePortalHostname } from "./lib/domainConfig";
+import { ExpenseHubGate } from "./features/expense-hub/ExpenseHubGate";
+import { ExpenseHubLayout } from "./features/expense-hub/ExpenseHubLayout";
 
 const queryClient = new QueryClient();
 
@@ -166,6 +173,14 @@ const App = () => (
                       <Route path="/mvp-votes" element={<ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpVotes /></ModuleGate>} />
                       <Route path="/mvp-votes/:sessionId" element={<ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpVoteCastRoute /></ModuleGate>} />
                       <Route path="/profile" element={<Profile />} />
+                      <Route path="/expense-hub" element={<ExpenseHubGate><ExpenseHubLayout /></ExpenseHubGate>}>
+                        <Route index element={<ExpenseDashboard />} />
+                        <Route path="expenses" element={<ExpensesPage />} />
+                        <Route path="expenses/new" element={<ExpenseEditorPage />} />
+                        <Route path="expenses/:id/edit" element={<ExpenseEditorPage />} />
+                        <Route path="suppliers" element={<SuppliersPage />} />
+                        <Route path="reports" element={<ExpenseReportsPage />} />
+                      </Route>
                       <Route path="/committee" element={<ModuleGate moduleKey="committee" moduleLabel="Committee Management"><CommitteeManagement /></ModuleGate>} />
                       
                       {/* Admin Routes */}

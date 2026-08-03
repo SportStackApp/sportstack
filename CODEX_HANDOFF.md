@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-03
+Last updated: 2026-08-04
 
 Future agents should start by reading these files in order:
 
@@ -11,6 +11,16 @@ Future agents should start by reading these files in order:
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
 ## Current release state
+
+- Expense Hub Stage 1 is implemented on the Dev code/database path at `/expense-hub`. It includes
+  manual personal/association/club expenses, scoped suppliers/aliases/payment methods/categories,
+  GST and business-use calculations, private multi-file attachments, duplicate warnings, archive/
+  restore, audit snapshots, combined filtering, dashboard summaries and filter-aware Excel/PDF
+  exports. Four additive Dev migrations ending `071327`, `073000`, `074800` and `080500` are active.
+  Access is deny-by-default through `expense_hub_access`; Aaron has Dev owner access. Finance
+  administrators need an explicit association/club grant, can edit shared records and cannot change
+  original ownership. Live rollback tests and Supabase advisers passed. Production is untouched.
+  The next checkpoint is Aaron's signed-in Dev workflow test described in `docs/current-state.md`.
 
 - The 3 August fixture batch now centralises bye presentation, adds calendar previous/next/current
   month navigation and historical colours, and expands completed fixture detail with RevSports

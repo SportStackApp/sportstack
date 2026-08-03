@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-08-03
+Last updated: 2026-08-04
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -3148,6 +3148,62 @@ What Aaron should test next:
 Risk level:
 
 - Low. These are contained display/documentation changes with no migration or Production change.
+
+## 4 August 2026 - Expense Hub Stage 1
+
+What changed:
+
+- Added the complete manual Expense Hub workflow at `/expense-hub`: dashboard, expense register,
+  entry/edit/duplicate/archive/restore, supplier aliases and defaults, payment methods, configurable
+  categories, private attachments, audit history, combined filters and filter-aware Excel/PDF reports.
+- Personal, association and club records remain separate. Access is denied by default and is granted
+  through `expense_hub_access`; Aaron's Dev owner access is seeded. Explicit finance administrators
+  can manage only their granted association or club scope and cannot change original record ownership.
+- Added ten RLS-protected tables, generated business/personal/GST values, validation triggers,
+  duplicate support through invoice/file hashes, export snapshots and the private 20 MB
+  `expense-documents` Storage bucket. Production is unchanged.
+- Added six focused calculation and supplier-matching tests plus pinned PDF, test and repeatable
+  browser-check dependencies.
+
+Files changed:
+
+- `src/features/expense-hub/*`
+- `src/pages/expense-hub/*`
+- `src/App.tsx`
+- `src/components/layout/AppLayout.tsx`
+- `src/integrations/supabase/types.ts`
+- `supabase/migrations/20260804071327_expense_hub_stage_one.sql`
+- `supabase/migrations/20260804073000_harden_expense_hub_access_and_indexes.sql`
+- `supabase/migrations/20260804074800_allow_expense_finance_admin_edits.sql`
+- `supabase/migrations/20260804080500_allow_expense_finance_admin_aliases.sql`
+- `package.json` and `package-lock.json`
+
+Checks run:
+
+- All four additive migrations passed rollback dry-runs before being applied to SportStack Dev.
+- Authenticated live rollback tests passed calculations, audit writes, cross-user isolation, finance
+  administrator edits, immutable ownership and finance administrator supplier-alias management.
+- Supabase advisers report no Expense Hub security warnings and no actionable performance warnings.
+- Focused ESLint, `npx tsc --noEmit`, six Vitest checks, `npm run build` and `git diff --check` pass.
+- Full `npm run lint` still fails on the existing repository backlog: 360 errors and 78 warnings in
+  older app/module files. The Expense Hub source adds none.
+- Unauthenticated desktop/mobile browser checks load without an error overlay and correctly return
+  `/expense-hub` to login. The signed-in end-to-end owner workflow remains the next Dev check.
+
+What Aaron should test next:
+
+1. On Dev, open Expense Hub and create a personal supplier and payment method.
+2. Add a $120.00 expense with $10.91 GST and 75% business use; expect $90.00 business and $30.00 personal.
+3. Upload a PDF or image, save as Draft, edit to Ready and confirm the audit history shows the change.
+4. Filter the expense, export it to Excel and PDF, then archive and restore it.
+5. If organisation sharing is required immediately, nominate each finance administrator and exact
+   association/club scope so an explicit access grant can be reviewed and added in Dev.
+
+Risk level:
+
+- Medium. This is a new financial-record module with four additive Dev database migrations and
+  private Storage policies. The migrations and RLS have passed live Dev rollback tests and adviser
+  checks. No Production system, branch, secret, deployment setting or domain was changed.
 
 ## How to update this file
 

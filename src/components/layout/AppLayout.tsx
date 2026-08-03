@@ -43,6 +43,7 @@ import {
   ImagePlus,
   ShieldCheck,
   Radar,
+  ReceiptText,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -72,6 +73,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useModuleAvailability } from "@/hooks/useModuleAvailability";
 import { APP_ENVIRONMENT, APP_ENVIRONMENT_CLASS, APP_VERSION } from "@/lib/appVersion";
 import { isProfileReviewRequired } from "@/lib/profileCompletion";
+import { useExpenseHubAccess } from "@/features/expense-hub/useExpenseHubAccess";
 
 interface NavItem {
   path: string;
@@ -548,6 +550,7 @@ const AppLayout = () => {
     selectedTeam,
   } = useTeamContext();
   const { enabled: moduleEnabled } = useModuleAvailability([...NAV_MODULE_KEYS]);
+  const { allowed: expenseHubAllowed } = useExpenseHubAccess();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAssociationPopoverOpen, setIsAssociationPopoverOpen] = useState(false);
@@ -993,7 +996,12 @@ const AppLayout = () => {
     navigate(`/associations/${associationId}`);
   };
 
-  const baseSections = NAV_SETS[activeMode];
+  const baseSections = expenseHubAllowed
+    ? [
+        ...NAV_SETS[activeMode],
+        { heading: "Finance", items: [{ path: "/expense-hub", label: "Expense Hub", icon: ReceiptText }] },
+      ]
+    : NAV_SETS[activeMode];
   // Viewing as is an actual data/action restriction, not only a navigation skin.
   const showAssociationSelector = activeMode === "super_admin";
   const showClubSelector = activeMode === "super_admin" || activeMode === "association" || activeMode === "club";

@@ -1984,6 +1984,784 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_attachments: {
+        Row: {
+          document_type: string
+          expense_id: string
+          file_hash: string | null
+          file_size: number
+          id: string
+          is_primary_document: boolean
+          mime_type: string
+          original_filename: string
+          owner_user_id: string
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          document_type?: string
+          expense_id: string
+          file_hash?: string | null
+          file_size: number
+          id?: string
+          is_primary_document?: boolean
+          mime_type: string
+          original_filename: string
+          owner_user_id: string
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          document_type?: string
+          expense_id?: string
+          file_hash?: string | null
+          file_size?: number
+          id?: string
+          is_primary_document?: boolean
+          mime_type?: string
+          original_filename?: string
+          owner_user_id?: string
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_attachments_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_attachments_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_audit_events: {
+        Row: {
+          action_type: string
+          changed_at: string
+          changed_by: string | null
+          expense_id: string
+          id: string
+          new_data: Json | null
+          previous_data: Json | null
+          reason_for_change: string | null
+        }
+        Insert: {
+          action_type: string
+          changed_at?: string
+          changed_by?: string | null
+          expense_id: string
+          id?: string
+          new_data?: Json | null
+          previous_data?: Json | null
+          reason_for_change?: string | null
+        }
+        Update: {
+          action_type?: string
+          changed_at?: string
+          changed_by?: string | null
+          expense_id?: string
+          id?: string
+          new_data?: Json | null
+          previous_data?: Json | null
+          reason_for_change?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_audit_events_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_audit_events_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_categories: {
+        Row: {
+          association_id: string | null
+          club_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          owner_user_id: string | null
+          parent_category_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          owner_user_id?: string | null
+          parent_category_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          owner_user_id?: string | null
+          parent_category_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_categories_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_categories_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_categories_parent_category_id_fkey"
+            columns: ["parent_category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_export_batches: {
+        Row: {
+          association_id: string | null
+          club_id: string | null
+          created_at: string
+          created_by: string
+          expense_count: number
+          export_format: string
+          filters: Json
+          id: string
+          module_version: string
+          owner_user_id: string
+          report_name: string
+          total_amount: number
+          total_business_amount: number
+          total_gst_amount: number
+          total_personal_amount: number
+        }
+        Insert: {
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by: string
+          expense_count: number
+          export_format: string
+          filters?: Json
+          id?: string
+          module_version?: string
+          owner_user_id: string
+          report_name: string
+          total_amount?: number
+          total_business_amount?: number
+          total_gst_amount?: number
+          total_personal_amount?: number
+        }
+        Update: {
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string
+          expense_count?: number
+          export_format?: string
+          filters?: Json
+          id?: string
+          module_version?: string
+          owner_user_id?: string
+          report_name?: string
+          total_amount?: number
+          total_business_amount?: number
+          total_gst_amount?: number
+          total_personal_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_export_batches_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_export_batches_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_export_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_export_batches_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_export_items: {
+        Row: {
+          created_at: string
+          expense_id: string
+          expense_snapshot: Json
+          export_batch_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          expense_id: string
+          expense_snapshot: Json
+          export_batch_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          expense_id?: string
+          expense_snapshot?: Json
+          export_batch_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_export_items_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_export_items_export_batch_id_fkey"
+            columns: ["export_batch_id"]
+            isOneToOne: false
+            referencedRelation: "expense_export_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_hub_access: {
+        Row: {
+          access_level: string
+          association_id: string | null
+          club_id: string | null
+          granted_at: string
+          granted_by: string | null
+          id: string
+          is_active: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_level?: string
+          association_id?: string | null
+          club_id?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_level?: string
+          association_id?: string | null
+          club_id?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_hub_access_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_hub_access_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_hub_access_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_hub_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_payment_methods: {
+        Row: {
+          account_hint: string | null
+          association_id: string | null
+          club_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          is_business_account: boolean
+          name: string
+          owner_user_id: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          account_hint?: string | null
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          is_business_account?: boolean
+          name: string
+          owner_user_id: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          account_hint?: string | null
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          is_business_account?: boolean
+          name?: string
+          owner_user_id?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_payment_methods_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_payment_methods_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_payment_methods_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_payment_methods_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_payment_methods_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_supplier_aliases: {
+        Row: {
+          alias_name: string
+          created_at: string
+          created_by: string
+          id: string
+          supplier_id: string
+        }
+        Insert: {
+          alias_name: string
+          created_at?: string
+          created_by: string
+          id?: string
+          supplier_id: string
+        }
+        Update: {
+          alias_name?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_supplier_aliases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_supplier_aliases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "expense_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_suppliers: {
+        Row: {
+          abn: string | null
+          association_id: string | null
+          club_id: string | null
+          created_at: string
+          created_by: string
+          default_business_use_percentage: number | null
+          default_category_id: string | null
+          display_name: string
+          email: string | null
+          id: string
+          is_active: boolean
+          legal_name: string | null
+          notes: string | null
+          owner_user_id: string
+          phone: string | null
+          updated_at: string
+          updated_by: string
+          website: string | null
+        }
+        Insert: {
+          abn?: string | null
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by: string
+          default_business_use_percentage?: number | null
+          default_category_id?: string | null
+          display_name: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          legal_name?: string | null
+          notes?: string | null
+          owner_user_id: string
+          phone?: string | null
+          updated_at?: string
+          updated_by: string
+          website?: string | null
+        }
+        Update: {
+          abn?: string | null
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string
+          default_business_use_percentage?: number | null
+          default_category_id?: string | null
+          display_name?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          legal_name?: string | null
+          notes?: string | null
+          owner_user_id?: string
+          phone?: string | null
+          updated_at?: string
+          updated_by?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_suppliers_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_suppliers_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_suppliers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_suppliers_default_category_id_fkey"
+            columns: ["default_category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_suppliers_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_suppliers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount_excluding_gst: number | null
+          archived_at: string | null
+          archived_by: string | null
+          association_id: string | null
+          business_amount: number | null
+          business_gst_amount: number | null
+          business_use_percentage: number
+          business_use_reason: string | null
+          category_id: string | null
+          club_id: string | null
+          created_at: string
+          created_by: string
+          currency_code: string
+          description: string
+          document_type: string
+          expense_date: string
+          expense_status: string
+          gst_amount: number
+          gst_entry_method: string
+          id: string
+          invoice_number: string | null
+          last_change_reason: string | null
+          notes: string | null
+          owner_user_id: string
+          ownership_type: string
+          payment_method_id: string | null
+          payment_status: string
+          personal_amount: number | null
+          subcategory_id: string | null
+          supplier_id: string
+          total_amount: number
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          amount_excluding_gst?: number | null
+          archived_at?: string | null
+          archived_by?: string | null
+          association_id?: string | null
+          business_amount?: number | null
+          business_gst_amount?: number | null
+          business_use_percentage?: number
+          business_use_reason?: string | null
+          category_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by: string
+          currency_code?: string
+          description: string
+          document_type?: string
+          expense_date: string
+          expense_status?: string
+          gst_amount?: number
+          gst_entry_method?: string
+          id?: string
+          invoice_number?: string | null
+          last_change_reason?: string | null
+          notes?: string | null
+          owner_user_id: string
+          ownership_type?: string
+          payment_method_id?: string | null
+          payment_status?: string
+          personal_amount?: number | null
+          subcategory_id?: string | null
+          supplier_id: string
+          total_amount: number
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          amount_excluding_gst?: number | null
+          archived_at?: string | null
+          archived_by?: string | null
+          association_id?: string | null
+          business_amount?: number | null
+          business_gst_amount?: number | null
+          business_use_percentage?: number
+          business_use_reason?: string | null
+          category_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string
+          currency_code?: string
+          description?: string
+          document_type?: string
+          expense_date?: string
+          expense_status?: string
+          gst_amount?: number
+          gst_entry_method?: string
+          id?: string
+          invoice_number?: string | null
+          last_change_reason?: string | null
+          notes?: string | null
+          owner_user_id?: string
+          ownership_type?: string
+          payment_method_id?: string | null
+          payment_status?: string
+          personal_amount?: number | null
+          subcategory_id?: string | null
+          supplier_id?: string
+          total_amount?: number
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "expense_payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "expense_suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       external_entities: {
         Row: {
           association_name: string | null
@@ -8172,6 +8950,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      administration_target_profile_in_scope: {
+        Args: { p_actor_mode?: string; p_user_id: string }
+        Returns: boolean
+      }
       approve_membership_request: {
         Args: { p_assign_team?: boolean; p_request_id: string }
         Returns: Json
@@ -8232,6 +9014,10 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: Json
       }
+      close_mvp_voting_session_module_impl_20260802115000: {
+        Args: { p_session_id: string }
+        Returns: Json
+      }
       complete_sportstack_notification_work: {
         Args: {
           p_delivery_id: string
@@ -8254,7 +9040,26 @@ export type Database = {
         }
         Returns: string
       }
+      create_committee_agenda_template_module_impl: {
+        Args: {
+          p_committee_id: string
+          p_description: string
+          p_items: Json
+          p_title: string
+        }
+        Returns: string
+      }
       create_committee_meeting_from_template: {
+        Args: {
+          p_committee_id: string
+          p_location: string
+          p_scheduled_at: string
+          p_template_id: string
+          p_title: string
+        }
+        Returns: string
+      }
+      create_committee_meeting_from_template_module_impl: {
         Args: {
           p_committee_id: string
           p_location: string
@@ -8275,6 +9080,17 @@ export type Database = {
         }
         Returns: string
       }
+      create_committee_poll_module_impl: {
+        Args: {
+          p_closes_at: string
+          p_committee_id: string
+          p_description: string
+          p_questions: Json
+          p_status: string
+          p_title: string
+        }
+        Returns: string
+      }
       create_public_umpire_vote: {
         Args: { p_lines: Json; p_submission: Json }
         Returns: {
@@ -8282,7 +9098,34 @@ export type Database = {
           submission_reference: string
         }[]
       }
+      current_session_can_access_voting_module: {
+        Args: {
+          p_association_id?: string
+          p_club_id?: string
+          p_division_id?: string
+          p_module_key: string
+          p_team_id?: string
+        }
+        Returns: boolean
+      }
       delete_unused_venue: { Args: { p_venue_id: string }; Returns: Json }
+      expense_record_access: {
+        Args: { p_expense_id: string }
+        Returns: boolean
+      }
+      expense_scope_allows: {
+        Args: {
+          p_association_id: string
+          p_club_id: string
+          p_owner_user_id: string
+        }
+        Returns: boolean
+      }
+      expense_storage_can_access: {
+        Args: { p_storage_name: string }
+        Returns: boolean
+      }
+      get_active_permission_mode: { Args: never; Returns: Json }
       get_committee_meeting_item_links: {
         Args: { p_committee_id: string }
         Returns: {
@@ -8295,6 +9138,10 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: Json
       }
+      get_mvp_result_check_state_module_impl_20260802115000: {
+        Args: { p_session_id: string }
+        Returns: Json
+      }
       get_mvp_session_results: {
         Args: { p_session_id: string }
         Returns: {
@@ -8304,6 +9151,20 @@ export type Database = {
           profile_id: string
           vote_count: number
         }[]
+      }
+      get_mvp_session_results_module_impl_20260802115000: {
+        Args: { p_session_id: string }
+        Returns: {
+          player_id: string
+          player_name: string
+          points: number
+          profile_id: string
+          vote_count: number
+        }[]
+      }
+      get_reserved_dev_test_account_id: {
+        Args: { p_email: string; p_role: string }
+        Returns: string
       }
       has_committee_permission: {
         Args: {
@@ -8323,6 +9184,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_expense_hub_access: { Args: never; Returns: boolean }
       is_active_committee_member: {
         Args: { p_committee_id: string; p_user_id?: string }
         Returns: boolean
@@ -8337,6 +9199,10 @@ export type Database = {
         Returns: Json
       }
       open_mvp_voting_session: {
+        Args: { p_closes_at?: string; p_fixture_id: string; p_team_id: string }
+        Returns: Json
+      }
+      open_mvp_voting_session_module_impl_20260802115000: {
         Args: { p_closes_at?: string; p_fixture_id: string; p_team_id: string }
         Returns: Json
       }
@@ -8396,6 +9262,15 @@ export type Database = {
           p_scope_type: string
         }
         Returns: string
+      }
+      permission_scope_contains: {
+        Args: {
+          p_assignment_scope_id: string
+          p_assignment_scope_type: string
+          p_owner_scope_id: string
+          p_owner_scope_type: string
+        }
+        Returns: boolean
       }
       permission_scope_details: {
         Args: { p_scope_id: string; p_scope_type: string }
@@ -8458,7 +9333,32 @@ export type Database = {
           profile_id: string
         }[]
       }
+      player_mvp_public_session_enabled: {
+        Args: { p_session_id: string }
+        Returns: boolean
+      }
+      player_mvp_public_session_row_enabled: {
+        Args: { p_fixture_id: string; p_team_id: string }
+        Returns: boolean
+      }
+      player_mvp_public_vote_enabled: {
+        Args: { p_session_id: string; p_token_id: string }
+        Returns: boolean
+      }
       provision_dev_test_account_data: {
+        Args: {
+          p_actor_id: string
+          p_association_id: string
+          p_club_id: string
+          p_created: boolean
+          p_email: string
+          p_role: string
+          p_team_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      provision_dev_test_account_data_scoped: {
         Args: {
           p_actor_id: string
           p_association_id: string
@@ -8475,11 +9375,23 @@ export type Database = {
         Args: { p_comment?: string; p_response: string; p_session_id: string }
         Returns: Json
       }
+      record_mvp_result_check_module_impl_20260802115000: {
+        Args: { p_comment?: string; p_response: string; p_session_id: string }
+        Returns: Json
+      }
       reopen_mvp_voting_session: {
         Args: { p_closes_at?: string; p_session_id: string }
         Returns: Json
       }
+      reopen_mvp_voting_session_module_impl_20260802115000: {
+        Args: { p_closes_at?: string; p_session_id: string }
+        Returns: Json
+      }
       request_mvp_session_reopen: {
+        Args: { p_session_id: string }
+        Returns: Json
+      }
+      request_mvp_session_reopen_module_impl_20260802115000: {
         Args: { p_session_id: string }
         Returns: Json
       }
@@ -8505,6 +9417,17 @@ export type Database = {
         }
         Returns: Json
       }
+      resolve_effective_permission_for_mode_unchecked: {
+        Args: {
+          p_actor_mode: string
+          p_association_id?: string
+          p_club_id?: string
+          p_division_id?: string
+          p_permission_key: string
+          p_team_id?: string
+        }
+        Returns: Json
+      }
       resolve_module_enabled: {
         Args: {
           p_association_id?: string
@@ -8519,11 +9442,27 @@ export type Database = {
         Args: { p_closes_at?: string; p_session_id: string }
         Returns: Json
       }
+      resolve_mvp_result_dispute_module_impl_20260802115000: {
+        Args: { p_closes_at?: string; p_session_id: string }
+        Returns: Json
+      }
       review_umpire_vote_submission: {
         Args: { p_action: string; p_lines?: Json; p_submission_id: string }
         Returns: Json
       }
+      review_umpire_vote_submission_module_impl_20260802115000: {
+        Args: { p_action: string; p_lines?: Json; p_submission_id: string }
+        Returns: Json
+      }
       save_committee_meeting_attendance: {
+        Args: {
+          p_apology_ids: string[]
+          p_attendee_ids: string[]
+          p_meeting_id: string
+        }
+        Returns: undefined
+      }
+      save_committee_meeting_attendance_module_impl: {
         Args: {
           p_apology_ids: string[]
           p_attendee_ids: string[]
@@ -8607,7 +9546,26 @@ export type Database = {
         }
         Returns: string
       }
+      set_active_permission_context: {
+        Args: {
+          p_active_mode: string
+          p_association_id?: string
+          p_club_id?: string
+          p_division_id?: string
+          p_root_mode: string
+          p_team_id?: string
+        }
+        Returns: Json
+      }
+      set_active_permission_mode: {
+        Args: { p_active_mode: string; p_root_mode: string }
+        Returns: Json
+      }
       set_committee_meeting_item_links: {
+        Args: { p_links: Json; p_meeting_item_id: string }
+        Returns: undefined
+      }
+      set_committee_meeting_item_links_module_impl: {
         Args: { p_links: Json; p_meeting_item_id: string }
         Returns: undefined
       }
@@ -8625,7 +9583,15 @@ export type Database = {
         Args: { p_enabled: boolean; p_team_id: string }
         Returns: Json
       }
+      set_team_mvp_enabled_module_impl_20260802115000: {
+        Args: { p_enabled: boolean; p_team_id: string }
+        Returns: Json
+      }
       set_team_mvp_notifications_enabled: {
+        Args: { p_enabled: boolean; p_team_id: string }
+        Returns: Json
+      }
+      set_team_mvp_notifications_enabled_module_impl_20260802115000: {
         Args: { p_enabled: boolean; p_team_id: string }
         Returns: Json
       }
@@ -8633,7 +9599,21 @@ export type Database = {
         Args: { p_answers: Json; p_poll_id: string }
         Returns: string
       }
+      submit_committee_poll_response_module_impl: {
+        Args: { p_answers: Json; p_poll_id: string }
+        Returns: string
+      }
       submit_mvp_ballot: {
+        Args: {
+          p_one_point_player_id: string
+          p_session_id: string
+          p_shoutout?: string
+          p_three_point_player_id: string
+          p_two_point_player_id: string
+        }
+        Returns: Json
+      }
+      submit_mvp_ballot_module_impl_20260802115000: {
         Args: {
           p_one_point_player_id: string
           p_session_id: string
@@ -8653,11 +9633,35 @@ export type Database = {
         }
         Returns: string
       }
+      submit_umpire_match_vote_module_impl_20260802115000: {
+        Args: {
+          p_fixture_id: string
+          p_lines: Json
+          p_proxy_reason?: string
+          p_proxy_umpire_name?: string
+          p_vote_scheme_key: string
+        }
+        Returns: string
+      }
+      umpire_match_voting_enabled_fixture_ids: {
+        Args: { p_fixture_ids: string[] }
+        Returns: {
+          fixture_id: string
+        }[]
+      }
       verify_sportstack_notification_cron: {
         Args: { p_secret: string }
         Returns: boolean
       }
       withdraw_mvp_submission: {
+        Args: {
+          p_reason: string
+          p_session_id: string
+          p_voter_profile_id: string
+        }
+        Returns: Json
+      }
+      withdraw_mvp_submission_module_impl_20260802115000: {
         Args: {
           p_reason: string
           p_session_id: string
