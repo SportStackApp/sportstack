@@ -1984,6 +1984,190 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_ai_extraction_results: {
+        Row: {
+          created_at: string
+          id: string
+          overall_confidence: number | null
+          processing_job_id: string
+          raw_result: Json | null
+          retained_until: string
+          validated_result: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          overall_confidence?: number | null
+          processing_job_id: string
+          raw_result?: Json | null
+          retained_until?: string
+          validated_result: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          overall_confidence?: number | null
+          processing_job_id?: string
+          raw_result?: Json | null
+          retained_until?: string
+          validated_result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_ai_extraction_results_processing_job_id_fkey"
+            columns: ["processing_job_id"]
+            isOneToOne: true
+            referencedRelation: "expense_ai_processing_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_ai_field_suggestions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_value: Json | null
+          confidence_score: number | null
+          created_at: string
+          field_name: string
+          id: string
+          processing_job_id: string
+          suggested_value: Json
+          suggestion_source: string
+          was_changed: boolean | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_value?: Json | null
+          confidence_score?: number | null
+          created_at?: string
+          field_name: string
+          id?: string
+          processing_job_id: string
+          suggested_value: Json
+          suggestion_source: string
+          was_changed?: boolean | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_value?: Json | null
+          confidence_score?: number | null
+          created_at?: string
+          field_name?: string
+          id?: string
+          processing_job_id?: string
+          suggested_value?: Json
+          suggestion_source?: string
+          was_changed?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_ai_field_suggestions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_ai_field_suggestions_processing_job_id_fkey"
+            columns: ["processing_job_id"]
+            isOneToOne: false
+            referencedRelation: "expense_ai_processing_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_ai_processing_jobs: {
+        Row: {
+          attachment_id: string
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          error_code: string | null
+          error_message: string | null
+          estimated_cost_usd: number | null
+          expense_id: string
+          id: string
+          input_tokens: number | null
+          model: string
+          output_tokens: number | null
+          provider: string
+          started_at: string | null
+          statement_line_id: string | null
+          status: string
+        }
+        Insert: {
+          attachment_id: string
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          error_code?: string | null
+          error_message?: string | null
+          estimated_cost_usd?: number | null
+          expense_id: string
+          id?: string
+          input_tokens?: number | null
+          model: string
+          output_tokens?: number | null
+          provider: string
+          started_at?: string | null
+          statement_line_id?: string | null
+          status?: string
+        }
+        Update: {
+          attachment_id?: string
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          error_code?: string | null
+          error_message?: string | null
+          estimated_cost_usd?: number | null
+          expense_id?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string
+          output_tokens?: number | null
+          provider?: string
+          started_at?: string | null
+          statement_line_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_ai_processing_jobs_attachment_id_fkey"
+            columns: ["attachment_id"]
+            isOneToOne: false
+            referencedRelation: "expense_attachments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_ai_processing_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_ai_processing_jobs_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_ai_processing_jobs_statement_line_id_fkey"
+            columns: ["statement_line_id"]
+            isOneToOne: false
+            referencedRelation: "expense_statement_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_attachments: {
         Row: {
           document_type: string
@@ -2434,6 +2618,236 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_statement_imports: {
+        Row: {
+          account_hint: string | null
+          association_id: string | null
+          bank_name: string | null
+          club_id: string | null
+          created_at: string
+          created_by: string
+          error_message: string | null
+          file_hash: string
+          file_size: number
+          id: string
+          mime_type: string
+          original_filename: string
+          owner_user_id: string
+          ownership_type: string
+          row_count: number
+          status: string
+          storage_path: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          account_hint?: string | null
+          association_id?: string | null
+          bank_name?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by: string
+          error_message?: string | null
+          file_hash: string
+          file_size: number
+          id?: string
+          mime_type: string
+          original_filename: string
+          owner_user_id: string
+          ownership_type?: string
+          row_count?: number
+          status?: string
+          storage_path: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          account_hint?: string | null
+          association_id?: string | null
+          bank_name?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string
+          error_message?: string | null
+          file_hash?: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          original_filename?: string
+          owner_user_id?: string
+          ownership_type?: string
+          row_count?: number
+          status?: string
+          storage_path?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_statement_imports_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_statement_imports_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_statement_imports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_statement_imports_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_statement_imports_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_statement_lines: {
+        Row: {
+          amount: number
+          balance: number | null
+          business_use_percentage: number
+          category_id: string | null
+          created_at: string
+          currency_code: string
+          decision: string
+          description: string
+          evidence_status: string
+          expense_id: string | null
+          id: string
+          import_id: string
+          line_number: number
+          owner_user_id: string
+          payment_method_id: string | null
+          raw_data: Json
+          reference: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          supplier_id: string | null
+          transaction_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          balance?: number | null
+          business_use_percentage?: number
+          category_id?: string | null
+          created_at?: string
+          currency_code?: string
+          decision?: string
+          description: string
+          evidence_status?: string
+          expense_id?: string | null
+          id?: string
+          import_id: string
+          line_number: number
+          owner_user_id: string
+          payment_method_id?: string | null
+          raw_data?: Json
+          reference?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          supplier_id?: string | null
+          transaction_date: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          balance?: number | null
+          business_use_percentage?: number
+          category_id?: string | null
+          created_at?: string
+          currency_code?: string
+          decision?: string
+          description?: string
+          evidence_status?: string
+          expense_id?: string | null
+          id?: string
+          import_id?: string
+          line_number?: number
+          owner_user_id?: string
+          payment_method_id?: string | null
+          raw_data?: Json
+          reference?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          supplier_id?: string | null
+          transaction_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_statement_lines_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_statement_lines_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_statement_lines_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "expense_statement_imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_statement_lines_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_statement_lines_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "expense_payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_statement_lines_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_statement_lines_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "expense_suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -9109,6 +9523,10 @@ export type Database = {
         Returns: boolean
       }
       delete_unused_venue: { Args: { p_venue_id: string }; Returns: Json }
+      expense_import_storage_can_access: {
+        Args: { object_name: string }
+        Returns: boolean
+      }
       expense_record_access: {
         Args: { p_expense_id: string }
         Returns: boolean

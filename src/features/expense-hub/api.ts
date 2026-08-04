@@ -6,6 +6,7 @@ import type {
   ExpenseFormValues,
 } from "./types";
 import { calculateGstFromInclusiveTotal, safeFilename, sha256File } from "./utils";
+import type { ParsedStatementLine } from "./statementParser";
 
 const nullable = (value: string) => value || null;
 
@@ -259,6 +260,7 @@ export async function uploadExpenseAttachment(
     await supabase.storage.from("expense-documents").remove([storagePath]);
     throw metadataError;
   }
+  await supabase.from("expense_statement_lines").update({ evidence_status: "ATTACHED", updated_at: new Date().toISOString() }).eq("expense_id", expenseId);
 }
 
 export async function openExpenseAttachment(attachment: ExpenseAttachment) {
@@ -275,4 +277,121 @@ export async function deleteExpenseAttachment(attachment: ExpenseAttachment) {
   const { error: metadataError } = await supabase.from("expense_attachments")
     .delete().eq("id", attachment.id);
   if (metadataError) throw new Error(`The private file was removed, but its record cleanup failed: ${metadataError.message}`);
+  const { count } = await supabase.from("expense_attachments").select("id", { count: "exact", head: true }).eq("expense_id", attachment.expense_id);
+  if (!count) await supabase.from("expense_statement_lines").update({ evidence_status: "MISSING", updated_at: new Date().toISOString() }).eq("expense_id", attachment.expense_id);
+}
+
+export async function scanExpenseAttachment(attachmentId: string) {
+  const { data, error } = await supabase.functions.invoke("expense-document-extract", { body: { attachmentId } });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+export async function importBankStatement(userId: string, file: File, lines: ParsedStatementLine[]) {
+  if (file.size > 20 * 1024 * 1024) throw new Error("The statement is larger than the 20 MB limit.");
+  const fileHash = await sha256File(file);
+  const importId = crypto.randomUUID();
+  const storagePath = `${importId}/${safeFilename(file.name)}`;
+  const { error: recordError } = await supabase.from("expense_statement_imports").insert({
+    id: importId,
+    owner_user_id: userId,
+    ownership_type: "PERSONAL",
+    storage_path: storagePath,
+    original_filename: file.name,
+    mime_type: file.type || "application/octet-stream",
+    file_size: file.size,
+    file_hash: fileHash,
+    status: "UPLOADED",
+    row_count: lines.length,
+    created_by: userId,
+    updated_by: userId,
+  });
+  if (recordError) throw recordError;
+
+  const contentType = file.type || (file.name.toLowerCase().endsWith(".ofx") ? "application/x-ofx" : "text/csv");
+  const { error: uploadError } = await supabase.storage.from("expense-imports").upload(storagePath, file, { upsert: false, contentType });
+  if (uploadError) throw uploadError;
+
+  const { error: linesError } = await supabase.from("expense_statement_lines").insert(lines.map((line) => ({
+    import_id: importId,
+    owner_user_id: userId,
+    line_number: line.lineNumber,
+    transaction_date: line.transactionDate,
+    description: line.description,
+    reference: line.reference || null,
+    amount: line.amount,
+    balance: line.balance,
+    raw_data: line.rawData,
+  })));
+  if (linesError) throw linesError;
+  const { error: statusError } = await supabase.from("expense_statement_imports").update({
+    status: "NEEDS_REVIEW",
+    updated_at: new Date().toISOString(),
+    updated_by: userId,
+  }).eq("id", importId);
+  if (statusError) throw statusError;
+  return importId;
+}
+
+export async function reviewStatementLine(lineId: string, userId: string, input: {
+  decision: "BUSINESS" | "PERSONAL" | "NOT_RELEVANT";
+  businessUsePercentage: number;
+  supplierId?: string;
+  categoryId?: string;
+  paymentMethodId?: string;
+  notes?: string;
+}) {
+  const { error } = await supabase.from("expense_statement_lines").update({
+    decision: input.decision,
+    business_use_percentage: input.decision === "PERSONAL" || input.decision === "NOT_RELEVANT" ? 0 : input.businessUsePercentage,
+    supplier_id: input.supplierId || null,
+    category_id: input.categoryId || null,
+    payment_method_id: input.paymentMethodId || null,
+    review_notes: input.notes || null,
+    reviewed_at: new Date().toISOString(),
+    reviewed_by: userId,
+    updated_at: new Date().toISOString(),
+  }).eq("id", lineId);
+  if (error) throw error;
+}
+
+export async function createDraftExpenseFromStatementLine(userId: string, lineId: string) {
+  const { data: line, error: lineError } = await supabase.from("expense_statement_lines")
+    .select("*, expense_statement_imports!inner(ownership_type, association_id, club_id)")
+    .eq("id", lineId).single();
+  if (lineError) throw lineError;
+  if (!line.supplier_id) throw new Error("Choose a supplier before creating the draft expense.");
+  const scope = line.expense_statement_imports;
+  const { data: expense, error: expenseError } = await supabase.from("expenses").insert({
+    owner_user_id: userId,
+    ownership_type: scope.ownership_type,
+    association_id: scope.association_id,
+    club_id: scope.club_id,
+    supplier_id: line.supplier_id,
+    expense_date: line.transaction_date,
+    invoice_number: line.reference,
+    description: line.description,
+    category_id: line.category_id,
+    total_amount: Math.abs(Number(line.amount)),
+    gst_amount: 0,
+    gst_entry_method: "NONE",
+    business_use_percentage: Number(line.business_use_percentage),
+    payment_method_id: line.payment_method_id,
+    payment_status: "PAID",
+    expense_status: "NEEDS_REVIEW",
+    document_type: "EXPENSE",
+    notes: line.review_notes,
+    last_change_reason: "Created from bank statement import",
+    created_by: userId,
+    updated_by: userId,
+  }).select("id").single();
+  if (expenseError) throw expenseError;
+  const { error: linkError } = await supabase.from("expense_statement_lines").update({
+    expense_id: expense.id,
+    evidence_status: "MISSING",
+    updated_at: new Date().toISOString(),
+  }).eq("id", lineId);
+  if (linkError) throw linkError;
+  return expense.id;
 }

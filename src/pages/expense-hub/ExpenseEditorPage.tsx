@@ -15,6 +15,7 @@ import {
   deleteExpenseAttachment,
   openExpenseAttachment,
   saveExpense,
+  scanExpenseAttachment,
   uploadExpenseAttachment,
 } from "@/features/expense-hub/api";
 import { useExpenseHub } from "@/features/expense-hub/ExpenseHubContext";
@@ -28,6 +29,7 @@ import { calculateExpenseAmounts, calculateGstFromInclusiveTotal, formatAustrali
 
 const selectClass = "w-full min-w-0 overflow-hidden";
 const AUDIT_HIDDEN_FIELDS = new Set(["updated_at", "updated_by", "last_change_reason"]);
+type ScanResult = { supplier_name: string | null; invoice_number: string | null; invoice_date: string | null; total_amount: number | null; gst_amount: number | null; overall_confidence: number };
 
 function auditChanges(previousData: unknown, newData: unknown) {
   if (!previousData || !newData || typeof previousData !== "object" || typeof newData !== "object" || Array.isArray(previousData) || Array.isArray(newData)) return [];
@@ -83,6 +85,7 @@ export default function ExpenseEditorPage() {
   const [attachmentType, setAttachmentType] = useState<AttachmentDocumentType>("INVOICE");
   const [saving, setSaving] = useState(false);
   const [allowDuplicate, setAllowDuplicate] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
 
   const existing = id ? expenses.find((expense) => expense.id === id) : undefined;
   useEffect(() => {
@@ -179,6 +182,25 @@ export default function ExpenseEditorPage() {
     }
   };
 
+  const scanAttachment = async (attachment: ExpenseRecord["attachments"][number]) => {
+    setSaving(true);
+    try {
+      const result = await scanExpenseAttachment(attachment.id);
+      setScanResult(result.result as ScanResult);
+      await refresh();
+      toast({
+        title: "Invoice scan ready for review",
+        description: result.evidenceStatus === "VERIFIED"
+          ? "The invoice amount and date match this expense."
+          : "The invoice differs from the expense. Check the extracted values.",
+      });
+    } catch (caught) {
+      toast({ variant: "destructive", title: "Invoice scan failed", description: caught instanceof Error ? caught.message : "You can continue with manual entry." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return <Card><CardContent className="p-8 text-muted-foreground">Loading expense…</CardContent></Card>;
   if (id && !existing) return <Alert variant="destructive"><AlertTitle>Expense not found</AlertTitle><AlertDescription>The record is unavailable or you do not have access.</AlertDescription></Alert>;
 
@@ -211,7 +233,9 @@ export default function ExpenseEditorPage() {
 
       <Card><CardHeader><CardTitle>3. Business and personal split</CardTitle><CardDescription>The system stores the percentage and calculates both portions.</CardDescription></CardHeader><CardContent className="space-y-4"><div className="grid gap-3 sm:grid-cols-3"><Button type="button" variant={values.businessUsePercentage === "100" ? "default" : "outline"} onClick={() => update("businessUsePercentage", "100")}>100% business</Button><Button type="button" variant={values.businessUsePercentage === "0" ? "default" : "outline"} onClick={() => update("businessUsePercentage", "0")}>0% business</Button><Field label="Custom percentage"><Input type="number" min="0" max="100" step="0.01" value={values.businessUsePercentage} onChange={(event) => update("businessUsePercentage", event.target.value)} /></Field></div><div className="grid gap-3 sm:grid-cols-3"><Amount label="Total" value={total} /><Amount label="Business portion" value={split.businessAmount} /><Amount label="Personal portion" value={split.personalAmount} /></div><Field label="Reason for the percentage (recommended for mixed use)"><Textarea value={values.businessUseReason} onChange={(event) => update("businessUseReason", event.target.value)} placeholder="For example, phone plan used for work three days per week." /></Field></CardContent></Card>
 
-      <Card><CardHeader><CardTitle>4. Supporting documents</CardTitle><CardDescription>Private PDF, JPG and PNG files up to 20 MB each.</CardDescription></CardHeader><CardContent className="space-y-4"><div className="grid gap-4 md:grid-cols-[220px_1fr]"><Field label="Document type"><Select value={attachmentType} onValueChange={(value) => setAttachmentType(value as AttachmentDocumentType)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="INVOICE">Invoice</SelectItem><SelectItem value="RECEIPT">Receipt</SelectItem><SelectItem value="CREDIT_NOTE">Credit note</SelectItem><SelectItem value="STATEMENT">Statement</SelectItem><SelectItem value="SUPPORTING_DOCUMENT">Supporting document</SelectItem><SelectItem value="OTHER">Other</SelectItem></SelectContent></Select></Field><Field label="Choose files"><Input type="file" accept="application/pdf,image/jpeg,image/png" multiple onChange={(event) => setFiles(Array.from(event.target.files || []))} /></Field></div>{files.length > 0 ? <p className="text-sm text-muted-foreground">Ready to upload: {files.map((file) => file.name).join(", ")}</p> : (!existing || existing.attachments.length === 0) && <Alert><AlertCircle className="h-4 w-4" /><AlertTitle>No document attached</AlertTitle><AlertDescription>You can save without a document, but the record will appear in the missing-document summary.</AlertDescription></Alert>}{existing?.attachments.map((attachment) => <div key={attachment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"><div className="flex min-w-0 items-center gap-3"><Paperclip className="h-4 w-4 shrink-0" /><div className="min-w-0"><p className="truncate text-sm font-medium">{attachment.original_filename}</p><p className="text-xs text-muted-foreground">{attachment.document_type.replaceAll("_", " ")} · {(attachment.file_size / 1024 / 1024).toFixed(2)} MB</p></div></div><div className="flex gap-1"><Button type="button" size="sm" variant="ghost" onClick={() => void openExpenseAttachment(attachment)}><ExternalLink className="mr-2 h-4 w-4" />Open</Button><Button type="button" size="icon" variant="ghost" disabled={saving} onClick={() => void removeAttachment(attachment)} aria-label={`Remove ${attachment.original_filename}`}><Trash2 className="h-4 w-4" /></Button></div></div>)}</CardContent></Card>
+      <Card><CardHeader><CardTitle>4. Supporting documents</CardTitle><CardDescription>Private PDF, JPG and PNG files up to 20 MB each.</CardDescription></CardHeader><CardContent className="space-y-4"><div className="grid gap-4 md:grid-cols-[220px_1fr]"><Field label="Document type"><Select value={attachmentType} onValueChange={(value) => setAttachmentType(value as AttachmentDocumentType)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="INVOICE">Invoice</SelectItem><SelectItem value="RECEIPT">Receipt</SelectItem><SelectItem value="CREDIT_NOTE">Credit note</SelectItem><SelectItem value="STATEMENT">Statement</SelectItem><SelectItem value="SUPPORTING_DOCUMENT">Supporting document</SelectItem><SelectItem value="OTHER">Other</SelectItem></SelectContent></Select></Field><Field label="Choose files"><Input type="file" accept="application/pdf,image/jpeg,image/png" multiple onChange={(event) => setFiles(Array.from(event.target.files || []))} /></Field></div>{files.length > 0 ? <p className="text-sm text-muted-foreground">Ready to upload: {files.map((file) => file.name).join(", ")}</p> : (!existing || existing.attachments.length === 0) && <Alert><AlertCircle className="h-4 w-4" /><AlertTitle>No document attached</AlertTitle><AlertDescription>You can save without a document, but the record will appear in the missing-document summary.</AlertDescription></Alert>}{existing?.attachments.map((attachment) => <div key={attachment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"><div className="flex min-w-0 items-center gap-3"><Paperclip className="h-4 w-4 shrink-0" /><div className="min-w-0"><p className="truncate text-sm font-medium">{attachment.original_filename}</p><p className="text-xs text-muted-foreground">{attachment.document_type.replaceAll("_", " ")} · {(attachment.file_size / 1024 / 1024).toFixed(2)} MB</p></div></div><div className="flex gap-1"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => void scanAttachment(attachment)}>Scan invoice</Button><Button type="button" size="sm" variant="ghost" onClick={() => void openExpenseAttachment(attachment)}><ExternalLink className="mr-2 h-4 w-4" />Open</Button><Button type="button" size="icon" variant="ghost" disabled={saving} onClick={() => void removeAttachment(attachment)} aria-label={`Remove ${attachment.original_filename}`}><Trash2 className="h-4 w-4" /></Button></div></div>)}</CardContent></Card>
+
+      {scanResult && <Alert><FileText className="h-4 w-4" /><AlertTitle>Extracted invoice values — check before changing the expense</AlertTitle><AlertDescription><div className="mt-2 grid gap-1 text-sm sm:grid-cols-2"><span>Supplier: {scanResult.supplier_name || "Not found"}</span><span>Invoice: {scanResult.invoice_number || "Not found"}</span><span>Date: {scanResult.invoice_date ? formatAustralianDate(scanResult.invoice_date) : "Not found"}</span><span>Total: {scanResult.total_amount === null ? "Not found" : formatCurrency(scanResult.total_amount)}</span><span>GST: {scanResult.gst_amount === null ? "Not found" : formatCurrency(scanResult.gst_amount)}</span><span>Confidence: {(scanResult.overall_confidence * 100).toFixed(0)}%</span></div></AlertDescription></Alert>}
 
       <Card><CardHeader><CardTitle>5. Notes and status</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><Field label="Notes"><Textarea rows={5} value={values.notes} onChange={(event) => update("notes", event.target.value)} placeholder="Project, reimbursement or tax-time notes." /></Field><div className="space-y-4"><Field label="Save status"><Select value={values.expenseStatus} onValueChange={(value) => update("expenseStatus", value as ExpenseFormValues["expenseStatus"])}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="DRAFT">Draft</SelectItem><SelectItem value="READY">Ready</SelectItem><SelectItem value="NEEDS_REVIEW">Needs review</SelectItem></SelectContent></Select></Field>{values.id && <Field label="Reason for this change"><Input value={values.lastChangeReason} onChange={(event) => update("lastChangeReason", event.target.value)} placeholder="For example, corrected business percentage" /></Field>}</div></CardContent></Card>
 

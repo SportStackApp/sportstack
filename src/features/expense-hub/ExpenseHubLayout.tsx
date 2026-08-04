@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { BarChart3, Building2, CircleDollarSign, FilePlus2, ReceiptText } from "lucide-react";
+import { BarChart3, Building2, CircleDollarSign, FilePlus2, Landmark, ReceiptText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ExpenseHubProvider } from "./ExpenseHubContext";
 
@@ -7,6 +7,7 @@ const LINKS = [
   { to: "/expense-hub", label: "Dashboard", icon: BarChart3, end: true },
   { to: "/expense-hub/expenses", label: "Expenses", icon: ReceiptText },
   { to: "/expense-hub/expenses/new", label: "Add expense", icon: FilePlus2 },
+  { to: "/expense-hub/statements", label: "Bank statements", icon: Landmark },
   { to: "/expense-hub/suppliers", label: "Suppliers", icon: Building2 },
   { to: "/expense-hub/reports", label: "Reports", icon: CircleDollarSign },
 ];

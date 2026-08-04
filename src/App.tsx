@@ -36,6 +36,7 @@ import ExpensesPage from "./pages/expense-hub/ExpensesPage";
 import ExpenseEditorPage from "./pages/expense-hub/ExpenseEditorPage";
 import SuppliersPage from "./pages/expense-hub/SuppliersPage";
 import ExpenseReportsPage from "./pages/expense-hub/ExpenseReportsPage";
+import StatementImportsPage from "./pages/expense-hub/StatementImportsPage";
 
 
 
@@ -177,6 +178,7 @@ const App = () => (
                         <Route index element={<ExpenseDashboard />} />
                         <Route path="expenses" element={<ExpensesPage />} />
                         <Route path="expenses/new" element={<ExpenseEditorPage />} />
+                        <Route path="statements" element={<StatementImportsPage />} />
                         <Route path="expenses/:id/edit" element={<ExpenseEditorPage />} />
                         <Route path="suppliers" element={<SuppliersPage />} />
                         <Route path="reports" element={<ExpenseReportsPage />} />

@@ -3217,6 +3217,42 @@ Risk level:
 
 ## How to update this file
 
+## 4 August 2026 - Expense Hub Stage 2 foundation
+
+What changed:
+
+- Added Dev-only bank statement imports for CSV and OFX files. Transactions are parsed deterministically in the browser and are not sent to an AI provider.
+- Added transaction review decisions for business, personal and not relevant, including business-use percentage, supplier/category selection, draft expense creation and missing-evidence status.
+- Added five RLS-protected Stage 2 tables for statement imports/lines, AI processing jobs, extraction results and field suggestions, plus a private 20 MB `expense-imports` bucket.
+- Added the authenticated `expense-document-extract` Dev Edge Function. It securely reads an authorised invoice/receipt, sends it to OpenAI using a strict schema, stores the extraction history and compares invoice date/total with a linked statement expense.
+- Added a manual `Scan invoice` action and a compact extracted-value review panel. AI never approves or silently overwrites the expense.
+
+Files changed:
+
+- `src/features/expense-hub/api.ts`
+- `src/features/expense-hub/ExpenseHubLayout.tsx`
+- `src/features/expense-hub/statementParser.ts`
+- `src/features/expense-hub/statementParser.test.ts`
+- `src/pages/expense-hub/ExpenseEditorPage.tsx`
+- `src/pages/expense-hub/StatementImportsPage.tsx`
+- `src/App.tsx`
+- `src/integrations/supabase/types.ts`
+- `supabase/functions/expense-document-extract/index.ts`
+- `supabase/migrations/20260804181000_expense_hub_stage_two_foundation.sql`
+- `supabase/migrations/20260804183000_harden_expense_stage_two_ownership.sql`
+- `supabase/config.toml`
+
+Remaining Stage 2 work:
+
+- Add explicit accept/correct controls that copy selected extraction values into the expense form and preserve field-level approval differences.
+- Add supplier alias/history recommendations, document-hash duplicate warnings in the scan screen, Anthropic fallback routing, cost calculation/reporting, retry controls and retention cleanup.
+- Add PDF bank-statement parsing; CSV and OFX are the supported initial statement formats.
+- Complete signed-in owner testing with a real de-identified statement and invoice/receipt.
+
+Risk level:
+
+- Medium. This includes one additive Dev migration, a private Storage bucket and one authenticated Dev Edge Function. Production is unchanged.
+
 When Codex finishes a task, add a dated entry with:
 
 - What changed

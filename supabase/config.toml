@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.provision-dev-test-account]
 verify_jwt = true
+
+[functions.expense-document-extract]
+verify_jwt = true
