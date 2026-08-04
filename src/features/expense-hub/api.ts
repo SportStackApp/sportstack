@@ -288,6 +288,19 @@ export async function scanExpenseAttachment(attachmentId: string) {
   return data;
 }
 
+export async function approveExpenseScan(jobId: string, values: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke("expense-document-extract", { body: { action: "APPROVE", jobId, values } });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+export async function expenseAttachmentSignedUrl(storagePath: string) {
+  const { data, error } = await supabase.storage.from("expense-documents").createSignedUrl(storagePath, 10 * 60);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
 export async function importBankStatement(userId: string, file: File, lines: ParsedStatementLine[]) {
   if (file.size > 20 * 1024 * 1024) throw new Error("The statement is larger than the 20 MB limit.");
   const fileHash = await sha256File(file);
@@ -332,6 +345,33 @@ export async function importBankStatement(userId: string, file: File, lines: Par
   }).eq("id", importId);
   if (statusError) throw statusError;
   return importId;
+}
+
+export async function importPdfBankStatement(userId: string, file: File) {
+  if (file.size > 20 * 1024 * 1024) throw new Error("The statement is larger than the 20 MB limit.");
+  if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) throw new Error("Choose a PDF bank statement.");
+  const fileHash = await sha256File(file);
+  const importId = crypto.randomUUID();
+  const storagePath = `${importId}/${safeFilename(file.name)}`;
+  const { error: recordError } = await supabase.from("expense_statement_imports").insert({
+    id: importId, owner_user_id: userId, ownership_type: "PERSONAL", storage_path: storagePath,
+    original_filename: file.name, mime_type: "application/pdf", file_size: file.size, file_hash: fileHash,
+    status: "UPLOADED", row_count: 0, created_by: userId, updated_by: userId,
+  });
+  if (recordError) throw recordError;
+  const { error: uploadError } = await supabase.storage.from("expense-imports").upload(storagePath, file, { upsert: false, contentType: "application/pdf" });
+  if (uploadError) throw uploadError;
+  const { data, error } = await supabase.functions.invoke("expense-statement-extract", { body: { importId } });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data as { importId: string; rowCount: number; provider: string; model: string; estimatedCostUsd: number };
+}
+
+export async function retryPdfBankStatement(importId: string) {
+  const { data, error } = await supabase.functions.invoke("expense-statement-extract", { body: { importId } });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data as { importId: string; rowCount: number; provider: string; model: string; estimatedCostUsd: number };
 }
 
 export async function reviewStatementLine(lineId: string, userId: string, input: {

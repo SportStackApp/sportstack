@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { createDraftExpenseFromStatementLine, importBankStatement, reviewStatementLine } from "@/features/expense-hub/api";
+import { createDraftExpenseFromStatementLine, importBankStatement, importPdfBankStatement, retryPdfBankStatement, reviewStatementLine } from "@/features/expense-hub/api";
 import { useExpenseHub } from "@/features/expense-hub/ExpenseHubContext";
 import { parseBankStatement } from "@/features/expense-hub/statementParser";
 import { formatAustralianDate, formatCurrency } from "@/features/expense-hub/utils";
@@ -55,12 +55,30 @@ export default function StatementImportsPage() {
     if (!user || !file) return;
     setBusy(true); setError(null);
     try {
+      if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+        const result = await importPdfBankStatement(user.id, file);
+        await refresh();
+        toast({ title: "PDF statement scanned", description: `${result.rowCount} lines are ready to review. ${result.provider} cost estimate: US$${result.estimatedCostUsd.toFixed(4)}.` });
+        return;
+      }
       const parsed = await parseBankStatement(file);
       await importBankStatement(user.id, file, parsed);
       await refresh();
       toast({ title: "Statement imported", description: `${parsed.length} transaction lines are ready to review.` });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The statement could not be imported.");
+    } finally { setBusy(false); }
+  };
+
+  const retryImport = async (statement: StatementImport) => {
+    setBusy(true); setError(null);
+    try {
+      const result = await retryPdfBankStatement(statement.id);
+      await refresh();
+      toast({ title: "Statement scan completed", description: `${result.rowCount} lines are ready to review.` });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The statement scan could not be retried.");
+      await refresh();
     } finally { setBusy(false); }
   };
 
@@ -101,15 +119,16 @@ export default function StatementImportsPage() {
     <div><h2 className="text-2xl font-semibold">Bank statements</h2><p className="text-sm text-muted-foreground">Import transactions, decide what is relevant, then attach evidence to the created expense.</p></div>
     {error && <Alert variant="destructive"><AlertTitle>Statement import needs attention</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     <Card><CardHeader><CardTitle className="text-lg">Upload statement</CardTitle></CardHeader><CardContent className="space-y-3">
-      <p className="text-sm text-muted-foreground">CSV and OFX are parsed directly without sending the statement to an AI provider.</p>
-      <Label htmlFor="bank-statement">Choose a CSV or OFX file</Label>
-      <Input id="bank-statement" type="file" accept=".csv,.ofx,text/csv,application/x-ofx" disabled={busy} onChange={(event) => void uploadStatement(event.target.files?.[0])} />
+      <p className="text-sm text-muted-foreground">CSV and OFX stay in your browser. PDF statements use OpenAI first, with Claude as an automatic fallback, and always require your review.</p>
+      <Label htmlFor="bank-statement">Choose a CSV, OFX or PDF file</Label>
+      <Input id="bank-statement" type="file" accept=".csv,.ofx,.pdf,text/csv,application/x-ofx,application/pdf" disabled={busy} onChange={(event) => void uploadStatement(event.target.files?.[0])} />
     </CardContent></Card>
     <div className="grid gap-3 sm:grid-cols-3">
       <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Imports</p><p className="text-2xl font-semibold">{imports.length}</p></CardContent></Card>
       <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Waiting for review</p><p className="text-2xl font-semibold">{pending.length}</p></CardContent></Card>
       <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Missing evidence</p><p className="text-2xl font-semibold">{lines.filter((line) => line.expense_id && line.evidence_status === "MISSING").length}</p></CardContent></Card>
     </div>
+    {imports.filter((statement) => statement.status === "FAILED").map((statement) => <Alert key={statement.id} variant="destructive"><FileWarning className="h-4 w-4" /><AlertTitle>{statement.original_filename} could not be scanned</AlertTitle><AlertDescription><p>{statement.error_message || "The PDF statement could not be processed. The original file was retained."}</p><Button className="mt-3" size="sm" variant="outline" disabled={busy || statement.attempt_count >= 5} onClick={() => void retryImport(statement)}>Retry scan ({statement.attempt_count}/5 used)</Button></AlertDescription></Alert>)}
     <div className="space-y-3">{lines.map((line) => {
       const draft = drafts[line.id] || { supplierId: "", categoryId: "", businessUse: "100" };
       return <Card key={line.id}><CardContent className="space-y-4 p-4">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { AlertCircle, ExternalLink, FileText, History, Loader2, Paperclip, Trash2 } from "lucide-react";
+import { AlertCircle, ExternalLink, FileCheck2, FileText, History, Loader2, Paperclip, Trash2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
   deleteExpenseAttachment,
+  approveExpenseScan,
+  expenseAttachmentSignedUrl,
   openExpenseAttachment,
   saveExpense,
   scanExpenseAttachment,
@@ -25,11 +27,16 @@ import {
   type ExpenseFormValues,
   type ExpenseRecord,
 } from "@/features/expense-hub/types";
-import { calculateExpenseAmounts, calculateGstFromInclusiveTotal, formatAustralianDate, formatCurrency } from "@/features/expense-hub/utils";
+import { calculateExpenseAmounts, calculateGstFromInclusiveTotal, confidenceLabel, findSupplierSuggestion, formatAustralianDate, formatCurrency } from "@/features/expense-hub/utils";
 
 const selectClass = "w-full min-w-0 overflow-hidden";
 const AUDIT_HIDDEN_FIELDS = new Set(["updated_at", "updated_by", "last_change_reason"]);
-type ScanResult = { supplier_name: string | null; invoice_number: string | null; invoice_date: string | null; total_amount: number | null; gst_amount: number | null; overall_confidence: number };
+type ScanField<T> = { value: T | null; confidence: number };
+type ScanResult = { supplier_name: ScanField<string>; supplier_abn: ScanField<string>; invoice_number: ScanField<string>; invoice_date: ScanField<string>; description: ScanField<string>; total_amount: ScanField<number>; gst_amount: ScanField<number>; overall_confidence: number };
+type ScanReview = {
+  jobId: string; documentUrl: string; provider: string; model: string; cost: number; result: ScanResult;
+  supplierId: string; expenseDate: string; invoiceNumber: string; description: string; totalAmount: string; gstAmount: string; categoryId: string; businessUse: string;
+};
 
 function auditChanges(previousData: unknown, newData: unknown) {
   if (!previousData || !newData || typeof previousData !== "object" || typeof newData !== "object" || Array.isArray(previousData) || Array.isArray(newData)) return [];
@@ -85,7 +92,7 @@ export default function ExpenseEditorPage() {
   const [attachmentType, setAttachmentType] = useState<AttachmentDocumentType>("INVOICE");
   const [saving, setSaving] = useState(false);
   const [allowDuplicate, setAllowDuplicate] = useState(false);
-  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanReview, setScanReview] = useState<ScanReview | null>(null);
 
   const existing = id ? expenses.find((expense) => expense.id === id) : undefined;
   useEffect(() => {
@@ -186,7 +193,22 @@ export default function ExpenseEditorPage() {
     setSaving(true);
     try {
       const result = await scanExpenseAttachment(attachment.id);
-      setScanResult(result.result as ScanResult);
+      const extracted = result.result as ScanResult;
+      const serverSuggestions = (result.suggestions || []) as Array<{ field_name: string; suggested_value: unknown }>;
+      const suggested = (fieldName: string) => serverSuggestions.find((item) => item.field_name === fieldName)?.suggested_value;
+      const supplierMatch = findSupplierSuggestion(extracted.supplier_name.value, extracted.supplier_abn.value, scopedSuppliers);
+      const documentUrl = await expenseAttachmentSignedUrl(attachment.storage_path);
+      setScanReview({
+        jobId: result.jobId, documentUrl, provider: result.provider, model: result.model, cost: Number(result.estimatedCostUsd || 0), result: extracted,
+        supplierId: String(suggested("supplier_id") || supplierMatch?.supplier.id || values.supplierId),
+        expenseDate: extracted.invoice_date.value || values.expenseDate,
+        invoiceNumber: extracted.invoice_number.value || values.invoiceNumber,
+        description: extracted.description.value || values.description,
+        totalAmount: extracted.total_amount.value === null ? values.totalAmount : String(extracted.total_amount.value),
+        gstAmount: extracted.gst_amount.value === null ? values.gstAmount : String(extracted.gst_amount.value),
+        categoryId: String(suggested("category_id") || values.categoryId),
+        businessUse: String(suggested("business_use_percentage") ?? values.businessUsePercentage),
+      });
       await refresh();
       toast({
         title: "Invoice scan ready for review",
@@ -199,6 +221,29 @@ export default function ExpenseEditorPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const approveScan = async (keepCurrent: boolean) => {
+    if (!scanReview) return;
+    setSaving(true);
+    const approved = keepCurrent ? {
+      supplier_id: values.supplierId, expense_date: values.expenseDate, invoice_number: values.invoiceNumber || null,
+      description: values.description, total_amount: Number(values.totalAmount), gst_amount: Number(values.gstAmount), category_id: values.categoryId || null,
+      business_use_percentage: Number(values.businessUsePercentage),
+    } : {
+      supplier_id: scanReview.supplierId, expense_date: scanReview.expenseDate, invoice_number: scanReview.invoiceNumber || null,
+      description: scanReview.description, total_amount: Number(scanReview.totalAmount), gst_amount: Number(scanReview.gstAmount), category_id: scanReview.categoryId || null,
+      business_use_percentage: Number(scanReview.businessUse),
+    };
+    try {
+      await approveExpenseScan(scanReview.jobId, approved);
+      if (!keepCurrent) setValues((current) => ({ ...current, supplierId: scanReview.supplierId, expenseDate: scanReview.expenseDate, invoiceNumber: scanReview.invoiceNumber, description: scanReview.description, totalAmount: scanReview.totalAmount, gstAmount: scanReview.gstAmount, gstEntryMethod: "MANUAL", categoryId: scanReview.categoryId, businessUsePercentage: scanReview.businessUse }));
+      await refresh();
+      setScanReview(null);
+      toast({ title: "Invoice review approved", description: keepCurrent ? "Your existing expense values were kept and the review was recorded." : "The checked values were applied and the differences were recorded." });
+    } catch (caught) {
+      toast({ variant: "destructive", title: "Review could not be approved", description: caught instanceof Error ? caught.message : "Try again." });
+    } finally { setSaving(false); }
   };
 
   if (loading) return <Card><CardContent className="p-8 text-muted-foreground">Loading expense…</CardContent></Card>;
@@ -235,7 +280,18 @@ export default function ExpenseEditorPage() {
 
       <Card><CardHeader><CardTitle>4. Supporting documents</CardTitle><CardDescription>Private PDF, JPG and PNG files up to 20 MB each.</CardDescription></CardHeader><CardContent className="space-y-4"><div className="grid gap-4 md:grid-cols-[220px_1fr]"><Field label="Document type"><Select value={attachmentType} onValueChange={(value) => setAttachmentType(value as AttachmentDocumentType)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="INVOICE">Invoice</SelectItem><SelectItem value="RECEIPT">Receipt</SelectItem><SelectItem value="CREDIT_NOTE">Credit note</SelectItem><SelectItem value="STATEMENT">Statement</SelectItem><SelectItem value="SUPPORTING_DOCUMENT">Supporting document</SelectItem><SelectItem value="OTHER">Other</SelectItem></SelectContent></Select></Field><Field label="Choose files"><Input type="file" accept="application/pdf,image/jpeg,image/png" multiple onChange={(event) => setFiles(Array.from(event.target.files || []))} /></Field></div>{files.length > 0 ? <p className="text-sm text-muted-foreground">Ready to upload: {files.map((file) => file.name).join(", ")}</p> : (!existing || existing.attachments.length === 0) && <Alert><AlertCircle className="h-4 w-4" /><AlertTitle>No document attached</AlertTitle><AlertDescription>You can save without a document, but the record will appear in the missing-document summary.</AlertDescription></Alert>}{existing?.attachments.map((attachment) => <div key={attachment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"><div className="flex min-w-0 items-center gap-3"><Paperclip className="h-4 w-4 shrink-0" /><div className="min-w-0"><p className="truncate text-sm font-medium">{attachment.original_filename}</p><p className="text-xs text-muted-foreground">{attachment.document_type.replaceAll("_", " ")} · {(attachment.file_size / 1024 / 1024).toFixed(2)} MB</p></div></div><div className="flex gap-1"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => void scanAttachment(attachment)}>Scan invoice</Button><Button type="button" size="sm" variant="ghost" onClick={() => void openExpenseAttachment(attachment)}><ExternalLink className="mr-2 h-4 w-4" />Open</Button><Button type="button" size="icon" variant="ghost" disabled={saving} onClick={() => void removeAttachment(attachment)} aria-label={`Remove ${attachment.original_filename}`}><Trash2 className="h-4 w-4" /></Button></div></div>)}</CardContent></Card>
 
-      {scanResult && <Alert><FileText className="h-4 w-4" /><AlertTitle>Extracted invoice values — check before changing the expense</AlertTitle><AlertDescription><div className="mt-2 grid gap-1 text-sm sm:grid-cols-2"><span>Supplier: {scanResult.supplier_name || "Not found"}</span><span>Invoice: {scanResult.invoice_number || "Not found"}</span><span>Date: {scanResult.invoice_date ? formatAustralianDate(scanResult.invoice_date) : "Not found"}</span><span>Total: {scanResult.total_amount === null ? "Not found" : formatCurrency(scanResult.total_amount)}</span><span>GST: {scanResult.gst_amount === null ? "Not found" : formatCurrency(scanResult.gst_amount)}</span><span>Confidence: {(scanResult.overall_confidence * 100).toFixed(0)}%</span></div></AlertDescription></Alert>}
+      {scanReview && <Card><CardHeader><CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Review scanned invoice</CardTitle><CardDescription>{scanReview.provider} · {scanReview.model} · estimated cost US${scanReview.cost.toFixed(4)}. Check every value before approval.</CardDescription></CardHeader><CardContent className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-3"><div className="aspect-[4/5] overflow-hidden rounded-lg border bg-muted"><iframe className="h-full w-full" src={scanReview.documentUrl} title="Invoice or receipt being reviewed" /></div><Button type="button" variant="outline" asChild><a href={scanReview.documentUrl} target="_blank" rel="noreferrer"><ExternalLink className="mr-2 h-4 w-4" />Open full document</a></Button></div>
+        <div className="space-y-4">
+          <Alert><FileCheck2 className="h-4 w-4" /><AlertTitle>{confidenceLabel(scanReview.result.overall_confidence)}</AlertTitle><AlertDescription>Green-looking confidence is still a suggestion, not approval.</AlertDescription></Alert>
+          <Field label={`Supplier · ${confidenceLabel(scanReview.result.supplier_name.confidence)}`}><Select value={scanReview.supplierId || "__none__"} onValueChange={(value) => setScanReview((current) => current ? { ...current, supplierId: value === "__none__" ? "" : value } : current)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="__none__">Choose supplier</SelectItem>{scopedSuppliers.map((supplier) => <SelectItem key={supplier.id} value={supplier.id}>{supplier.display_name}</SelectItem>)}</SelectContent></Select></Field>
+          <div className="grid gap-4 sm:grid-cols-2"><Field label={`Invoice date · ${confidenceLabel(scanReview.result.invoice_date.confidence)}`}><Input type="date" value={scanReview.expenseDate} onChange={(event) => setScanReview((current) => current ? { ...current, expenseDate: event.target.value } : current)} /></Field><Field label={`Invoice number · ${confidenceLabel(scanReview.result.invoice_number.confidence)}`}><Input value={scanReview.invoiceNumber} onChange={(event) => setScanReview((current) => current ? { ...current, invoiceNumber: event.target.value } : current)} /></Field></div>
+          <Field label={`Description · ${confidenceLabel(scanReview.result.description.confidence)}`}><Input value={scanReview.description} onChange={(event) => setScanReview((current) => current ? { ...current, description: event.target.value } : current)} /></Field>
+          <div className="grid gap-4 sm:grid-cols-2"><Field label={`Total · ${confidenceLabel(scanReview.result.total_amount.confidence)}`}><Input type="number" min="0" step="0.01" value={scanReview.totalAmount} onChange={(event) => setScanReview((current) => current ? { ...current, totalAmount: event.target.value } : current)} /></Field><Field label={`GST · ${confidenceLabel(scanReview.result.gst_amount.confidence)}`}><Input type="number" min="0" step="0.01" value={scanReview.gstAmount} onChange={(event) => setScanReview((current) => current ? { ...current, gstAmount: event.target.value } : current)} /></Field></div>
+          <div className="grid gap-4 sm:grid-cols-2"><Field label="Suggested category"><Select value={scanReview.categoryId || "__none__"} onValueChange={(value) => setScanReview((current) => current ? { ...current, categoryId: value === "__none__" ? "" : value } : current)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="__none__">No category</SelectItem>{parentCategories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}</SelectContent></Select></Field><Field label="Suggested business use percentage"><Input type="number" min="0" max="100" value={scanReview.businessUse} onChange={(event) => setScanReview((current) => current ? { ...current, businessUse: event.target.value } : current)} /></Field></div>
+          <div className="flex flex-wrap gap-2"><Button type="button" disabled={saving || !scanReview.supplierId} onClick={() => void approveScan(false)}>Apply checked values and approve</Button><Button type="button" variant="outline" disabled={saving} onClick={() => void approveScan(true)}>Keep expense values and approve</Button><Button type="button" variant="ghost" disabled={saving} onClick={() => setScanReview(null)}>Leave for later</Button></div>
+        </div>
+      </CardContent></Card>}
 
       <Card><CardHeader><CardTitle>5. Notes and status</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><Field label="Notes"><Textarea rows={5} value={values.notes} onChange={(event) => update("notes", event.target.value)} placeholder="Project, reimbursement or tax-time notes." /></Field><div className="space-y-4"><Field label="Save status"><Select value={values.expenseStatus} onValueChange={(value) => update("expenseStatus", value as ExpenseFormValues["expenseStatus"])}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="DRAFT">Draft</SelectItem><SelectItem value="READY">Ready</SelectItem><SelectItem value="NEEDS_REVIEW">Needs review</SelectItem></SelectContent></Select></Field>{values.id && <Field label="Reason for this change"><Input value={values.lastChangeReason} onChange={(event) => update("lastChangeReason", event.target.value)} placeholder="For example, corrected business percentage" /></Field>}</div></CardContent></Card>
 

@@ -37,6 +37,7 @@ import ExpenseEditorPage from "./pages/expense-hub/ExpenseEditorPage";
 import SuppliersPage from "./pages/expense-hub/SuppliersPage";
 import ExpenseReportsPage from "./pages/expense-hub/ExpenseReportsPage";
 import StatementImportsPage from "./pages/expense-hub/StatementImportsPage";
+import ExpenseAiActivityPage from "./pages/expense-hub/ExpenseAiActivityPage";
 
 
 
@@ -179,6 +180,7 @@ const App = () => (
                         <Route path="expenses" element={<ExpensesPage />} />
                         <Route path="expenses/new" element={<ExpenseEditorPage />} />
                         <Route path="statements" element={<StatementImportsPage />} />
+                        <Route path="ai-activity" element={<ExpenseAiActivityPage />} />
                         <Route path="expenses/:id/edit" element={<ExpenseEditorPage />} />
                         <Route path="suppliers" element={<SuppliersPage />} />
                         <Route path="reports" element={<ExpenseReportsPage />} />

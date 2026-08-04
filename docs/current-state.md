@@ -3215,17 +3215,19 @@ Risk level:
   private Storage policies. The migrations and RLS have passed live Dev rollback tests and adviser
   checks. No Production system, branch, secret, deployment setting or domain was changed.
 
-## How to update this file
-
-## 4 August 2026 - Expense Hub Stage 2 foundation
+## 4 August 2026 - Expense Hub Stage 2 complete on Dev
 
 What changed:
 
-- Added Dev-only bank statement imports for CSV and OFX files. Transactions are parsed deterministically in the browser and are not sent to an AI provider.
+- Added Dev-only bank statement imports for CSV and OFX files. They are parsed deterministically in the browser and are not sent to an AI provider. PDF statements are securely scanned into reviewable transaction lines.
 - Added transaction review decisions for business, personal and not relevant, including business-use percentage, supplier/category selection, draft expense creation and missing-evidence status.
 - Added five RLS-protected Stage 2 tables for statement imports/lines, AI processing jobs, extraction results and field suggestions, plus a private 20 MB `expense-imports` bucket.
-- Added the authenticated `expense-document-extract` Dev Edge Function. It securely reads an authorised invoice/receipt, sends it to OpenAI using a strict schema, stores the extraction history and compares invoice date/total with a linked statement expense.
-- Added a manual `Scan invoice` action and a compact extracted-value review panel. AI never approves or silently overwrites the expense.
+- Added authenticated `expense-document-extract` and `expense-statement-extract` Dev Edge Functions. Both use low-cost OpenAI GPT-5.6 Luna first and automatically try Claude Haiku 4.5 if OpenAI fails.
+- Added strict structured output, per-field confidence, supplier name/alias/ABN matching, supplier defaults, approved-history suggestions, five-attempt limits and estimated provider cost tracking.
+- Added side-by-side invoice review with editable extracted values. Users can apply checked values or retain the existing expense values; either action records field-level differences and explicit approval.
+- Added an AI activity page showing scans, failures, waiting reviews, field correction rate, average confidence and estimated cost without exposing invoice content.
+- AI is optional: manual expense entry and deterministic CSV/OFX imports continue to work when either provider is unavailable.
+- OpenAI requests use `store: false`. Restricted raw invoice output has a 30-day retention marker and expired raw output is cleared during subsequent scans. No raw provider response is stored for PDF bank statements. Production provider privacy/region settings still require owner review before release.
 
 Files changed:
 
@@ -3233,25 +3235,46 @@ Files changed:
 - `src/features/expense-hub/ExpenseHubLayout.tsx`
 - `src/features/expense-hub/statementParser.ts`
 - `src/features/expense-hub/statementParser.test.ts`
+- `src/features/expense-hub/utils.ts`
+- `src/features/expense-hub/utils.test.ts`
 - `src/pages/expense-hub/ExpenseEditorPage.tsx`
 - `src/pages/expense-hub/StatementImportsPage.tsx`
+- `src/pages/expense-hub/ExpenseAiActivityPage.tsx`
 - `src/App.tsx`
 - `src/integrations/supabase/types.ts`
 - `supabase/functions/expense-document-extract/index.ts`
+- `supabase/functions/expense-statement-extract/index.ts`
+- `supabase/functions/_shared/expense-ai-provider.ts`
 - `supabase/migrations/20260804181000_expense_hub_stage_two_foundation.sql`
 - `supabase/migrations/20260804183000_harden_expense_stage_two_ownership.sql`
+- `supabase/migrations/20260804190000_complete_expense_hub_stage_two.sql`
+- `supabase/migrations/20260804190500_limit_expense_statement_scans.sql`
 - `supabase/config.toml`
 
-Remaining Stage 2 work:
+Checks run:
 
-- Add explicit accept/correct controls that copy selected extraction values into the expense form and preserve field-level approval differences.
-- Add supplier alias/history recommendations, document-hash duplicate warnings in the scan screen, Anthropic fallback routing, cost calculation/reporting, retry controls and retention cleanup.
-- Add PDF bank-statement parsing; CSV and OFX are the supported initial statement formats.
-- Complete signed-in owner testing with a real de-identified statement and invoice/receipt.
+- Both new migrations passed transaction rollback dry-runs before being applied to SportStack Dev.
+- All five Stage 2 tables have RLS enabled. Both Edge Functions require a valid JWT and returned HTTP 401 without one.
+- Focused ESLint, ten Expense Hub Vitest checks, `npx tsc --noEmit`, `npm run build` and `git diff --check` pass.
+- Supabase security advisers reported no Expense Hub finding; existing unrelated Dev warnings remain.
+
+What Aaron should test next:
+
+1. Upload one de-identified PDF bank statement and confirm every transaction appears for review.
+2. Create one business draft, attach its invoice, select Scan invoice, correct a value and approve it.
+3. Confirm the statement line changes from Missing evidence to Verified and the AI activity page records the cost and correction.
+4. Temporarily test a poor-quality image to confirm uncertainty is shown and manual entry remains available.
+
+Remaining release gate:
+
+- A signed-in owner smoke test with de-identified sample files is still required before promoting Stage 2 beyond Dev.
+- Provider privacy, processing region and billing limits must be approved separately before Production deployment.
 
 Risk level:
 
-- Medium. This includes one additive Dev migration, a private Storage bucket and one authenticated Dev Edge Function. Production is unchanged.
+- Medium. Stage 2 has four additive Dev migrations, private Storage and two authenticated Dev Edge Functions. Production is unchanged.
+
+## How to update this file
 
 When Codex finishes a task, add a dated entry with:
 

@@ -3,6 +3,8 @@ import {
   calculateExpenseAmounts,
   calculateGstFromInclusiveTotal,
   financialYearForDate,
+  findSupplierSuggestion,
+  confidenceLabel,
   normaliseSupplierName,
   supplierSimilarity,
 } from "./utils";
@@ -44,5 +46,17 @@ describe("Supplier matching", () => {
   it("suggests close supplier wordings without silently merging them", () => {
     expect(supplierSimilarity("MICROSOFT*365", "Microsoft")).toBeGreaterThan(0.7);
     expect(supplierSimilarity("Microsoft", "Telstra")).toBeLessThan(0.3);
+  });
+
+  it("prefers an explicit supplier alias over fuzzy matching", () => {
+    const suppliers = [{ id: "microsoft", display_name: "Microsoft", legal_name: null, abn: null, aliases: [{ alias_name: "MSFT AUSTRALIA" }] }];
+    expect(findSupplierSuggestion("MSFT AUSTRALIA", null, suppliers)?.supplier.id).toBe("microsoft");
+    expect(findSupplierSuggestion("MSFT AUSTRALIA", null, suppliers)?.confidence).toBe(1);
+  });
+
+  it("labels uncertain extraction values for review", () => {
+    expect(confidenceLabel(0.9)).toBe("High confidence");
+    expect(confidenceLabel(0.7)).toContain("Medium confidence");
+    expect(confidenceLabel(0.2)).toContain("Low confidence");
   });
 });

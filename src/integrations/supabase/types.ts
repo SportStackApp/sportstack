@@ -2081,6 +2081,8 @@ export type Database = {
       }
       expense_ai_processing_jobs: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           attachment_id: string
           attempt_count: number
           completed_at: string | null
@@ -2100,6 +2102,8 @@ export type Database = {
           status: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           attachment_id: string
           attempt_count?: number
           completed_at?: string | null
@@ -2119,6 +2123,8 @@ export type Database = {
           status?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           attachment_id?: string
           attempt_count?: number
           completed_at?: string | null
@@ -2138,6 +2144,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "expense_ai_processing_jobs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expense_ai_processing_jobs_attachment_id_fkey"
             columns: ["attachment_id"]
@@ -2626,18 +2639,26 @@ export type Database = {
         Row: {
           account_hint: string | null
           association_id: string | null
+          attempt_count: number
           bank_name: string | null
           club_id: string | null
           created_at: string
           created_by: string
           error_message: string | null
+          estimated_cost_usd: number | null
           file_hash: string
           file_size: number
           id: string
+          input_tokens: number | null
           mime_type: string
+          model: string | null
           original_filename: string
+          output_tokens: number | null
           owner_user_id: string
           ownership_type: string
+          processing_completed_at: string | null
+          processing_started_at: string | null
+          provider: string | null
           row_count: number
           status: string
           storage_path: string
@@ -2647,18 +2668,26 @@ export type Database = {
         Insert: {
           account_hint?: string | null
           association_id?: string | null
+          attempt_count?: number
           bank_name?: string | null
           club_id?: string | null
           created_at?: string
           created_by: string
           error_message?: string | null
+          estimated_cost_usd?: number | null
           file_hash: string
           file_size: number
           id?: string
+          input_tokens?: number | null
           mime_type: string
+          model?: string | null
           original_filename: string
+          output_tokens?: number | null
           owner_user_id: string
           ownership_type?: string
+          processing_completed_at?: string | null
+          processing_started_at?: string | null
+          provider?: string | null
           row_count?: number
           status?: string
           storage_path: string
@@ -2668,18 +2697,26 @@ export type Database = {
         Update: {
           account_hint?: string | null
           association_id?: string | null
+          attempt_count?: number
           bank_name?: string | null
           club_id?: string | null
           created_at?: string
           created_by?: string
           error_message?: string | null
+          estimated_cost_usd?: number | null
           file_hash?: string
           file_size?: number
           id?: string
+          input_tokens?: number | null
           mime_type?: string
+          model?: string | null
           original_filename?: string
+          output_tokens?: number | null
           owner_user_id?: string
           ownership_type?: string
+          processing_completed_at?: string | null
+          processing_started_at?: string | null
+          provider?: string | null
           row_count?: number
           status?: string
           storage_path?: string

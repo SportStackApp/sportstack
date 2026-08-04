@@ -73,6 +73,37 @@ export function supplierSimilarity(left: string, right: string) {
   return (2 * intersection) / (leftBigrams.size + rightBigrams.size);
 }
 
+export function confidenceLabel(score: number | null | undefined) {
+  const value = Number(score || 0);
+  if (value >= 0.85) return "High confidence";
+  if (value >= 0.6) return "Medium confidence — check this";
+  return "Low confidence — input required";
+}
+
+export function findSupplierSuggestion<T extends {
+  id: string;
+  display_name: string;
+  legal_name: string | null;
+  abn: string | null;
+  aliases: Array<{ alias_name: string }>;
+}>(supplierName: string | null, supplierAbn: string | null, suppliers: T[]) {
+  const normalisedName = normaliseSupplierName(supplierName || "");
+  const normalisedAbn = String(supplierAbn || "").replace(/\D/g, "");
+  const exact = suppliers.find((supplier) =>
+    (normalisedAbn && String(supplier.abn || "").replace(/\D/g, "") === normalisedAbn)
+    || [supplier.display_name, supplier.legal_name, ...supplier.aliases.map((alias) => alias.alias_name)]
+      .some((name) => normaliseSupplierName(name || "") === normalisedName));
+  if (exact) return { supplier: exact, confidence: 1, reason: "Exact name, alias or ABN match" };
+  const ranked = suppliers
+    .map((supplier) => ({ supplier, confidence: Math.max(
+      supplierSimilarity(supplierName || "", supplier.display_name),
+      supplierSimilarity(supplierName || "", supplier.legal_name || ""),
+      ...supplier.aliases.map((alias) => supplierSimilarity(supplierName || "", alias.alias_name)),
+    ) }))
+    .sort((left, right) => right.confidence - left.confidence);
+  return ranked[0]?.confidence >= 0.72 ? { ...ranked[0], reason: "Similar supplier name" } : null;
+}
+
 export function calculateExpenseTotals(expenses: ExpenseRecord[]): ExpenseTotals {
   return expenses.reduce<ExpenseTotals>((totals, expense) => ({
     totalAmount: roundMoney(totals.totalAmount + Number(expense.total_amount)),
