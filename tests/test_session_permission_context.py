@@ -298,6 +298,15 @@ class SessionPermissionContextFrontendTests(unittest.TestCase):
         self.assertNotIn("const constrainbymembership = !issuperadmin", source)
         self.assertIn('.from("user_roles")', source)
 
+    def test_large_visible_user_scopes_are_split_into_safe_request_batches(self) -> None:
+        source = normalised(USERS_MANAGEMENT)
+
+        self.assertIn("candidateuserids.length > 100", source)
+        self.assertIn("candidateuserids.slice(index, index + 100)", source)
+        self.assertIn("await promise.all(idbatches.map", source)
+        self.assertIn("settotalusercount(matchingprofiles.length)", source)
+        self.assertIn("matchingprofiles.slice(pagestart, pagestart + rowsperpage)", source)
+
 
 class ScopedAdministrationUserListTests(unittest.TestCase):
     def test_role_only_accounts_are_included_with_membership_accounts(self) -> None:

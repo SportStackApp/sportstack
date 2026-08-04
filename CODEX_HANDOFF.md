@@ -12,6 +12,8 @@ Future agents should start by reading these files in order:
 
 ## Current release state
 
+- The 4 August owner retest found `/admin/users` failing for both broad Super Admin and scoped account views. Supabase API logs confirmed `admin_visible_profile_ids` succeeded, then the browser sent hundreds of returned UUIDs in one `profiles?id=in.(...)` URL and received HTTP 400. The local fix batches authorised profile IDs into safe requests before sorting and paging. No database, user, role or permission data was changed. Focused regression coverage passes; Dev deployment and owner retesting are pending.
+
 - Expense Hub Stage 1 is implemented on the Dev code/database path at `/expense-hub`. It includes
   manual personal/association/club expenses, scoped suppliers/aliases/payment methods/categories,
   GST and business-use calculations, private multi-file attachments, duplicate warnings, archive/

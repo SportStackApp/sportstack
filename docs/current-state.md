@@ -30,6 +30,8 @@ Update this file after every meaningful Codex task, pull request, schema change,
 
 ## Current priority
 
+- The 4 August owner retest found `/admin/users` failing for both the Super Admin and scoped account paths. The permission RPC succeeded, but the following profile request placed every visible UUID in one PostgREST URL and was rejected with HTTP 400. `UsersManagement` now splits broad authorised profile sets into bounded batches, merges them deterministically and applies the requested page without changing any user, role or permission data. Focused regression coverage passes; deployment and owner retesting remain pending.
+
 The locked Owner-Test remediation package is implemented on the Dev database and `dev` code path.
 Every observation from the 31 July to 2 August review is now mapped in
 `docs/owner-test-matrix.md`. The immediate priority is integrated verification using real Super

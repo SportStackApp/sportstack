@@ -470,31 +470,65 @@ const UsersManagement = () => {
         return [];
       }
 
-      let profilesQuery = supabase.from("profiles").select("*", { count: "exact" });
-      if (candidateUserIds) profilesQuery = profilesQuery.in("id", candidateUserIds);
-      if (hidePlaceholders) profilesQuery = profilesQuery.eq("is_placeholder", false);
       const searchTerms = searchQuery
         .trim()
         .replace(/[,%()]/g, " ")
         .split(/\s+/)
         .filter(Boolean);
-      for (const term of searchTerms) {
-        // Each word may match either part of the person's name or their
-        // RevSports registration ID. Repeating .or() makes all words required,
-        // so a full name can span first_name and last_name.
-        profilesQuery = profilesQuery.or(
-          `first_name.ilike.%${term}%,last_name.ilike.%${term}%,revsports_player_id.ilike.%${term}%`,
-        );
-      }
       const pageStart = (currentPage - 1) * rowsPerPage;
-      const { data: profilesData, count, error: profilesError } = await profilesQuery
-        .order("first_name")
-        .order("last_name")
-        .range(pageStart, pageStart + rowsPerPage - 1);
-      if (profilesError) throw profilesError;
-      const profiles = (profilesData || []) as Profile[];
+      let profiles: Profile[] = [];
+
+      if (candidateUserIds && candidateUserIds.length > 100) {
+        // PostgREST puts `.in()` filters in the request URL. A broad association
+        // or Super Admin scope can contain hundreds of UUIDs, which makes one
+        // request too large and returns HTTP 400. Keep each URL safely bounded,
+        // then apply the requested page after merging the authorised batches.
+        const idBatches: string[][] = [];
+        for (let index = 0; index < candidateUserIds.length; index += 100) {
+          idBatches.push(candidateUserIds.slice(index, index + 100));
+        }
+
+        const profileBatches = await Promise.all(idBatches.map(async (profileIds) => {
+          let batchQuery = supabase.from("profiles").select("*").in("id", profileIds);
+          if (hidePlaceholders) batchQuery = batchQuery.eq("is_placeholder", false);
+          for (const term of searchTerms) {
+            batchQuery = batchQuery.or(
+              `first_name.ilike.%${term}%,last_name.ilike.%${term}%,revsports_player_id.ilike.%${term}%`,
+            );
+          }
+          const { data, error } = await batchQuery;
+          if (error) throw error;
+          return (data || []) as Profile[];
+        }));
+
+        const matchingProfiles = profileBatches.flat().sort((left, right) => {
+          const firstNameOrder = (left.first_name || "").localeCompare(right.first_name || "");
+          return firstNameOrder || (left.last_name || "").localeCompare(right.last_name || "");
+        });
+        setTotalUserCount(matchingProfiles.length);
+        profiles = matchingProfiles.slice(pageStart, pageStart + rowsPerPage);
+      } else {
+        let profilesQuery = supabase.from("profiles").select("*", { count: "exact" });
+        if (candidateUserIds) profilesQuery = profilesQuery.in("id", candidateUserIds);
+        if (hidePlaceholders) profilesQuery = profilesQuery.eq("is_placeholder", false);
+        for (const term of searchTerms) {
+          // Each word may match either part of the person's name or their
+          // RevSports registration ID. Repeating .or() makes all words required,
+          // so a full name can span first_name and last_name.
+          profilesQuery = profilesQuery.or(
+            `first_name.ilike.%${term}%,last_name.ilike.%${term}%,revsports_player_id.ilike.%${term}%`,
+          );
+        }
+        const { data: profilesData, count, error: profilesError } = await profilesQuery
+          .order("first_name")
+          .order("last_name")
+          .range(pageStart, pageStart + rowsPerPage - 1);
+        if (profilesError) throw profilesError;
+        profiles = (profilesData || []) as Profile[];
+        setTotalUserCount(count || 0);
+      }
+
       const pageUserIds = profiles.map((profile) => profile.id);
-      setTotalUserCount(count || 0);
 
       let membershipsData: MembershipRow[] = [];
       let pendingInvitesData: PendingInviteRow[] = [];
