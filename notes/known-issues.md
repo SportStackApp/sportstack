@@ -145,7 +145,7 @@ Still required before staging:
 ## Whole-Site State Persistence Audit
 
 **Logged:** 4 August 2026
-**Status:** Focus-remount cause confirmed — local fix awaiting deployed retest
+**Status:** Users fix confirmed on Dev; broader screen audit parked for later
 
 **Problem:**
 When the browser loses focus and then returns to SportStack, the permission context performs a
@@ -163,6 +163,27 @@ persistence is not required by this issue.
 - Confirm Users Edit Details and its unsaved text survive switching to another window and back.
 - Regression-test one other unsaved form and one Safety Hub dialog after the Dev deployment.
 
+**8 August owner test:** Deployed commit `f3486b0` passed the Users Edit Details test: the dialog
+and unsaved text survived switching to Codex and back. Roles & Permissions still visibly refreshes
+when focus returns. Aaron chose to record affected screens during actual-role testing and handle
+the broader focus-refresh audit as a separate follow-up rather than interrupt the current matrix.
+
+## Team Manager Scheduled Fixture Detail Crash
+
+**Logged:** 8 August 2026
+**Status:** Fix prepared locally — Dev deployment and owner retest required
+
+The actual Team Manager Pumas fixture list loaded correctly on deployed `f3486b0`, but opening a
+scheduled fixture displayed the route error boundary. `GameDetail` passed availability status
+`MAYBE` into a style map whose matching key was incorrectly named `UNSURE`, then dereferenced the
+missing style record. The page also used legacy client fallback `PENDING` instead of the generated
+database enum value `NO_RESPONSE`.
+
+The local repair uses the four generated availability values (`AVAILABLE`, `UNAVAILABLE`, `MAYBE`,
+`NO_RESPONSE`) consistently and declares the style map as a complete typed record. Focused lint,
+TypeScript, build and all 146 Python regressions pass; repository-wide lint remains at its existing
+360-error/78-warning baseline. No database migration is included.
+
 ## Email Template Polish
 **Logged:** 30 June 2026  
 **Status:** Parked - do when revisiting claim/reset/welcome email flows
@@ -174,13 +195,40 @@ The Supabase emails for password resets, placeholder claim links, and welcome me
 - Improve the password reset email template.
 - Improve the placeholder claim link email template.
 - Improve the welcome/invite email template.
+
+## Permissions Screen Redesign Reference
+
+**Logged:** 8 August 2026
+**Status:** Parked design direction — no permission or code change approved
+
+Aaron supplied a reference permission screen built around a role list and grouped permission matrix.
+The useful SportStack direction is:
+
+- show predefined and custom roles in a left-hand list;
+- let authorised administrators create a named custom role with a description;
+- group the right-hand permission controls by SportStack screen or feature, including module access
+  and action-level rights such as view, create, edit, approve, publish and delete where applicable;
+- show the members assigned to each role;
+- keep built-in role definitions visibly distinct from custom roles, with safe clone/customise paths;
+- retain the Association -> Club -> Division -> Team scope boundary, inheritance and server-side
+  enforcement so a friendly permission matrix cannot grant authority above the administrator's scope;
+- show inherited, explicitly allowed and explicitly denied states clearly, with confirmation and an
+  audit record for meaningful changes.
+
+This is food for thought for a later permissions UX/architecture block. It is not a blocker for the
+current actual-role matrix and must not weaken the existing active-mode, hierarchy or RLS controls.
 - Keep the wording clear about what action the user needs to take.
 - Make the templates visually consistent with SportStack branding.
 
 ## Permission, Modules, and Parked Feedback Items
 **Logged:** 3 July 2026  
-**Updated:** 2 August 2026
-**Status:** Scoped group, set, role and user module controls implemented on Dev
+**Updated:** 8 August 2026
+**Status:** Existing controls remain active; full Roles & modules review parked by owner
+
+**Owner direction:** Stop the current permission-screen testing and return to it as one dedicated
+review. During other work, fix a permission problem immediately when it causes incorrect access or
+blocks the workflow being tested; otherwise record it here. Every new feature must include an
+explicit access-control decision rather than assuming all signed-in users should receive it.
 
 **Do:**
 - Add separate permission concepts for Player MVP Voting submission/result visibility and Umpire Match Voting submission/result visibility, plus committee access and committee president access.
@@ -205,6 +253,10 @@ The Supabase emails for password resets, placeholder claim links, and welcome me
   management, alongside the existing workflow RLS.
 
 **Still parked in this item:**
+- Full Roles & modules information architecture and UX, including the supplied predefined/custom
+  role list, grouped permission matrix and assigned-member reference.
+- The Club Admin menu did not show Roles & modules although the direct route loaded. The club
+  selector test was not completed before the review was parked.
 - Action-level submission, result, View/Create/Edit/Delete/Approve/Export permissions beyond the
   existing workflow RLS. Catalogue foundations exist, but the UI hides these entries until every
   affected server workflow enforces them end to end.

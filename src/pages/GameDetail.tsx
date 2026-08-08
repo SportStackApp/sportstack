@@ -84,7 +84,7 @@ const GameDetail = () => {
   const { selectedTeam } = useTeamContext();
   const [game, setGame] = useState<GameRow | null>(null);
   const [loading, setLoading] = useState(true);
-  const [availability, setAvailability] = useState<AvailabilityStatus>("PENDING");
+  const [availability, setAvailability] = useState<AvailabilityStatus>("NO_RESPONSE");
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [lineupAccess, setLineupAccess] = useState<LineupAccess | null>(null);
   const [hasVisibleLineup, setHasVisibleLineup] = useState(false);
@@ -225,7 +225,7 @@ const GameDetail = () => {
               green_cards: appearance?.green_cards || 0,
               yellow_cards: appearance?.yellow_cards || 0,
               red_cards: appearance?.red_cards || 0,
-              availability_status: (avail?.status as AvailabilityStatus) || "PENDING",
+              availability_status: (avail?.status as AvailabilityStatus) || "NO_RESPONSE",
             };
           });
 
@@ -247,7 +247,7 @@ const GameDetail = () => {
                 green_cards: appearance.green_cards || 0,
                 yellow_cards: appearance.yellow_cards || 0,
                 red_cards: appearance.red_cards || 0,
-                availability_status: "PENDING",
+                availability_status: "NO_RESPONSE",
               };
             });
 
@@ -451,7 +451,7 @@ const GameDetail = () => {
                           {!member.played && member.availability_status === "AVAILABLE" && (
                             <Badge variant="outline">Available • not selected</Badge>
                           )}
-                          {member.played && member.availability_status === "PENDING" && (
+                          {member.played && member.availability_status === "NO_RESPONSE" && (
                             <Badge variant="outline">Played • no response</Badge>
                           )}
                         </div>
@@ -466,7 +466,7 @@ const GameDetail = () => {
                     }
                     className="text-xs"
                   >
-                    {member.availability_status === "PENDING" ? "No response" : member.availability_status}
+                    {member.availability_status === "NO_RESPONSE" ? "No response" : member.availability_status}
                   </Badge>
                 </div>
               ))}
@@ -500,11 +500,11 @@ interface AvailabilityButtonProps {
 
 const AvailabilityButton = ({ status, current, onClick, icon, label }: AvailabilityButtonProps) => {
   const isSelected = status === current;
-  const variants = {
+  const variants: Record<AvailabilityStatus, { selected: string; default: string }> = {
     AVAILABLE: { selected: "bg-success text-success-foreground border-success", default: "border-success/50 text-success hover:bg-success/10" },
     UNAVAILABLE: { selected: "bg-destructive text-destructive-foreground border-destructive", default: "border-destructive/50 text-destructive hover:bg-destructive/10" },
-    UNSURE: { selected: "bg-warning text-warning-foreground border-warning", default: "border-warning/50 text-warning-foreground hover:bg-warning/10" },
-    PENDING: { selected: "", default: "" },
+    MAYBE: { selected: "bg-warning text-warning-foreground border-warning", default: "border-warning/50 text-warning-foreground hover:bg-warning/10" },
+    NO_RESPONSE: { selected: "", default: "" },
   };
 
   return (

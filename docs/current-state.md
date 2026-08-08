@@ -36,15 +36,30 @@ Update this file after every meaningful Codex task, pull request, schema change,
   from the Club Admin checkpoint. Owner testing then clarified the persistence problem: navigating
   to another SportStack page may reset that page, but merely switching to another window and back
   must not close an open dialog or discard unsaved text. The focus recheck was unmounting protected
-  pages while Supabase reconfirmed the existing permission context. A local fix keeps the last
-  confirmed page mounted during that background check. The same local package displays Coach/Team
-  Manager role scopes when no membership row exists. It remains uncommitted and needs a deployed
-  focus-regression test before it can be treated as landed.
+  pages while Supabase reconfirmed the existing permission context. Deployed commit `f3486b0` keeps
+  the last confirmed page mounted during that background check and displays Coach/Team Manager role
+  scopes when no membership row exists. Aaron confirmed the Users Edit Details dialog and unsaved
+  text survive switching windows, and the Coach test row shows its Pumas scope. Roles & Permissions
+  still visibly refreshes when focus returns; the broader screen-by-screen focus audit is parked
+  until after the current actual-role matrix, with affected screens to be recorded as testing continues.
 
 - The consolidated 8 August transfer state, active workstreams, past delivery summary, remaining
   gates and takeover order are recorded at the top of `CODEX_HANDOFF.md`. The generated Obsidian
   mirror was refreshed from committed `origin/dev` at `6246a48`; local uncommitted changes remain
   intentionally absent from the mirror.
+
+- On 8 August Aaron discontinued the current Roles & modules screen review and parked the broader
+  permission model/UI for a later dedicated pass. Existing active-mode, hierarchy, server and RLS
+  protections remain mandatory. Permission defects that expose or block a workflow should be fixed
+  when encountered; non-blocking gaps should be recorded. Every new feature now requires an explicit
+  access-control decision covering the actions relevant to that feature.
+
+- Actual Team Manager testing on deployed `f3486b0` confirmed the Pumas fixture list and scoped
+  navigation, but opening a scheduled fixture crashed at the route boundary. `GameDetail` used a
+  mismatched `UNSURE` style key for database status `MAYBE` and legacy fallback `PENDING` instead of
+  `NO_RESPONSE`. A local no-migration repair aligns and exhaustively type-checks the generated enum.
+  Focused lint, TypeScript, build and all 146 Python regression tests pass; Dev deployment and owner
+  retest of the same fixture remain required.
 
 The locked Owner-Test remediation package is implemented on the Dev database and `dev` code path.
 Every observation from the 31 July to 2 August review is now mapped in
