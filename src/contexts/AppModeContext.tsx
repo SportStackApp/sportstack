@@ -566,7 +566,6 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     const refreshCanonicalContext = () => {
       if (refreshInFlight) return;
       refreshInFlight = true;
-      setContextConfirmed(false);
 
       void (async () => {
         const { data: refreshedRoleRows, error: refreshedRolesError } = await supabase
@@ -606,10 +605,16 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
       })()
         .catch((refreshError: unknown) => {
           if (!active) return;
-          setModeSyncError(refreshError instanceof Error
-            ? refreshError.message
-            : "The current mode and scope could not be checked.");
-          setContextConfirmed(false);
+          // Losing and regaining browser focus must not unmount the current
+          // protected page. Keep the last server-confirmed context during a
+          // transient background failure; sign-out, role changes and a newer
+          // canonical context still flow through their normal fail-closed paths.
+          if (!lastCanonicalContextRef.current) {
+            setModeSyncError(refreshError instanceof Error
+              ? refreshError.message
+              : "The current mode and scope could not be checked.");
+            setContextConfirmed(false);
+          }
         })
         .finally(() => {
           refreshInFlight = false;

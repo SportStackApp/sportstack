@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-08-04
+Last updated: 2026-08-08
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -30,7 +30,21 @@ Update this file after every meaningful Codex task, pull request, schema change,
 
 ## Current priority
 
-- The 4 August owner retest found `/admin/users` failing for both the Super Admin and scoped account paths. The permission RPC succeeded, but the following profile request placed every visible UUID in one PostgREST URL and was rejected with HTTP 400. `UsersManagement` now splits broad authorised profile sets into bounded batches, merges them deterministically and applies the requested page without changing any user, role or permission data. Focused regression coverage passes; deployment and owner retesting remain pending.
+- The 4 August `/admin/users` failure was fixed, committed and deployed to Dev as `6246a48`. The
+  page now splits broad authorised profile sets into bounded requests instead of placing every UUID
+  in one oversized PostgREST URL. The owner confirmed the page loads. Scoped role testing continues
+  from the Club Admin checkpoint. Owner testing then clarified the persistence problem: navigating
+  to another SportStack page may reset that page, but merely switching to another window and back
+  must not close an open dialog or discard unsaved text. The focus recheck was unmounting protected
+  pages while Supabase reconfirmed the existing permission context. A local fix keeps the last
+  confirmed page mounted during that background check. The same local package displays Coach/Team
+  Manager role scopes when no membership row exists. It remains uncommitted and needs a deployed
+  focus-regression test before it can be treated as landed.
+
+- The consolidated 8 August transfer state, active workstreams, past delivery summary, remaining
+  gates and takeover order are recorded at the top of `CODEX_HANDOFF.md`. The generated Obsidian
+  mirror was refreshed from committed `origin/dev` at `6246a48`; local uncommitted changes remain
+  intentionally absent from the mirror.
 
 The locked Owner-Test remediation package is implemented on the Dev database and `dev` code path.
 Every observation from the 31 July to 2 August review is now mapped in

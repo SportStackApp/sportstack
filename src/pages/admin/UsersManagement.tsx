@@ -752,6 +752,37 @@ const UsersManagement = () => {
     );
   }, [clubFilter, divisionFilter, scopedAvailableTeams]);
 
+  const renderRoleScopeAssignments = (profile: UserWithRoles) => {
+    const seenLabels = new Set<string>();
+    const assignments = profile.roleScopes.flatMap((scope, index) => {
+      const team = scope.team_id ? teams.find((item) => item.id === scope.team_id) : undefined;
+      const clubId = scope.club_id || team?.club_id;
+      const club = clubId ? clubs.find((item) => item.id === clubId) : undefined;
+      const associationId = scope.association_id || club?.association_id;
+      const association = associationId ? associations.find((item) => item.id === associationId) : undefined;
+      const division = team?.division_id ? divisions.find((item) => item.id === team.division_id) : undefined;
+      const label = [association?.name, club?.name, division?.name, team?.name].filter(Boolean).join(" / ");
+
+      if (!label || seenLabels.has(label)) return [];
+      seenLabels.add(label);
+      return [{ key: `${scope.role}-${scope.association_id || "all"}-${scope.club_id || "all"}-${scope.team_id || "all"}-${index}`, label }];
+    });
+
+    if (assignments.length === 0) {
+      return <span className="text-muted-foreground text-sm">Unassigned</span>;
+    }
+
+    return (
+      <div className="flex flex-col items-start gap-1">
+        {assignments.map((assignment) => (
+          <Badge key={assignment.key} variant="outline" className="text-xs">
+            {assignment.label}
+          </Badge>
+        ))}
+      </div>
+    );
+  };
+
   const filteredUsers = users;
   const paginatedUsers = users;
 
@@ -2081,7 +2112,7 @@ const UsersManagement = () => {
                       </TableCell>
                       <TableCell>
                         {u.memberships.length === 0 ? (
-                          <span className="text-muted-foreground text-sm">Unassigned</span>
+                          renderRoleScopeAssignments(u)
                         ) : (
                           <div className="space-y-1">
                             {(() => {

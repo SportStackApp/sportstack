@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-04
+Last updated: 2026-08-08
 
 Future agents should start by reading these files in order:
 
@@ -10,9 +10,165 @@ Future agents should start by reading these files in order:
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
-## Current release state
+## 8 August 2026 transfer snapshot
 
-- The 4 August owner retest found `/admin/users` failing for both broad Super Admin and scoped account views. Supabase API logs confirmed `admin_visible_profile_ids` succeeded, then the browser sent hundreds of returned UUIDs in one `profiles?id=in.(...)` URL and received HTTP 400. The local fix batches authorised profile IDs into safe requests before sorting and paging. No database, user, role or permission data was changed. Focused regression coverage passes; Dev deployment and owner retesting are pending.
+This section is the current transfer brief. The longer sections below preserve implementation and
+release detail from earlier work, but some older "pending deployment" wording has been superseded by
+this snapshot.
+
+### Repository and release position
+
+- Checkout: `C:\Users\mulla\Projects\SportStackApp\sportstack`.
+- Current branch: `dev` at `6246a48`, matching `origin/dev`.
+- `origin/dev` is 70 commits ahead of `origin/main`.
+- `origin/main` is 12 commits ahead of `origin/prod`.
+- `origin/main` ends at `4bcb4fc`; `origin/prod` ends at `682b8ea`.
+- No `main`, `prod`, Production Supabase, Production Vercel, DNS, domain, redirect or secret change
+  was made during this consolidation.
+- Two pre-existing local changes are intentionally unfinished and must be preserved:
+  - `src/pages/admin/UsersManagement.tsx`
+  - `notes/known-issues.md`
+- The generated Obsidian mirror was refreshed from `origin/dev` at `6246a48` on 8 August. It cannot
+  include these uncommitted files or this handoff update until they are committed and pushed.
+
+### Active Codex task inventory reviewed
+
+The Codex task list was reviewed on 8 August. Only this consolidation task was actively running.
+The following SportStack tasks are the active or parked workstreams that another harness should
+carry forward; unrelated Personal, Work and Grampians Hockey chats were excluded.
+
+| Workstream | Current position | What remains |
+|---|---|---|
+| Owner-test remediation and current Dev plan | The 14-block package is implemented on Dev. Permission, navigation, dashboard, communications, both voting modules, formation, committee and Safety Hub work has extensive automated/read-only evidence. | Complete the actual-role and signed-in workflow matrix in `docs/owner-test-matrix.md`; record Pass, Fail or Needs discussion; only then decide whether Dev is accepted for `main`. |
+| Users page reliability | Oversized PostgREST profile requests were fixed, committed and deployed to Dev as `6246a48`. The owner confirmed the Users page loads. | Continue the matrix from Club Admin scope. Retest Super Admin and scoped users. Resolve the rejected-mode visual mismatch where an unauthorised club such as Blaze can remain displayed. |
+| Focus persistence and scoped role display | Owner testing confirmed that returning focus to SportStack temporarily unmounted protected pages, closing Edit Details and discarding unsaved text. A local AppMode background-recheck fix keeps the last confirmed page mounted. Coach/Team Manager role scopes also display instead of `Unassigned`. Intentional navigation to another SportStack page may still reset page state. | Deploy to Dev, then confirm an open Edit Details dialog and unsaved text survive switching to another window and back. Retest an actual scoped role row. Do not treat this as landed yet. |
+| Wider focus persistence audit | The requirement is now clarified: ordinary navigation may load each page fresh. The defect is loss of the current form/dialog when the browser merely loses and regains focus. | After the global fix passes on Users, regression-test another unsaved form and a Safety Hub dialog. Keep initial and genuinely revoked access fail-closed. |
+| Fixtures and match presentation | Bye handling, calendar navigation, result colours/scores, completed-match participants/stats, competition ordering and Super/Association Admin-only fixture editing are on Dev through `4cc7070`. | Deployed owner retest across Association Admin, Club/Team views, byes and a scraped completed fixture. My Dashboard's separate bye formatting and any remaining availability duplicates need regression checks. |
+| Expense Hub Stage 1 and Stage 2 | Manual expense tracking, private attachments, exports, CSV/OFX imports, PDF statement/invoice extraction, OpenAI-to-Claude fallback, approval tracking and AI activity are on Dev through `701edab`. Dev migrations/functions/RLS checks passed. | Signed-in owner smoke test using de-identified files. Before any Production release, separately approve provider privacy/region, billing limits and Production deployment. |
+| Umpire Portal Production release | Public portal work and the guarded backup-first release tooling are prepared. Encrypted 30-day Vercel/Supabase access was previously verified. Production remains unchanged. | Revalidate token expiry and branch/preflight state. Production release, Turnstile/Vercel settings, migrations, function deploy and `prod` promotion require a fresh explicit owner approval. |
+| Domain rollout | Corrected repository preparation is on Dev: future `hb.sportstackapp.com.au` routes to the SportStack Umpire Portal while current hosts stay unchanged. | Live Vercel, DNS, Supabase Auth redirects, Turnstile, deployment and redirect work remain separately approval-gated. Never merge/cherry-pick superseded `chore/domain-structure` commit `3a7d6cc`. |
+| Coordination Module | Discovery only; no code, schema or live data changed. Recommended model uses scoped coordination permissions, separate assignable capabilities, configurable fixture/activity slots and immutable assignment history. | Write a docs-only technical specification first. Resolve Umpire identity/scope mismatches, then design RLS, multi-person atomic offers, deadlines/reminders, offer notes and roster/submission mismatch review before migrations. |
+| Historical membership cleanup | New bad writes are blocked. An immutable snapshot records 201 duplicate user/team groups, 44 users with multiple Primary memberships and 490 affected rows. | Produce an exact per-person keep/remove dry run. Any cleanup is destructive and requires separate approval. |
+| RevSports fixture mapping | Import safety and the main recovery block are complete. | Do not backfill fixture foreign keys yet: 162 Wimmera fixtures still lack an unambiguous `season_id` mapping. Re-run the dry-run and resolve mappings before proposing writes. |
+| Production follow-up and operations | July Production compatibility release, scraper reliability release and storage cleanup completed. Forty-four intended recovery objects remained after cleanup. | Complete signed-in Production smoke testing and continue monitoring email/reminder jobs, scraper runs and organisation Storage GB-hours. Production checks remain read-only unless separately approved. |
+| Parked product work | Action-level fine-grained permissions, email-template polish, advanced persistence coverage and broader visual polish remain intentionally parked. Hockey Trace remains experimental and disabled by default. | Prioritise only after the owner-test package and release gates are closed, unless Aaron explicitly changes scope. |
+
+### What has already been delivered
+
+- **29-30 July:** completed the approved Production compatibility release, deployed 16 migrations
+  and two Edge Functions, enabled notification schedules, released the fault-tolerant scraper and
+  reduced Production scraper backups to the intended 44 recovery objects.
+- **31 July-1 August:** recovered the RevSports importer, added the guarded Production release path,
+  locked the 14-block plan, and implemented formation/line-up, domain preparation, navigation,
+  dashboard/availability, communications, voting reliability, core administration, scoped module
+  permissions, Committee Management, Safety Hub writes and Dev quality automation.
+- **2-3 August:** added session-bound/mode-aware permission enforcement, disposable actual-role Dev
+  accounts, route/menu guards and a broad owner-test evidence matrix. Follow-up fixes covered role
+  labels, Umpire Match Voting draft/context handling, fixture/availability deduplication,
+  notification author exclusion and state retention.
+- **4 August:** completed the fixture/calendar presentation batch, Expense Hub Stages 1 and 2, and
+  the `/admin/users` broad-query fix now deployed at `6246a48`.
+
+Recent commit history is the strongest concise record of landed work. Start at `6246a48` and review
+back through `18aa428` for the owner-test package and `682b8ea` for the last Production-aligned
+baseline.
+
+### Known open defects and cautions
+
+- The actual-role browser matrix is not complete. A Viewing-as preview is useful but is not proof
+  of the same permissions as a separate account.
+- A rejected role/mode switch can leave the wrong club visible even though the backend correctly
+  denies access.
+- Umpire Match Voting candidate search must be regression-tested against only the fixture's valid
+  people; older evidence found overly broad club membership suggestions.
+- Broadcast recipient queries previously included the author. A fix landed, but end-to-end
+  notification regression testing remains required.
+- Live Supabase schema can differ from migration history. Check the live Dev schema before any
+  database-dependent change.
+- There is no complete automated signed-in browser suite. Desktop evidence exists; tablet/mobile
+  integrated testing remains incomplete.
+- Full repository lint has known debt. The latest read-only takeover run reported 360 errors and
+  78 warnings; TypeScript, production build, 10 Expense Hub tests and 144 Python regression tests
+  passed. Separate existing lint debt from regressions in changed files.
+- `docs/current-state.md`, `docs/owner-test-matrix.md` and some curated Vault notes contain dated
+  status wording. Use dates and commit evidence; do not treat an older "pending deployment" line as
+  newer than this snapshot.
+
+### Recommended takeover order
+
+1. Run `git status --short --branch` and preserve the two existing local changes.
+2. Read the local diff in `UsersManagement.tsx` and `notes/known-issues.md`; do not overwrite it.
+3. Continue `docs/owner-test-matrix.md` from the Users/Club Admin checkpoint using the prepared
+   disposable Dev accounts. Temporary credentials must remain ephemeral.
+4. Test the local focus-preservation/scoped-role change. If it passes, run the required checks, review the
+   exact diff, then commit and push only the intended files to `dev`.
+5. Work through fixtures, communications, Player MVP Voting, Umpire Match Voting, Formation,
+   Expense Hub, Safety Hub and Committee Management with clearly marked disposable Dev data.
+6. Update the matrix and current-state notes with evidence, not assumptions.
+7. Present failures and owner-judgement items to Aaron. Promote accepted Dev work to `main` only
+   after reviewing divergence and the exact commit set.
+8. Keep `prod`, Production systems, domains, secrets and destructive membership cleanup behind
+   their separate approval gates.
+
+### Useful transfer references
+
+- `docs/development-plan.md` — planned blocks and implementation state.
+- `docs/owner-test-matrix.md` — line-by-line verification checklist and execution order.
+- `notes/known-issues.md` — defects and parked work, including the local persistence addition.
+- `docs/domain-migration-plan.md` — domain preparation, live rollout and rollback gates.
+- `docs/production-release-process.md` — guarded Production release tooling.
+- `docs/scraper-operations.md` — scraper schedules, backup and retention routines.
+
+### Documentation state
+
+- This handoff is intentionally the main 8 August transfer snapshot.
+- `docs/current-state.md` is still the canonical implementation history and has been corrected for
+  the deployed Users fix, but its long dated entries should be read chronologically.
+- The curated Vault pages were last edited on 30 July and therefore lag newer Expense Hub, fixture
+  and owner-test work. The generated repository mirror is current to committed `origin/dev`.
+- Because this task is being completed with existing local work still uncommitted, Obsidian close-out
+  remains pending until the intended files are committed and pushed to `dev`, followed by sync and
+  `-Check`.
+
+### 8 August 2026 connection readiness audit
+
+- GitHub app access works as `SportStackApp` with administrator permission. GitHub CLI is now
+  actively using `SportStackApp`; the HTTPS remote and repository-local commit identity are correct.
+- The Supabase app and CLI both reach SportStack Dev and Production. This checkout remains linked to
+  Dev, both projects report healthy, and the Dev Edge Function gateway correctly rejects
+  unauthenticated calls to protected functions with HTTP 401.
+- The Vercel app reaches the `sportstackapps-projects` team and the `sportstack` project. The latest
+  Dev deployment for `6246a48` is READY. Local Vercel CLI is authenticated only to Aaron's personal
+  account and the checkout has no `.vercel/project.json`; use the Vercel app for routine inspection.
+  The guarded Production script retains its separate encrypted access path and cannot complete a
+  preflight while the worktree is intentionally dirty.
+- Dev, Main and Production public addresses return HTTP 200. The T3 collaborative browser and local
+  Playwright Chromium both load Dev successfully. The pinned scraper environment is now aligned at
+  `supabase 2.31.0`, `beautifulsoup4 4.15.0`, `playwright 1.61.0` and `requests 2.34.2`.
+- Development environment validation, plan lint, TypeScript, production build, 10 Expense Hub tests,
+  144 Python tests, Obsidian sync/check and the daily scheduled-task status pass. Full lint remains
+  at its known 360-error/78-warning baseline. Docker Desktop is installed but its daemon is stopped;
+  Deno is not installed.
+- The latest Production scraper run `31238193085` had one failed Sunraysia target because GitHub's
+  runner received HTTP 403 from a round page. The same base, game and round URLs returned HTTP 200
+  locally, while the other targeted fixture jobs passed, so this is not a Supabase credential
+  failure. Monitor or separately harden retry handling before treating it as resolved.
+- Dev function inventory has drift: deployed `provider-key-healthcheck` and `update-user-details`
+  are absent from the repository function folders, while repository folders `clear-test-data`,
+  `profile-claim` and `profile-claim-admin` are not in the deployed Dev list. Reconcile this
+  read-only before the next related function edit or deployment.
+
+## Detailed implementation history
+
+The entries below retain earlier technical detail. Where their pending/deployed wording conflicts
+with the 8 August snapshot above, the newer snapshot and current Git evidence win.
+
+- The 4 August owner retest found `/admin/users` failing for both broad Super Admin and scoped
+  account views. Supabase API logs confirmed `admin_visible_profile_ids` succeeded, then the browser
+  sent hundreds of returned UUIDs in one `profiles?id=in.(...)` URL and received HTTP 400. The fix
+  batches authorised profile IDs into safe requests before sorting and paging. No database, user,
+  role or permission data was changed. It is committed and deployed to Dev as `6246a48`; the page
+  now loads and scoped owner testing continues.
 
 - Expense Hub Stage 1 is implemented on the Dev code/database path at `/expense-hub`. It includes
   manual personal/association/club expenses, scoped suppliers/aliases/payment methods/categories,

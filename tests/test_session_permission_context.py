@@ -263,6 +263,23 @@ class SessionPermissionContextFrontendTests(unittest.TestCase):
         self.assertLess(confirmation, redirect)
         self.assertIn("if (!modesyncerror)", gate)
 
+    def test_focus_recheck_keeps_confirmed_page_mounted(self) -> None:
+        source = normalised(APP_MODE_CONTEXT)
+        refresh = re.search(
+            r"const refreshcanonicalcontext = \(\) => \{(.*?)const handlestorage",
+            source,
+        )
+
+        self.assertIsNotNone(refresh)
+        body = refresh.group(1)
+        self.assertIn('window.addeventlistener("focus", handlefocus)', source)
+        self.assertIn('document.addeventlistener("visibilitychange", handlevisibility)', source)
+        self.assertNotIn(
+            "refreshinflight = true; setcontextconfirmed(false)",
+            body,
+        )
+        self.assertIn("if (!lastcanonicalcontextref.current)", body)
+
     def test_player_navigation_does_not_expose_umpire_administration(self) -> None:
         app = normalised(APP)
         layout = normalised(APP_LAYOUT)

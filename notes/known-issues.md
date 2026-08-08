@@ -84,6 +84,12 @@ is open. The pass also confirmed these remaining gaps:
   `modeLabel`, the Admin badge reads the account's highest stored role and Profile's unnamed
   role/scope line is caused by its local label maps omitting `UMPIRE_ADMIN`. These display defects do
   not prove the active preview reset.
+- When a mode change is correctly rejected because the currently selected club is outside that
+  role's assigned scope, the unauthorised club can remain visible in the cascade and entity page
+  while the lower mode label is shown. Example: Blaze remained on screen after Club Admin mode was
+  rejected because the account is not a Blaze Club Admin. Keep the security rejection, but return
+  the interface to the previous valid mode/scope or move it to an authorised club so the displayed
+  page, cascade and active mode cannot disagree.
 - Direct navigation while previewing Team Manager rendered Umpire Match Voting and MVP Analytics.
   The Umpire ballot checks stored account roles rather than active mode, `useAdminScope` treats Team
   Manager as an admin and `/admin/analytics` lacks a direct module gate. Safety Hub rendered its
@@ -135,6 +141,27 @@ Still required before staging:
 - Test committee private uploads, Safety Hub matrix/link changes and the two voting workflows with
   clearly marked disposable Dev records.
 - Report repository-wide lint separately while its baseline remains 362 errors and 76 warnings.
+
+## Whole-Site State Persistence Audit
+
+**Logged:** 4 August 2026
+**Status:** Focus-remount cause confirmed — local fix awaiting deployed retest
+
+**Problem:**
+When the browser loses focus and then returns to SportStack, the permission context performs a
+background server recheck. The protected page was temporarily unmounted during that check. Open
+dialogs therefore closed and unsaved form text was lost even though the user had not navigated away.
+
+Intentional navigation to another SportStack page may load that page fresh. Cross-page filter
+persistence is not required by this issue.
+
+**To do:**
+- Keep the last confirmed protected page mounted while focus/visibility performs a background
+  permission-context check.
+- Continue to fail closed during initial loading, actual sign-out, revoked roles or a newer canonical
+  mode/scope from another tab.
+- Confirm Users Edit Details and its unsaved text survive switching to another window and back.
+- Regression-test one other unsaved form and one Safety Hub dialog after the Dev deployment.
 
 ## Email Template Polish
 **Logged:** 30 June 2026  
