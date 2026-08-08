@@ -55,11 +55,14 @@ Update this file after every meaningful Codex task, pull request, schema change,
   access-control decision covering the actions relevant to that feature.
 
 - Actual Team Manager testing on deployed `f3486b0` confirmed the Pumas fixture list and scoped
-  navigation, but opening a scheduled fixture crashed at the route boundary. `GameDetail` used a
-  mismatched `UNSURE` style key for database status `MAYBE` and legacy fallback `PENDING` instead of
-  `NO_RESPONSE`. A local no-migration repair aligns and exhaustively type-checks the generated enum.
-  Focused lint, TypeScript, build and all 146 Python regression tests pass; Dev deployment and owner
-  retest of the same fixture remain required.
+  navigation, but opening a scheduled fixture crashed at the route boundary. Commit `df5b0ec`
+  aligned the mismatched availability keys with generated enum values `MAYBE` and `NO_RESPONSE`,
+  exhaustively type-checks the style map and passed Dev Quality, build and all 146 Python tests.
+  Aaron confirmed the deployed scheduled fixture detail now displays correctly. No migration.
+  Follow-up testing found the unselected Maybe button unreadable, mixed Unsure/Maybe copy and no
+  way to clear a selected response. A local continuation now uses **Maybe** consistently on Dashboard
+  and Fixture Detail, adds readable tinted unselected styles and matches Dashboard's safe click-again
+  delete behaviour to return to **No response**. Deployment and owner retest remain required.
 
 The locked Owner-Test remediation package is implemented on the Dev database and `dev` code path.
 Every observation from the 31 July to 2 August review is now mapped in

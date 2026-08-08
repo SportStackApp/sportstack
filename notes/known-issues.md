@@ -171,7 +171,7 @@ the broader focus-refresh audit as a separate follow-up rather than interrupt th
 ## Team Manager Scheduled Fixture Detail Crash
 
 **Logged:** 8 August 2026
-**Status:** Fix prepared locally — Dev deployment and owner retest required
+**Status:** Fixed and owner-confirmed on Dev in `df5b0ec`
 
 The actual Team Manager Pumas fixture list loaded correctly on deployed `f3486b0`, but opening a
 scheduled fixture displayed the route error boundary. `GameDetail` passed availability status
@@ -179,10 +179,19 @@ scheduled fixture displayed the route error boundary. `GameDetail` passed availa
 missing style record. The page also used legacy client fallback `PENDING` instead of the generated
 database enum value `NO_RESPONSE`.
 
-The local repair uses the four generated availability values (`AVAILABLE`, `UNAVAILABLE`, `MAYBE`,
-`NO_RESPONSE`) consistently and declares the style map as a complete typed record. Focused lint,
-TypeScript, build and all 146 Python regressions pass; repository-wide lint remains at its existing
-360-error/78-warning baseline. No database migration is included.
+The deployed repair uses the four generated availability values (`AVAILABLE`, `UNAVAILABLE`,
+`MAYBE`, `NO_RESPONSE`) consistently and declares the style map as a complete typed record. Focused
+lint, TypeScript, build, Dev Quality and all 146 Python regressions passed; repository-wide lint
+remains at its existing 360-error/78-warning baseline. Aaron confirmed the scheduled fixture detail
+now displays correctly. No database migration is included.
+
+Follow-up owner testing found three availability UX issues on that detail: the unselected Maybe
+button text was unreadable, the UI mixed **Unsure** and **Maybe**, and clicking the selected response
+again did not clear it. Aaron chose **Maybe** as the consistent user-facing term because it matches
+the database value. The local continuation uses readable tinted unselected states, updates Dashboard
+and Fixture Detail to **Maybe**, and reuses the Dashboard delete-row behaviour so selecting the
+active choice again returns to **No response**. The buttons now expose pressed/clear state to
+assistive technology and block duplicate clicks while saving.
 
 ## Email Template Polish
 **Logged:** 30 June 2026  

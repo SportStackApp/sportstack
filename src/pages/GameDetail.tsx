@@ -29,6 +29,13 @@ import {
 
 type AvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
 
+const availabilityStatusLabel = (status: AvailabilityStatus) => {
+  if (status === "AVAILABLE") return "available";
+  if (status === "UNAVAILABLE") return "unavailable";
+  if (status === "MAYBE") return "maybe";
+  return "no response";
+};
+
 interface GameRow {
   id: string;
   fixture_date: string;
@@ -85,6 +92,7 @@ const GameDetail = () => {
   const [game, setGame] = useState<GameRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [availability, setAvailability] = useState<AvailabilityStatus>("NO_RESPONSE");
+  const [availabilitySaving, setAvailabilitySaving] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [lineupAccess, setLineupAccess] = useState<LineupAccess | null>(null);
   const [hasVisibleLineup, setHasVisibleLineup] = useState(false);
@@ -271,31 +279,43 @@ const GameDetail = () => {
   }, [id, user, selectedTeam?.id]);
 
   const handleAvailability = async (status: AvailabilityStatus) => {
-    if (!user || !id) return;
+    if (!user || !id || availabilitySaving) return;
 
-    const { error } = await supabase
-      .from("fixture_availability")
-      .upsert(
-        { fixture_id: id, user_id: user.id, status },
-        { onConflict: "fixture_id,user_id" }
-      );
+    const previous = availability;
+    const isClearing = previous === status;
+    const nextStatus: AvailabilityStatus = isClearing ? "NO_RESPONSE" : status;
+    setAvailabilitySaving(true);
+    setAvailability(nextStatus);
+
+    const { error } = isClearing
+      ? await supabase
+          .from("fixture_availability")
+          .delete()
+          .eq("fixture_id", id)
+          .eq("user_id", user.id)
+      : await supabase
+          .from("fixture_availability")
+          .upsert(
+            { fixture_id: id, user_id: user.id, status },
+            { onConflict: "fixture_id,user_id" }
+          );
 
     if (error) {
+      setAvailability(previous);
       toast({
-        title: "Error",
-        description: "Failed to update availability.",
+        title: "Availability not saved",
+        description: "Please try again.",
         variant: "destructive",
       });
     } else {
-      setAvailability(status);
       setTeamMembers((current) => current.map((member) => (
-        member.user_id === user.id ? { ...member, availability_status: status } : member
+        member.user_id === user.id ? { ...member, availability_status: nextStatus } : member
       )));
-      toast({
-        title: "Availability Updated",
-        description: `You are now marked as ${status.toLowerCase()}.`,
-      });
+      toast(isClearing
+        ? { title: "Availability cleared", description: "No response is selected for this fixture." }
+        : { title: "Availability updated", description: `You are now marked as ${availabilityStatusLabel(status)}.` });
     }
+    setAvailabilitySaving(false);
   };
 
   if (loading) {
@@ -413,9 +433,9 @@ const GameDetail = () => {
               Let your coach know if you can play in this match.
             </p>
             <div className="grid grid-cols-3 gap-3">
-              <AvailabilityButton status="AVAILABLE" current={availability} onClick={() => handleAvailability("AVAILABLE")} icon={<Check className="h-5 w-5" />} label="Available" />
-              <AvailabilityButton status="UNAVAILABLE" current={availability} onClick={() => handleAvailability("UNAVAILABLE")} icon={<X className="h-5 w-5" />} label="Unavailable" />
-              <AvailabilityButton status="MAYBE" current={availability} onClick={() => handleAvailability("MAYBE")} icon={<HelpCircle className="h-5 w-5" />} label="Unsure" />
+              <AvailabilityButton status="AVAILABLE" current={availability} saving={availabilitySaving} onClick={() => handleAvailability("AVAILABLE")} icon={<Check className="h-5 w-5" />} label="Available" />
+              <AvailabilityButton status="UNAVAILABLE" current={availability} saving={availabilitySaving} onClick={() => handleAvailability("UNAVAILABLE")} icon={<X className="h-5 w-5" />} label="Unavailable" />
+              <AvailabilityButton status="MAYBE" current={availability} saving={availabilitySaving} onClick={() => handleAvailability("MAYBE")} icon={<HelpCircle className="h-5 w-5" />} label="Maybe" />
             </div>
           </CardContent>
         </Card>
@@ -466,7 +486,9 @@ const GameDetail = () => {
                     }
                     className="text-xs"
                   >
-                    {member.availability_status === "NO_RESPONSE" ? "No response" : member.availability_status}
+                    {member.availability_status === "NO_RESPONSE"
+                      ? "No response"
+                      : availabilityStatusLabel(member.availability_status).replace(/^./, (letter) => letter.toUpperCase())}
                   </Badge>
                 </div>
               ))}
@@ -493,25 +515,30 @@ const GameDetail = () => {
 interface AvailabilityButtonProps {
   status: AvailabilityStatus;
   current: AvailabilityStatus;
+  saving: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
 }
 
-const AvailabilityButton = ({ status, current, onClick, icon, label }: AvailabilityButtonProps) => {
+const AvailabilityButton = ({ status, current, saving, onClick, icon, label }: AvailabilityButtonProps) => {
   const isSelected = status === current;
   const variants: Record<AvailabilityStatus, { selected: string; default: string }> = {
-    AVAILABLE: { selected: "bg-success text-success-foreground border-success", default: "border-success/50 text-success hover:bg-success/10" },
-    UNAVAILABLE: { selected: "bg-destructive text-destructive-foreground border-destructive", default: "border-destructive/50 text-destructive hover:bg-destructive/10" },
-    MAYBE: { selected: "bg-warning text-warning-foreground border-warning", default: "border-warning/50 text-warning-foreground hover:bg-warning/10" },
+    AVAILABLE: { selected: "bg-success text-success-foreground border-success", default: "border-success/60 bg-success/5 text-success hover:bg-success/10" },
+    UNAVAILABLE: { selected: "bg-destructive text-destructive-foreground border-destructive", default: "border-destructive/60 bg-destructive/5 text-destructive hover:bg-destructive/10" },
+    MAYBE: { selected: "bg-warning text-warning-foreground border-warning", default: "border-warning/70 bg-warning/10 text-foreground hover:bg-warning/20" },
     NO_RESPONSE: { selected: "", default: "" },
   };
 
   return (
     <button
+      type="button"
       onClick={onClick}
+      disabled={saving}
+      aria-pressed={isSelected}
+      aria-label={`${label}${isSelected ? "; selected; select again to clear" : ""}`}
       className={cn(
-        "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
+        "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 disabled:cursor-wait disabled:opacity-60",
         isSelected ? variants[status].selected : variants[status].default
       )}
     >

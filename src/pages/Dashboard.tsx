@@ -88,13 +88,13 @@ type DisplayMembershipType = "PRIMARY" | "SECONDARY" | "FILL_IN";
 const AVAILABILITY_OPTIONS = [
   { status: "AVAILABLE", label: "Available", icon: Check },
   { status: "UNAVAILABLE", label: "Unavailable", icon: X },
-  { status: "MAYBE", label: "Unsure", icon: HelpCircle },
+  { status: "MAYBE", label: "Maybe", icon: HelpCircle },
 ] as const;
 
 const availabilityLabel = (status?: AvailabilityStatus) => {
   if (status === "AVAILABLE") return "Available";
   if (status === "UNAVAILABLE") return "Unavailable";
-  if (status === "MAYBE") return "Unsure";
+  if (status === "MAYBE") return "Maybe";
   return "No response";
 };
 

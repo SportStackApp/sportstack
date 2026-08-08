@@ -20,6 +20,22 @@ class GameDetailAvailabilityTests(unittest.TestCase):
         self.assertNotIn("UNSURE: {", source)
         self.assertNotIn('"PENDING"', source)
 
+    def test_selected_availability_can_be_cleared(self) -> None:
+        source = SOURCE.read_text(encoding="utf-8")
+
+        self.assertIn("const isClearing = previous === status;", source)
+        self.assertIn('.from("fixture_availability")\n          .delete()', source)
+        self.assertIn('title: "Availability cleared"', source)
+        self.assertIn('aria-label={`${label}${isSelected ? "; selected; select again to clear" : ""}`}', source)
+
+    def test_maybe_is_presented_consistently_with_readable_unselected_colours(self) -> None:
+        source = SOURCE.read_text(encoding="utf-8")
+
+        self.assertIn('if (status === "MAYBE") return "maybe";', source)
+        self.assertIn('label="Maybe"', source)
+        self.assertIn('MAYBE: { selected: "bg-warning', source)
+        self.assertIn('default: "border-warning/70 bg-warning/10 text-foreground', source)
+
 
 if __name__ == "__main__":
     unittest.main()
