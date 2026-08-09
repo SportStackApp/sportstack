@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-08-08
+Last updated: 2026-08-09
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -29,6 +29,25 @@ Update this file after every meaningful Codex task, pull request, schema change,
 8. Live Supabase checks
 
 ## Current priority
+
+- The 9 August actual-role run is recorded in the new top section of `CODEX_HANDOFF.md`. Team
+  Manager, Coach, Player, Association Admin, dashboard, fixture/calendar/completed-game, Safety Hub
+  and Committee paths passed on Dev. Communications is partial, multi-club Team Manager switching
+  failed, Player MVP still lacks an eligible disposable round, and Umpire Match Voting suggestions
+  remain association-wide. No Production change or real-user communication occurred.
+
+- Association Admin fixture editing exposed a data-integrity blocker: saving an unchanged local
+  time wrote the wall clock as UTC and moved a `12:15 pm` fixture to `10:15 pm`. Commit `e38150d`
+  now converts edit/add form values through `associations.timezone` (default
+  `Australia/Melbourne`). Focused lint, TypeScript, build, all 16 Vitest tests, all 148 Python tests,
+  Dev Quality and Vercel deployment passed. The deployed browser retest and live Dev row both kept
+  the original instant. No migration.
+
+- Final health checks found existing debt rather than a new regression: full lint remains 360
+  errors/78 warnings; `npm audit --omit=dev` reports 10 high and one moderate production-package
+  advisory; Dev Supabase reports 69 security WARN and 239 performance WARN advisor notices. All 16
+  Edge Functions are ACTIVE and the latest 100 Edge requests were HTTP 200. Treat dependency and
+  advisor remediation as reviewed standalone work.
 
 - The 4 August `/admin/users` failure was fixed, committed and deployed to Dev as `6246a48`. The
   page now splits broad authorised profile sets into bounded requests instead of placing every UUID
@@ -62,7 +81,11 @@ Update this file after every meaningful Codex task, pull request, schema change,
   Follow-up testing found the unselected Maybe button unreadable, mixed Unsure/Maybe copy and no
   way to clear a selected response. A local continuation now uses **Maybe** consistently on Dashboard
   and Fixture Detail, adds readable tinted unselected styles and matches Dashboard's safe click-again
-  delete behaviour to return to **No response**. Deployment and owner retest remain required.
+  delete behaviour to return to **No response**. Commit `7d7e67f` passed Dev Quality, build and 148
+  Python tests; Aaron confirmed the complete deployed control, persistence and clearing behaviour.
+  The same actual Team Manager then opened the Pumas line-up: Coach view exposed the expected
+  formation/save/fill-in/suggestion controls, Player view remained readable without editing controls,
+  and switching back restored Coach controls. No line-up data was changed.
 
 The locked Owner-Test remediation package is implemented on the Dev database and `dev` code path.
 Every observation from the 31 July to 2 August review is now mapped in

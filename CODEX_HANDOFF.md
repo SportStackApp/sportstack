@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-08
+Last updated: 2026-08-09
 
 Future agents should start by reading these files in order:
 
@@ -9,6 +9,74 @@ Future agents should start by reading these files in order:
 3. `docs/project-brief.md` — concise product and architecture context.
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 9 August 2026 unattended Dev test snapshot
+
+Aaron approved a Dev-only unattended actual-role and module test run. Non-blocking defects were
+recorded rather than fixed. Production, `main`, `prod`, live domains, secrets and real-user
+communications were not changed.
+
+### Release and verification position
+
+- `dev` and `origin/dev` now include commit `e38150d` (`fix(fixtures): preserve local time on admin
+  save`). Vercel deployed that exact commit successfully and Dev Quality passed.
+- The blocker was an unchanged Association Admin fixture edit shifting `12:15 pm` to `10:15 pm`
+  because the local wall-clock value was written as UTC. The repair converts fixture form values
+  through the association timezone. A browser retest kept Bobcats vs Pumas at `12:15 pm`; the Dev
+  row remained `2026-08-23 02:15:00+00`.
+- Verification passed: focused fixture lint, `npx tsc --noEmit`, `npm run build`, 16 Vitest tests,
+  148 Python tests, `git diff --check`, Dev Quality and Vercel READY. Full lint remains the existing
+  baseline of 360 errors and 78 warnings.
+- No migration is included. The four documentation files changed during owner testing were
+  deliberately preserved and extended in a separate documentation continuation.
+
+### Actual-role and workflow results
+
+| Area | Result | Evidence / remaining work |
+|---|---|---|
+| Team Manager route restriction | **Pass** | Direct `/admin/fixtures` returned to `/dashboard`; no fixture editor was exposed. |
+| Coach | **Pass** | Correct navigation, Fixtures, Squad (25), Roster (25), Coach line-up controls and direct-admin redirect. |
+| Player | **Pass** | Restricted navigation, availability persistence and click-again clearing, plus read-only published line-up. |
+| Player -> Coach -> Player line-up | **Pass** | Player availability reached Coach selection; Coach assigned and saved Goalie; Player saw the published read-only position. The exact test assignment was removed and verified absent. |
+| Association Admin | **Pass after blocker fix** | Correct association scope, fixture management access and unchanged fixture save. |
+| Dashboard/fixtures | **Pass** | Scope links, branding, list/calendar views, byes, results and completed-game participants/statistics loaded. |
+| Communications | **Partial** | Existing chat, navigation retention and notification deep-link/read state passed. A full reload clears an unsent draft; the legacy edited message opens an empty revision history; only seven messages meant earlier-page loading could not be exercised. Nothing was published. |
+| Multi-club Team Manager | **Fail — parked** | Adding a temporary Lucas HC Team Manager assignment did not provide a club-switch control; the account stayed on Grampians/Pumas. The exact temporary role was removed and verified absent. |
+| Player MVP Voting | **Partial** | The real Player route is correctly restricted but shows no rounds because the disposable player has no attended or selected fill-in match. No ballot or analytics write was made; eligible-player end-to-end testing remains. |
+| Umpire Match Voting | **Known fail — parked** | Actual Umpire account reached the ballot. Source/live logic still builds suggestions from association-wide profiles, then leaves unrelated people without a fixture team. Required scope is the two fixture teams plus recorded participants/fill-ins. No ballot was submitted. |
+| Safety Hub | **Pass, read-only** | Dashboard, Risk Register, Actions, QI Register, Bright Ideas, Matrix/Guidance, Audit History and the guided add-risk form loaded without a write. |
+| Committee Management | **Pass with display note** | Calendar, Polls, Chat, Minutes and all administration tabs loaded. Calendar shows a past `Test meeting`, while Meetings says no meetings are scheduled; discuss whether that wording is intentional. Nothing was posted or changed. |
+
+The line-up screen did not expose an obvious way to unassign a saved player; the exact Dev test row
+was removed safely through its known identifier. Treat a product-facing Remove/Clear action as a
+discussion item, not as evidence that cleanup failed.
+
+### Health-check findings
+
+- `npm audit --omit=dev`: 11 production dependency advisories — 10 high and one moderate. Direct
+  packages include `react-router-dom` (fix available) and `xlsx` (no automated fix); review as a
+  dedicated dependency update rather than mixing it into owner-test fixes.
+- Dev Supabase: 86 applied migrations; all 16 Edge Functions report ACTIVE; the latest 100 Edge
+  requests were HTTP 200. Recent Auth warnings were two deliberate invalid disposable-account
+  login attempts and one disabled Google-provider attempt.
+- Supabase database advisors remain baseline debt: 85 security notices (69 WARN) and 554
+  performance notices (239 WARN). Dominant items are executable security-definer functions,
+  unindexed foreign keys, multiple permissive policies, unused indexes and RLS init-plan costs.
+  Review each against intended RPC/RLS behaviour before changing anything.
+- The disposable Umpire account password was rotated after testing. No temporary credential was
+  added to repository notes or retained as test evidence.
+
+### Recommended next order
+
+1. Review the parked findings with Aaron: multi-club scope switching, chat reload/history,
+   line-up unassign, Committee meeting wording and Umpire suggestion scope.
+2. Prepare an eligible Dev-only Player MVP round and complete ballot, history and analytics tests
+   without sending email.
+3. Run the remaining communication pagination test with at least 51 clearly disposable messages,
+   or cover it with a focused automated test instead of publishing to real users.
+4. Plan dependency and Supabase-advisor remediation as separate reviewed batches.
+5. Only after Aaron accepts Dev, audit `dev` -> `main` divergence and promote the exact intended
+   commits. Production remains separately approval-gated.
 
 ## 8 August 2026 transfer snapshot
 
@@ -46,7 +114,8 @@ carry forward; unrelated Personal, Work and Grampians Hockey chats were excluded
 | Focus persistence and scoped role display | Deployed commit `f3486b0` keeps the confirmed Users page mounted during focus rechecks. Aaron confirmed Edit Details and unsaved text survive switching windows, and the Coach row shows its Pumas scope instead of `Unassigned`. Intentional navigation may still reset page state. | Users acceptance is complete. Keep checking scoped rows during the actual-role matrix. |
 | Wider focus persistence audit | Roles & Permissions still visibly refreshes when focus returns, despite the Users modal fix. Aaron chose not to interrupt the role matrix for another focus change. | Record other affected screens, then handle them together as a separate follow-up. Include an unsaved form and Safety Hub dialog, while keeping initial/revoked access fail-closed. |
 | Fixtures and match presentation | Bye handling, calendar navigation, result colours/scores, completed-match participants/stats, competition ordering and Super/Association Admin-only fixture editing are on Dev through `4cc7070`. | Deployed owner retest across Association Admin, Club/Team views, byes and a scraped completed fixture. My Dashboard's separate bye formatting and any remaining availability duplicates need regression checks. |
-| Team Manager scheduled fixture detail | Commit `df5b0ec` fixed the crash and Aaron confirmed the deployed detail displays. Follow-up found unreadable unselected Maybe styling, mixed Unsure/Maybe wording and no click-again clearing. A local continuation uses **Maybe** consistently on Dashboard/Fixture Detail, adds readable tinted defaults and reuses the existing safe delete-row clearing behaviour. Focused tests, TypeScript and changed-file lint pass. | Run full checks, deploy to Dev, then select Maybe, refresh, click Maybe again and confirm No response. No migration. |
+| Team Manager scheduled fixture detail | Commits `df5b0ec` and `7d7e67f` fixed the crash, aligned availability with generated enum values, made unselected controls readable, used **Maybe** consistently, persisted responses and added click-again clearing. Dev Quality/build/148 Python tests passed, and Aaron confirmed the complete deployed behaviour. | Availability acceptance is complete. Continue the actual Team Manager lineup workflow. No migration. |
+| Actual Team Manager line-up | On deployed `7d7e67f`, the Pumas Team Manager opened the Bobcats vs Pumas line-up with Coach editing controls. Player view remained visible but removed editing controls, and returning to Coach restored them. No line-up data was changed. | Team Manager line-up acceptance is complete; continue with the actual Coach account. |
 | Expense Hub Stage 1 and Stage 2 | Manual expense tracking, private attachments, exports, CSV/OFX imports, PDF statement/invoice extraction, OpenAI-to-Claude fallback, approval tracking and AI activity are on Dev through `701edab`. Dev migrations/functions/RLS checks passed. | Signed-in owner smoke test using de-identified files. Before any Production release, separately approve provider privacy/region, billing limits and Production deployment. |
 | Umpire Portal Production release | Public portal work and the guarded backup-first release tooling are prepared. Encrypted 30-day Vercel/Supabase access was previously verified. Production remains unchanged. | Revalidate token expiry and branch/preflight state. Production release, Turnstile/Vercel settings, migrations, function deploy and `prod` promotion require a fresh explicit owner approval. |
 | Domain rollout | Corrected repository preparation is on Dev: future `hb.sportstackapp.com.au` routes to the SportStack Umpire Portal while current hosts stay unchanged. | Live Vercel, DNS, Supabase Auth redirects, Turnstile, deployment and redirect work remain separately approval-gated. Never merge/cherry-pick superseded `chore/domain-structure` commit `3a7d6cc`. |

@@ -193,6 +193,39 @@ and Fixture Detail to **Maybe**, and reuses the Dashboard delete-row behaviour s
 active choice again returns to **No response**. The buttons now expose pressed/clear state to
 assistive technology and block duplicate clicks while saving.
 
+**Owner retest:** Aaron confirmed deployed commit `7d7e67f` has readable controls, consistent
+**Maybe** wording, refresh persistence and click-again clearing back to no selected response.
+The actual Pumas Team Manager also confirmed the line-up's Coach view has editing controls, Player
+view is read-only, and switching back restores the controls. No line-up data was changed.
+
+## 9 August 2026 unattended Dev findings
+
+**Status:** Logged for discussion; only the fixture data-integrity blocker was fixed
+
+- **Fixture unchanged-save timezone shift — fixed on Dev:** Association Admin saving an unchanged
+  `12:15 pm` fixture changed it to `10:15 pm`. Commit `e38150d` converts form values using the
+  association timezone. Browser and Dev DB retests passed; no migration.
+- **Multi-club Team Manager switching:** A temporary Lucas HC Team Manager role was recognised in
+  storage but did not expose a club switcher; the UI stayed on Grampians/Pumas. The exact temporary
+  role was removed and verified absent.
+- **Communications persistence/history:** An unsent draft survives in-app navigation but disappears
+  after a full reload. The only legacy edited message opens an empty revision-history dialog.
+- **Communications pagination:** Only seven existing Team Chat messages were available, so loading
+  an earlier batch beyond the newest 50 remains untested. Do not create real-user noise merely to
+  satisfy this check.
+- **Line-up removal:** Coach assignment and Player read-only display work, but no obvious UI action
+  was found to unassign a saved player. The exact test assignment was safely removed by identifier.
+- **Player MVP Voting:** The disposable Player has no attended/selected match, so the eligible
+  ballot and analytics flow still needs a controlled Dev-only round with email disabled.
+- **Umpire Match Voting suggestion scope:** Candidate loading remains association-wide. Restrict
+  suggestions to both fixture teams plus recorded participants/fill-ins; unrelated club/team
+  members must not appear merely because they share the association.
+- **Committee meeting wording:** The calendar shows a past `Test meeting`, while the Meetings tab
+  says no meetings are scheduled. Confirm whether that tab intentionally means future meetings.
+- **Repository/database health debt:** production dependency audit reports 10 high and one moderate
+  advisory. Dev Supabase advisors report 69 security WARN and 239 performance WARN notices. Review
+  both as dedicated batches; do not run broad automatic fixes during owner testing.
+
 ## Email Template Polish
 **Logged:** 30 June 2026  
 **Status:** Parked - do when revisiting claim/reset/welcome email flows
