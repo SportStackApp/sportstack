@@ -29,6 +29,11 @@ import {
 } from "@/lib/adminCascade";
 import * as XLSX from "xlsx";
 import { getFixtureDisplayStatus } from "@/lib/fixtureDisplay";
+import {
+  combineZonedDateTime,
+  DEFAULT_ASSOCIATION_TIMEZONE,
+  splitZonedDateTime,
+} from "@/lib/timezoneDateTime";
 
 interface FixtureRow {
   id: string;
@@ -135,24 +140,8 @@ const getFixtureLocationLabel = (fixture: FixtureRow) =>
   (fixture.venue?.name ?? getByeRoundLocations(fixture)) ||
   (isByeFixture(fixture) ? "No match venue — bye" : "TBD");
 
-const splitDateTime = (value: string | null) => {
-  if (!value) return { fixture_date: "", game_time: "" };
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return { fixture_date: "", game_time: "" };
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return {
-    fixture_date: `${year}-${month}-${day}`,
-    game_time: date.toTimeString().slice(0, 5),
-  };
-};
-
-const combineDateTime = (date: string, time: string) =>
-  time ? `${date}T${time}:00` : `${date}T00:00:00`;
-
-const combineOptionalDateTime = (date: string, time: string) =>
-  date && time ? combineDateTime(date, time) : null;
+const combineOptionalDateTime = (date: string, time: string, timeZone: string) =>
+  date && time ? combineZonedDateTime(date, time, timeZone) : null;
 
 const isValidExactEnd = (startAt: string, exactEndAt: string | null) =>
   exactEndAt === null || new Date(exactEndAt).getTime() > new Date(startAt).getTime();
@@ -200,7 +189,7 @@ const FixturesManagement = () => {
   const [addTeamScope, setAddTeamScope] = useState<FixtureTeamScope>(emptyFixtureTeamScope);
   const [editTeamScope, setEditTeamScope] = useState<FixtureTeamScope>(emptyFixtureTeamScope);
   const [allAssocTeams, setAllAssocTeams] = useState<FixtureTeam[]>([]);
-  const [allAssociations, setAllAssociations] = useState<{ id: string; name: string }[]>([]);
+  const [allAssociations, setAllAssociations] = useState<{ id: string; name: string; timezone: string | null }[]>([]);
   const [allClubs, setAllClubs] = useState<{ id: string; name: string; association_id: string }[]>([]);
   const [allDivisions, setAllDivisions] = useState<{ id: string; name: string; association_id: string; season_id: string | null }[]>([]);
   const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
@@ -236,7 +225,7 @@ const FixturesManagement = () => {
           supabase.from("teams").select("id, name, club_id, division_id, divisions(name, association_id, associations(name))").order("name"),
           supabase.from("pitches").select("id, name, venue_id").order("name"),
           supabase.from("divisions").select("id, name, association_id, season_id").order("name"),
-          supabase.from("associations").select("id, name").order("name"),
+          supabase.from("associations").select("id, name, timezone").order("name"),
           supabase.from("clubs").select("id, name, association_id").order("name"),
         ]);
         setVenues(venueRes.data || []);
@@ -258,7 +247,7 @@ const FixturesManagement = () => {
         supabase.from("clubs").select("id, name, association_id").eq("association_id", selectedAssociationId).order("name"),
         supabase.from("venues").select("id, name").eq("association_id", selectedAssociationId).order("name"),
         supabase.from("divisions").select("id, name, association_id, season_id").order("name"),
-        supabase.from("associations").select("id, name").order("name"),
+        supabase.from("associations").select("id, name, timezone").order("name"),
       ]);
 
       const clubIds = (clubRes.data || []).map((club) => club.id);
@@ -447,8 +436,10 @@ const FixturesManagement = () => {
       divisionId: scopeTeam?.division_id ?? ALL_CASCADE_VALUE,
     });
     
-    const dateParts = splitDateTime(fixture.fixture_date);
-    const endParts = splitDateTime(fixture.scheduled_end_at);
+    const timeZone = allAssociations.find((association) => association.id === club?.association_id)?.timezone
+      ?? DEFAULT_ASSOCIATION_TIMEZONE;
+    const dateParts = splitZonedDateTime(fixture.fixture_date, timeZone);
+    const endParts = splitZonedDateTime(fixture.scheduled_end_at, timeZone);
     
     setEditForm({
       date: dateParts.fixture_date,
@@ -526,8 +517,10 @@ const FixturesManagement = () => {
       return;
     }
 
-    const fixtureStartAt = combineDateTime(editForm.date, editForm.time);
-    const exactEndAt = combineOptionalDateTime(editForm.endDate, editForm.endTime);
+    const timeZone = allAssociations.find((association) => association.id === editTeamScope.associationId)?.timezone
+      ?? DEFAULT_ASSOCIATION_TIMEZONE;
+    const fixtureStartAt = combineZonedDateTime(editForm.date, editForm.time, timeZone);
+    const exactEndAt = combineOptionalDateTime(editForm.endDate, editForm.endTime, timeZone);
     if (!isValidExactEnd(fixtureStartAt, exactEndAt)) {
       toast({ title: "Check exact finish", description: "The exact finish must be after the fixture start.", variant: "destructive" });
       return;
@@ -593,8 +586,10 @@ const FixturesManagement = () => {
       return;
     }
 
-    const fixtureStartAt = combineDateTime(addForm.fixture_date, addForm.game_time);
-    const exactEndAt = combineOptionalDateTime(addForm.scheduled_end_date, addForm.scheduled_end_time);
+    const timeZone = allAssociations.find((association) => association.id === addTeamScope.associationId)?.timezone
+      ?? DEFAULT_ASSOCIATION_TIMEZONE;
+    const fixtureStartAt = combineZonedDateTime(addForm.fixture_date, addForm.game_time, timeZone);
+    const exactEndAt = combineOptionalDateTime(addForm.scheduled_end_date, addForm.scheduled_end_time, timeZone);
     if (!isValidExactEnd(fixtureStartAt, exactEndAt)) {
       toast({ title: "Check exact finish", description: "The exact finish must be after the fixture start.", variant: "destructive" });
       return;
