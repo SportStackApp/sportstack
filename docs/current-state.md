@@ -39,6 +39,10 @@ Update this file after every meaningful Codex task, pull request, schema change,
   focused permission-context Python 23/23, TypeScript and build pass. Aaron confirmed the refreshed
   AM Club Admin selector now behaves correctly. No migration or role change.
 
+- **AM Player multi-team switch owner pass:** Aaron confirmed Player mode offers both Primary Pumas
+  and Secondary Lucas HC, and that Lucas HC loads and remains selected without bouncing back. The
+  separate multi-Team-Manager-role variant remains pending.
+
 - **10 August Dev repair deployed:** commit `a77f01a` is on `origin/dev`; Vercel deployment
   `dpl_EkW4715qFjkTmfzwCwHRwndRW9qn` is READY and the Dev alias displayed
   `v2026.08.10+a77f01a`. The batch fixes communications reload/pagination/legacy history wording,

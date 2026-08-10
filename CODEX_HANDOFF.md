@@ -27,6 +27,10 @@ is pushed to `origin/dev`, Vercel deployment `dpl_EkW4715qFjkTmfzwCwHRwndRW9qn` 
   Vercel deployment `dpl_5VMTTeGKRFUvXLxHQxUyDYEDsCS9` is READY for exact commit `77422f1`.
   Aaron confirmed the refreshed AM Club Admin selector now behaves correctly. No database migration
   or role row change was needed.
+- **AM Player multi-team owner pass:** In Player mode, Aaron confirmed both the Primary Pumas team
+  and Secondary Lucas HC team are available. Lucas HC loaded and remained selected without bouncing
+  back. This passes the normal Player multi-team switch; a separate account with multiple Team
+  Manager role assignments is still needed to close the Team Manager-specific variant.
 - Communications now retains account/channel drafts across a full reload, merges edited messages
   without duplication, paginates older messages in batches of 50, and explains that legacy edits
   may have no recorded earlier version. Three focused pagination/merge tests cover the behaviour.
