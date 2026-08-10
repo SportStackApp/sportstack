@@ -99,6 +99,9 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
   const [fillInFinderOpen, setFillInFinderOpen] = useState(false);
 
   const selectedFormation = formations.find((formation) => formation.id === selectedFormationId) || null;
+  const selectedPositionPlayer = selectedPositionId
+    ? roster.find((player) => player.id === assignments[selectedPositionId])
+    : undefined;
 
   const assignedPlayerIds = useMemo(() => {
     return new Set([...Object.values(assignments), ...benchIds]);
@@ -695,9 +698,24 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search players..." className="pl-9" />
             </div>
             {selectedPositionId && (
-              <Button variant="outline" className="w-full" onClick={() => setSelectedPositionId(null)}>
-                Add selected player to bench instead
-              </Button>
+              <div className="space-y-2">
+                {selectedPositionPlayer && (
+                  <Button
+                    variant="outline"
+                    className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => {
+                      removePlayer(selectedPositionPlayer.id);
+                      setSelectedPositionId(null);
+                    }}
+                  >
+                    <UserMinus className="mr-2 h-4 w-4" />
+                    Remove {selectedPositionPlayer.name}
+                  </Button>
+                )}
+                <Button variant="ghost" className="w-full" onClick={() => setSelectedPositionId(null)}>
+                  Clear position selection
+                </Button>
+              </div>
             )}
             <div className="max-h-[640px] space-y-2 overflow-auto pr-1">
               {availablePlayers.length === 0 ? (

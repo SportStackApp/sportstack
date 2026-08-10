@@ -370,137 +370,194 @@ const loadMatchOptions = async (serviceClient: any, association: { id: string; n
 };
 
 const loadPlayerOptions = async (serviceClient: any, context: FixtureContext) => {
-  const { clubs, teams } = await loadAssociationStructure(serviceClient, context.associationId);
-  const clubIds = clubs.map((club: any) => club.id);
-  const teamIds = teams.map((team: any) => team.id);
+  const fixtureTeamIds = [context.homeTeam.id, context.awayTeam.id];
+  const [membershipResult, fillInResult, lineupResult, legacyLineupResult, appearanceResult] =
+    await Promise.all([
+      serviceClient
+        .from("team_memberships")
+        .select("user_id, team_id, jersey_number, membership_type")
+        .in("team_id", fixtureTeamIds)
+        .eq("status", "ACTIVE"),
+      serviceClient
+        .from("fixture_fill_ins")
+        .select("player_id, team_id")
+        .eq("fixture_id", context.fixture.id)
+        .in("team_id", fixtureTeamIds)
+        .eq("status", "SELECTED"),
+      serviceClient
+        .from("fixture_lineups")
+        .select("id, team_id")
+        .eq("fixture_id", context.fixture.id)
+        .in("team_id", fixtureTeamIds),
+      serviceClient
+        .from("lineups")
+        .select("player_id, team_id")
+        .eq("fixture_id", context.fixture.id)
+        .in("team_id", fixtureTeamIds),
+      serviceClient
+        .from("revsports_players")
+        .select("player_name, profile_id, jersey, team_side")
+        .eq("fixture_id", context.fixture.id)
+        .eq("attended", true)
+        .eq("is_removed", false),
+    ]);
+  const firstError = [membershipResult, fillInResult, lineupResult, legacyLineupResult, appearanceResult]
+    .find((result) => result.error)?.error;
+  if (firstError) throw firstError;
 
-  const profileRows: any[] = [];
-  if (clubIds.length > 0) {
+  const membershipRows = membershipResult.data || [];
+  const fillInRows = fillInResult.data || [];
+  const fixtureLineups = lineupResult.data || [];
+  const legacyLineupRows = legacyLineupResult.data || [];
+  const appearanceRows = appearanceResult.data || [];
+  const teamById = new Map([
+    [context.homeTeam.id, context.homeTeam],
+    [context.awayTeam.id, context.awayTeam],
+  ]);
+  const teamByLineupId = new Map(fixtureLineups.map((lineup: any) => [lineup.id, lineup.team_id]));
+  const lineupIds = fixtureLineups.map((lineup: any) => lineup.id);
+  const assignmentRows: any[] = [];
+  for (const ids of chunksOf(lineupIds)) {
     const { data, error } = await serviceClient
-      .from("profiles")
-      .select("id, first_name, last_name, registered_club_id")
-      .in("registered_club_id", clubIds);
+      .from("fixture_lineup_assignments")
+      .select("player_id, fixture_lineup_id")
+      .in("fixture_lineup_id", ids);
     if (error) throw error;
-    profileRows.push(...(data || []));
+    assignmentRows.push(...(data || []));
   }
 
-  const membershipRows: any[] = [];
-  for (const ids of chunksOf(teamIds)) {
-    const { data, error } = await serviceClient
-      .from("team_memberships")
-      .select("user_id, team_id, jersey_number, membership_type")
-      .in("team_id", ids)
-      .eq("status", "ACTIVE");
-    if (error) throw error;
-    membershipRows.push(...(data || []));
-  }
+  const participantByProfile = new Map<string, { teamId: string; number: string; context: string }>();
+  const recordParticipant = (profileId: string | null, teamId: string | null, number: unknown, label: string) => {
+    if (!profileId || !teamId || !teamById.has(teamId)) return;
+    const existing = participantByProfile.get(profileId);
+    participantByProfile.set(profileId, {
+      teamId,
+      number: number === null || number === undefined || number === "" ? existing?.number || "" : String(number),
+      context: existing?.context || label,
+    });
+  };
 
-  const knownProfileIds = new Set(profileRows.map((profile) => profile.id));
-  const missingProfileIds = Array.from(
-    new Set(
-      membershipRows
-        .map((membership) => membership.user_id)
-        .filter((id) => id && !knownProfileIds.has(id)),
-    ),
+  membershipRows.forEach((membership: any) =>
+    recordParticipant(membership.user_id, membership.team_id, membership.jersey_number, "Active team member")
   );
-  for (const ids of chunksOf(missingProfileIds)) {
+  fillInRows.forEach((fillIn: any) =>
+    recordParticipant(fillIn.player_id, fillIn.team_id, null, "Selected fill-in")
+  );
+  assignmentRows.forEach((assignment: any) =>
+    recordParticipant(
+      assignment.player_id,
+      teamByLineupId.get(assignment.fixture_lineup_id) || null,
+      null,
+      "Published line-up",
+    )
+  );
+  legacyLineupRows.forEach((lineup: any) =>
+    recordParticipant(lineup.player_id, lineup.team_id, null, "Recorded line-up")
+  );
+  appearanceRows.forEach((appearance: any) =>
+    recordParticipant(
+      appearance.profile_id,
+      appearance.team_side === "home" ? context.homeTeam.id : appearance.team_side === "away" ? context.awayTeam.id : null,
+      appearance.jersey,
+      "Recorded match participant",
+    )
+  );
+
+  const profileIds = Array.from(participantByProfile.keys());
+  const profileRows: any[] = [];
+  for (const ids of chunksOf(profileIds)) {
     const { data, error } = await serviceClient
       .from("profiles")
-      .select("id, first_name, last_name, registered_club_id")
+      .select("id, first_name, last_name")
       .in("id", ids);
     if (error) throw error;
     profileRows.push(...(data || []));
   }
 
-  const teamById = new Map(teams.map((team: any) => [team.id, team]));
-  const clubById = new Map(clubs.map((club: any) => [club.id, club]));
-  const relevantMemberships = new Map<string, any>();
-  const primaryMemberships = new Map<string, any>();
-  membershipRows.forEach((membership) => {
-    if (membership.membership_type === "PRIMARY" && !primaryMemberships.has(membership.user_id)) {
-      primaryMemberships.set(membership.user_id, membership);
-    }
-    if (
-      membership.team_id === context.homeTeam.id ||
-      membership.team_id === context.awayTeam.id
-    ) {
-      relevantMemberships.set(membership.user_id, membership);
-    }
-  });
-
   const profileCandidates = new Map<string, any>();
   profileRows.forEach((profile) => {
     const name = [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
     if (!name || profileCandidates.has(profile.id)) return;
-    const membership = relevantMemberships.get(profile.id);
-    const primaryMembership = primaryMemberships.get(profile.id);
-    const primaryTeam = primaryMembership ? teamById.get(primaryMembership.team_id) : null;
-    const primaryClub = primaryTeam?.club_id
-      ? clubById.get(primaryTeam.club_id)
-      : profile.registered_club_id
-      ? clubById.get(profile.registered_club_id)
-      : null;
-    const team = membership?.team_id === context.homeTeam.id
-      ? context.homeTeam
-      : membership?.team_id === context.awayTeam.id
-      ? context.awayTeam
-      : null;
+    const participant = participantByProfile.get(profile.id);
+    if (!participant) return;
+    const team = teamById.get(participant.teamId);
     profileCandidates.set(profile.id, {
       optionId: `profile:${profile.id}`,
       profileId: profile.id,
       name,
-      number: membership?.jersey_number === null || membership?.jersey_number === undefined
-        ? ""
-        : String(membership.jersey_number),
+      number: participant.number,
       teamId: team?.id || null,
-      teamLabel: team?.name || "Select fixture team",
-      contextLabel: [primaryClub?.name, primaryTeam?.name].filter(Boolean).join(" · "),
-      source: "association",
+      teamLabel: team?.name || "Fixture team",
+      contextLabel: participant.context,
+      source: "fixture",
+    });
+  });
+
+  const unresolvedCandidates = new Map<string, any>();
+  appearanceRows.forEach((appearance: any) => {
+    if (appearance.profile_id) return;
+    const name = normaliseText(appearance.player_name, 100);
+    const nameKey = normaliseNameKey(name);
+    const team = appearance.team_side === "home"
+      ? context.homeTeam
+      : appearance.team_side === "away"
+      ? context.awayTeam
+      : null;
+    if (!nameKey || !team) return;
+    unresolvedCandidates.set(nameKey, {
+      name,
+      number: appearance.jersey === null || appearance.jersey === undefined ? "" : String(appearance.jersey),
+      teamId: team.id,
+      teamLabel: team.name,
+      contextLabel: "Recorded match participant",
     });
   });
 
   const { data: pendingSubmissions, error: pendingError } = await serviceClient
     .from("player_vote_submissions")
     .select("id")
-    .eq("association_id", context.associationId)
+    .eq("fixture_id", context.fixture.id)
     .eq("is_approved", false)
     .eq("is_deleted", false);
   if (pendingError) throw pendingError;
 
-  const pendingNames = new Set<string>();
   const pendingSubmissionIds = (pendingSubmissions || []).map((submission: any) => submission.id);
   for (const ids of chunksOf(pendingSubmissionIds)) {
     const { data, error } = await serviceClient
       .from("player_vote_lines")
-      .select("player_name")
+      .select("player_name, player_number, team_id")
       .in("submission_id", ids);
     if (error) throw error;
     (data || []).forEach((line: any) => {
       const name = normaliseText(line.player_name, 100);
-      if (name) pendingNames.add(name);
+      const nameKey = normaliseNameKey(name);
+      const team = teamById.get(line.team_id);
+      if (!nameKey || !team || unresolvedCandidates.has(nameKey)) return;
+      unresolvedCandidates.set(nameKey, {
+        name,
+        number: line.player_number === null || line.player_number === undefined ? "" : String(line.player_number),
+        teamId: team.id,
+        teamLabel: team.name,
+        contextLabel: "Pending vote for this fixture",
+      });
     });
   }
 
   const candidates = Array.from(profileCandidates.values());
   const approvedNameKeys = new Set(candidates.map((candidate) => normaliseNameKey(candidate.name)));
-  for (const name of pendingNames) {
-    const nameKey = normaliseNameKey(name);
+  for (const [nameKey, unresolved] of unresolvedCandidates) {
     if (!nameKey || approvedNameKeys.has(nameKey)) continue;
     candidates.push({
       optionId: `unresolved:${await sha256(nameKey)}`,
       profileId: null,
-      name,
-      number: "",
-      teamId: null,
-      teamLabel: "Select fixture team",
-      contextLabel: "",
+      ...unresolved,
       source: "unresolved",
     });
   }
 
   return candidates.sort((left, right) =>
     left.name.localeCompare(right.name, "en-AU", { sensitivity: "base" }) ||
-    (left.source === "association" ? -1 : 1),
+    (left.source === "fixture" ? -1 : 1),
   );
 };
 
@@ -580,34 +637,13 @@ const validateProfiles = async (
   profileIds: string[],
 ) => {
   if (profileIds.length === 0) return;
-  const { clubs, teams } = await loadAssociationStructure(serviceClient, context.associationId);
-  const clubIds = new Set(clubs.map((club: any) => club.id));
-  const teamIds = teams.map((team: any) => team.id);
-
-  const { data: profiles, error: profilesError } = await serviceClient
-    .from("profiles")
-    .select("id, registered_club_id")
-    .in("id", profileIds);
-  if (profilesError) throw profilesError;
+  const candidates = await loadPlayerOptions(serviceClient, context);
   const validIds = new Set(
-    (profiles || [])
-      .filter((profile: any) => profile.registered_club_id && clubIds.has(profile.registered_club_id))
-      .map((profile: any) => profile.id),
+    candidates.map((candidate: any) => candidate.profileId).filter(Boolean),
   );
 
-  for (const ids of chunksOf(teamIds)) {
-    const { data, error } = await serviceClient
-      .from("team_memberships")
-      .select("user_id")
-      .in("team_id", ids)
-      .in("user_id", profileIds)
-      .eq("status", "ACTIVE");
-    if (error) throw error;
-    (data || []).forEach((membership: any) => validIds.add(membership.user_id));
-  }
-
   if (profileIds.some((id) => !validIds.has(id))) {
-    throw new Error("One selected player is not available for Hockey Ballarat.");
+    throw new Error("One selected player is not recorded for this fixture.");
   }
 };
 

@@ -46,6 +46,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  hasOlderMessagePage,
+  mergeLatestMessages,
+  prependOlderMessages,
+} from "@/lib/communicationMessages";
 
 const database = supabase;
 const REACTIONS = ["👍", "❤️", "😊", "🎉"] as const;
@@ -286,13 +291,8 @@ const Chat = () => {
     const loaded = ((data || []) as CommunicationMessage[]).reverse();
     const isSameChannel = loadedChannelRef.current === channelId;
     loadedChannelRef.current = channelId;
-    setMessages((current) => {
-      if (!isSameChannel) return loaded;
-      const merged = new Map(current.map((message) => [message.id, message]));
-      for (const message of loaded) merged.set(message.id, message);
-      return [...merged.values()].sort((a, b) => a.created_at.localeCompare(b.created_at));
-    });
-    setHasOlderMessages(loaded.length === MESSAGE_PAGE_SIZE);
+    setMessages((current) => mergeLatestMessages(current, loaded, isSameChannel));
+    setHasOlderMessages(hasOlderMessagePage(loaded.length, MESSAGE_PAGE_SIZE));
     const messageIds = loaded.map((message) => message.id);
     const authorIds = [...new Set(loaded.map((message) => message.author_id))];
     const [reactionResult, profileResult, permissionResult] = await Promise.all([
@@ -342,8 +342,8 @@ const Chat = () => {
     }
 
     const older = ((data || []) as CommunicationMessage[]).reverse();
-    setMessages((current) => [...older, ...current]);
-    setHasOlderMessages(older.length === MESSAGE_PAGE_SIZE);
+    setMessages((current) => prependOlderMessages(current, older));
+    setHasOlderMessages(hasOlderMessagePage(older.length, MESSAGE_PAGE_SIZE));
 
     const authorIds = [...new Set(older.map((message) => message.author_id))];
     const messageIds = older.map((message) => message.id);
@@ -907,6 +907,11 @@ const Chat = () => {
                   <p className="text-xs font-medium text-muted-foreground">Current version</p>
                   <p className="mt-1 whitespace-pre-wrap text-sm">{historyMessage.content}</p>
                 </div>
+              )}
+              {messageRevisions.length === 0 && (
+                <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                  No earlier versions were recorded for this legacy message.
+                </p>
               )}
               {messageRevisions.map((revision) => (
                 <div key={revision.id} className="rounded-md border p-3">

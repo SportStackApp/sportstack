@@ -475,7 +475,6 @@ interface FillInMembershipRow {
 
 interface TeamRoleRow {
   team_id: string | null;
-  teams: VoterTeamRow | VoterTeamRow[] | null;
 }
 
 interface FeedbackInsert {
@@ -843,7 +842,7 @@ const AppLayout = () => {
         scopedRole
           ? supabase
               .from("user_roles")
-              .select("team_id, teams(id, name, division_id, clubs(id, name, logo_url, associations(id, name, abbreviation, logo_url)))")
+              .select("team_id")
               .eq("user_id", user.id)
               .eq("role", scopedRole)
               .not("team_id", "is", null)
@@ -891,13 +890,37 @@ const AppLayout = () => {
         });
       const fillInRows = ((fillInResult.data || []) as unknown as FillInMembershipRow[]);
       const fillInMemberships = fillInRows.map((row) => toMembership(row, "FILL_IN", false));
+      const toRoleMembership = (row: TeamRoleRow) => {
+        const team = teams.find((item) => item.id === row.team_id);
+        const club = team ? clubs.find((item) => item.id === team.club_id) : undefined;
+        const association = club ? associations.find((item) => item.id === club.association_id) : undefined;
+        if (!team || !club || !association) return null;
+
+        return {
+          teamId: team.id,
+          teamName: team.name || "Team",
+          membershipType: "SECONDARY",
+          isDefaultTeam: false,
+          divisionId: team.division_id || teamDivisions.find((item) => item.team_id === team.id)?.division_id || null,
+          clubId: club.id,
+          clubName: club.name || "Club",
+          clubLogoUrl: club.logo_url || null,
+          associationId: association.id,
+          associationName: association.name || "Association",
+          associationAbbr: association.abbreviation || null,
+          associationLogoUrl: association.logo_url || null,
+        } satisfies VoterTeamMembership;
+      };
       const roleMemberships = ((roleResult.data || []) as unknown as TeamRoleRow[])
         .map((row) => {
-          const roleMembership = toMembership(row, "SECONDARY", false);
+          const roleMembership = toRoleMembership(row);
           if (!roleMembership) return null;
           const matchingMembership = regularMemberships.find((item) => item?.teamId === roleMembership.teamId);
           return matchingMembership || roleMembership;
         });
+      if (roleResult.error) {
+        console.error(`Unable to load ${scopedRole || "team"} scopes`, roleResult.error);
+      }
       const accessibleMemberships = activeMode === "player"
         ? [...regularMemberships, ...fillInMemberships]
         : roleMemberships;
@@ -971,6 +994,9 @@ const AppLayout = () => {
     selectedTeamId,
     setSelectedScope,
     teamDivisions,
+    associations,
+    clubs,
+    teams,
   ]);
 
   // Auto-switch viewingAs based on cascade selection (only if not manually overridden)
@@ -1110,6 +1136,10 @@ const AppLayout = () => {
     ? voterTeamMemberships.find((membership) => membership.teamId === selectedTeamId) || voterTeamMemberships[0]
     : undefined;
   const playerCanBrowseParentEntities = selectedPlayerMembership?.membershipType !== "FILL_IN";
+  const teamScopeLabel = (membership: VoterTeamMembership) =>
+    membership.clubName === membership.teamName
+      ? membership.teamName
+      : `${membership.clubName} — ${membership.teamName}`;
 
   useEffect(() => {
     // Player entity dashboards use their route ID and must not clear the
@@ -1512,7 +1542,7 @@ const AppLayout = () => {
                                 }
                               }}
                             >
-                              {membership.teamName}
+                              {teamScopeLabel(membership)}
                               {activeMode === "player" && ` (${membership.membershipType === "PRIMARY" ? "Primary" : membership.membershipType === "FILL_IN" ? "Fill-in" : "Secondary"})`}
                             </SelectItem>
                           ))}
@@ -1520,7 +1550,7 @@ const AppLayout = () => {
                       </Select>
                     ) : (
                       <Button className="w-full justify-start" variant="outline" onClick={() => handleVoterTeamChange(selectedPlayerMembership.teamId)}>
-                        {selectedPlayerMembership.teamName}
+                        {teamScopeLabel(selectedPlayerMembership)}
                       </Button>
                     )}
                   </div>
@@ -1770,7 +1800,7 @@ const AppLayout = () => {
                               }
                             }}
                           >
-                            {membership.teamName}
+                            {teamScopeLabel(membership)}
                             {activeMode === "player" && ` (${membership.membershipType === "PRIMARY" ? "Primary" : membership.membershipType === "FILL_IN" ? "Fill-in" : "Secondary"})`}
                           </SelectItem>
                         ))}

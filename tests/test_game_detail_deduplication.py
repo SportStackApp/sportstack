@@ -10,7 +10,7 @@ def test_game_detail_deduplicates_historical_memberships_before_rendering() -> N
 
     assert "const uniqueMembers = Array.from(" in source
     assert "new Map<string, (typeof members)[number]>()" in source
-    assert "const merged: TeamMember[] = uniqueMembers.map" in source
+    assert "const linkedMembers: TeamMember[] = userIds.map" in source
 
 
 def test_game_detail_preserves_useful_membership_details() -> None:
