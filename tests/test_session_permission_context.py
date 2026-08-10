@@ -185,6 +185,18 @@ class SessionPermissionContextFrontendTests(unittest.TestCase):
         self.assertIn('boolean(state.team_id)', source)
         self.assertNotIn('rpc("set_active_permission_mode"', source)
 
+    def test_role_change_does_not_reuse_an_unassigned_scope(self) -> None:
+        source = normalised(APP_MODE_CONTEXT)
+
+        self.assertIn(
+            "const transitionscope = newmode === mode ? selectedscoperef.current : empty_scope",
+            source,
+        )
+        self.assertIn(
+            'const fallbackscope = fallback.rootmode === "super_admin" ? preferredscope : empty_scope',
+            source,
+        )
+
     def test_deliberate_super_admin_view_is_not_replaced_by_cascade(self) -> None:
         context = normalised(APP_MODE_CONTEXT)
         layout = normalised(APP_LAYOUT)

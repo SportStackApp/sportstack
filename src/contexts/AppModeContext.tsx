@@ -328,10 +328,13 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
         preferredRootMode,
         preferredActiveMode,
       );
+      const fallbackScope = fallback.rootMode === "super_admin"
+        ? preferredScope
+        : EMPTY_SCOPE;
       canonical = await writeSessionContext(
         fallback.rootMode,
         fallback.activeMode,
-        canonical ? EMPTY_SCOPE : preferredScope,
+        canonical ? EMPTY_SCOPE : fallbackScope,
       );
     }
 
@@ -458,7 +461,11 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     setContextConfirmed(false);
     try {
       await contextWriteChainRef.current;
-      const canonical = await writeSessionContext(newMode, newMode, selectedScopeRef.current);
+      // A scope selected in another role may not belong to the new role. Let
+      // the server choose the first assigned scope instead of sending a stale
+      // club/team and forcing the whole mode change to fail.
+      const transitionScope = newMode === mode ? selectedScopeRef.current : EMPTY_SCOPE;
+      const canonical = await writeSessionContext(newMode, newMode, transitionScope);
       const adopted = adoptServerContext(canonical, availableModes, true);
       const changed = adopted
         && canonical.root_mode === newMode
@@ -472,7 +479,7 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     } finally {
       setModeChanging(false);
     }
-  }, [adoptServerContext, availableModes, modeChanging, user, writeSessionContext]);
+  }, [adoptServerContext, availableModes, mode, modeChanging, user, writeSessionContext]);
 
   const setViewingAs = useCallback(async (newMode: AppMode): Promise<boolean> => {
     if (!user || mode !== "super_admin" || !availableModes.includes(newMode) || modeChanging) return false;

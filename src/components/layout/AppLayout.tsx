@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { cn, getTeamDisplayName } from "@/lib/utils";
@@ -70,8 +70,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAppMode, MODE_LABELS, type AppMode } from "@/contexts/AppModeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAdminScope } from "@/hooks/useAdminScope";
 import { useModuleAvailability } from "@/hooks/useModuleAvailability";
 import { APP_ENVIRONMENT, APP_ENVIRONMENT_CLASS, APP_VERSION } from "@/lib/appVersion";
+import { filterClubsForActiveMode } from "@/lib/activeScopeOptions";
 import { isProfileReviewRequired } from "@/lib/profileCompletion";
 import { useExpenseHubAccess } from "@/features/expense-hub/useExpenseHubAccess";
 
@@ -548,6 +550,11 @@ const AppLayout = () => {
     selectedClub,
     selectedTeam,
   } = useTeamContext();
+  const {
+    loading: adminScopeLoading,
+    scopedAssociationIds,
+    scopedClubIds,
+  } = useAdminScope();
   const { enabled: moduleEnabled } = useModuleAvailability([...NAV_MODULE_KEYS]);
   const { allowed: expenseHubAllowed } = useExpenseHubAccess();
 
@@ -1032,6 +1039,16 @@ const AppLayout = () => {
   const showAssociationSelector = activeMode === "super_admin";
   const showClubSelector = activeMode === "super_admin" || activeMode === "association" || activeMode === "club";
   const showAdminDropdown = activeMode === "super_admin" || activeMode === "association" || activeMode === "club";
+  const authorisedClubs = useMemo(() => filterClubsForActiveMode(
+    clubs,
+    activeMode,
+    scopedAssociationIds,
+    scopedClubIds,
+  ), [activeMode, clubs, scopedAssociationIds, scopedClubIds]);
+  const cascadeClubs = useMemo(
+    () => authorisedClubs.filter((club) => club.association_id === selectedAssociationId),
+    [authorisedClubs, selectedAssociationId],
+  );
   const isModulePathEnabled = (path: string) => {
     if (path === "/mvp-votes" || path === "/admin/mvp-voting") return moduleEnabled.player_mvp;
     if (path === "/umpire/vote" || path === "/admin/umpire-voting") return moduleEnabled.umpire_match_voting;
@@ -1142,6 +1159,31 @@ const AppLayout = () => {
       : `${membership.clubName} — ${membership.teamName}`;
 
   useEffect(() => {
+    if (adminScopeLoading || activeMode !== "club") return;
+    if (selectedClubId && authorisedClubs.some((club) => club.id === selectedClubId)) return;
+
+    const fallbackClub = authorisedClubs[0];
+    if (!fallbackClub) return;
+    setSelectedScope({
+      associationId: fallbackClub.association_id,
+      clubId: fallbackClub.id,
+      divisionId: "",
+      teamId: "",
+    });
+    if (location.pathname.startsWith("/clubs/")) {
+      navigate(`/clubs/${fallbackClub.id}`, { replace: true });
+    }
+  }, [
+    activeMode,
+    adminScopeLoading,
+    authorisedClubs,
+    location.pathname,
+    navigate,
+    selectedClubId,
+    setSelectedScope,
+  ]);
+
+  useEffect(() => {
     // Player entity dashboards use their route ID and must not clear the
     // active membership context shown in the header. Clearing it here made
     // the player-primary effect immediately restore Pumas, creating a loop.
@@ -1166,7 +1208,21 @@ const AppLayout = () => {
 
     if (clubMatch) {
       const clubId = clubMatch[1];
-      const club = clubs.find((item) => item.id === clubId);
+      if (adminScopeLoading) return;
+      const club = authorisedClubs.find((item) => item.id === clubId);
+      if (!club) {
+        const fallbackClub = activeMode === "club" ? authorisedClubs[0] : undefined;
+        if (fallbackClub) {
+          setSelectedScope({
+            associationId: fallbackClub.association_id,
+            clubId: fallbackClub.id,
+            divisionId: "",
+            teamId: "",
+          });
+          navigate(`/clubs/${fallbackClub.id}`, { replace: true });
+        }
+        return;
+      }
       if (club && selectedAssociationId !== club.association_id) setSelectedAssociationId(club.association_id);
       if (club && selectedClubId !== club.id) setSelectedClubId(club.id);
       if (selectedDivision) setSelectedDivision("");
@@ -1184,7 +1240,10 @@ const AppLayout = () => {
   }, [
     location.pathname,
     activeMode,
+    adminScopeLoading,
+    authorisedClubs,
     isTeamScopedMode,
+    navigate,
     clubs,
     teams,
     teamDivisions,
@@ -1195,6 +1254,7 @@ const AppLayout = () => {
     setSelectedAssociationId,
     setSelectedClubId,
     setSelectedDivision,
+    setSelectedScope,
     setSelectedTeamId,
   ]);
 
@@ -1579,7 +1639,7 @@ const AppLayout = () => {
                   </div>
                 )}
 
-                {showClubSelector && selectedAssociationId && filteredClubs.length > 0 && (
+                {showClubSelector && selectedAssociationId && cascadeClubs.length > 0 && (
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Club</Label>
                     <Select
@@ -1593,7 +1653,7 @@ const AppLayout = () => {
                         <SelectValue placeholder="Select club" />
                       </SelectTrigger>
                       <SelectContent className="bg-background border-border">
-                        {filteredClubs.map((club) => (
+                        {cascadeClubs.map((club) => (
                           <SelectItem key={club.id} value={club.id}>
                             {club.name}
                           </SelectItem>
@@ -1835,11 +1895,11 @@ const AppLayout = () => {
             )}
 
             {/* Club Selector */}
-            {showClubSelector && selectedAssociationId && filteredClubs.length > 0 && (
+            {showClubSelector && selectedAssociationId && cascadeClubs.length > 0 && (
               <div className="flex items-center gap-1">
-                {filteredClubs.length === 1 ? (
-                  <button type="button" className={staticCascadeClass} title={`Open ${selectedClub?.name || filteredClubs[0].name} overview`} onClick={() => navigate(`/clubs/${selectedClub?.id || filteredClubs[0].id}`)}>
-                    {selectedClub?.name || filteredClubs[0].name}
+                {cascadeClubs.length === 1 ? (
+                  <button type="button" className={staticCascadeClass} title={`Open ${selectedClub?.name || cascadeClubs[0].name} overview`} onClick={() => navigate(`/clubs/${selectedClub?.id || cascadeClubs[0].id}`)}>
+                    {selectedClub?.name || cascadeClubs[0].name}
                   </button>
                 ) : (
                   <Select key={selectedAssociationId} value={selectedClubId || undefined} onValueChange={(v) => {
@@ -1850,7 +1910,7 @@ const AppLayout = () => {
                       <SelectValue placeholder="Select Club" />
                     </SelectTrigger>
                     <SelectContent className="bg-background border-border">
-                      {filteredClubs.map((club) => (
+                      {cascadeClubs.map((club) => (
                         <SelectItem key={club.id} value={club.id}>
                           {club.name}
                         </SelectItem>
@@ -1858,7 +1918,7 @@ const AppLayout = () => {
                     </SelectContent>
                   </Select>
                 )}
-                {selectedClubId && filteredClubs.length > 1 && (
+                {selectedClubId && cascadeClubs.length > 1 && (
                   <Button variant="ghost" size="icon" className={cascadeClearClass} title="Clear club" onClick={() => {
                     setSelectedClubId("");
                     setSelectedDivision("");
