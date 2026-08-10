@@ -84,12 +84,11 @@ is open. The pass also confirmed these remaining gaps:
   `modeLabel`, the Admin badge reads the account's highest stored role and Profile's unnamed
   role/scope line is caused by its local label maps omitting `UMPIRE_ADMIN`. These display defects do
   not prove the active preview reset.
-- When a mode change is correctly rejected because the currently selected club is outside that
-  role's assigned scope, the unauthorised club can remain visible in the cascade and entity page
-  while the lower mode label is shown. Example: Blaze remained on screen after Club Admin mode was
-  rejected because the account is not a Blaze Club Admin. Keep the security rejection, but return
-  the interface to the previous valid mode/scope or move it to an authorised club so the displayed
-  page, cascade and active mode cannot disagree.
+- **Resolved on Dev in `77422f1`; owner retest pending:** The server correctly rejected Blaze for
+  an account whose Club Admin assignment is only Grampians Hockey Club, but the header had offered
+  every association club and retained the rejected route. Club options now use active-role scope,
+  invalid retained selections return to an assigned club, unauthorised club routes are redirected,
+  and role changes no longer reuse an unassigned prior scope.
 - Direct navigation while previewing Team Manager rendered Umpire Match Voting and MVP Analytics.
   The Umpire ballot checks stored account roles rather than active mode, `useAdminScope` treats Team
   Manager as an admin and `/admin/analytics` lacks a direct module gate. Safety Hub rendered its

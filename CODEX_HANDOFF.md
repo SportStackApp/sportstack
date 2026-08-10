@@ -19,6 +19,13 @@ is pushed to `origin/dev`, Vercel deployment `dpl_EkW4715qFjkTmfzwCwHRwndRW9qn` 
 
 ### Completed repairs
 
+- **Club Admin scope follow-up (`77422f1`):** Aaron's actual AM account showed only a Grampians
+  Hockey Club Admin assignment but the header offered every Hockey Ballarat club and retained Blaze.
+  The database correctly rejected Blaze. The deployed UI now filters club options from the active
+  role's authorised IDs, replaces an invalid retained club with the first assigned club, redirects
+  an unauthorised club route, and starts a role change without reusing the previous role's scope.
+  Vercel deployment `dpl_5VMTTeGKRFUvXLxHQxUyDYEDsCS9` is READY for exact commit `77422f1`.
+  Owner retest remains; no database migration or role row change was needed.
 - Communications now retains account/channel drafts across a full reload, merges edited messages
   without duplication, paginates older messages in batches of 50, and explains that legacy edits
   may have no recorded earlier version. Three focused pagination/merge tests cover the behaviour.
@@ -53,7 +60,8 @@ is pushed to `origin/dev`, Vercel deployment `dpl_EkW4715qFjkTmfzwCwHRwndRW9qn` 
 ### Verification
 
 - Focused changed-file ESLint, `git diff --check`, `npx tsc --noEmit` and `npm run build`: pass.
-- Vitest: 19/19 pass. Python: 167 tests plus 29 subtests pass.
+- Latest Club Admin follow-up: Vitest 22/22, focused permission-context Python 23/23, TypeScript and
+  build pass. The earlier complete Python result remains 167 tests plus 29 subtests.
 - Full `npm run lint` remains baseline debt at 360 errors and 78 warnings; changed files are clean.
 - Vercel deployed the exact `a77f01a` commit and the Dev alias showed the matching build.
 

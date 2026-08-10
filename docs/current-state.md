@@ -30,6 +30,14 @@ Update this file after every meaningful Codex task, pull request, schema change,
 
 ## Current priority
 
+- **Actual Club Admin scope leak repaired on Dev:** Aaron showed that the AM account has Club Admin
+  scope only for Grampians Hockey Club, while its header offered Blaze and every other Hockey
+  Ballarat club. The server rejected Blaze correctly; the selector and retained route state were
+  wrong. Commit `77422f1` filters clubs by active-role scope, replaces invalid retained selections,
+  redirects unauthorised club routes and prevents a new mode from inheriting the previous mode's
+  unassigned scope. Vercel deployment `dpl_5VMTTeGKRFUvXLxHQxUyDYEDsCS9` is READY. Vitest 22/22,
+  focused permission-context Python 23/23, TypeScript and build pass. No migration or role change.
+
 - **10 August Dev repair deployed:** commit `a77f01a` is on `origin/dev`; Vercel deployment
   `dpl_EkW4715qFjkTmfzwCwHRwndRW9qn` is READY and the Dev alias displayed
   `v2026.08.10+a77f01a`. The batch fixes communications reload/pagination/legacy history wording,
