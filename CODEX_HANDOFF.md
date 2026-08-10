@@ -25,7 +25,8 @@ is pushed to `origin/dev`, Vercel deployment `dpl_EkW4715qFjkTmfzwCwHRwndRW9qn` 
   role's authorised IDs, replaces an invalid retained club with the first assigned club, redirects
   an unauthorised club route, and starts a role change without reusing the previous role's scope.
   Vercel deployment `dpl_5VMTTeGKRFUvXLxHQxUyDYEDsCS9` is READY for exact commit `77422f1`.
-  Owner retest remains; no database migration or role row change was needed.
+  Aaron confirmed the refreshed AM Club Admin selector now behaves correctly. No database migration
+  or role row change was needed.
 - Communications now retains account/channel drafts across a full reload, merges edited messages
   without duplication, paginates older messages in batches of 50, and explains that legacy edits
   may have no recorded earlier version. Three focused pagination/merge tests cover the behaviour.

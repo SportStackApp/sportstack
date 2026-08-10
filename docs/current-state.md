@@ -36,7 +36,8 @@ Update this file after every meaningful Codex task, pull request, schema change,
   wrong. Commit `77422f1` filters clubs by active-role scope, replaces invalid retained selections,
   redirects unauthorised club routes and prevents a new mode from inheriting the previous mode's
   unassigned scope. Vercel deployment `dpl_5VMTTeGKRFUvXLxHQxUyDYEDsCS9` is READY. Vitest 22/22,
-  focused permission-context Python 23/23, TypeScript and build pass. No migration or role change.
+  focused permission-context Python 23/23, TypeScript and build pass. Aaron confirmed the refreshed
+  AM Club Admin selector now behaves correctly. No migration or role change.
 
 - **10 August Dev repair deployed:** commit `a77f01a` is on `origin/dev`; Vercel deployment
   `dpl_EkW4715qFjkTmfzwCwHRwndRW9qn` is READY and the Dev alias displayed
