@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-08-09
+Last updated: 2026-08-10
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -29,6 +29,29 @@ Update this file after every meaningful Codex task, pull request, schema change,
 8. Live Supabase checks
 
 ## Current priority
+
+- **10 August Dev repair deployed:** commit `a77f01a` is on `origin/dev`; Vercel deployment
+  `dpl_EkW4715qFjkTmfzwCwHRwndRW9qn` is READY and the Dev alias displayed
+  `v2026.08.10+a77f01a`. The batch fixes communications reload/pagination/legacy history wording,
+  multi-team Team Manager scope resolution, Coach line-up removal, Committee empty wording and
+  fixture-scoped Umpire Match Voting candidates. The public voting Edge Function is ACTIVE as
+  version 9. Real Team Manager/Coach/Player session retests remain because Chrome automation was
+  unavailable during the final pass.
+
+- **Dev Supabase hardening applied:** additive migration
+  `20260810090000_harden_functions_and_rls_performance.sql` passed a transaction/rollback dry run,
+  then was recorded live as `20260810064248_harden_functions_and_rls_performance`. It fixes two
+  function search paths, restricts six trigger-only security-definer functions, optimises 61 RLS
+  auth calls and adds 33 foreign-key indexes. Security notices reduced 85 -> 75 and performance
+  notices 554 -> 493; `auth_rls_initplan` reduced 61 -> 0 and unindexed foreign keys 164 -> 131.
+  No data row, Production system or destructive object was changed. Remaining policy/index/RPC
+  warnings require individual review rather than a blanket fix; leaked-password protection remains
+  a Dev Auth dashboard setting.
+
+- **Quality result:** focused changed-file lint, TypeScript, build and diff checks pass; Vitest is
+  19/19; Python is 167 tests plus 29 subtests; `npm audit` is zero. Full lint is unchanged baseline
+  debt at 360 errors and 78 warnings. The dependency update includes React Router 7.18.2, Vite
+  8.2.1, Supabase JS 2.112.2 and SheetJS 0.20.3.
 
 - The 9 August actual-role run is recorded in the new top section of `CODEX_HANDOFF.md`. Team
   Manager, Coach, Player, Association Admin, dashboard, fixture/calendar/completed-game, Safety Hub

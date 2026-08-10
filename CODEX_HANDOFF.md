@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-09
+Last updated: 2026-08-10
 
 Future agents should start by reading these files in order:
 
@@ -9,6 +9,65 @@ Future agents should start by reading these files in order:
 3. `docs/project-brief.md` — concise product and architecture context.
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 10 August 2026 Dev repair and Supabase hardening snapshot
+
+Aaron approved the complete Dev-only repair batch and a deeper Supabase review. Commit `a77f01a`
+is pushed to `origin/dev`, Vercel deployment `dpl_EkW4715qFjkTmfzwCwHRwndRW9qn` is READY, and
+`https://dev.sportstackapp.com.au` displayed build `v2026.08.10+a77f01a`. Production, `main`,
+`prod`, domains, secrets and Production Supabase were not changed.
+
+### Completed repairs
+
+- Communications now retains account/channel drafts across a full reload, merges edited messages
+  without duplication, paginates older messages in batches of 50, and explains that legacy edits
+  may have no recorded earlier version. Three focused pagination/merge tests cover the behaviour.
+- The top scope switcher now resolves all Team Manager team assignments from the complete role and
+  TeamContext data instead of a fragile nested query. A real multi-club login retest is still needed.
+- Coach line-up view has explicit **Remove player** and **Clear position** actions.
+- Committee Meetings uses neutral wording when there are no recorded meetings, avoiding conflict
+  with past meetings visible in Calendar.
+- Public Umpire Match Voting candidate loading and submission validation are restricted to the
+  selected fixture's two teams, selected fill-ins, line-up assignments and recorded appearances.
+  Dev Edge Function `public-umpire-match-voting` version 9 is ACTIVE. A live Round 13 fixture search
+  loaded the fixture candidate pool with no browser console error; no ballot was submitted.
+- Dependencies were updated, including React Router, Vite and SheetJS. `npm audit` now reports zero
+  vulnerabilities.
+
+### Dev Supabase result
+
+- Migration `20260810090000_harden_functions_and_rls_performance.sql` was first run inside a full
+  transaction and rolled back successfully. It was then applied to Dev and recorded live as
+  `20260810064248_harden_functions_and_rls_performance`.
+- The migration fixes two mutable function search paths, removes browser-role execution from six
+  trigger-only security-definer functions, converts 61 RLS auth calls to one-time init-plan form,
+  and adds 33 missing foreign-key indexes. It contains no delete, drop, truncate or data rewrite.
+- Security adviser notices reduced from 85 to 75. Performance adviser notices reduced from 554 to
+  493. The actionable `auth_rls_initplan` group reduced from 61 to zero and the missing foreign-key
+  index group reduced from 164 to 131.
+- Remaining notices were deliberately not blanket-fixed: public ballot RPCs require anonymous
+  access, authenticated RPC helpers require individual access review, policy consolidation can
+  change permissions, and index/table cleanup would require destructive drops. Supabase leaked
+  password protection remains a dashboard Auth setting to enable separately.
+
+### Verification
+
+- Focused changed-file ESLint, `git diff --check`, `npx tsc --noEmit` and `npm run build`: pass.
+- Vitest: 19/19 pass. Python: 167 tests plus 29 subtests pass.
+- Full `npm run lint` remains baseline debt at 360 errors and 78 warnings; changed files are clean.
+- Vercel deployed the exact `a77f01a` commit and the Dev alias showed the matching build.
+
+### Still open before Dev acceptance
+
+1. Use real disposable Team Manager, Coach and Player sessions to retest the multi-club switcher,
+   line-up removal and read-only line-up behaviour. Chrome automation was unavailable during the
+   final pass, so these are not marked as owner/session passes.
+2. Create one controlled eligible Player MVP Voting round and complete the ballot/history/analytics
+   flow with email disabled.
+3. Finish the remaining Safety Hub and Committee write/upload checks and responsive tablet/mobile
+   review. The broader Roles & modules redesign remains parked by owner decision.
+4. Review the remaining Supabase adviser groups separately before any destructive cleanup. Enable
+   leaked-password protection in the Dev Auth dashboard when convenient.
 
 ## 9 August 2026 unattended Dev test snapshot
 

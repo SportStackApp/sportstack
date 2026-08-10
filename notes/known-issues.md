@@ -200,31 +200,36 @@ view is read-only, and switching back restores the controls. No line-up data was
 
 ## 9 August 2026 unattended Dev findings
 
-**Status:** Logged for discussion; only the fixture data-integrity blocker was fixed
+**Updated:** 10 August 2026
+**Status:** Approved repair batch deployed to Dev; role-session acceptance checks remain
 
 - **Fixture unchanged-save timezone shift — fixed on Dev:** Association Admin saving an unchanged
   `12:15 pm` fixture changed it to `10:15 pm`. Commit `e38150d` converts form values using the
   association timezone. Browser and Dev DB retests passed; no migration.
-- **Multi-club Team Manager switching:** A temporary Lucas HC Team Manager role was recognised in
-  storage but did not expose a club switcher; the UI stayed on Grampians/Pumas. The exact temporary
-  role was removed and verified absent.
-- **Communications persistence/history:** An unsent draft survives in-app navigation but disappears
-  after a full reload. The only legacy edited message opens an empty revision-history dialog.
-- **Communications pagination:** Only seven existing Team Chat messages were available, so loading
-  an earlier batch beyond the newest 50 remains untested. Do not create real-user noise merely to
-  satisfy this check.
-- **Line-up removal:** Coach assignment and Player read-only display work, but no obvious UI action
-  was found to unassign a saved player. The exact test assignment was safely removed by identifier.
+- **Multi-club Team Manager switching — repaired, session retest pending:** Commit `a77f01a`
+  replaces the fragile nested role query with a flat role query resolved through the complete
+  TeamContext lists. A real multi-club Team Manager login is still required before owner acceptance.
+- **Communications persistence/history — repaired:** Drafts are now stored per account/channel
+  across a full reload. Legacy edits with no revision rows show explanatory wording rather than an
+  apparently broken empty history. A signed-in reload smoke test remains.
+- **Communications pagination — automated pass:** Focused tests cover edit replacement, a 51-message
+  page and full-page detection without publishing disposable messages to real channels.
+- **Line-up removal — repaired, session retest pending:** Coach view now exposes explicit remove-player
+  and clear-position actions. No line-up data was changed during the final verification.
 - **Player MVP Voting:** The disposable Player has no attended/selected match, so the eligible
   ballot and analytics flow still needs a controlled Dev-only round with email disabled.
-- **Umpire Match Voting suggestion scope:** Candidate loading remains association-wide. Restrict
-  suggestions to both fixture teams plus recorded participants/fill-ins; unrelated club/team
-  members must not appear merely because they share the association.
-- **Committee meeting wording:** The calendar shows a past `Test meeting`, while the Meetings tab
-  says no meetings are scheduled. Confirm whether that tab intentionally means future meetings.
-- **Repository/database health debt:** production dependency audit reports 10 high and one moderate
-  advisory. Dev Supabase advisors report 69 security WARN and 239 performance WARN notices. Review
-  both as dedicated batches; do not run broad automatic fixes during owner testing.
+- **Umpire Match Voting suggestion scope — repaired on Dev:** Edge Function version 9 restricts
+  candidate loading and linked-profile submission validation to the selected fixture's two teams,
+  selected fill-ins, line-up assignments and recorded appearances. Live fixture search passed; an
+  actual Umpire submission regression remains.
+- **Committee meeting wording — repaired:** Empty Meetings copy now says no meetings have been
+  recorded for the committee and no longer implies that a past Calendar meeting cannot exist.
+- **Repository dependency debt — resolved:** Reviewed dependency updates are on Dev and `npm audit`
+  reports zero vulnerabilities.
+- **Dev Supabase adviser debt — safe batch applied:** Additive migration
+  `20260810090000_harden_functions_and_rls_performance.sql` passed rollback before apply. Security
+  notices reduced 85 -> 75 and performance notices 554 -> 493. Remaining RPC, policy and index
+  notices require individual review; destructive index/table cleanup remains approval-gated.
 
 ## Email Template Polish
 **Logged:** 30 June 2026  
