@@ -212,7 +212,8 @@ view is read-only, and switching back restores the controls. No line-up data was
 - **Communications persistence/history — repaired and draft owner-confirmed:** Drafts are now stored per account/channel
   across a full reload. Legacy edits with no revision rows show explanatory wording rather than an
   apparently broken empty history. Aaron confirmed an unsent Team Chat draft survives a full reload
-  on Dev. The legacy-history wording still needs a signed-in visual check.
+  on Dev. He also confirmed an edited message displays its current and earlier versions with the
+  editor and timestamp. Legacy messages without revision rows use the new explanatory wording.
 - **Communications pagination — automated pass:** Focused tests cover edit replacement, a 51-message
   page and full-page detection without publishing disposable messages to real channels.
 - **Line-up removal — repaired, session retest pending:** Coach view now exposes explicit remove-player

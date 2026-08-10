@@ -53,7 +53,8 @@ Update this file after every meaningful Codex task, pull request, schema change,
 
 - **Communications draft owner pass:** Aaron confirmed an unsent Team Chat draft survives a full
   `Ctrl + Shift + R` reload on Dev. Automated 50-message pagination/edit-merge coverage also passes;
-  no message was sent for this reload test.
+  no message was sent for this reload test. He then opened an edited message and confirmed its
+  history shows the current and earlier versions with the editor and timestamp.
 
 - **Dev Supabase hardening applied:** additive migration
   `20260810090000_harden_functions_and_rls_performance.sql` passed a transaction/rollback dry run,
