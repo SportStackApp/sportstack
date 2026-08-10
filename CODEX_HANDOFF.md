@@ -34,6 +34,7 @@ is pushed to `origin/dev`, Vercel deployment `dpl_EkW4715qFjkTmfzwCwHRwndRW9qn` 
 - Communications now retains account/channel drafts across a full reload, merges edited messages
   without duplication, paginates older messages in batches of 50, and explains that legacy edits
   may have no recorded earlier version. Three focused pagination/merge tests cover the behaviour.
+  Aaron confirmed an unsent Team Chat draft survives `Ctrl + Shift + R` on Dev.
 - The top scope switcher now resolves all Team Manager team assignments from the complete role and
   TeamContext data instead of a fragile nested query. A real multi-club login retest is still needed.
 - Coach line-up view has explicit **Remove player** and **Clear position** actions.

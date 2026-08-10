@@ -209,9 +209,10 @@ view is read-only, and switching back restores the controls. No line-up data was
 - **Multi-club Team Manager switching — repaired, session retest pending:** Commit `a77f01a`
   replaces the fragile nested role query with a flat role query resolved through the complete
   TeamContext lists. A real multi-club Team Manager login is still required before owner acceptance.
-- **Communications persistence/history — repaired:** Drafts are now stored per account/channel
+- **Communications persistence/history — repaired and draft owner-confirmed:** Drafts are now stored per account/channel
   across a full reload. Legacy edits with no revision rows show explanatory wording rather than an
-  apparently broken empty history. A signed-in reload smoke test remains.
+  apparently broken empty history. Aaron confirmed an unsent Team Chat draft survives a full reload
+  on Dev. The legacy-history wording still needs a signed-in visual check.
 - **Communications pagination — automated pass:** Focused tests cover edit replacement, a 51-message
   page and full-page detection without publishing disposable messages to real channels.
 - **Line-up removal — repaired, session retest pending:** Coach view now exposes explicit remove-player

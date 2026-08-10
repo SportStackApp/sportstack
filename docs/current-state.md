@@ -51,6 +51,10 @@ Update this file after every meaningful Codex task, pull request, schema change,
   version 9. Real Team Manager/Coach/Player session retests remain because Chrome automation was
   unavailable during the final pass.
 
+- **Communications draft owner pass:** Aaron confirmed an unsent Team Chat draft survives a full
+  `Ctrl + Shift + R` reload on Dev. Automated 50-message pagination/edit-merge coverage also passes;
+  no message was sent for this reload test.
+
 - **Dev Supabase hardening applied:** additive migration
   `20260810090000_harden_functions_and_rls_performance.sql` passed a transaction/rollback dry run,
   then was recorded live as `20260810064248_harden_functions_and_rls_performance`. It fixes two
