@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ExternalLink, FileUp, Loader2, Plus } from "lucide-react";
+import { Archive, CornerDownRight, ExternalLink, FileUp, GitBranch, Loader2, LockKeyhole, Plus } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +33,7 @@ import { CommitteeActivity } from "@/components/committee/CommitteeActivity";
 import { CommitteeChat } from "@/components/committee/CommitteeChat";
 import { CommitteeMeetings } from "@/components/committee/CommitteeMeetings";
 import { CommitteePolls } from "@/components/committee/CommitteePolls";
+import { CommitteeSetupWizard, type CommitteeWizardParent } from "@/components/committee/CommitteeSetupWizard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useAdminScope } from "@/hooks/useAdminScope";
@@ -109,8 +120,11 @@ export default function CommitteeManagement() {
   const [documents, setDocuments] = useState<CommitteeDocument[]>([]);
   const [qualifications, setQualifications] = useState<CommitteeQualification[]>([]);
   const [profiles, setProfiles] = useState<Array<{ id: string; first_name: string | null; last_name: string | null }>>([]);
+  const [eligibleProfiles, setEligibleProfiles] = useState<Array<{ id: string; first_name: string | null; last_name: string | null }>>([]);
   const [permissions, setPermissions] = useState<Record<PermissionKey, boolean>>(emptyPermissionState());
   const [createOpen, setCreateOpen] = useState(false);
+  const [createParent, setCreateParent] = useState<CommitteeWizardParent | null>(null);
+  const [closeOpen, setCloseOpen] = useState(false);
   const [positionOpen, setPositionOpen] = useState(false);
   const [memberOpen, setMemberOpen] = useState(false);
   const [documentOpen, setDocumentOpen] = useState(false);
@@ -118,7 +132,6 @@ export default function CommitteeManagement() {
   const [saving, setSaving] = useState(false);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [qualificationFile, setQualificationFile] = useState<File | null>(null);
-  const [committeeForm, setCommitteeForm] = useState({ scopeType: "ASSOCIATION", associationId: "", clubId: "", name: "", description: "" });
   const [positionForm, setPositionForm] = useState({ id: "", title: "", description: "", isPresident: false, permissions: emptyPermissionState() });
   const [memberForm, setMemberForm] = useState({ userId: "", positionId: "", startDate: new Date().toISOString().slice(0, 10), endDate: "", notes: "" });
   const [documentForm, setDocumentForm] = useState({ title: "", type: "Governance", notes: "" });
@@ -136,19 +149,39 @@ export default function CommitteeManagement() {
   };
 
   const selectedCommittee = committees.find((committee) => committee.id === selectedCommitteeId);
+  const selectedParentCommittee = selectedCommittee?.parent_committee_id
+    ? committees.find((committee) => committee.id === selectedCommittee.parent_committee_id)
+    : undefined;
   const profileById = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);
   const positionById = useMemo(() => new Map(positions.map((position) => [position.id, position])), [positions]);
   const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
   const associationById = useMemo(() => new Map(associations.map((association) => [association.id, association])), [associations]);
   const clubById = useMemo(() => new Map(clubs.map((club) => [club.id, club])), [clubs]);
 
-  const manageableAssociations = useMemo(() => associations.filter((association) =>
-    isSuperAdmin || scopedAssociationIds.includes(association.id),
-  ), [associations, isSuperAdmin, scopedAssociationIds]);
   const manageableClubs = useMemo(() => clubs.filter((club) =>
     isSuperAdmin || scopedAssociationIds.includes(club.association_id) || scopedClubIds.includes(club.id),
   ), [clubs, isSuperAdmin, scopedAssociationIds, scopedClubIds]);
+  const manageableAssociations = useMemo(() => associations.filter((association) =>
+    isSuperAdmin
+    || scopedAssociationIds.includes(association.id)
+    || manageableClubs.some((club) => club.association_id === association.id),
+  ), [associations, isSuperAdmin, manageableClubs, scopedAssociationIds]);
   const canCreateCommittee = isSuperAdmin || scopedAssociationIds.length > 0 || scopedClubIds.length > 0;
+  const canCreateAssociationCommittee = isSuperAdmin || scopedAssociationIds.length > 0;
+  const rootCommittees = useMemo(() => {
+    const accessibleIds = new Set(committees.map((committee) => committee.id));
+    return committees.filter((committee) =>
+      !committee.parent_committee_id || !accessibleIds.has(committee.parent_committee_id),
+    );
+  }, [committees]);
+  const subcommitteesByParent = useMemo(() => {
+    const grouped = new Map<string, Committee[]>();
+    committees.filter((committee) => committee.parent_committee_id).forEach((committee) => {
+      const parentId = committee.parent_committee_id as string;
+      grouped.set(parentId, [...(grouped.get(parentId) || []), committee]);
+    });
+    return grouped;
+  }, [committees]);
 
   const loadCommittees = useCallback(async () => {
     setLoading(true);
@@ -224,40 +257,74 @@ export default function CommitteeManagement() {
     void loadCommitteeDetail();
   }, [loadCommitteeDetail]);
 
-  const openCreateCommittee = () => {
+  const preferredWizardScope = () => {
     const preferredClub = manageableClubs.find((club) => club.id === selectedClubId);
     const preferredAssociation = manageableAssociations.find((association) => association.id === selectedAssociationId)
       || manageableAssociations[0]
       || associationById.get(preferredClub?.association_id || "");
-    setCommitteeForm({
-      scopeType: preferredClub ? "CLUB" : "ASSOCIATION",
+    return {
       associationId: preferredAssociation?.id || preferredClub?.association_id || "",
       clubId: preferredClub?.id || "",
-      name: preferredClub ? `${preferredClub.name} Committee` : preferredAssociation ? `${preferredAssociation.name} Committee` : "",
-      description: "",
+    };
+  };
+
+  const openCreateCommittee = () => {
+    setCreateParent(null);
+    setCreateOpen(true);
+  };
+
+  const openCreateSubcommittee = () => {
+    if (!selectedCommittee || selectedCommittee.parent_committee_id) return;
+    setCreateParent({
+      id: selectedCommittee.id,
+      name: selectedCommittee.name,
+      associationId: selectedCommittee.association_id,
+      associationName: associationById.get(selectedCommittee.association_id)?.name || "Association",
+      clubId: selectedCommittee.club_id,
+      clubName: selectedCommittee.club_id ? clubById.get(selectedCommittee.club_id)?.name || "Club" : null,
+      scopeType: selectedCommittee.scope_type as "ASSOCIATION" | "CLUB",
     });
     setCreateOpen(true);
   };
 
-  const createCommittee = async () => {
-    if (!user || !committeeForm.name.trim() || !committeeForm.associationId) return;
-    if (committeeForm.scopeType === "CLUB" && !committeeForm.clubId) return;
+  const handleCommitteeCreated = async (committeeId: string) => {
+    await loadCommittees();
+    changeCommittee(committeeId);
+  };
+
+  const openMemberDialog = async () => {
+    if (!selectedCommittee) return;
+    const { data, error: candidateError } = await supabase.rpc("list_committee_candidates", {
+      p_association_id: selectedCommittee.association_id,
+      ...(selectedCommittee.club_id ? { p_club_id: selectedCommittee.club_id } : {}),
+      ...(selectedCommittee.parent_committee_id ? { p_parent_committee_id: selectedCommittee.parent_committee_id } : {}),
+    });
+    if (candidateError) {
+      toast({ title: "Eligible people could not be loaded", description: candidateError.message, variant: "destructive" });
+      return;
+    }
+    setEligibleProfiles((data || []).map((candidate) => ({
+      id: candidate.profile_id,
+      first_name: candidate.display_name,
+      last_name: null,
+    })));
+    setMemberOpen(true);
+  };
+
+  const closeCommittee = async () => {
+    if (!selectedCommittee || !user) return;
     setSaving(true);
-    const { data, error: saveError } = await supabase.from("committees").insert({
-      association_id: committeeForm.associationId,
-      club_id: committeeForm.scopeType === "CLUB" ? committeeForm.clubId : null,
-      scope_type: committeeForm.scopeType,
-      name: committeeForm.name.trim(),
-      description: committeeForm.description.trim() || null,
-      created_by: user.id,
-    }).select("id").single();
-    if (saveError) {
-      toast({ title: "Committee not created", description: saveError.message, variant: "destructive" });
+    const { error: closeError } = await supabase.from("committees").update({
+      is_active: false,
+      closed_at: new Date().toISOString(),
+      closed_by: user.id,
+    }).eq("id", selectedCommittee.id);
+    if (closeError) {
+      toast({ title: "Committee not closed", description: closeError.message, variant: "destructive" });
     } else {
-      toast({ title: "Committee created", description: "Add positions, permissions and appointments next." });
-      setCreateOpen(false);
+      toast({ title: "Committee closed", description: "Its records have been kept and remain available to authorised administrators." });
+      setCloseOpen(false);
       await loadCommittees();
-      setSelectedCommitteeId(data.id);
     }
     setSaving(false);
   };
@@ -446,22 +513,115 @@ export default function CommitteeManagement() {
         </Card>
       ) : (
         <>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-2">
-                <Label>Committee</Label>
-                <Select value={selectedCommitteeId} onValueChange={changeCommittee}>
-                  <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
-                  <SelectContent>{committees.map((committee) => {
-                    const scopeName = committee.scope_type === "CLUB"
-                      ? clubById.get(committee.club_id || "")?.name || "Club"
-                      : associationById.get(committee.association_id)?.name || "Association";
-                    return <SelectItem key={committee.id} value={committee.id}>{committee.name} — {scopeName}</SelectItem>;
-                  })}</SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+            <Card>
+              <CardHeader>
+                <CardTitle>Your committees</CardTitle>
+                <CardDescription>Subcommittees are shown under their parent committee.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {rootCommittees.map((committee) => {
+                  const children = subcommitteesByParent.get(committee.id) || [];
+                  return (
+                    <div key={committee.id} className="space-y-1">
+                      <Button
+                        variant={selectedCommitteeId === committee.id ? "secondary" : "ghost"}
+                        className="h-auto w-full justify-start px-3 py-2 text-left"
+                        onClick={() => changeCommittee(committee.id)}
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{committee.name}</span>
+                          <span className="block truncate text-xs font-normal text-muted-foreground">
+                            {committee.parent_committee_id
+                              ? "Private subcommittee"
+                              : committee.scope_type === "CLUB"
+                              ? clubById.get(committee.club_id || "")?.name || "Club committee"
+                              : associationById.get(committee.association_id)?.name || "Association committee"}
+                          </span>
+                        </span>
+                        {children.length > 0 && <Badge variant="outline">{children.length}</Badge>}
+                      </Button>
+                      {children.map((child) => (
+                        <Button
+                          key={child.id}
+                          variant={selectedCommitteeId === child.id ? "secondary" : "ghost"}
+                          className="h-auto w-[calc(100%-1rem)] justify-start gap-2 py-2 pl-3 pr-2 text-left ml-4"
+                          onClick={() => changeCommittee(child.id)}
+                        >
+                          <CornerDownRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium">{child.name}</span>
+                            <span className="block text-xs font-normal text-muted-foreground">
+                              {child.lifecycle_type === "TEMPORARY" ? "Temporary panel" : "Standing subcommittee"}
+                            </span>
+                          </span>
+                          {!child.is_active && <Badge variant="outline">Closed</Badge>}
+                        </Button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            {selectedCommittee && (
+              <Card>
+                <CardHeader className="space-y-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      {selectedCommittee.parent_committee_id && selectedParentCommittee && (
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-sm text-primary hover:underline"
+                          onClick={() => changeCommittee(selectedCommittee.parent_committee_id as string)}
+                        >
+                          <GitBranch className="h-4 w-4" />
+                          {selectedParentCommittee.name}
+                        </button>
+                      )}
+                      {selectedCommittee.parent_committee_id && !selectedParentCommittee && (
+                        <p className="flex items-center gap-1 text-sm text-muted-foreground"><LockKeyhole className="h-4 w-4" />Private subcommittee</p>
+                      )}
+                      <CardTitle>{selectedCommittee.name}</CardTitle>
+                      <CardDescription>{selectedCommittee.description || "No purpose description has been added."}</CardDescription>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant={selectedCommittee.is_active ? "secondary" : "outline"}>{selectedCommittee.is_active ? "Active" : "Closed"}</Badge>
+                      {selectedCommittee.parent_committee_id && <Badge variant="outline"><LockKeyhole className="mr-1 h-3 w-3" />Private subcommittee</Badge>}
+                      <Badge variant="outline">{selectedCommittee.lifecycle_type === "TEMPORARY" ? "Temporary" : "Standing"}</Badge>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 text-sm sm:grid-cols-2">
+                    <div className="rounded-lg bg-muted/50 p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Organisation</p>
+                      <p className="mt-1 font-medium">
+                        {associationById.get(selectedCommittee.association_id)?.name || "Association"}
+                        {selectedCommittee.club_id ? ` • ${clubById.get(selectedCommittee.club_id)?.name || "Club"}` : ""}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-muted/50 p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Lifecycle</p>
+                      <p className="mt-1 font-medium">
+                        {selectedCommittee.lifecycle_type === "TEMPORARY"
+                          ? `${formatDate(selectedCommittee.starts_on)}${selectedCommittee.target_end_on ? ` to ${formatDate(selectedCommittee.target_end_on)}` : " — no target date"}`
+                          : "Standing — ongoing until formally closed"}
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                {(permissions.manage_committee || permissions.manage_members) && selectedCommittee.is_active && (
+                  <CardContent className="flex flex-wrap gap-2 pt-0">
+                    {permissions.manage_committee && !selectedCommittee.parent_committee_id && (
+                      <Button onClick={openCreateSubcommittee}><GitBranch className="mr-2 h-4 w-4" />Create subcommittee</Button>
+                    )}
+                    {permissions.manage_committee && (
+                      <Button variant="outline" onClick={() => setCloseOpen(true)}><Archive className="mr-2 h-4 w-4" />Close committee</Button>
+                    )}
+                  </CardContent>
+                )}
+              </Card>
+            )}
+          </div>
 
           <Tabs value={area} onValueChange={(value) => setWorkspace(value as "work" | "admin", value === "admin" ? "positions" : "calendar")}>
             <TabsList className="grid h-auto w-full grid-cols-2">
@@ -511,7 +671,7 @@ export default function CommitteeManagement() {
               <Card>
                 <CardHeader className="flex-row items-start justify-between gap-3">
                   <div><CardTitle>Appointments</CardTitle><CardDescription>Position, start date and optional end date.</CardDescription></div>
-                  {permissions.manage_members && positions.length > 0 && <Button size="sm" onClick={() => setMemberOpen(true)}><Plus className="mr-2 h-4 w-4" />Member</Button>}
+                  {permissions.manage_members && positions.length > 0 && <Button size="sm" onClick={() => void openMemberDialog()}><Plus className="mr-2 h-4 w-4" />Member</Button>}
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {members.length === 0 ? <p className="text-sm text-muted-foreground">No committee members appointed.</p> : members.map((member) => (
@@ -647,10 +807,23 @@ export default function CommitteeManagement() {
         </>
       )}
 
-      <CommitteeCreateDialog open={createOpen} onOpenChange={setCreateOpen} form={committeeForm} setForm={setCommitteeForm} associations={manageableAssociations} clubs={manageableClubs} saving={saving} onSave={() => void createCommittee()} />
+      {user && (
+        <CommitteeSetupWizard
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          userId={user.id}
+          associations={manageableAssociations.map((association) => ({ id: association.id, name: association.name }))}
+          clubs={manageableClubs.map((club) => ({ id: club.id, name: club.name, association_id: club.association_id }))}
+          canCreateAssociationCommittee={canCreateAssociationCommittee}
+          initialAssociationId={preferredWizardScope().associationId}
+          initialClubId={preferredWizardScope().clubId}
+          parent={createParent}
+          onCreated={handleCommitteeCreated}
+        />
+      )}
       <PositionDialog open={positionOpen} onOpenChange={setPositionOpen} form={positionForm} setForm={setPositionForm} saving={saving} onSave={() => void savePosition()} />
       <SimpleDialog open={memberOpen} onOpenChange={setMemberOpen} title="Appoint committee member" description="Assign a user to a position with appointment dates." saving={saving} onSave={() => void saveMember()}>
-        <SelectField label="User" value={memberForm.userId} onChange={(userId) => setMemberForm((current) => ({ ...current, userId }))} options={profiles.map((profile) => ({ id: profile.id, name: profileName(profile) }))} />
+        <SelectField label="User" value={memberForm.userId} onChange={(userId) => setMemberForm((current) => ({ ...current, userId }))} options={eligibleProfiles.map((profile) => ({ id: profile.id, name: profileName(profile) }))} />
         <SelectField label="Position" value={memberForm.positionId} onChange={(positionId) => setMemberForm((current) => ({ ...current, positionId }))} options={positions.map((position) => ({ id: position.id, name: position.title }))} />
         <div className="grid grid-cols-2 gap-3"><InputField label="Start date" type="date" value={memberForm.startDate} onChange={(startDate) => setMemberForm((current) => ({ ...current, startDate }))} /><InputField label="End date (optional)" type="date" value={memberForm.endDate} onChange={(endDate) => setMemberForm((current) => ({ ...current, endDate }))} /></div>
         <TextAreaField label="Appointment notes" value={memberForm.notes} onChange={(notes) => setMemberForm((current) => ({ ...current, notes }))} />
@@ -664,19 +837,25 @@ export default function CommitteeManagement() {
         <SelectField label="Committee member" value={qualificationForm.memberId} onChange={(memberId) => setQualificationForm((current) => ({ ...current, memberId }))} options={members.filter((member) => permissions.manage_members || member.user_id === user?.id).map((member) => ({ id: member.id, name: `${profileName(profileById.get(member.user_id))} — ${positionById.get(member.position_id)?.title || "Position"}` }))} />
         <InputField label="Qualification title" value={qualificationForm.title} onChange={(title) => setQualificationForm((current) => ({ ...current, title }))} /><InputField label="Issuer" value={qualificationForm.issuer} onChange={(issuer) => setQualificationForm((current) => ({ ...current, issuer }))} /><div className="grid grid-cols-2 gap-3"><InputField label="Obtained date" type="date" value={qualificationForm.obtainedDate} onChange={(obtainedDate) => setQualificationForm((current) => ({ ...current, obtainedDate }))} /><InputField label="Expiry date" type="date" value={qualificationForm.expiryDate} onChange={(expiryDate) => setQualificationForm((current) => ({ ...current, expiryDate }))} /></div><FileField label="Evidence file (optional)" file={qualificationFile} onChange={setQualificationFile} /><TextAreaField label="Notes" value={qualificationForm.notes} onChange={(notes) => setQualificationForm((current) => ({ ...current, notes }))} />
       </SimpleDialog>
+      <AlertDialog open={closeOpen} onOpenChange={setCloseOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close {selectedCommittee?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Closing keeps the committee and all of its records. A parent committee cannot be closed while it has active subcommittees.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Keep open</AlertDialogCancel>
+            <AlertDialogAction onClick={(event) => { event.preventDefault(); void closeCommittee(); }} disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Close committee
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
-}
-
-function CommitteeCreateDialog({ open, onOpenChange, form, setForm, associations, clubs, saving, onSave }: { open: boolean; onOpenChange: (open: boolean) => void; form: { scopeType: string; associationId: string; clubId: string; name: string; description: string }; setForm: React.Dispatch<React.SetStateAction<{ scopeType: string; associationId: string; clubId: string; name: string; description: string }>>; associations: Array<{ id: string; name: string }>; clubs: Array<{ id: string; name: string; association_id: string }>; saving: boolean; onSave: () => void }) {
-  const visibleClubs = clubs.filter((club) => club.association_id === form.associationId);
-  return <SimpleDialog open={open} onOpenChange={onOpenChange} title="Create committee" description="Choose association or club scope. This controls who can administer it." saving={saving} onSave={onSave}>
-    <SelectField label="Scope" value={form.scopeType} onChange={(scopeType) => setForm((current) => ({ ...current, scopeType, clubId: scopeType === "CLUB" ? current.clubId : "" }))} options={[{ id: "ASSOCIATION", name: "Association" }, { id: "CLUB", name: "Club" }]} />
-    <SelectField label="Association" value={form.associationId} onChange={(associationId) => setForm((current) => ({ ...current, associationId, clubId: "" }))} options={associations} />
-    {form.scopeType === "CLUB" && <SelectField label="Club" value={form.clubId} onChange={(clubId) => setForm((current) => ({ ...current, clubId }))} options={visibleClubs} />}
-    <InputField label="Committee name" value={form.name} onChange={(name) => setForm((current) => ({ ...current, name }))} />
-    <TextAreaField label="Purpose" value={form.description} onChange={(description) => setForm((current) => ({ ...current, description }))} />
-  </SimpleDialog>;
 }
 
 function PositionDialog({ open, onOpenChange, form, setForm, saving, onSave }: { open: boolean; onOpenChange: (open: boolean) => void; form: { id: string; title: string; description: string; isPresident: boolean; permissions: Record<PermissionKey, boolean> }; setForm: React.Dispatch<React.SetStateAction<{ id: string; title: string; description: string; isPresident: boolean; permissions: Record<PermissionKey, boolean> }>>; saving: boolean; onSave: () => void }) {

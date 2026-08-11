@@ -1332,38 +1332,56 @@ export type Database = {
       committees: {
         Row: {
           association_id: string
+          closed_at: string | null
+          closed_by: string | null
           club_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
           id: string
           is_active: boolean
+          lifecycle_type: string
           name: string
+          parent_committee_id: string | null
           scope_type: string
+          starts_on: string
+          target_end_on: string | null
           updated_at: string
         }
         Insert: {
           association_id: string
+          closed_at?: string | null
+          closed_by?: string | null
           club_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
+          lifecycle_type?: string
           name: string
+          parent_committee_id?: string | null
           scope_type: string
+          starts_on?: string
+          target_end_on?: string | null
           updated_at?: string
         }
         Update: {
           association_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
           club_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
+          lifecycle_type?: string
           name?: string
+          parent_committee_id?: string | null
           scope_type?: string
+          starts_on?: string
+          target_end_on?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1372,6 +1390,13 @@ export type Database = {
             columns: ["association_id"]
             isOneToOne: false
             referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committees_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1386,6 +1411,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committees_parent_committee_id_fkey"
+            columns: ["parent_committee_id"]
+            isOneToOne: false
+            referencedRelation: "committees"
             referencedColumns: ["id"]
           },
         ]
@@ -9413,6 +9445,15 @@ export type Database = {
         Args: { p_session_id: string; p_user_id: string }
         Returns: boolean
       }
+      can_create_committee: {
+        Args: {
+          p_association_id: string
+          p_club_id?: string
+          p_parent_committee_id?: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       can_manage_committee_scope: {
         Args: {
           p_association_id: string
@@ -9542,6 +9583,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_committee_with_setup: {
+        Args: { p_committee: Json; p_positions?: Json }
+        Returns: string
+      }
       create_public_umpire_vote: {
         Args: { p_lines: Json; p_submission: Json }
         Returns: {
@@ -9645,6 +9690,18 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: never; Returns: boolean }
+      list_committee_candidates: {
+        Args: {
+          p_association_id: string
+          p_club_id?: string
+          p_parent_committee_id?: string
+        }
+        Returns: {
+          display_name: string
+          is_current_club_president: boolean
+          profile_id: string
+        }[]
+      }
       list_permission_management_records_for_mode: {
         Args: {
           p_actor_mode?: string
@@ -10364,4 +10421,3 @@ export const Constants = {
     },
   },
 } as const
-
