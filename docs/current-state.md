@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-08-10
+Last updated: 2026-08-11
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -29,6 +29,31 @@ Update this file after every meaningful Codex task, pull request, schema change,
 8. Live Supabase checks
 
 ## Current priority
+
+- **Guided Committee and subcommittee workflow is live on Dev:** commit `deea6c0` replaces the
+  single create form with a reusable five-step workflow for Association and Club committees plus
+  one level of standing or temporary private subcommittees. It supports suggested purposes,
+  inherited scope, editable details, optional positions/access presets/member appointments,
+  current-Club-President preview and confirmation, review-before-create, saved draft recovery and
+  discard protection. The Committee list now displays parent/child nesting and breadcrumbs, and
+  exposes **Create subcommittee** only on active top-level committees.
+- **Dev database enforcement is applied:** additive migrations
+  `20260811090305_guided_committee_workflow` and
+  `20260811091322_fix_guided_committee_creation_returning` add lifecycle/parent fields, restrict
+  deletion, preserve closed records, prevent active-child closure, enforce one-level inherited
+  scope and validate appointments. The authenticated `create_committee_with_setup` function is
+  security-invoker and creates the committee, positions and appointments atomically. Full
+  transaction/rollback security suites passed for Association Admin, Club Admin, parent setup
+  manager and appointed/private member access, including atomic failure, President snapshot and
+  close-preservation checks. No rollback test records remain.
+- **Dev verification:** Vercel deployment `dpl_5TWrcvoBeJPPYEUFD3HzTvLmMhTo` is READY and the Dev
+  page displayed `v2026.08.11+deea6c0`. The authenticated browser smoke test passed the first two
+  guided steps, draft answer recovery after reload, discard confirmation and the responsive
+  390 px layout without creating a record. All 26 Vitest tests, focused ESLint, TypeScript, build
+  and diff checks pass. Full lint remains baseline debt at 360 errors and 78 warnings. The live Dev
+  adviser baseline remains 77 security and 493 performance notices; the new atomic create function
+  did not add a security-definer warning. Production, `main` and `prod` remain untouched. Owner UI
+  write/access testing across the four intended roles is still required before staging acceptance.
 
 - **Actual Club Admin scope leak repaired on Dev:** Aaron showed that the AM account has Club Admin
   scope only for Grampians Hockey Club, while its header offered Blaze and every other Hockey

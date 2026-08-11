@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-10
+Last updated: 2026-08-11
 
 Future agents should start by reading these files in order:
 
@@ -9,6 +9,63 @@ Future agents should start by reading these files in order:
 3. `docs/project-brief.md` — concise product and architecture context.
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 11 August 2026 guided Committee workflow
+
+Aaron approved the full Dev-only implementation of the guided Committee and subcommittee plan.
+Commit `deea6c0` (`feat(committee): add guided setup workflow`) is pushed to `origin/dev`. Vercel
+deployment `dpl_5TWrcvoBeJPPYEUFD3HzTvLmMhTo` is READY for exact commit
+`deea6c00613712950e6a204b1152ca5994f6b6c2`; the Dev alias displayed
+`v2026.08.11+deea6c0`. Production, `main`, `prod`, Production Supabase, domains and secrets were not
+changed.
+
+### Delivered
+
+- A reusable large five-step guided pop-up now handles purpose, structure, details, optional
+  positions/members and final review. Main committees support the agreed purpose presets and
+  authorised Association or Club scope.
+- Top-level committees can create one level of standing or temporary subcommittees. Children show
+  under the parent with breadcrumbs, inherit its organisation, cannot create another level and
+  keep private meetings, documents, minutes, polls and chat separate.
+- The people step supports suggested and custom positions, four access presets, scoped candidate
+  search, optional appointments and **Skip roles and members for now**. Presidents forums can
+  preview and confirm current scoped Club Presidents; this is a fixed snapshot, not future syncing.
+- Draft answers are versioned in session storage, survive reload/window switching, and require
+  confirmation before discard. Submission is guarded against double clicks and step-specific
+  errors are shown inline.
+- Committee listing and existing appointment controls now respect scoped candidates and private
+  child visibility, including a child whose parent is not visible to the ordinary appointed member.
+
+### Dev database and security
+
+- Applied additive Dev migrations `20260811090305_guided_committee_workflow` and
+  `20260811091322_fix_guided_committee_creation_returning`. They extend `committees` with parent,
+  lifecycle and close fields; restrict parent deletion; preserve closed records; block a parent
+  close while children are active; and enforce inherited scope, one-level nesting and in-scope
+  appointments.
+- `create_committee_with_setup(jsonb,jsonb)` is authenticated, security-invoker and creates the
+  committee, positions and appointments in one transaction. The follow-up migration generates IDs
+  before inserts because the initial dry-run exposed an `INSERT ... RETURNING`/RLS conflict.
+- Rolled-back access suites passed for Club Admin, Association Admin, parent setup manager,
+  ordinary parent member and explicitly appointed child member. Atomic failure, President matching
+  and fixed snapshot, inherited scope, one-level nesting, close retention and active-child close
+  guard all passed. Zero rollback committees remain.
+- Post-migration Supabase advisers remain at the existing broad baseline of 77 security and 493
+  performance notices. The new atomic create function did not add a security-definer warning.
+  Candidate and create-authorisation helpers intentionally bind authenticated users to their
+  current role/scope and still require later individual adviser review with the existing baseline.
+
+### Verification and remaining owner checks
+
+- All 26 Vitest tests, the four focused Committee tests, changed-file ESLint, TypeScript, build and
+  `git diff --check` pass. Full lint remains known baseline debt at 360 errors and 78 warnings.
+- Authenticated Dev smoke passed the latest build, first two workflow steps, saved-answer recovery
+  after reload, discard confirmation and a 390 px mobile layout. It did not create a real record.
+- Owner/session testing remains for: the full Review/create write; Association Admin, Club Admin,
+  Super Admin and parent setup-manager UI access; a real standing and temporary child; keyboard-only
+  completion; President preview wording; and explicit private-member access in separate sessions.
+- Exact next owner test: open **Create Committee**, choose any purpose and continue to **Review**
+  without pressing the final create button. Confirm whether the wording and visual flow are clear.
 
 ## 10 August 2026 Dev repair and Supabase hardening snapshot
 

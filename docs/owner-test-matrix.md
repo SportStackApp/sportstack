@@ -1,11 +1,31 @@
 # SportStack Owner-Test Matrix
 
-Last updated: 3 August 2026
+Last updated: 11 August 2026
 
 This is the single checklist matching the 31 July to 2 August owner review against the Dev
 implementation. It separates what is present from what has actually been tested.
 
 ## Current test checkpoint
+
+### Guided Committee and subcommittee workflow — 11 August 2026
+
+The new workflow is deployed on Dev at commit `deea6c0`. Database checks below ran inside rolled-back
+transactions unless stated otherwise, so no disposable committee records remain.
+
+| Check | Evidence | Status |
+|---|---|---|
+| Main committee purpose, organisation, details, optional people and review steps | Desktop and 390 px browser smoke loaded the five-step workflow with authorised Club scope, selectable purpose cards, progress and responsive scrolling | **Automated UI smoke pass; owner creation pending** |
+| Standing/temporary subcommittee and inherited organisation | Live Dev constraints and rolled-back function calls enforce the parent organisation, lifecycle dates and one child level | **Database pass; owner UI creation pending** |
+| Private child access | Scope administrators and a parent member with `Manage committee setup` administered the child; an ordinary parent member could not read it; an appointed child member could read only that child | **Database/RLS pass** |
+| Position access presets and scoped appointments | Atomic setup created selected positions and appointments; an out-of-scope candidate failed the entire transaction with no partial committee | **Database/atomicity pass** |
+| Current Club Presidents | Matching returned current Presidents in scope; the confirmed appointment snapshot did not change when the source appointment later ended | **Database pass; owner preview wording pending** |
+| Draft recovery and discard protection | Purpose answer survived reload and reopened from **Create Committee**; closing a started flow asked before removing the draft | **Automated UI pass** |
+| Closing and retention | Active children blocked parent closure; closing preserved committee and member records; the parent could close after its children | **Database pass** |
+| Keyboard, full review, real create and role matrix | Needs a complete no-mouse pass and controlled Association Admin, Club Admin, Super Admin and parent setup-manager UI writes | **Owner/session test pending** |
+
+**Next owner test:** on Dev Committee Management, open **Create Committee**, choose a purpose and
+continue through to **Review**. Do not press the final create button yet. Confirm the wording and
+flow are clear.
 
 - The actual **Admin Sportstack** Super Admin account is signed in on Dev.
 - Dev migrations `20260802105000_transactional_dev_account_and_role_guards.sql`,
