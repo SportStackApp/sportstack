@@ -8,7 +8,8 @@ export type SportStackModuleKey =
   | "umpire_match_voting"
   | "committee"
   | "safety_risk"
-  | "hockey_trace";
+  | "hockey_trace"
+  | "incident_discipline";
 
 const CLOSED_MODULE_STATE: Record<SportStackModuleKey, boolean> = {
   player_mvp: false,
@@ -16,6 +17,7 @@ const CLOSED_MODULE_STATE: Record<SportStackModuleKey, boolean> = {
   committee: false,
   safety_risk: false,
   hockey_trace: false,
+  incident_discipline: false,
 };
 
 const permissionClient = supabase as unknown as {

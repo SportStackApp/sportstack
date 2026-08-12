@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -29,6 +29,36 @@ Update this file after every meaningful Codex task, pull request, schema change,
 8. Live Supabase checks
 
 ## Current priority
+
+- **Incident & Discipline Phase 1 is implemented on Dev and awaiting owner acceptance:** the hidden
+  `/discipline` portal provides assigned cases, atomic case/person/allegation intake, verified
+  Rule 7 deadlines, separate preliminary classification guidance, explicit case and portal access,
+  investigator independence, notifications, witnesses, private immutable evidence, natural-justice
+  safeguards, allegation findings, signed report snapshots, HB decisions, an append-only timeline
+  and official-source citations. The UI labels information as **Fact**, **Rule**, **Judgement** or
+  **Local interpretation** and never decides guilt or automatically applies a penalty.
+- **Accuracy corrections are locked into the Dev rule pack:** finals timing requires the relevant
+  club to participate in that competition; current investigation appeals are Rules 7.22-7.25; all
+  four direct-Tribunal Schedule triggers are covered; and the linked form's `$250` versus 2026
+  Schedules `$500` contempt conflict remains visible. Business-day meaning, NIF adoption/contact,
+  authority mappings, natural-justice safeguards, fines/fees and other local treatments remain
+  `REVIEW_REQUIRED` until Hockey Ballarat approves them. See `docs/incident-discipline-phase1.md`.
+- **Dev database only:** seven additive local `2026081211*` migration files create 26 RLS-protected
+  `discipline_*` tables, a 20 MB private evidence bucket, role-checking functions, UTC/Melbourne
+  deadline calculations, 32 classification rows, 10 deadline definitions, 12 local-variation
+  records and the verified 2026 Victorian holiday calendar. All migrations passed rollback dry
+  runs before application to SportStack Dev. Cross-case access/revocation, regular/Easter and
+  finals deadlines, every classification branch, atomic intake and blocked/overridden report
+  sign-off passed rolled-back live Dev tests. A sign-off test found and fixed the pgcrypto schema
+  qualification before release. No rollback records remain; Production, `main` and `prod` are
+  untouched.
+- **Security review:** case content is assignment-only even for Association/Super Admin roles;
+  configuration and case access are separate. Supabase reports no anonymous discipline function
+  warning or discipline table without RLS. Its authenticated security-definer warnings are
+  expected for the client RPC entrypoints, which re-check `auth.uid()` and the required case role.
+  New foreign-key indexes are currently reported only as unused because the module has no live
+  workload. The `discipline_only` route restriction is not claimed as a complete database sandbox:
+  existing SportStack shared directory data remains available to signed-in accounts.
 
 - **Guided Committee and subcommittee workflow is live on Dev:** commit `deea6c0` replaces the
   single create form with a reusable five-step workflow for Association and Club committees plus

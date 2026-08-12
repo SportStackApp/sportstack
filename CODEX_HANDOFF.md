@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 
 Future agents should start by reading these files in order:
 
@@ -9,6 +9,65 @@ Future agents should start by reading these files in order:
 3. `docs/project-brief.md` — concise product and architecture context.
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 12 August 2026 Incident & Discipline Phase 1
+
+Aaron approved a Dev-first implementation with content accuracy at least as important as page
+structure. The hidden direct-address portal is implemented at `/discipline`, `/discipline/new` and
+`/discipline/cases/:caseId`. It is intentionally absent from normal navigation. Production,
+`main`, `prod`, domains, secrets and Production Supabase were not changed.
+
+### Rule verification and product boundary
+
+- The checked source set is the HB March 2026 addendum, HV 2026 Competition Rules, Regulations and
+  Schedules, the linked Incident Report Form, the HB policies page and site-linked Hockey Australia
+  Complaints, Disputes and Discipline Policy. Exact official addresses and SHA-256 hashes are in
+  `docs/incident-discipline-phase1.md`.
+- Phase 1 stops at an HB close or referral decision. Tribunal, mediation, appeal, suspension and
+  publication workflows remain Phase 2. The app records guidance but never decides guilt or applies
+  a penalty automatically.
+- Corrected source interpretation: direct finals timing applies only when the relevant club is
+  participating in that competition; 2026 investigation appeals are Rules 7.22-7.25; and direct
+  Tribunal screening includes Level 3 language, vilification, Level 3 violent conduct and the
+  listed unfair public personal attack.
+- The current Schedules show `$500` for contempt while the linked form says `$250`. The Schedules
+  amount is guidance with a visible conflict warning, not an automatic fine. The business-day
+  definition and all unresolved HB local treatments keep the rule pack at `REVIEW_REQUIRED`.
+
+### Dev implementation and security
+
+- Seven additive local migration files from `20260812110000` to `20260812116000` are applied to
+  Dev. The live migration history recorded the same seven names under application-time versions
+  `20260812004524` through `20260812011829`; the exact mapping is in
+  `docs/incident-discipline-phase1.md`. They add
+  26 `discipline_*` tables, rule/deadline/config data, append-only audit and revision records, a
+  private 20 MB `discipline-evidence` bucket and role-checking database functions. Generated
+  Supabase TypeScript types were refreshed.
+- Every exposed discipline table has RLS. Existing admin or committee status does not reveal case
+  contents; an active case assignment is required. Portal/config access remains separate from case
+  access. Creating a case atomically creates its initial people/allegation, assigns the creator as
+  Case Coordinator and starts the applicable deadlines.
+- The separate portal layout exposes only Cases, New case where allowed, Profile and Sign out.
+  Dedicated accounts can be marked `DISCIPLINE_ONLY`; normal SportStack addresses then redirect to
+  the discipline portal. This is an app restriction, not a total database sandbox, because existing
+  SportStack shared directory information remains readable by signed-in users.
+- The client uses authenticated security-definer RPCs intentionally. Each write rechecks the
+  signed-in user and required association/case role. Supabase advisers show no discipline anonymous
+  RPC warning and no discipline table without RLS; authenticated-RPC warnings are expected and
+  documented. New indexes are only flagged as unused because they have no workload yet.
+
+### Verification and remaining gate
+
+- Migration dry-runs passed before every Dev apply. Rolled-back live tests passed case
+  assignment/removal isolation, Easter public-holiday calculations, direct-finals deadlines, all
+  Language/Physical/Vilification/Other classification branches and Amber fallback, atomic intake,
+  natural-justice blocking, authorised override, immutable SHA-256 report snapshot and audit data.
+- The sign-off test exposed an unqualified pgcrypto `digest` call; additive migration
+  `20260812116000_incident_discipline_report_hash.sql` fixed it and the complete test then passed.
+- The unauthenticated local browser check correctly redirected `/discipline` to sign-in. An
+  authenticated owner UI pass is still required after the Dev deployment. The first owner test is
+  intentionally one small action: open the direct Dev `/discipline` address and confirm the private
+  case portal appears instead of the normal SportStack layout.
 
 ## 11 August 2026 guided Committee workflow
 

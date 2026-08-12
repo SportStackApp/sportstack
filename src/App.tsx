@@ -92,6 +92,11 @@ import { AppModeProvider } from "./contexts/AppModeContext";
 import { isUmpirePortalHostname } from "./lib/domainConfig";
 import { ExpenseHubGate } from "./features/expense-hub/ExpenseHubGate";
 import { ExpenseHubLayout } from "./features/expense-hub/ExpenseHubLayout";
+import { DisciplineAccessGate } from "./features/discipline/DisciplineAccessGate";
+import { DisciplinePortalLayout } from "./features/discipline/DisciplinePortalLayout";
+import DisciplineCaseList from "./pages/discipline/DisciplineCaseList";
+import NewDisciplineCase from "./pages/discipline/NewDisciplineCase";
+import DisciplineCaseWorkspace from "./pages/discipline/DisciplineCaseWorkspace";
 
 const queryClient = new QueryClient();
 
@@ -157,6 +162,14 @@ const App = () => (
 
                   {/* Protected Routes with App Layout */}
                   <Route element={<ProtectedRoute />}>
+                    <Route element={<DisciplineAccessGate />}>
+                      <Route element={<DisciplinePortalLayout />}>
+                        <Route path="/discipline" element={<DisciplineCaseList />} />
+                        <Route path="/discipline/new" element={<NewDisciplineCase />} />
+                        <Route path="/discipline/cases/:caseId" element={<DisciplineCaseWorkspace />} />
+                        <Route path="/discipline/profile" element={<Profile />} />
+                      </Route>
+                    </Route>
                     <Route element={<AppLayout />}>
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/games" element={<Games />} />

@@ -1919,6 +1919,1838 @@ export type Database = {
           },
         ]
       }
+      discipline_allegation_revisions: {
+        Row: {
+          allegation_id: string
+          case_id: string
+          change_reason: string
+          changed_at: string
+          changed_by: string
+          id: string
+          revision_number: number
+          snapshot: Json
+        }
+        Insert: {
+          allegation_id: string
+          case_id: string
+          change_reason: string
+          changed_at?: string
+          changed_by: string
+          id?: string
+          revision_number: number
+          snapshot: Json
+        }
+        Update: {
+          allegation_id?: string
+          case_id?: string
+          change_reason?: string
+          changed_at?: string
+          changed_by?: string
+          id?: string
+          revision_number?: number
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_allegation_revisions_allegation_id_fkey"
+            columns: ["allegation_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_allegations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_allegation_revisions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_allegation_revisions_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_allegations: {
+        Row: {
+          allegation_number: number
+          case_id: string
+          created_at: string
+          created_by: string
+          description: string
+          final_charge: string | null
+          finding: string | null
+          id: string
+          incident_at: string | null
+          initial_classification_code: string | null
+          location: string | null
+          recommended_classification_code: string | null
+          revision_number: number
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allegation_number: number
+          case_id: string
+          created_at?: string
+          created_by: string
+          description: string
+          final_charge?: string | null
+          finding?: string | null
+          id?: string
+          incident_at?: string | null
+          initial_classification_code?: string | null
+          location?: string | null
+          recommended_classification_code?: string | null
+          revision_number?: number
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allegation_number?: number
+          case_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          final_charge?: string | null
+          finding?: string | null
+          id?: string
+          incident_at?: string | null
+          initial_classification_code?: string | null
+          location?: string | null
+          recommended_classification_code?: string | null
+          revision_number?: number
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_allegations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_allegations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_allegations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_audit_events: {
+        Row: {
+          actor_id: string | null
+          association_id: string
+          case_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          event_type: string
+          id: number
+          new_data: Json | null
+          previous_data: Json | null
+          reason: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          association_id: string
+          case_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          event_type: string
+          id?: never
+          new_data?: Json | null
+          previous_data?: Json | null
+          reason?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          association_id?: string
+          case_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          event_type?: string
+          id?: never
+          new_data?: Json | null
+          previous_data?: Json | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_audit_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_audit_events_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_audit_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_calendar_exclusions: {
+        Row: {
+          active: boolean
+          association_id: string
+          created_at: string
+          created_by: string | null
+          exclusion_date: string
+          exclusion_type: string
+          id: string
+          label: string
+          source_url: string | null
+        }
+        Insert: {
+          active?: boolean
+          association_id: string
+          created_at?: string
+          created_by?: string | null
+          exclusion_date: string
+          exclusion_type: string
+          id?: string
+          label: string
+          source_url?: string | null
+        }
+        Update: {
+          active?: boolean
+          association_id?: string
+          created_at?: string
+          created_by?: string | null
+          exclusion_date?: string
+          exclusion_type?: string
+          id?: string
+          label?: string
+          source_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_calendar_exclusions_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_calendar_exclusions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_case_members: {
+        Row: {
+          active: boolean
+          assigned_at: string
+          assigned_by: string
+          assignment_reason: string
+          case_id: string
+          case_role: string
+          id: string
+          revoked_at: string | null
+          revoked_by: string | null
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          assigned_at?: string
+          assigned_by: string
+          assignment_reason: string
+          case_id: string
+          case_role: string
+          id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          assigned_at?: string
+          assigned_by?: string
+          assignment_reason?: string
+          case_id?: string
+          case_role?: string
+          id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_case_members_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_case_members_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_case_members_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_case_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_case_people: {
+        Row: {
+          case_id: string
+          case_role: string
+          created_at: string
+          created_by: string
+          email: string | null
+          full_name: string
+          id: string
+          is_junior: boolean | null
+          notes: string | null
+          organisation: string | null
+          person_role: string | null
+          phone: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          case_id: string
+          case_role: string
+          created_at?: string
+          created_by: string
+          email?: string | null
+          full_name: string
+          id?: string
+          is_junior?: boolean | null
+          notes?: string | null
+          organisation?: string | null
+          person_role?: string | null
+          phone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          case_id?: string
+          case_role?: string
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_junior?: boolean | null
+          notes?: string | null
+          organisation?: string | null
+          person_role?: string | null
+          phone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_case_people_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_case_people_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_case_people_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_cases: {
+        Row: {
+          association_id: string
+          case_number: string
+          closed_at: string | null
+          committee_id: string | null
+          competition: string | null
+          created_at: string
+          created_by: string
+          desired_outcome_included: boolean | null
+          first_named_team: string | null
+          fixture_id: string | null
+          grade: string | null
+          id: string
+          immediate_safety_action: string | null
+          immediate_safety_risk: boolean
+          incident_at: string | null
+          incident_location: string | null
+          jurisdiction_path: string
+          jurisdiction_reason: string | null
+          match_concluded_at: string
+          pathway: string
+          prescribed_form_used: boolean | null
+          prior_presentation_completed: boolean | null
+          relevant_club_participating: boolean | null
+          report_complete: boolean | null
+          report_in_writing: boolean | null
+          report_method: string | null
+          report_received_at: string | null
+          round_label: string | null
+          round_type: string
+          rule_pack_id: string
+          safety_record_id: string | null
+          second_named_team: string | null
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          venue: string | null
+        }
+        Insert: {
+          association_id: string
+          case_number: string
+          closed_at?: string | null
+          committee_id?: string | null
+          competition?: string | null
+          created_at?: string
+          created_by: string
+          desired_outcome_included?: boolean | null
+          first_named_team?: string | null
+          fixture_id?: string | null
+          grade?: string | null
+          id?: string
+          immediate_safety_action?: string | null
+          immediate_safety_risk?: boolean
+          incident_at?: string | null
+          incident_location?: string | null
+          jurisdiction_path?: string
+          jurisdiction_reason?: string | null
+          match_concluded_at: string
+          pathway?: string
+          prescribed_form_used?: boolean | null
+          prior_presentation_completed?: boolean | null
+          relevant_club_participating?: boolean | null
+          report_complete?: boolean | null
+          report_in_writing?: boolean | null
+          report_method?: string | null
+          report_received_at?: string | null
+          round_label?: string | null
+          round_type: string
+          rule_pack_id: string
+          safety_record_id?: string | null
+          second_named_team?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          venue?: string | null
+        }
+        Update: {
+          association_id?: string
+          case_number?: string
+          closed_at?: string | null
+          committee_id?: string | null
+          competition?: string | null
+          created_at?: string
+          created_by?: string
+          desired_outcome_included?: boolean | null
+          first_named_team?: string | null
+          fixture_id?: string | null
+          grade?: string | null
+          id?: string
+          immediate_safety_action?: string | null
+          immediate_safety_risk?: boolean
+          incident_at?: string | null
+          incident_location?: string | null
+          jurisdiction_path?: string
+          jurisdiction_reason?: string | null
+          match_concluded_at?: string
+          pathway?: string
+          prescribed_form_used?: boolean | null
+          prior_presentation_completed?: boolean | null
+          relevant_club_participating?: boolean | null
+          report_complete?: boolean | null
+          report_in_writing?: boolean | null
+          report_method?: string | null
+          report_received_at?: string | null
+          round_label?: string | null
+          round_type?: string
+          rule_pack_id?: string
+          safety_record_id?: string | null
+          second_named_team?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          venue?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_cases_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_cases_committee_id_fkey"
+            columns: ["committee_id"]
+            isOneToOne: false
+            referencedRelation: "committees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_cases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_cases_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_cases_rule_pack_id_fkey"
+            columns: ["rule_pack_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_rule_packs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_cases_safety_record_id_fkey"
+            columns: ["safety_record_id"]
+            isOneToOne: false
+            referencedRelation: "rg_risk_register"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_cases_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_classification_assessments: {
+        Row: {
+          allegation_id: string
+          answers: Json
+          assessed_at: string
+          assessed_by: string
+          assessment_stage: string
+          case_id: string
+          classification_code: string
+          classification_label: string
+          classification_rule_id: string | null
+          explanation: string
+          id: string
+          penalty_guidance: string | null
+          tribunal_readiness: string
+        }
+        Insert: {
+          allegation_id: string
+          answers: Json
+          assessed_at?: string
+          assessed_by: string
+          assessment_stage: string
+          case_id: string
+          classification_code: string
+          classification_label: string
+          classification_rule_id?: string | null
+          explanation: string
+          id?: string
+          penalty_guidance?: string | null
+          tribunal_readiness: string
+        }
+        Update: {
+          allegation_id?: string
+          answers?: Json
+          assessed_at?: string
+          assessed_by?: string
+          assessment_stage?: string
+          case_id?: string
+          classification_code?: string
+          classification_label?: string
+          classification_rule_id?: string | null
+          explanation?: string
+          id?: string
+          penalty_guidance?: string | null
+          tribunal_readiness?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_classification_assessmen_classification_rule_id_fkey"
+            columns: ["classification_rule_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_classification_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_classification_assessments_allegation_id_fkey"
+            columns: ["allegation_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_allegations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_classification_assessments_assessed_by_fkey"
+            columns: ["assessed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_classification_assessments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_classification_rules: {
+        Row: {
+          classification_code: string
+          created_at: string
+          criteria: Json
+          id: string
+          label: string
+          person_category: string
+          priority: number
+          recommended_penalty_text: string
+          recommended_penalty_unit: string | null
+          recommended_penalty_value: number | null
+          rule_pack_id: string
+          rule_reference: string
+          source_warning: string | null
+          tribunal_required: boolean
+        }
+        Insert: {
+          classification_code: string
+          created_at?: string
+          criteria: Json
+          id?: string
+          label: string
+          person_category: string
+          priority?: number
+          recommended_penalty_text: string
+          recommended_penalty_unit?: string | null
+          recommended_penalty_value?: number | null
+          rule_pack_id: string
+          rule_reference: string
+          source_warning?: string | null
+          tribunal_required: boolean
+        }
+        Update: {
+          classification_code?: string
+          created_at?: string
+          criteria?: Json
+          id?: string
+          label?: string
+          person_category?: string
+          priority?: number
+          recommended_penalty_text?: string
+          recommended_penalty_unit?: string | null
+          recommended_penalty_value?: number | null
+          rule_pack_id?: string
+          rule_reference?: string
+          source_warning?: string | null
+          tribunal_required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_classification_rules_rule_pack_id_fkey"
+            columns: ["rule_pack_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_rule_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_deadline_definitions: {
+        Row: {
+          action_key: string
+          business_day_number: number
+          created_at: string
+          due_local_time: string
+          id: string
+          label: string
+          pathway: string
+          rule_pack_id: string
+          rule_reference: string
+          sort_order: number
+        }
+        Insert: {
+          action_key: string
+          business_day_number: number
+          created_at?: string
+          due_local_time: string
+          id?: string
+          label: string
+          pathway: string
+          rule_pack_id: string
+          rule_reference: string
+          sort_order?: number
+        }
+        Update: {
+          action_key?: string
+          business_day_number?: number
+          created_at?: string
+          due_local_time?: string
+          id?: string
+          label?: string
+          pathway?: string
+          rule_pack_id?: string
+          rule_reference?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_deadline_definitions_rule_pack_id_fkey"
+            columns: ["rule_pack_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_rule_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_deadline_events: {
+        Row: {
+          actor_id: string
+          case_id: string
+          created_at: string
+          deadline_id: string | null
+          event_type: string
+          id: string
+          new_completed_at: string | null
+          new_due_at: string | null
+          previous_completed_at: string | null
+          previous_due_at: string | null
+          reason: string
+        }
+        Insert: {
+          actor_id: string
+          case_id: string
+          created_at?: string
+          deadline_id?: string | null
+          event_type: string
+          id?: string
+          new_completed_at?: string | null
+          new_due_at?: string | null
+          previous_completed_at?: string | null
+          previous_due_at?: string | null
+          reason: string
+        }
+        Update: {
+          actor_id?: string
+          case_id?: string
+          created_at?: string
+          deadline_id?: string | null
+          event_type?: string
+          id?: string
+          new_completed_at?: string | null
+          new_due_at?: string | null
+          previous_completed_at?: string | null
+          previous_due_at?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_deadline_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_deadline_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_deadline_events_deadline_id_fkey"
+            columns: ["deadline_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_deadlines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_deadlines: {
+        Row: {
+          action_key: string
+          calculation_text: string
+          case_id: string
+          completed_at: string | null
+          completed_by: string | null
+          completion_note: string | null
+          created_at: string
+          definition_id: string
+          due_at: string
+          id: string
+          label: string
+          rule_reference: string
+          trigger_at: string
+          updated_at: string
+        }
+        Insert: {
+          action_key: string
+          calculation_text: string
+          case_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_note?: string | null
+          created_at?: string
+          definition_id: string
+          due_at: string
+          id?: string
+          label: string
+          rule_reference: string
+          trigger_at: string
+          updated_at?: string
+        }
+        Update: {
+          action_key?: string
+          calculation_text?: string
+          case_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_note?: string | null
+          created_at?: string
+          definition_id?: string
+          due_at?: string
+          id?: string
+          label?: string
+          rule_reference?: string
+          trigger_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_deadlines_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_deadlines_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_deadlines_definition_id_fkey"
+            columns: ["definition_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_deadline_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_decisions: {
+        Row: {
+          case_id: string
+          decided_at: string
+          decided_by: string
+          decision_reason: string
+          difference_reason: string | null
+          id: string
+          outcome: string
+          recommendation_followed: boolean | null
+          rule_reference: string
+        }
+        Insert: {
+          case_id: string
+          decided_at?: string
+          decided_by: string
+          decision_reason: string
+          difference_reason?: string | null
+          id?: string
+          outcome: string
+          recommendation_followed?: boolean | null
+          rule_reference: string
+        }
+        Update: {
+          case_id?: string
+          decided_at?: string
+          decided_by?: string
+          decision_reason?: string
+          difference_reason?: string | null
+          id?: string
+          outcome?: string
+          recommendation_followed?: boolean | null
+          rule_reference?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_decisions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_decisions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_evidence: {
+        Row: {
+          allegation_id: string | null
+          case_id: string
+          created_at: string
+          created_by: string
+          evidence_basis: string
+          evidence_type: string
+          external_url: string | null
+          id: string
+          notes: string | null
+          received_at: string | null
+          requested_at: string | null
+          shared_with_reported_person_at: string | null
+          source: string
+          storage_path: string | null
+          supersedes_evidence_id: string | null
+          title: string
+          version_number: number
+        }
+        Insert: {
+          allegation_id?: string | null
+          case_id: string
+          created_at?: string
+          created_by: string
+          evidence_basis: string
+          evidence_type: string
+          external_url?: string | null
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          requested_at?: string | null
+          shared_with_reported_person_at?: string | null
+          source: string
+          storage_path?: string | null
+          supersedes_evidence_id?: string | null
+          title: string
+          version_number?: number
+        }
+        Update: {
+          allegation_id?: string | null
+          case_id?: string
+          created_at?: string
+          created_by?: string
+          evidence_basis?: string
+          evidence_type?: string
+          external_url?: string | null
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          requested_at?: string | null
+          shared_with_reported_person_at?: string | null
+          source?: string
+          storage_path?: string | null
+          supersedes_evidence_id?: string | null
+          title?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_evidence_allegation_id_fkey"
+            columns: ["allegation_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_allegations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_evidence_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_evidence_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_evidence_supersedes_evidence_id_fkey"
+            columns: ["supersedes_evidence_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_evidence"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_finding_revisions: {
+        Row: {
+          case_id: string
+          change_reason: string
+          changed_at: string
+          changed_by: string
+          finding_id: string
+          id: string
+          revision_number: number
+          snapshot: Json
+        }
+        Insert: {
+          case_id: string
+          change_reason: string
+          changed_at?: string
+          changed_by: string
+          finding_id: string
+          id?: string
+          revision_number: number
+          snapshot: Json
+        }
+        Update: {
+          case_id?: string
+          change_reason?: string
+          changed_at?: string
+          changed_by?: string
+          finding_id?: string
+          id?: string
+          revision_number?: number
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_finding_revisions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_finding_revisions_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_finding_revisions_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_findings: {
+        Row: {
+          allegation_id: string
+          case_id: string
+          classification_change_reason: string | null
+          contradicting_evidence: string | null
+          id: string
+          inconsistencies: string | null
+          missing_evidence: string | null
+          reasoning: string
+          recommended_classification_code: string | null
+          recommended_finding: string
+          recorded_at: string
+          recorded_by: string
+          reported_person_response: string | null
+          revision_number: number
+          supporting_evidence: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allegation_id: string
+          case_id: string
+          classification_change_reason?: string | null
+          contradicting_evidence?: string | null
+          id?: string
+          inconsistencies?: string | null
+          missing_evidence?: string | null
+          reasoning: string
+          recommended_classification_code?: string | null
+          recommended_finding: string
+          recorded_at?: string
+          recorded_by: string
+          reported_person_response?: string | null
+          revision_number?: number
+          supporting_evidence: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allegation_id?: string
+          case_id?: string
+          classification_change_reason?: string | null
+          contradicting_evidence?: string | null
+          id?: string
+          inconsistencies?: string | null
+          missing_evidence?: string | null
+          reasoning?: string
+          recommended_classification_code?: string | null
+          recommended_finding?: string
+          recorded_at?: string
+          recorded_by?: string
+          reported_person_response?: string | null
+          revision_number?: number
+          supporting_evidence?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_findings_allegation_id_fkey"
+            columns: ["allegation_id"]
+            isOneToOne: true
+            referencedRelation: "discipline_allegations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_findings_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_findings_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_findings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_investigator_setups: {
+        Row: {
+          actual_conflict: boolean
+          appointed_at: string
+          appointed_by: string
+          case_id: string
+          club_affiliation: string | null
+          committee_role: string | null
+          competitive_interest: string | null
+          conflict_decision: string
+          conflict_reason: string
+          id: string
+          lead_user_id: string
+          perceived_conflict: boolean
+          recorded_at: string
+          recorded_by: string
+          relationship_to_parties: string | null
+          support_user_ids: string[]
+          training_experience: string
+        }
+        Insert: {
+          actual_conflict: boolean
+          appointed_at: string
+          appointed_by: string
+          case_id: string
+          club_affiliation?: string | null
+          committee_role?: string | null
+          competitive_interest?: string | null
+          conflict_decision: string
+          conflict_reason: string
+          id?: string
+          lead_user_id: string
+          perceived_conflict: boolean
+          recorded_at?: string
+          recorded_by: string
+          relationship_to_parties?: string | null
+          support_user_ids?: string[]
+          training_experience: string
+        }
+        Update: {
+          actual_conflict?: boolean
+          appointed_at?: string
+          appointed_by?: string
+          case_id?: string
+          club_affiliation?: string | null
+          committee_role?: string | null
+          competitive_interest?: string | null
+          conflict_decision?: string
+          conflict_reason?: string
+          id?: string
+          lead_user_id?: string
+          perceived_conflict?: boolean
+          recorded_at?: string
+          recorded_by?: string
+          relationship_to_parties?: string | null
+          support_user_ids?: string[]
+          training_experience?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_investigator_setups_appointed_by_fkey"
+            columns: ["appointed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_investigator_setups_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_investigator_setups_lead_user_id_fkey"
+            columns: ["lead_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_investigator_setups_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_local_variations: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          effective_from: string | null
+          hv_requirement: string
+          id: string
+          issue: string
+          proposed_hb_treatment: string | null
+          review_date: string | null
+          rule_pack_id: string
+          rule_reference: string
+          status: string
+          variation_key: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          effective_from?: string | null
+          hv_requirement: string
+          id?: string
+          issue: string
+          proposed_hb_treatment?: string | null
+          review_date?: string | null
+          rule_pack_id: string
+          rule_reference: string
+          status?: string
+          variation_key: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          effective_from?: string | null
+          hv_requirement?: string
+          id?: string
+          issue?: string
+          proposed_hb_treatment?: string | null
+          review_date?: string | null
+          rule_pack_id?: string
+          rule_reference?: string
+          status?: string
+          variation_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_local_variations_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_local_variations_rule_pack_id_fkey"
+            columns: ["rule_pack_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_rule_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_natural_justice_checks: {
+        Row: {
+          case_id: string
+          check_key: string
+          completed: boolean
+          completed_at: string | null
+          completed_by: string | null
+          id: string
+          label: string
+          notes: string | null
+          required: boolean
+          rule_basis: string
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          check_key: string
+          completed?: boolean
+          completed_at?: string | null
+          completed_by?: string | null
+          id?: string
+          label: string
+          notes?: string | null
+          required?: boolean
+          rule_basis?: string
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          check_key?: string
+          completed?: boolean
+          completed_at?: string | null
+          completed_by?: string | null
+          id?: string
+          label?: string
+          notes?: string | null
+          required?: boolean
+          rule_basis?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_natural_justice_checks_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_natural_justice_checks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_natural_justice_overrides: {
+        Row: {
+          authorised_at: string
+          authorised_by: string
+          case_id: string
+          id: string
+          reason: string
+          used_by_snapshot_id: string | null
+        }
+        Insert: {
+          authorised_at?: string
+          authorised_by: string
+          case_id: string
+          id?: string
+          reason: string
+          used_by_snapshot_id?: string | null
+        }
+        Update: {
+          authorised_at?: string
+          authorised_by?: string
+          case_id?: string
+          id?: string
+          reason?: string
+          used_by_snapshot_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_natural_justice_overrides_authorised_by_fkey"
+            columns: ["authorised_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_natural_justice_overrides_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_natural_justice_overrides_used_by_snapshot_id_fkey"
+            columns: ["used_by_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_report_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_notifications: {
+        Row: {
+          acknowledged_at: string | null
+          case_id: string
+          copy_reference: string | null
+          created_at: string
+          created_by: string
+          delivered: boolean | null
+          id: string
+          no_finding_statement_included: boolean
+          notice_type: string
+          recipient_email: string | null
+          recipient_name: string
+          recipient_role: string | null
+          sent_at: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          case_id: string
+          copy_reference?: string | null
+          created_at?: string
+          created_by: string
+          delivered?: boolean | null
+          id?: string
+          no_finding_statement_included?: boolean
+          notice_type: string
+          recipient_email?: string | null
+          recipient_name: string
+          recipient_role?: string | null
+          sent_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          case_id?: string
+          copy_reference?: string | null
+          created_at?: string
+          created_by?: string
+          delivered?: boolean | null
+          id?: string
+          no_finding_statement_included?: boolean
+          notice_type?: string
+          recipient_email?: string | null
+          recipient_name?: string
+          recipient_role?: string | null
+          sent_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_notifications_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_notifications_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_notifications_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_portal_access: {
+        Row: {
+          account_mode: string
+          active: boolean
+          association_id: string
+          can_create_cases: boolean
+          can_manage_config: boolean
+          granted_at: string
+          granted_by: string | null
+          id: string
+          reason: string
+          revoked_at: string | null
+          revoked_by: string | null
+          user_id: string
+        }
+        Insert: {
+          account_mode?: string
+          active?: boolean
+          association_id: string
+          can_create_cases?: boolean
+          can_manage_config?: boolean
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          reason: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id: string
+        }
+        Update: {
+          account_mode?: string
+          active?: boolean
+          association_id?: string
+          can_create_cases?: boolean
+          can_manage_config?: boolean
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          reason?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_portal_access_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_portal_access_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_portal_access_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_portal_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_report_snapshots: {
+        Row: {
+          case_id: string
+          id: string
+          natural_justice_override_reason: string | null
+          report_data: Json
+          sha256: string
+          signed_at: string
+          signed_by: string
+          snapshot_number: number
+        }
+        Insert: {
+          case_id: string
+          id?: string
+          natural_justice_override_reason?: string | null
+          report_data: Json
+          sha256: string
+          signed_at?: string
+          signed_by: string
+          snapshot_number: number
+        }
+        Update: {
+          case_id?: string
+          id?: string
+          natural_justice_override_reason?: string | null
+          report_data?: Json
+          sha256?: string
+          signed_at?: string
+          signed_by?: string
+          snapshot_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_report_snapshots_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_report_snapshots_signed_by_fkey"
+            columns: ["signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_rule_clauses: {
+        Row: {
+          created_at: string
+          id: string
+          item_type: string
+          reference: string
+          rule_pack_id: string
+          sort_order: number
+          source_page: number | null
+          source_status: string
+          source_url: string
+          title: string
+          verified_summary: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_type?: string
+          reference: string
+          rule_pack_id: string
+          sort_order?: number
+          source_page?: number | null
+          source_status?: string
+          source_url: string
+          title: string
+          verified_summary: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_type?: string
+          reference?: string
+          rule_pack_id?: string
+          sort_order?: number
+          source_page?: number | null
+          source_status?: string
+          source_url?: string
+          title?: string
+          verified_summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_rule_clauses_rule_pack_id_fkey"
+            columns: ["rule_pack_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_rule_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_rule_packs: {
+        Row: {
+          approval_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          association_id: string
+          code: string
+          created_at: string
+          created_by: string | null
+          effective_from: string | null
+          effective_to: string | null
+          id: string
+          source_manifest: Json
+          status: string
+          timezone: string
+          title: string
+          version: string
+        }
+        Insert: {
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          association_id: string
+          code: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          source_manifest?: Json
+          status?: string
+          timezone?: string
+          title: string
+          version: string
+        }
+        Update: {
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          association_id?: string
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          source_manifest?: Json
+          status?: string
+          timezone?: string
+          title?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_rule_packs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_rule_packs_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_rule_packs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_witnesses: {
+        Row: {
+          allegation_id: string | null
+          can_address: string
+          case_id: string
+          contact_details: string | null
+          created_at: string
+          created_by: string
+          direct_witness: boolean | null
+          follow_up_required: boolean
+          id: string
+          is_junior: boolean | null
+          name: string
+          request_sent_at: string | null
+          response_received_at: string | null
+          role_and_club: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allegation_id?: string | null
+          can_address: string
+          case_id: string
+          contact_details?: string | null
+          created_at?: string
+          created_by: string
+          direct_witness?: boolean | null
+          follow_up_required?: boolean
+          id?: string
+          is_junior?: boolean | null
+          name: string
+          request_sent_at?: string | null
+          response_received_at?: string | null
+          role_and_club?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allegation_id?: string | null
+          can_address?: string
+          case_id?: string
+          contact_details?: string | null
+          created_at?: string
+          created_by?: string
+          direct_witness?: boolean | null
+          follow_up_required?: boolean
+          id?: string
+          is_junior?: boolean | null
+          name?: string
+          request_sent_at?: string | null
+          response_received_at?: string | null
+          role_and_club?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_witnesses_allegation_id_fkey"
+            columns: ["allegation_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_allegations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_witnesses_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_witnesses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_witnesses_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       divisions: {
         Row: {
           age_group: string | null
@@ -9441,9 +11273,23 @@ export type Database = {
         Args: { p_assign_team?: boolean; p_request_id: string }
         Returns: Json
       }
+      assign_discipline_case_member: {
+        Args: {
+          p_active: boolean
+          p_case_id: string
+          p_case_role: string
+          p_reason: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       authorise_dev_test_account_provisioning: {
         Args: { p_session_id: string; p_user_id: string }
         Returns: boolean
+      }
+      authorise_discipline_natural_justice_override: {
+        Args: { p_case_id: string; p_reason: string }
+        Returns: string
       }
       can_create_committee: {
         Args: {
@@ -9509,6 +11355,10 @@ export type Database = {
       close_mvp_voting_session_module_impl_20260802115000: {
         Args: { p_session_id: string }
         Returns: Json
+      }
+      complete_discipline_stage: {
+        Args: { p_case_id: string; p_next_status: string; p_reason: string }
+        Returns: undefined
       }
       complete_sportstack_notification_work: {
         Args: {
@@ -9587,6 +11437,7 @@ export type Database = {
         Args: { p_committee: Json; p_positions?: Json }
         Returns: string
       }
+      create_discipline_case: { Args: { p_intake: Json }; Returns: string }
       create_public_umpire_vote: {
         Args: { p_lines: Json; p_submission: Json }
         Returns: {
@@ -9634,6 +11485,7 @@ export type Database = {
           record_type: string
         }[]
       }
+      get_discipline_portal_context: { Args: never; Returns: Json }
       get_mvp_result_check_state: {
         Args: { p_session_id: string }
         Returns: Json
@@ -9883,6 +11735,30 @@ export type Database = {
         }
         Returns: Json
       }
+      recalculate_discipline_deadlines: {
+        Args: { p_case_id: string; p_reason: string }
+        Returns: undefined
+      }
+      record_discipline_classification: {
+        Args: {
+          p_allegation_id: string
+          p_answers: Json
+          p_assessment_stage: string
+          p_case_id: string
+        }
+        Returns: Json
+      }
+      record_discipline_decision: {
+        Args: {
+          p_case_id: string
+          p_decision_reason: string
+          p_difference_reason: string
+          p_outcome: string
+          p_recommendation_followed: boolean
+          p_rule_reference: string
+        }
+        Returns: string
+      }
       record_mvp_result_check: {
         Args: { p_comment?: string; p_response: string; p_session_id: string }
         Returns: Json
@@ -9890,6 +11766,10 @@ export type Database = {
       record_mvp_result_check_module_impl_20260802115000: {
         Args: { p_comment?: string; p_response: string; p_session_id: string }
         Returns: Json
+      }
+      reopen_discipline_stage: {
+        Args: { p_case_id: string; p_previous_status: string; p_reason: string }
+        Returns: undefined
       }
       reopen_mvp_voting_session: {
         Args: { p_closes_at?: string; p_session_id: string }
@@ -9981,6 +11861,31 @@ export type Database = {
           p_meeting_id: string
         }
         Returns: undefined
+      }
+      save_discipline_allegation: {
+        Args: {
+          p_allegation_id: string
+          p_case_id: string
+          p_change_reason: string
+          p_description: string
+          p_incident_at: string
+          p_location: string
+          p_title: string
+        }
+        Returns: string
+      }
+      save_discipline_finding: {
+        Args: {
+          p_allegation_id: string
+          p_case_id: string
+          p_change_reason: string
+          p_finding: Json
+        }
+        Returns: string
+      }
+      save_discipline_intake: {
+        Args: { p_case_id: string; p_intake: Json; p_reason: string }
+        Returns: Json
       }
       save_permission_assignment: {
         Args: {
@@ -10081,6 +11986,27 @@ export type Database = {
         Args: { p_links: Json; p_meeting_item_id: string }
         Returns: undefined
       }
+      set_discipline_deadline_completion: {
+        Args: {
+          p_completed: boolean
+          p_completed_at: string
+          p_deadline_id: string
+          p_note: string
+        }
+        Returns: undefined
+      }
+      set_discipline_portal_access: {
+        Args: {
+          p_account_mode: string
+          p_active: boolean
+          p_association_id: string
+          p_can_create_cases: boolean
+          p_can_manage_config: boolean
+          p_reason: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       set_module_feature_flag: {
         Args: {
           p_enabled: boolean
@@ -10107,6 +12033,7 @@ export type Database = {
         Args: { p_enabled: boolean; p_team_id: string }
         Returns: Json
       }
+      sign_discipline_report: { Args: { p_case_id: string }; Returns: string }
       submit_committee_poll_response: {
         Args: { p_answers: Json; p_poll_id: string }
         Returns: string
