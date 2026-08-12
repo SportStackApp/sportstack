@@ -59,6 +59,12 @@ Update this file after every meaningful Codex task, pull request, schema change,
   New foreign-key indexes are currently reported only as unused because the module has no live
   workload. The `discipline_only` route restriction is not claimed as a complete database sandbox:
   existing SportStack shared directory data remains available to signed-in accounts.
+- **Dev deployment verified:** Vercel deployment `dpl_F8E2PVxXxEoWGs6vMZF4V7r7gGJe` is `READY` for
+  exact commit `b517912f6fefc1836060a4b8a6e50e7f03f06710` and owns the
+  `dev.sportstackapp.com.au` alias. The Dev address returned HTTP 200; its deployed bundle includes
+  the discipline route and commit label, references SportStack Dev Supabase and does not reference
+  Production Supabase. The signed-in owner workflow still needs acceptance testing one action at a
+  time.
 
 - **Guided Committee and subcommittee workflow is live on Dev:** commit `deea6c0` replaces the
   single create form with a reusable five-step workflow for Association and Club committees plus
