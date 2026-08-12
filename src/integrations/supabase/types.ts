@@ -3247,13 +3247,17 @@ export type Database = {
           actual_conflict: boolean
           appointed_at: string
           appointed_by: string
+          appointment_authority: string
+          authority_reference: string | null
           case_id: string
           club_affiliation: string | null
           committee_role: string | null
           competitive_interest: string | null
           conflict_decision: string
+          conflict_factors: string[]
           conflict_reason: string
           id: string
+          investigation_type: string
           lead_user_id: string
           perceived_conflict: boolean
           recorded_at: string
@@ -3266,13 +3270,17 @@ export type Database = {
           actual_conflict: boolean
           appointed_at: string
           appointed_by: string
+          appointment_authority: string
+          authority_reference?: string | null
           case_id: string
           club_affiliation?: string | null
           committee_role?: string | null
           competitive_interest?: string | null
           conflict_decision: string
+          conflict_factors?: string[]
           conflict_reason: string
           id?: string
+          investigation_type: string
           lead_user_id: string
           perceived_conflict: boolean
           recorded_at?: string
@@ -3285,13 +3293,17 @@ export type Database = {
           actual_conflict?: boolean
           appointed_at?: string
           appointed_by?: string
+          appointment_authority?: string
+          authority_reference?: string | null
           case_id?: string
           club_affiliation?: string | null
           committee_role?: string | null
           competitive_interest?: string | null
           conflict_decision?: string
+          conflict_factors?: string[]
           conflict_reason?: string
           id?: string
+          investigation_type?: string
           lead_user_id?: string
           perceived_conflict?: boolean
           recorded_at?: string
@@ -11973,6 +11985,28 @@ export type Database = {
       record_mvp_result_check_module_impl_20260802115000: {
         Args: { p_comment?: string; p_response: string; p_session_id: string }
         Returns: Json
+      }
+      record_discipline_investigator_setup: {
+        Args: {
+          p_actual_conflict: boolean
+          p_appointed_at: string
+          p_appointment_authority: string
+          p_authority_reference: string
+          p_case_id: string
+          p_club_affiliation: string
+          p_committee_role: string
+          p_competitive_interest: string
+          p_conflict_decision: string
+          p_conflict_factors: string[]
+          p_conflict_reason: string
+          p_investigation_type: string
+          p_lead_user_id: string
+          p_perceived_conflict: boolean
+          p_relationship_to_parties: string
+          p_support_user_ids: string[]
+          p_training_experience: string
+        }
+        Returns: string
       }
       reopen_discipline_stage: {
         Args: { p_case_id: string; p_previous_status: string; p_reason: string }

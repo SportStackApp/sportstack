@@ -4,6 +4,7 @@ import type {
   ClassificationResult,
   DisciplineCaseSummary,
   DisciplineIntakeOptions,
+  DisciplineInvestigatorSetupInput,
   DisciplinePortalContext,
   DisciplineWorkspaceData,
   NewDisciplineCaseInput,
@@ -452,41 +453,29 @@ export async function addDisciplineCasePerson(
   throwIfError(error);
 }
 
-export async function addInvestigatorSetup(
+export async function recordInvestigatorSetup(
   caseId: string,
-  userId: string,
-  values: {
-    leadUserId: string;
-    appointedAt: string;
-    trainingExperience: string;
-    clubAffiliation?: string;
-    committeeRole?: string;
-    relationshipToParties?: string;
-    competitiveInterest?: string;
-    actualConflict: boolean;
-    perceivedConflict: boolean;
-    conflictDecision: string;
-    conflictReason: string;
-  },
+  values: DisciplineInvestigatorSetupInput,
 ) {
-  const { error } = await supabase
-    .from("discipline_investigator_setups")
-    .insert({
-      case_id: caseId,
-      lead_user_id: values.leadUserId,
-      appointed_at: values.appointedAt,
-      appointed_by: userId,
-      training_experience: values.trainingExperience,
-      club_affiliation: values.clubAffiliation || null,
-      committee_role: values.committeeRole || null,
-      relationship_to_parties: values.relationshipToParties || null,
-      competitive_interest: values.competitiveInterest || null,
-      actual_conflict: values.actualConflict,
-      perceived_conflict: values.perceivedConflict,
-      conflict_decision: values.conflictDecision,
-      conflict_reason: values.conflictReason,
-      recorded_by: userId,
-    });
+  const { error } = await supabase.rpc("record_discipline_investigator_setup", {
+    p_case_id: caseId,
+    p_lead_user_id: values.leadUserId,
+    p_support_user_ids: values.supportUserIds,
+    p_appointed_at: values.appointedAt,
+    p_investigation_type: values.investigationType,
+    p_appointment_authority: values.appointmentAuthority,
+    p_authority_reference: values.authorityReference || "",
+    p_training_experience: values.trainingExperience,
+    p_club_affiliation: values.clubAffiliation || "",
+    p_committee_role: values.committeeRole || "",
+    p_relationship_to_parties: values.relationshipToParties || "",
+    p_competitive_interest: values.competitiveInterest || "",
+    p_conflict_factors: values.conflictFactors,
+    p_actual_conflict: values.actualConflict,
+    p_perceived_conflict: values.perceivedConflict,
+    p_conflict_decision: values.conflictDecision,
+    p_conflict_reason: values.conflictReason,
+  });
   throwIfError(error);
 }
 

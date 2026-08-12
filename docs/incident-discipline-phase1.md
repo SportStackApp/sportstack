@@ -55,6 +55,31 @@ The Hockey Australia policy is still linked by Hockey Ballarat, but its stated r
 - The latest preliminary result, its time, penalty guidance and any source warning remain visible. Each later check creates another preserved assessment rather than overwriting the earlier record.
 - The Schedule table marks the listed unfair public personal attack for immediate Tribunal referral, while the clarification below the table refers only to Level 3 offences and vilification. The app keeps that row Red and displays the conflict as a source warning.
 
+## Investigation setup and independence decisions
+
+- Rule 7.12 says the nature and seriousness of the allegation inform whether the matter uses an
+  internal investigation or an independent external person. The appointed Investigation Officer
+  should have no conflict of interest and appropriate training or experience. The screen explains
+  those requirements and links directly to the verified HV Rules and HB addendum.
+- No conflict answer is preselected. The Case Coordinator must answer actual and perceived conflict
+  questions separately, record the relevant disclosures, choose a decision and explain its factual
+  basis and any safeguards. The predefined conflict descriptors are HB operating prompts for
+  consistent searching; they are not presented as a quoted or exhaustive Rule 7 list.
+- An actual conflict requires a replacement. A perceived conflict may be managed with recorded
+  safeguards or may also require replacement. A no-conflict decision is allowed only when both
+  questions are answered No. Every saved check remains in the case history.
+- The app supports optional support investigators as an HB practical arrangement, while one Lead
+  Investigation Officer remains formally accountable. Investigators must be selected from
+  SportStack profiles because case access is private and audited.
+- An accepted check atomically records the setup, revokes superseded investigator access and grants
+  the matching lead/support case roles. A replacement decision retains the rejected check without
+  granting the proposed investigator access. Direct browser inserts into the setup table are
+  revoked.
+- Addendum clauses 2.1 and 3.1 support HB administration and reading “HV” as “HB” where practicable,
+  but do not identify the exact local equivalent of the HV CEO or delegate in Rule 7.12. The screen
+  therefore records the actual person or HB body that authorised the appointment and labels the
+  authority mapping as **Local interpretation — needs formal HB confirmation**.
+
 ## Source ambiguities to retain
 
 - Schedule 1 clause 4.1 refers to Rule 7.17(a) for Tribunal notification. The notice requirements appear in Rule 7.18(a).
@@ -131,7 +156,7 @@ Evidence files use short-lived signed links; the original object and evidence re
 overwritten. Signed report snapshots retain their SHA-256 hash and any authorised natural-justice
 override reason.
 
-The nine local migration files and the versions recorded by the live Dev migration history are:
+The ten local migration files and the versions recorded by the live Dev migration history are:
 
 | Local migration file | Live Dev version and name |
 |---|---|
@@ -144,6 +169,7 @@ The nine local migration files and the versions recorded by the live Dev migrati
 | `20260812116000_incident_discipline_report_hash.sql` | `20260812011829 incident_discipline_report_hash` |
 | `20260812162815_improve_discipline_intake_guidance.sql` | `20260812064047 improve_discipline_intake_guidance` |
 | `20260812164333_index_discipline_intake_links.sql` | `20260812064352 index_discipline_intake_links` |
+| `20260812235915_improve_discipline_investigator_setup.sql` | `20260812140314 improve_discipline_investigator_setup` |
 
 Supabase assigned the live versions at application time; the migration names identify the matching
 local files.
@@ -162,6 +188,9 @@ Rolled-back live Dev checks confirmed:
 - association-scoped suggestions returned 232 fixtures, 38 teams, 451 people and 34 descriptive
   tags in the Dev snapshot; a two-allegation Rule 7 case retained `REGULAR`/`DRAFT` when immediate
   safety was also recorded, and stored both case and allegation tags; and
+- an accepted investigator setup atomically assigned one lead and one support role, an actual
+  conflict replacement retained no investigator access, and an invalid actual-conflict/managed
+  combination was rejected; and
 - every test transaction rolled back without leaving a case, person, finding or report record.
 
 The final Supabase review found no anonymous discipline RPC, no discipline table without RLS and no

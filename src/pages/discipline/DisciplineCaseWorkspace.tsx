@@ -44,7 +44,6 @@ import {
   addDisciplineEvidence,
   addDisciplineNotification,
   addDisciplineWitness,
-  addInvestigatorSetup,
   advanceDisciplineStage,
   assignDisciplineCaseMember,
   authoriseNaturalJusticeOverride,
@@ -52,6 +51,7 @@ import {
   loadDisciplineWorkspace,
   recordClassification,
   recordDisciplineDecision,
+  recordInvestigatorSetup,
   saveAllegation,
   saveDisciplineFinding,
   setDeadlineCompletion,
@@ -64,6 +64,7 @@ import {
   WorkflowSection,
 } from "@/features/discipline/DisciplineUi";
 import { DisciplineTagPicker } from "@/features/discipline/DisciplineTagPicker";
+import { DisciplineInvestigatorSetupPanel } from "@/features/discipline/DisciplineInvestigatorSetup";
 import {
   ScreeningGuidance,
   TribunalReadinessLegend,
@@ -110,8 +111,14 @@ const PERSON_CATEGORIES = [
 ] as const;
 
 const OTHER_OFFENCES = [
-  ["INFLUENCE_OFFICIAL", "Constant or repeated attempts to influence an official's decision"],
-  ["PUBLIC_PERSONAL_ATTACK", "Unfair public statement involving a personal attack"],
+  [
+    "INFLUENCE_OFFICIAL",
+    "Constant or repeated attempts to influence an official's decision",
+  ],
+  [
+    "PUBLIC_PERSONAL_ATTACK",
+    "Unfair public statement involving a personal attack",
+  ],
   ["NOT_LEAVING_FIELD", "Not leaving the field of play when directed"],
   ["UNFIT_STATE", "Participation in a match in an unfit state"],
   ["UNAUTHORISED_FIELD_ENTRY", "Unauthorised entry to the field of play"],
@@ -123,8 +130,7 @@ function profileLabel(data: DisciplineWorkspaceData, userId: string) {
   const profile = data.profileOptions.find((option) => option.id === userId);
   if (!profile) return userId;
   return (
-    `${profile.first_name || ""} ${profile.last_name || ""}`.trim() ||
-    userId
+    `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || userId
   );
 }
 
@@ -244,7 +250,9 @@ function ClassificationForm({
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!canRecord || !formComplete) {
-      setError("Complete the required factual questions before recording guidance.");
+      setError(
+        "Complete the required factual questions before recording guidance.",
+      );
       return;
     }
     setSubmitting(true);
@@ -442,9 +450,7 @@ function ClassificationForm({
           <div className="space-y-2">
             <Label>Does the allegation say contact was made?</Label>
             <Select
-              value={
-                contactMade === null ? "" : contactMade ? "YES" : "NO"
-              }
+              value={contactMade === null ? "" : contactMade ? "YES" : "NO"}
               onValueChange={(value) => setContactMade(value === "YES")}
               disabled={!canRecord}
             >
@@ -458,7 +464,8 @@ function ClassificationForm({
             </Select>
             <p className="text-xs text-muted-foreground">
               The Schedule separates an attempted strike from a strike where
-              contact was made. An inconsistent answer will require human review.
+              contact was made. An inconsistent answer will require human
+              review.
             </p>
           </div>
         </div>
@@ -564,7 +571,10 @@ function ClassificationForm({
           </AlertTitle>
           <AlertDescription>
             <p>
-              {TRIBUNAL_READINESS_CONTENT[result.tribunal_readiness].description}
+              {
+                TRIBUNAL_READINESS_CONTENT[result.tribunal_readiness]
+                  .description
+              }
             </p>
             <p className="mt-2">{result.explanation}</p>
             {result.penalty_guidance ? (
@@ -579,7 +589,8 @@ function ClassificationForm({
             ) : null}
             {assessments.length > 0 ? (
               <p className="mt-2 text-xs opacity-80">
-                Latest saved check: {formatMelbourneDateTime(assessments[0].assessed_at)}.
+                Latest saved check:{" "}
+                {formatMelbourneDateTime(assessments[0].assessed_at)}.
                 {assessments.length > 1
                   ? ` ${assessments.length} preliminary checks are preserved in the case record.`
                   : " This preliminary check is preserved in the case record."}
@@ -1014,14 +1025,19 @@ export default function DisciplineCaseWorkspace() {
                   {formatStatus(incidentCase.jurisdiction_path)}
                 </dd>
                 {data.caseTags
-                  .filter((assignment) => assignment.tag_context === "JURISDICTION")
+                  .filter(
+                    (assignment) => assignment.tag_context === "JURISDICTION",
+                  )
                   .map((assignment) =>
                     data.tags.find((tag) => tag.id === assignment.tag_id),
                   )
                   .filter((tag) => Boolean(tag)).length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {data.caseTags
-                      .filter((assignment) => assignment.tag_context === "JURISDICTION")
+                      .filter(
+                        (assignment) =>
+                          assignment.tag_context === "JURISDICTION",
+                      )
                       .map((assignment) =>
                         data.tags.find((tag) => tag.id === assignment.tag_id),
                       )
@@ -1052,9 +1068,7 @@ export default function DisciplineCaseWorkspace() {
                 </dd>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {data.caseTags
-                    .filter(
-                      (assignment) => assignment.tag_context === "SAFETY",
-                    )
+                    .filter((assignment) => assignment.tag_context === "SAFETY")
                     .map((assignment) =>
                       data.tags.find((tag) => tag.id === assignment.tag_id),
                     )
@@ -1206,13 +1220,15 @@ export default function DisciplineCaseWorkspace() {
                 <li className="rounded-lg border bg-background p-3">
                   <strong>2. Answer factual questions</strong>
                   <span className="mt-1 block text-muted-foreground">
-                    Use the report as written. Do not fill gaps with assumptions.
+                    Use the report as written. Do not fill gaps with
+                    assumptions.
                   </span>
                 </li>
                 <li className="rounded-lg border bg-background p-3">
                   <strong>3. Record guidance</strong>
                   <span className="mt-1 block text-muted-foreground">
-                    The result plans the pathway and remains separate from findings.
+                    The result plans the pathway and remains separate from
+                    findings.
                   </span>
                 </li>
               </ol>
@@ -1346,9 +1362,7 @@ export default function DisciplineCaseWorkspace() {
                   label="Reported-fact descriptors"
                   description="Tags describe the report for searching and triage. They are not findings."
                   tags={data.tags
-                    .filter(
-                      (tag) => tag.tag_scope === "ALLEGATION_DESCRIPTOR",
-                    )
+                    .filter((tag) => tag.tag_scope === "ALLEGATION_DESCRIPTOR")
                     .map((tag) => ({
                       id: tag.id,
                       scope: "ALLEGATION_DESCRIPTOR" as const,
@@ -1411,9 +1425,20 @@ export default function DisciplineCaseWorkspace() {
         </TabsContent>
 
         <TabsContent value="investigation" className="space-y-5">
+          <DisciplineInvestigatorSetupPanel
+            data={data}
+            canCoordinate={canCoordinate}
+            busy={busy}
+            onSave={(values) => {
+              void runAction("Investigator appointment recorded", () =>
+                recordInvestigatorSetup(caseId, values),
+              );
+            }}
+          />
+
           <WorkflowSection
-            title="Case access and investigator appointment"
-            description="Case access is explicit. The lead investigator remains formally accountable."
+            title="Case and portal access administration"
+            description="Use this area for exceptional access changes. An accepted appointment above manages the normal lead and support investigator roles automatically."
             kind="JUDGEMENT"
           >
             <div className="space-y-2">
@@ -1471,8 +1496,6 @@ export default function DisciplineCaseWorkspace() {
                     <SelectContent>
                       {[
                         "CASE_COORDINATOR",
-                        "LEAD_INVESTIGATOR",
-                        "SUPPORT_INVESTIGATOR",
                         "DECISION_MAKER",
                         "READ_ONLY",
                       ].map((value) => (
@@ -1516,8 +1539,7 @@ export default function DisciplineCaseWorkspace() {
                       associationId: incidentCase.association_id,
                       userId: String(form.get("portalUserId")),
                       accountMode: String(form.get("accountMode")) as
-                        | "FULL_APP"
-                        | "DISCIPLINE_ONLY",
+                        "FULL_APP" | "DISCIPLINE_ONLY",
                       canCreateCases: form.get("canCreate") === "on",
                       canManageConfig: form.get("canConfigure") === "on",
                       active: String(form.get("portalActive")) === "true",
@@ -1593,117 +1615,6 @@ export default function DisciplineCaseWorkspace() {
                 </label>
                 <Button type="submit" disabled={busy} className="md:col-span-2">
                   Record portal access change
-                </Button>
-              </form>
-            ) : null}
-            {canCoordinate ? (
-              <form
-                className="mt-5 grid gap-4 rounded-lg border p-4 md:grid-cols-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const form = new FormData(event.currentTarget);
-                  const date = String(form.get("appointedDate"));
-                  const time = String(form.get("appointedTime"));
-                  const lead = String(form.get("leadUserId"));
-                  void runAction(
-                    "Investigator appointment recorded",
-                    async () => {
-                      await assignDisciplineCaseMember(caseId, {
-                        userId: lead,
-                        role: "LEAD_INVESTIGATOR",
-                        active: true,
-                        reason: "Appointed as the Lead Investigation Officer.",
-                      });
-                      await addInvestigatorSetup(caseId, user!.id, {
-                        leadUserId: lead,
-                        appointedAt: combineZonedDateTime(date, time),
-                        trainingExperience: String(form.get("experience")),
-                        clubAffiliation: String(form.get("club") || ""),
-                        committeeRole: String(form.get("committeeRole") || ""),
-                        relationshipToParties: String(
-                          form.get("relationship") || "",
-                        ),
-                        competitiveInterest: String(form.get("interest") || ""),
-                        actualConflict: form.get("actualConflict") === "on",
-                        perceivedConflict:
-                          form.get("perceivedConflict") === "on",
-                        conflictDecision: String(form.get("conflictDecision")),
-                        conflictReason: String(form.get("conflictReason")),
-                      });
-                    },
-                  );
-                }}
-              >
-                <div className="space-y-2">
-                  <Label>Lead Investigation Officer</Label>
-                  <Select name="leadUserId" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select user" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {data.profileOptions.map((profile) => (
-                        <SelectItem key={profile.id} value={profile.id}>
-                          {`${profile.first_name || ""} ${profile.last_name || ""}`.trim() ||
-                            profile.id}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Appointment date</Label>
-                    <Input name="appointedDate" type="date" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Time</Label>
-                    <Input name="appointedTime" type="time" required />
-                  </div>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Training and experience</Label>
-                  <Textarea name="experience" required />
-                </div>
-                {[
-                  ["club", "Club affiliation"],
-                  ["committeeRole", "Committee role"],
-                  ["relationship", "Relationship to parties"],
-                  ["interest", "Competitive interest"],
-                ].map(([name, label]) => (
-                  <div key={name} className="space-y-2">
-                    <Label>{label}</Label>
-                    <Input name={name} />
-                  </div>
-                ))}
-                <label className="flex items-center gap-3 rounded-lg border p-3">
-                  <Checkbox name="actualConflict" />
-                  Actual conflict identified
-                </label>
-                <label className="flex items-center gap-3 rounded-lg border p-3">
-                  <Checkbox name="perceivedConflict" />
-                  Perceived conflict identified
-                </label>
-                <div className="space-y-2">
-                  <Label>Conflict decision</Label>
-                  <Select name="conflictDecision" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select decision" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="NO_CONFLICT">No conflict</SelectItem>
-                      <SelectItem value="MANAGED">Conflict managed</SelectItem>
-                      <SelectItem value="REPLACE_INVESTIGATOR">
-                        Replace investigator
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Conflict reason</Label>
-                  <Input name="conflictReason" required />
-                </div>
-                <Button type="submit" disabled={busy} className="md:col-span-2">
-                  Record appointment and independence check
                 </Button>
               </form>
             ) : null}

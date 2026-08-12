@@ -6,6 +6,8 @@ export const HV_SCHEDULES_URL =
   "https://cdn.revolutionise.com.au/cups/vichockey/files/jnpjob9q1ytyxveo.pdf";
 export const HA_DISCIPLINE_POLICY_URL =
   "https://www.hockeyballarat.com.au/uploads/1/4/8/3/148316959/de3wntx1qsqupsyp.pdf";
+export const HB_BYLAW_ADDENDUM_URL =
+  "https://www.hockeyballarat.com.au/uploads/1/4/8/3/148316959/hb_by-law_addendum_2026.pdf";
 
 export const TRIBUNAL_READINESS_CONTENT = {
   GREEN: {

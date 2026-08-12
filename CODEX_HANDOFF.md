@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-12
+Last updated: 2026-08-13
 
 Future agents should start by reading these files in order:
 
@@ -44,12 +44,21 @@ structure. The hidden direct-address portal is implemented at `/discipline`, `/d
   descriptor tags, requires explicit factual answers and records unclear combinations as Amber
   human review. Green/Amber/Red are explained as pathway-planning states only. Previous assessments,
   penalty guidance and rule-source warnings remain visible and are not overwritten.
+- Investigation Setup now explains Rule 7.12 and the difference between internal and independent
+  external investigation. It records one accountable lead, optional support investigators,
+  appointment date/time and authority, training/experience, four disclosure areas, separate
+  actual/perceived conflict answers, predefined operating descriptors, the independence decision
+  and its factual basis/safeguards. Earlier checks remain visible.
+- Support investigators and the conflict descriptors are explicitly labelled as HB operating tools,
+  not quoted Rule 7 requirements. The HB addendum does not settle the local equivalent of the HV
+  CEO/delegate appointment authority, so that mapping remains visibly unapproved and the actual
+  authorising person/body must be recorded.
 
 ### Dev implementation and security
 
-- Nine additive local migration files from `20260812110000` to `20260812164333` are applied to
-  Dev. The live migration history recorded the same seven names under application-time versions
-  `20260812004524` through `20260812011829`; the exact mapping is in
+- Ten additive local migration files from `20260812110000` to `20260812235915` are applied to
+  Dev. The first seven live migrations used application-time versions `20260812004524` through
+  `20260812011829`; the exact local-to-live mapping for all ten files is in
   `docs/incident-discipline-phase1.md`. They add
   29 `discipline_*` tables, rule/deadline/config data, append-only audit and revision records, a
   private 20 MB `discipline-evidence` bucket and role-checking database functions. Generated
@@ -57,6 +66,10 @@ structure. The hidden direct-address portal is implemented at `/discipline`, `/d
 - The two intake usability migrations are live as `20260812064047 improve_discipline_intake_guidance`
   and `20260812064352 index_discipline_intake_links`. They add 34 reusable tags, optional links to
   existing SportStack records, association-scoped suggestion data and covered foreign-key indexes.
+- Investigator setup migration `20260812140314 improve_discipline_investigator_setup` is live on
+  Dev. It adds investigation type, appointment authority/reference and conflict descriptors, blocks
+  direct authenticated inserts and exposes one secured atomic function. Accepted appointments align
+  lead/support case access; a replacement decision records the check without granting access.
 - Every exposed discipline table has RLS. Existing admin or committee status does not reveal case
   contents; an active case assignment is required. Portal/config access remains separate from case
   access. Creating a case atomically creates its initial people/allegation, assigns the creator as
@@ -81,6 +94,10 @@ structure. The hidden direct-address portal is implemented at `/discipline`, `/d
 - A new rolled-back Dev check returned 232 fixture, 38 team, 451 person and 34 tag suggestions. It
   created a two-allegation Rule 7 test with an immediate-safety flag, confirmed the case remained
   `REGULAR`/`DRAFT`, confirmed both case and allegation tag assignments, and left zero test records.
+- A separate rolled-back Dev investigator workflow test assigned an accepted lead and support role,
+  retained no access for an actual-conflict replacement, rejected an invalid actual-conflict/
+  managed combination and left zero test cases. Function grants are authenticated-only, direct
+  table insert is revoked and the fixed empty function search path was verified live.
 - The unauthenticated local browser check correctly redirected `/discipline` to sign-in. Vercel
   deployment `dpl_HU2QXTrCJmoEzMrRfKawDZnTUpfY` was `READY` for exact preliminary-screening commit
   `e6b73dfe19ce55da7512296b12f15ee1a6970fdf` and was verified through the Dev alias. The Dev address

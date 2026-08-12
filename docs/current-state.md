@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-08-12
+Last updated: 2026-08-13
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -44,6 +44,13 @@ Update this file after every meaningful Codex task, pull request, schema change,
   factual answers with no preselected classification, screens each allegation separately, preserves
   earlier assessments and sends unclear combinations to Amber human review. Exact Schedule wording,
   penalty-guidance limits and the direct-Tribunal source conflict remain visible.
+  Investigation Setup now explains Rule 7.12, requires an explicit internal/external pathway,
+  appointment authority, training/experience and separate actual/perceived conflict answers,
+  supports one accountable lead plus optional support investigators, offers reusable conflict
+  descriptors, preserves every check and links the official HV Rules and HB addendum. Accepted
+  appointments align private case roles atomically; a replacement decision records the rejected
+  check without granting investigator access. The exact HB equivalent of the HV CEO/delegate
+  appointment authority remains visibly labelled as a local interpretation requiring approval.
   The UI labels information as **Fact**, **Rule**, **Judgement** or
   **Local interpretation** and never decides guilt or automatically applies a penalty.
 - **Accuracy corrections are locked into the Dev rule pack:** finals timing requires the relevant
@@ -52,7 +59,7 @@ Update this file after every meaningful Codex task, pull request, schema change,
   Schedules `$500` contempt conflict remains visible. Business-day meaning, NIF adoption/contact,
   authority mappings, natural-justice safeguards, fines/fees and other local treatments remain
   `REVIEW_REQUIRED` until Hockey Ballarat approves them. See `docs/incident-discipline-phase1.md`.
-- **Dev database only:** nine additive local migration files create 29 RLS-protected
+- **Dev database only:** ten additive local migration files create 29 RLS-protected
   `discipline_*` tables, a 20 MB private evidence bucket, role-checking functions, UTC/Melbourne
   deadline calculations, 32 classification rows, 10 deadline definitions, 12 local-variation
   records and the verified 2026 Victorian holiday calendar. All migrations passed rollback dry
@@ -62,6 +69,11 @@ Update this file after every meaningful Codex task, pull request, schema change,
   internal pathway unless an explicit referral path is chosen. A sign-off test found and fixed the pgcrypto schema
   qualification before release. No rollback records remain; Production, `main` and `prod` are
   untouched.
+- **Investigator workflow database evidence:** live Dev migration
+  `20260812140314 improve_discipline_investigator_setup` adds the Rule 7.12 appointment fields and
+  one role-checking atomic write function. Authenticated direct table inserts are revoked. A live
+  rolled-back workflow test passed accepted lead/support assignment, replacement-without-access
+  and invalid conflict-decision rejection, then confirmed zero test cases remained.
 - **Security review:** case content is assignment-only even for Association/Super Admin roles;
   configuration and case access are separate. Supabase reports no anonymous discipline function
   warning or discipline table without RLS. Its authenticated security-definer warnings are

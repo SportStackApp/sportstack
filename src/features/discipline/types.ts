@@ -24,6 +24,25 @@ export type DisciplinePerson =
   Database["public"]["Tables"]["discipline_case_people"]["Row"];
 export type DisciplineInvestigatorSetup =
   Database["public"]["Tables"]["discipline_investigator_setups"]["Row"];
+
+export type DisciplineInvestigatorSetupInput = {
+  leadUserId: string;
+  supportUserIds: string[];
+  appointedAt: string;
+  investigationType: "INTERNAL" | "EXTERNAL";
+  appointmentAuthority: string;
+  authorityReference?: string;
+  trainingExperience: string;
+  clubAffiliation?: string;
+  committeeRole?: string;
+  relationshipToParties?: string;
+  competitiveInterest?: string;
+  conflictFactors: string[];
+  actualConflict: boolean;
+  perceivedConflict: boolean;
+  conflictDecision: "NO_CONFLICT" | "MANAGED" | "REPLACE_INVESTIGATOR";
+  conflictReason: string;
+};
 export type DisciplineNotification =
   Database["public"]["Tables"]["discipline_notifications"]["Row"];
 export type DisciplineWitness =
