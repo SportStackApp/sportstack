@@ -44,6 +44,12 @@ export type DisciplineRuleClause =
   Database["public"]["Tables"]["discipline_rule_clauses"]["Row"];
 export type DisciplineLocalVariation =
   Database["public"]["Tables"]["discipline_local_variations"]["Row"];
+export type DisciplineTag =
+  Database["public"]["Tables"]["discipline_tags"]["Row"];
+export type DisciplineCaseTag =
+  Database["public"]["Tables"]["discipline_case_tags"]["Row"];
+export type DisciplineAllegationTag =
+  Database["public"]["Tables"]["discipline_allegation_tags"]["Row"];
 
 export type DisciplineCaseSummary = DisciplineCase & {
   nextDeadline: DisciplineDeadline | null;
@@ -77,12 +83,67 @@ export type DisciplineWorkspaceData = {
   auditEvents: DisciplineAuditEvent[];
   ruleClauses: DisciplineRuleClause[];
   localVariations: DisciplineLocalVariation[];
+  tags: DisciplineTag[];
+  caseTags: DisciplineCaseTag[];
+  allegationTags: DisciplineAllegationTag[];
   profileOptions: Array<{
     id: string;
     first_name: string | null;
     last_name: string | null;
-    email: string | null;
   }>;
+};
+
+export type DisciplineIntakeTagOption = {
+  id: string;
+  scope:
+    | "JURISDICTION_REASON"
+    | "SAFETY_RISK"
+    | "ALLEGATION_DESCRIPTOR";
+  key: string;
+  label: string;
+  description: string;
+};
+
+export type DisciplineIntakeOptions = {
+  fixtures: Array<{
+    id: string;
+    label: string;
+    fixture_at: string;
+    match_concluded_at: string;
+    competition_id: string | null;
+    competition: string | null;
+    division_id: string | null;
+    grade: string | null;
+    round_label: string | null;
+    home_team_id: string;
+    home_team: string;
+    away_team_id: string;
+    away_team: string;
+    venue_id: string | null;
+    venue: string | null;
+  }>;
+  competitions: Array<{ id: string; label: string }>;
+  grades: Array<{
+    id: string;
+    label: string;
+    competition_id: string | null;
+  }>;
+  teams: Array<{
+    id: string;
+    label: string;
+    club_id: string;
+    club: string;
+    division_id: string | null;
+  }>;
+  venues: Array<{ id: string; label: string }>;
+  clubs: Array<{ id: string; label: string }>;
+  profiles: Array<{
+    id: string;
+    label: string;
+    club_id: string | null;
+    club: string | null;
+  }>;
+  tags: DisciplineIntakeTagOption[];
 };
 
 export type NewDisciplineCaseInput = {
@@ -92,6 +153,14 @@ export type NewDisciplineCaseInput = {
   jurisdiction_reason?: string;
   immediate_safety_risk: boolean;
   immediate_safety_action?: string;
+  jurisdiction_tag_ids?: string[];
+  safety_tag_ids?: string[];
+  fixture_id?: string;
+  competition_id?: string;
+  division_id?: string;
+  home_team_id?: string;
+  away_team_id?: string;
+  venue_id?: string;
   competition?: string;
   grade?: string;
   round_label?: string;
@@ -117,6 +186,8 @@ export type NewDisciplineCaseInput = {
     email?: string;
     phone?: string;
     is_junior?: boolean;
+    profile_id?: string;
+    club_id?: string;
   };
   reported_person?: {
     full_name: string;
@@ -125,13 +196,16 @@ export type NewDisciplineCaseInput = {
     email?: string;
     phone?: string;
     is_junior?: boolean;
+    profile_id?: string;
+    club_id?: string;
   };
-  initial_allegation?: {
+  allegations: Array<{
     title: string;
     description: string;
     incident_at?: string;
     location?: string;
-  };
+    tag_ids?: string[];
+  }>;
 };
 
 export const asJson = (value: unknown) => value as Json;

@@ -36,7 +36,16 @@ The Hockey Australia policy is still linked by Hockey Ballarat, but its stated r
 4. The linked incident form shows a `$250` contempt amount, while the 2026 Schedules show `$500`. The Schedules value is stored as the current guideline and a source-conflict warning remains visible.
 5. Rule 7.12 requires an appropriately experienced, conflict-free Investigation Officer and cooperation. It does not expressly state the full natural-justice checklist proposed for the investigation stage. That checklist is stored as an HB operating safeguard pending formal approval, supported more generally by the NIF policy and Tribunal provisions.
 6. The source set contains no located definition of `business day`. Calculations use the configurable HB calendar, weekends and verified Victorian public holidays, but are labelled as a local interpretation pending approval.
-7. The NIF complaint pathway must not be silently blended with the match-misconduct Rule 7 pathway. Intake requires a human jurisdiction choice. Immediate child-safety or other urgent risk is escalated outside the ordinary workflow.
+7. The NIF complaint pathway must not be silently blended with the match-misconduct Rule 7 pathway. Intake requires a human jurisdiction choice. Immediate child-safety or other urgent risk requires prompt external action where applicable, but the safety flag is an overlay rather than an automatic jurisdiction decision. An external referral may suspend the internal process; it does not erase the private record.
+
+## Intake wording and data decisions
+
+- The page explains each jurisdiction pathway in plain language and links directly to the checked HV Rules, Incident Report Form and site-linked Hockey Australia policy. The NIF option remains labelled as requiring confirmation of HB adoption and referral contacts.
+- The reason for the selected pathway is required factual text. Reusable reason tags support triage and searching but do not decide jurisdiction.
+- Immediate-safety tags describe the reported risk or action. Selecting immediate safety alone no longer changes a Rule 7 case to `REFERRED`; an explicit external or policy referral pathway is required for that status.
+- A selected SportStack fixture fills competition, grade, round, home team, away team, venue and match timing. Each field remains editable free text so the saved snapshot can accurately reflect an external report. The database keeps the official form-compatible `first_named_team` and `second_named_team` snapshot columns while the UI displays **Home team** and **Away team**.
+- People and clubs can be linked to association-scoped SportStack suggestions or retained as free-text snapshots. A suggestion is not forced when identity is uncertain.
+- The original incident report remains evidence. An allegation is a neutral structured account of one separate reported act, not a finding or a rewritten replacement for the report. Intake supports multiple allegations in one transaction and each allegation has its own optional descriptive tags, date, time and location.
 
 ## Source ambiguities to retain
 
@@ -108,13 +117,13 @@ Until then Dev cases show `Rule pack review required` and every calculated deadl
 ## Implemented Dev evidence
 
 The hidden portal implements the Phase 1 intake, screening, investigation, findings, report and HB
-decision flow. Initial people and the first allegation are created in the same database transaction
-as the case. Case access and portal access can be granted, changed or revoked only with a reason.
+decision flow. Initial people, all entered allegations and their descriptive tags are created in the
+same database transaction as the case. Case access and portal access can be granted, changed or revoked only with a reason.
 Evidence files use short-lived signed links; the original object and evidence record are not
 overwritten. Signed report snapshots retain their SHA-256 hash and any authorised natural-justice
 override reason.
 
-The seven local migration files and the versions recorded by the live Dev migration history are:
+The nine local migration files and the versions recorded by the live Dev migration history are:
 
 | Local migration file | Live Dev version and name |
 |---|---|
@@ -125,6 +134,8 @@ The seven local migration files and the versions recorded by the live Dev migrat
 | `20260812114000_incident_discipline_portal_context.sql` | `20260812005212 incident_discipline_portal_context` |
 | `20260812115000_incident_discipline_atomic_intake.sql` | `20260812010350 incident_discipline_atomic_intake` |
 | `20260812116000_incident_discipline_report_hash.sql` | `20260812011829 incident_discipline_report_hash` |
+| `20260812162815_improve_discipline_intake_guidance.sql` | `20260812064047 improve_discipline_intake_guidance` |
+| `20260812164333_index_discipline_intake_links.sql` | `20260812064352 index_discipline_intake_links` |
 
 Supabase assigned the live versions at application time; the migration names identify the matching
 local files.
@@ -140,6 +151,9 @@ Rolled-back live Dev checks confirmed:
   and Classification Review Required return the intended Green/Amber/Red guidance;
 - report signing is blocked while required natural-justice safeguards are incomplete, then creates
   one immutable hashed snapshot only after a Case Coordinator's recorded override; and
+- association-scoped suggestions returned 232 fixtures, 38 teams, 451 people and 34 descriptive
+  tags in the Dev snapshot; a two-allegation Rule 7 case retained `REGULAR`/`DRAFT` when immediate
+  safety was also recorded, and stored both case and allegation tags; and
 - every test transaction rolled back without leaving a case, person, finding or report record.
 
 The final Supabase review found no anonymous discipline RPC, no discipline table without RLS and no

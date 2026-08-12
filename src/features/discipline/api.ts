@@ -3,6 +3,7 @@ import type { Json } from "@/integrations/supabase/types";
 import type {
   ClassificationResult,
   DisciplineCaseSummary,
+  DisciplineIntakeOptions,
   DisciplinePortalContext,
   DisciplineWorkspaceData,
   NewDisciplineCaseInput,
@@ -64,6 +65,16 @@ export async function loadAssociationOptions(associationIds: string[]) {
   return data ?? [];
 }
 
+export async function loadDisciplineIntakeOptions(
+  associationId: string,
+): Promise<DisciplineIntakeOptions> {
+  const { data, error } = await supabase.rpc("get_discipline_intake_options", {
+    p_association_id: associationId,
+  });
+  throwIfError(error);
+  return data as unknown as DisciplineIntakeOptions;
+}
+
 export async function createDisciplineCase(input: NewDisciplineCaseInput) {
   const { data, error } = await supabase.rpc("create_discipline_case", {
     p_intake: input as unknown as Json,
@@ -101,6 +112,9 @@ export async function loadDisciplineWorkspace(
     auditResult,
     clausesResult,
     variationsResult,
+    tagsResult,
+    caseTagsResult,
+    allegationTagsResult,
     profilesResult,
   ] = await Promise.all([
     supabase
@@ -189,8 +203,15 @@ export async function loadDisciplineWorkspace(
       .eq("rule_pack_id", incidentCase.rule_pack_id)
       .order("created_at"),
     supabase
+      .from("discipline_tags")
+      .select("*")
+      .eq("association_id", incidentCase.association_id)
+      .order("sort_order"),
+    supabase.from("discipline_case_tags").select("*").eq("case_id", caseId),
+    supabase.from("discipline_allegation_tags").select("*"),
+    supabase
       .from("profiles")
-      .select("id, first_name, last_name, email")
+      .select("id, first_name, last_name")
       .order("last_name")
       .limit(1000),
   ]);
@@ -213,6 +234,9 @@ export async function loadDisciplineWorkspace(
     auditResult,
     clausesResult,
     variationsResult,
+    tagsResult,
+    caseTagsResult,
+    allegationTagsResult,
     profilesResult,
   ].forEach((result) => throwIfError(result.error));
 
@@ -235,6 +259,13 @@ export async function loadDisciplineWorkspace(
     auditEvents: auditResult.data ?? [],
     ruleClauses: clausesResult.data ?? [],
     localVariations: variationsResult.data ?? [],
+    tags: tagsResult.data ?? [],
+    caseTags: caseTagsResult.data ?? [],
+    allegationTags: (allegationTagsResult.data ?? []).filter((assignment) =>
+      (allegationsResult.data ?? []).some(
+        (allegation) => allegation.id === assignment.allegation_id,
+      ),
+    ),
     profileOptions: profilesResult.data ?? [],
   };
 }
@@ -248,17 +279,22 @@ export async function saveAllegation(
     incidentAt?: string;
     location?: string;
     changeReason: string;
+    tagIds?: string[];
   },
 ) {
-  const { data, error } = await supabase.rpc("save_discipline_allegation", {
-    p_case_id: caseId,
-    p_allegation_id: (values.allegationId || null) as unknown as string,
-    p_title: values.title,
-    p_description: values.description,
-    p_incident_at: (values.incidentAt || null) as unknown as string,
-    p_location: (values.location || null) as unknown as string,
-    p_change_reason: values.changeReason,
-  });
+  const { data, error } = await supabase.rpc(
+    "save_discipline_allegation_with_tags",
+    {
+      p_case_id: caseId,
+      p_allegation_id: (values.allegationId || null) as unknown as string,
+      p_title: values.title,
+      p_description: values.description,
+      p_incident_at: (values.incidentAt || null) as unknown as string,
+      p_location: (values.location || null) as unknown as string,
+      p_change_reason: values.changeReason,
+      p_tag_ids: values.tagIds ?? null,
+    },
+  );
   throwIfError(error);
   return data;
 }

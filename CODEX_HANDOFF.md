@@ -26,6 +26,13 @@ structure. The hidden direct-address portal is implemented at `/discipline`, `/d
 - Phase 1 stops at an HB close or referral decision. Tribunal, mediation, appeal, suspension and
   publication workflows remain Phase 2. The app records guidance but never decides guilt or applies
   a penalty automatically.
+- The revised intake explains Rule 7 and every jurisdiction option, links the official sources and
+  requires a factual pathway reason. Immediate safety is recorded as an overlay: it no longer marks
+  a Rule 7 case `REFERRED` unless an explicit external/policy referral pathway is selected. The
+  linked national policy remains visibly subject to HB adoption/contact confirmation.
+- Fixture, competition, grade, round, home team, away team, venue, person and club suggestions are
+  association-scoped and retain free-text fallback. The original report remains evidence; multiple
+  neutral allegations and optional descriptive tags are saved atomically in the same case.
 - Corrected source interpretation: direct finals timing applies only when the relevant club is
   participating in that competition; 2026 investigation appeals are Rules 7.22-7.25; and direct
   Tribunal screening includes Level 3 language, vilification, Level 3 violent conduct and the
@@ -36,13 +43,16 @@ structure. The hidden direct-address portal is implemented at `/discipline`, `/d
 
 ### Dev implementation and security
 
-- Seven additive local migration files from `20260812110000` to `20260812116000` are applied to
+- Nine additive local migration files from `20260812110000` to `20260812164333` are applied to
   Dev. The live migration history recorded the same seven names under application-time versions
   `20260812004524` through `20260812011829`; the exact mapping is in
   `docs/incident-discipline-phase1.md`. They add
-  26 `discipline_*` tables, rule/deadline/config data, append-only audit and revision records, a
+  29 `discipline_*` tables, rule/deadline/config data, append-only audit and revision records, a
   private 20 MB `discipline-evidence` bucket and role-checking database functions. Generated
   Supabase TypeScript types were refreshed.
+- The two intake usability migrations are live as `20260812064047 improve_discipline_intake_guidance`
+  and `20260812064352 index_discipline_intake_links`. They add 34 reusable tags, optional links to
+  existing SportStack records, association-scoped suggestion data and covered foreign-key indexes.
 - Every exposed discipline table has RLS. Existing admin or committee status does not reveal case
   contents; an active case assignment is required. Portal/config access remains separate from case
   access. Creating a case atomically creates its initial people/allegation, assigns the creator as
@@ -64,6 +74,9 @@ structure. The hidden direct-address portal is implemented at `/discipline`, `/d
   natural-justice blocking, authorised override, immutable SHA-256 report snapshot and audit data.
 - The sign-off test exposed an unqualified pgcrypto `digest` call; additive migration
   `20260812116000_incident_discipline_report_hash.sql` fixed it and the complete test then passed.
+- A new rolled-back Dev check returned 232 fixture, 38 team, 451 person and 34 tag suggestions. It
+  created a two-allegation Rule 7 test with an immediate-safety flag, confirmed the case remained
+  `REGULAR`/`DRAFT`, confirmed both case and allegation tag assignments, and left zero test records.
 - The unauthenticated local browser check correctly redirected `/discipline` to sign-in. An
   authenticated owner UI pass is still required. Vercel deployment
   `dpl_F8E2PVxXxEoWGs6vMZF4V7r7gGJe` was `READY` for exact feature commit

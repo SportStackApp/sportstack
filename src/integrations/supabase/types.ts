@@ -1974,6 +1974,49 @@ export type Database = {
           },
         ]
       }
+      discipline_allegation_tags: {
+        Row: {
+          allegation_id: string
+          assigned_at: string
+          assigned_by: string | null
+          tag_id: string
+        }
+        Insert: {
+          allegation_id: string
+          assigned_at?: string
+          assigned_by?: string | null
+          tag_id: string
+        }
+        Update: {
+          allegation_id?: string
+          assigned_at?: string
+          assigned_by?: string | null
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_allegation_tags_allegation_id_fkey"
+            columns: ["allegation_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_allegations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_allegation_tags_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_allegation_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discipline_allegations: {
         Row: {
           allegation_number: number
@@ -2240,6 +2283,7 @@ export type Database = {
         Row: {
           case_id: string
           case_role: string
+          club_id: string | null
           created_at: string
           created_by: string
           email: string | null
@@ -2250,12 +2294,14 @@ export type Database = {
           organisation: string | null
           person_role: string | null
           phone: string | null
+          profile_id: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           case_id: string
           case_role: string
+          club_id?: string | null
           created_at?: string
           created_by: string
           email?: string | null
@@ -2266,12 +2312,14 @@ export type Database = {
           organisation?: string | null
           person_role?: string | null
           phone?: string | null
+          profile_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           case_id?: string
           case_role?: string
+          club_id?: string | null
           created_at?: string
           created_by?: string
           email?: string | null
@@ -2282,6 +2330,7 @@ export type Database = {
           organisation?: string | null
           person_role?: string | null
           phone?: string | null
+          profile_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -2294,8 +2343,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "discipline_case_people_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "discipline_case_people_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_case_people_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2309,19 +2372,69 @@ export type Database = {
           },
         ]
       }
+      discipline_case_tags: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          case_id: string
+          tag_context: string
+          tag_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          case_id: string
+          tag_context: string
+          tag_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          case_id?: string
+          tag_context?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_case_tags_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_case_tags_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_case_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discipline_cases: {
         Row: {
           association_id: string
+          away_team_id: string | null
           case_number: string
           closed_at: string | null
           committee_id: string | null
           competition: string | null
+          competition_id: string | null
           created_at: string
           created_by: string
           desired_outcome_included: boolean | null
+          division_id: string | null
           first_named_team: string | null
           fixture_id: string | null
           grade: string | null
+          home_team_id: string | null
           id: string
           immediate_safety_action: string | null
           immediate_safety_risk: boolean
@@ -2348,19 +2461,24 @@ export type Database = {
           updated_at: string
           updated_by: string | null
           venue: string | null
+          venue_id: string | null
         }
         Insert: {
           association_id: string
+          away_team_id?: string | null
           case_number: string
           closed_at?: string | null
           committee_id?: string | null
           competition?: string | null
+          competition_id?: string | null
           created_at?: string
           created_by: string
           desired_outcome_included?: boolean | null
+          division_id?: string | null
           first_named_team?: string | null
           fixture_id?: string | null
           grade?: string | null
+          home_team_id?: string | null
           id?: string
           immediate_safety_action?: string | null
           immediate_safety_risk?: boolean
@@ -2387,19 +2505,24 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           venue?: string | null
+          venue_id?: string | null
         }
         Update: {
           association_id?: string
+          away_team_id?: string | null
           case_number?: string
           closed_at?: string | null
           committee_id?: string | null
           competition?: string | null
+          competition_id?: string | null
           created_at?: string
           created_by?: string
           desired_outcome_included?: boolean | null
+          division_id?: string | null
           first_named_team?: string | null
           fixture_id?: string | null
           grade?: string | null
+          home_team_id?: string | null
           id?: string
           immediate_safety_action?: string | null
           immediate_safety_risk?: boolean
@@ -2426,6 +2549,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           venue?: string | null
+          venue_id?: string | null
         }
         Relationships: [
           {
@@ -2436,10 +2560,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "discipline_cases_away_team_id_fkey"
+            columns: ["away_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "discipline_cases_committee_id_fkey"
             columns: ["committee_id"]
             isOneToOne: false
             referencedRelation: "committees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_cases_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
             referencedColumns: ["id"]
           },
           {
@@ -2450,10 +2588,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "discipline_cases_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "discipline_cases_fixture_id_fkey"
             columns: ["fixture_id"]
             isOneToOne: false
             referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_cases_home_team_id_fkey"
+            columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
           {
@@ -2475,6 +2627,13 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_cases_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
             referencedColumns: ["id"]
           },
         ]
@@ -3661,6 +3820,50 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_tags: {
+        Row: {
+          active: boolean
+          association_id: string
+          created_at: string
+          description: string
+          id: string
+          label: string
+          sort_order: number
+          tag_key: string
+          tag_scope: string
+        }
+        Insert: {
+          active?: boolean
+          association_id: string
+          created_at?: string
+          description: string
+          id?: string
+          label: string
+          sort_order?: number
+          tag_key: string
+          tag_scope: string
+        }
+        Update: {
+          active?: boolean
+          association_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          tag_key?: string
+          tag_scope?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_tags_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
             referencedColumns: ["id"]
           },
         ]
@@ -11485,6 +11688,10 @@ export type Database = {
           record_type: string
         }[]
       }
+      get_discipline_intake_options: {
+        Args: { p_association_id: string }
+        Returns: Json
+      }
       get_discipline_portal_context: { Args: never; Returns: Json }
       get_mvp_result_check_state: {
         Args: { p_session_id: string }
@@ -11870,6 +12077,19 @@ export type Database = {
           p_description: string
           p_incident_at: string
           p_location: string
+          p_title: string
+        }
+        Returns: string
+      }
+      save_discipline_allegation_with_tags: {
+        Args: {
+          p_allegation_id: string
+          p_case_id: string
+          p_change_reason: string
+          p_description: string
+          p_incident_at: string
+          p_location: string
+          p_tag_ids?: string[]
           p_title: string
         }
         Returns: string

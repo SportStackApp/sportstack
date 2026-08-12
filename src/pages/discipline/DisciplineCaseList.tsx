@@ -106,7 +106,7 @@ export default function DisciplineCaseList() {
               </CardHeader>
               <CardContent className="flex flex-1 flex-col gap-4">
                 <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
-                  <dt className="text-muted-foreground">Match</dt>
+                  <dt className="text-muted-foreground">Home / away</dt>
                   <dd>
                     {incidentCase.first_named_team || "Not recorded"} v{" "}
                     {incidentCase.second_named_team || "Not recorded"}

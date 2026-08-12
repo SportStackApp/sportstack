@@ -31,11 +31,16 @@ Update this file after every meaningful Codex task, pull request, schema change,
 ## Current priority
 
 - **Incident & Discipline Phase 1 is implemented on Dev and awaiting owner acceptance:** the hidden
-  `/discipline` portal provides assigned cases, atomic case/person/allegation intake, verified
+  `/discipline` portal provides assigned cases, atomic case/person/multi-allegation intake, verified
   Rule 7 deadlines, separate preliminary classification guidance, explicit case and portal access,
   investigator independence, notifications, witnesses, private immutable evidence, natural-justice
   safeguards, allegation findings, signed report snapshots, HB decisions, an append-only timeline
-  and official-source citations. The UI labels information as **Fact**, **Rule**, **Judgement** or
+  and official-source citations. Intake now explains each jurisdiction pathway and Rule 7 in plain
+  language; requires a factual pathway reason; links the official source documents; offers 34
+  reusable jurisdiction, safety and allegation-descriptor tags; predicts association-scoped
+  fixtures, teams, grades, venues, people and clubs while retaining free-text snapshots; displays
+  Home/Away team wording; and keeps each separate allegation alongside the original report source.
+  The UI labels information as **Fact**, **Rule**, **Judgement** or
   **Local interpretation** and never decides guilt or automatically applies a penalty.
 - **Accuracy corrections are locked into the Dev rule pack:** finals timing requires the relevant
   club to participate in that competition; current investigation appeals are Rules 7.22-7.25; all
@@ -43,13 +48,14 @@ Update this file after every meaningful Codex task, pull request, schema change,
   Schedules `$500` contempt conflict remains visible. Business-day meaning, NIF adoption/contact,
   authority mappings, natural-justice safeguards, fines/fees and other local treatments remain
   `REVIEW_REQUIRED` until Hockey Ballarat approves them. See `docs/incident-discipline-phase1.md`.
-- **Dev database only:** seven additive local `2026081211*` migration files create 26 RLS-protected
+- **Dev database only:** nine additive local migration files create 29 RLS-protected
   `discipline_*` tables, a 20 MB private evidence bucket, role-checking functions, UTC/Melbourne
   deadline calculations, 32 classification rows, 10 deadline definitions, 12 local-variation
   records and the verified 2026 Victorian holiday calendar. All migrations passed rollback dry
   runs before application to SportStack Dev. Cross-case access/revocation, regular/Easter and
-  finals deadlines, every classification branch, atomic intake and blocked/overridden report
-  sign-off passed rolled-back live Dev tests. A sign-off test found and fixed the pgcrypto schema
+  finals deadlines, every classification branch, atomic multi-allegation/tag intake and blocked/overridden report
+  sign-off passed rolled-back live Dev tests. Immediate safety now remains an overlay on the selected
+  internal pathway unless an explicit referral path is chosen. A sign-off test found and fixed the pgcrypto schema
   qualification before release. No rollback records remain; Production, `main` and `prod` are
   untouched.
 - **Security review:** case content is assignment-only even for Association/Super Admin roles;

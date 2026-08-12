@@ -63,6 +63,7 @@ import {
   InformationBadge,
   WorkflowSection,
 } from "@/features/discipline/DisciplineUi";
+import { DisciplineTagPicker } from "@/features/discipline/DisciplineTagPicker";
 import {
   formatMelbourneDateTime,
   formatStatus,
@@ -116,7 +117,6 @@ function profileLabel(data: DisciplineWorkspaceData, userId: string) {
   if (!profile) return userId;
   return (
     `${profile.first_name || ""} ${profile.last_name || ""}`.trim() ||
-    profile.email ||
     userId
   );
 }
@@ -496,6 +496,7 @@ export default function DisciplineCaseWorkspace() {
   const { context: portalContext } = useDisciplineAccess();
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [newAllegationTagIds, setNewAllegationTagIds] = useState<string[]>([]);
   const workspaceQuery = useQuery({
     queryKey: ["discipline-workspace", caseId],
     queryFn: () => loadDisciplineWorkspace(caseId),
@@ -688,7 +689,7 @@ export default function DisciplineCaseWorkspace() {
                   {incidentCase.grade || "Not recorded"} ·{" "}
                   {incidentCase.round_label || "Not recorded"}
                 </dd>
-                <dt className="text-muted-foreground">Match</dt>
+                <dt className="text-muted-foreground">Home / away</dt>
                 <dd>
                   {incidentCase.first_named_team || "Not recorded"} v{" "}
                   {incidentCase.second_named_team || "Not recorded"}
@@ -794,6 +795,58 @@ export default function DisciplineCaseWorkspace() {
                 <dd className="font-medium">
                   {formatStatus(incidentCase.jurisdiction_path)}
                 </dd>
+                {data.caseTags
+                  .filter((assignment) => assignment.tag_context === "JURISDICTION")
+                  .map((assignment) =>
+                    data.tags.find((tag) => tag.id === assignment.tag_id),
+                  )
+                  .filter((tag) => Boolean(tag)).length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {data.caseTags
+                      .filter((assignment) => assignment.tag_context === "JURISDICTION")
+                      .map((assignment) =>
+                        data.tags.find((tag) => tag.id === assignment.tag_id),
+                      )
+                      .filter((tag) => Boolean(tag))
+                      .map((tag) => (
+                        <Badge key={tag!.id} variant="outline">
+                          {tag!.label}
+                        </Badge>
+                      ))}
+                  </div>
+                ) : null}
+              </div>
+              <div className="md:col-span-2">
+                <dt className="text-muted-foreground">
+                  Factual reason for pathway
+                </dt>
+                <dd className="whitespace-pre-wrap">
+                  {incidentCase.jurisdiction_reason || "Not recorded"}
+                </dd>
+              </div>
+              <div className="md:col-span-2">
+                <dt className="text-muted-foreground">Immediate safety</dt>
+                <dd>
+                  {incidentCase.immediate_safety_risk
+                    ? incidentCase.immediate_safety_action ||
+                      "Risk recorded; action not recorded"
+                    : "No immediate safety risk recorded"}
+                </dd>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {data.caseTags
+                    .filter(
+                      (assignment) => assignment.tag_context === "SAFETY",
+                    )
+                    .map((assignment) =>
+                      data.tags.find((tag) => tag.id === assignment.tag_id),
+                    )
+                    .filter((tag) => Boolean(tag))
+                    .map((tag) => (
+                      <Badge key={tag!.id} variant="outline">
+                        {tag!.label}
+                      </Badge>
+                    ))}
+                </div>
               </div>
               <div>
                 <dt className="text-muted-foreground">Round / relevant club</dt>
@@ -924,6 +977,22 @@ export default function DisciplineCaseWorkspace() {
                   <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
                     {allegation.description}
                   </p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {data.allegationTags
+                      .filter(
+                        (assignment) =>
+                          assignment.allegation_id === allegation.id,
+                      )
+                      .map((assignment) =>
+                        data.tags.find((tag) => tag.id === assignment.tag_id),
+                      )
+                      .filter((tag) => Boolean(tag))
+                      .map((tag) => (
+                        <Badge key={tag!.id} variant="outline">
+                          {tag!.label}
+                        </Badge>
+                      ))}
+                  </div>
                   {allegation.initial_classification_code ? (
                     <Badge variant="secondary" className="mt-2">
                       Initial: {allegation.initial_classification_code}
@@ -1005,9 +1074,11 @@ export default function DisciplineCaseWorkspace() {
                       location: String(form.get("location") || ""),
                       changeReason:
                         "Initial allegation recorded from the case workspace.",
+                      tagIds: newAllegationTagIds,
                     }),
                   );
                   event.currentTarget.reset();
+                  setNewAllegationTagIds([]);
                 }}
               >
                 <div className="space-y-2">
@@ -1022,6 +1093,23 @@ export default function DisciplineCaseWorkspace() {
                   <Label>Location</Label>
                   <Input name="location" />
                 </div>
+                <DisciplineTagPicker
+                  label="Reported-fact descriptors"
+                  description="Tags describe the report for searching and triage. They are not findings."
+                  tags={data.tags
+                    .filter(
+                      (tag) => tag.tag_scope === "ALLEGATION_DESCRIPTOR",
+                    )
+                    .map((tag) => ({
+                      id: tag.id,
+                      scope: "ALLEGATION_DESCRIPTOR" as const,
+                      key: tag.tag_key,
+                      label: tag.label,
+                      description: tag.description,
+                    }))}
+                  selectedIds={newAllegationTagIds}
+                  onChange={setNewAllegationTagIds}
+                />
                 <Button type="submit" disabled={busy}>
                   Add allegation
                 </Button>
@@ -1098,7 +1186,6 @@ export default function DisciplineCaseWorkspace() {
                       {data.profileOptions.map((profile) => (
                         <SelectItem key={profile.id} value={profile.id}>
                           {`${profile.first_name || ""} ${profile.last_name || ""}`.trim() ||
-                            profile.email ||
                             profile.id}
                         </SelectItem>
                       ))}
@@ -1186,7 +1273,6 @@ export default function DisciplineCaseWorkspace() {
                       {data.profileOptions.map((profile) => (
                         <SelectItem key={profile.id} value={profile.id}>
                           {`${profile.first_name || ""} ${profile.last_name || ""}`.trim() ||
-                            profile.email ||
                             profile.id}
                         </SelectItem>
                       ))}
@@ -1288,7 +1374,6 @@ export default function DisciplineCaseWorkspace() {
                       {data.profileOptions.map((profile) => (
                         <SelectItem key={profile.id} value={profile.id}>
                           {`${profile.first_name || ""} ${profile.last_name || ""}`.trim() ||
-                            profile.email ||
                             profile.id}
                         </SelectItem>
                       ))}
