@@ -47,6 +47,14 @@ The Hockey Australia policy is still linked by Hockey Ballarat, but its stated r
 - People and clubs can be linked to association-scoped SportStack suggestions or retained as free-text snapshots. A suggestion is not forced when identity is uncertain.
 - The original incident report remains evidence. An allegation is a neutral structured account of one separate reported act, not a finding or a rewritten replacement for the report. Intake supports multiple allegations in one transaction and each allegation has its own optional descriptive tags, date, time and location.
 
+## Preliminary screening wording and data decisions
+
+- Screen 2 handles one allegation at a time. It repeats the saved allegation wording and descriptor tags so the user classifies the reported act rather than the whole incident.
+- No factual answer is preselected. The user must identify the closest conduct category, the person group where relevant, and the facts required by that Schedule row. An unclear or unsafe match records an Amber human-review result instead of forcing a classification.
+- Green means no current direct-Tribunal trigger was matched; Amber means human classification review is required; Red means the matched Schedule row calls for direct Tribunal preparation. None of these colours is a finding of guilt or an automatic penalty.
+- The latest preliminary result, its time, penalty guidance and any source warning remain visible. Each later check creates another preserved assessment rather than overwriting the earlier record.
+- The Schedule table marks the listed unfair public personal attack for immediate Tribunal referral, while the clarification below the table refers only to Level 3 offences and vilification. The app keeps that row Red and displays the conflict as a source warning.
+
 ## Source ambiguities to retain
 
 - Schedule 1 clause 4.1 refers to Rule 7.17(a) for Tribunal notification. The notice requirements appear in Rule 7.18(a).

@@ -40,6 +40,10 @@ structure. The hidden direct-address portal is implemented at `/discipline`, `/d
 - The current Schedules show `$500` for contempt while the linked form says `$250`. The Schedules
   amount is guidance with a visible conflict warning, not an automatic fine. The business-day
   definition and all unresolved HB local treatments keep the rule pack at `REVIEW_REQUIRED`.
+- Preliminary Screening now deals with one allegation at a time, displays its saved wording and
+  descriptor tags, requires explicit factual answers and records unclear combinations as Amber
+  human review. Green/Amber/Red are explained as pathway-planning states only. Previous assessments,
+  penalty guidance and rule-source warnings remain visible and are not overwritten.
 
 ### Dev implementation and security
 
@@ -78,13 +82,14 @@ structure. The hidden direct-address portal is implemented at `/discipline`, `/d
   created a two-allegation Rule 7 test with an immediate-safety flag, confirmed the case remained
   `REGULAR`/`DRAFT`, confirmed both case and allegation tag assignments, and left zero test records.
 - The unauthenticated local browser check correctly redirected `/discipline` to sign-in. Vercel
-  deployment `dpl_FWnuNNABUewUfSkNu2savNft7EcP` was `READY` for exact guided-intake commit
-  `df4decd622311221b07287aa02a83ff49b9b77b6` and was verified through the Dev alias. The Dev address
-  returned HTTP 200; the bundle pointed to SportStack Dev Supabase and did not contain the Production
-  Supabase project reference. A fresh signed-in browser snapshot rendered the revised form, pathway
+  deployment `dpl_HU2QXTrCJmoEzMrRfKawDZnTUpfY` was `READY` for exact preliminary-screening commit
+  `e6b73dfe19ce55da7512296b12f15ee1a6970fdf` and was verified through the Dev alias. The Dev address
+  returned HTTP 200; the bundle contained the new Screen 2 guidance, pointed to SportStack Dev
+  Supabase and did not contain the Production Supabase project reference. A fresh signed-in browser
+  snapshot rendered the revised intake form, pathway
   guidance, tags, predictive inputs and multi-allegation controls without a framework error. The
-  first owner acceptance test is intentionally one small action: click **Find out which pathway may
-  apply** and confirm that the plain-language Rule 7 explanation and official source links appear.
+  next owner acceptance test requires a disposable Dev case because the signed-in account currently
+  has no assigned cases. Create one disposable case and stop when its workspace opens.
   Later documentation-only Dev commits may change the displayed build label without changing the
   feature package.
 

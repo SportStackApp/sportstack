@@ -40,6 +40,10 @@ Update this file after every meaningful Codex task, pull request, schema change,
   reusable jurisdiction, safety and allegation-descriptor tags; predicts association-scoped
   fixtures, teams, grades, venues, people and clubs while retaining free-text snapshots; displays
   Home/Away team wording; and keeps each separate allegation alongside the original report source.
+  Preliminary Screening now explains its purpose, shows Green/Amber/Red meanings, requires explicit
+  factual answers with no preselected classification, screens each allegation separately, preserves
+  earlier assessments and sends unclear combinations to Amber human review. Exact Schedule wording,
+  penalty-guidance limits and the direct-Tribunal source conflict remain visible.
   The UI labels information as **Fact**, **Rule**, **Judgement** or
   **Local interpretation** and never decides guilt or automatically applies a penalty.
 - **Accuracy corrections are locked into the Dev rule pack:** finals timing requires the relevant
@@ -65,12 +69,13 @@ Update this file after every meaningful Codex task, pull request, schema change,
   New foreign-key indexes are currently reported only as unused because the module has no live
   workload. The `discipline_only` route restriction is not claimed as a complete database sandbox:
   existing SportStack shared directory data remains available to signed-in accounts.
-- **Dev deployment verified:** Vercel deployment `dpl_FWnuNNABUewUfSkNu2savNft7EcP` was `READY`
-  for exact guided-intake commit `df4decd622311221b07287aa02a83ff49b9b77b6` and was verified through
+- **Dev deployment verified:** Vercel deployment `dpl_HU2QXTrCJmoEzMrRfKawDZnTUpfY` was `READY`
+  for exact preliminary-screening commit `e6b73dfe19ce55da7512296b12f15ee1a6970fdf` and was verified through
   `dev.sportstackapp.com.au`. The Dev address returned HTTP 200; its deployed bundle included the
-  new guidance, tag, predictive-field and multi-allegation controls, references SportStack Dev
-  Supabase and does not reference Production Supabase. A fresh signed-in browser snapshot rendered
-  the complete revised form without a framework error. Later documentation-only Dev commits may
+  new Screen 2 guidance plus the earlier intake guidance, tags, predictive fields and
+  multi-allegation controls. It references SportStack Dev Supabase and does not reference
+  Production Supabase. A fresh signed-in browser snapshot rendered the complete revised intake
+  form without a framework error. Later documentation-only Dev commits may
   update the displayed build label without changing the feature package. Owner acceptance testing
   is still required one action at a time.
 
