@@ -65,13 +65,14 @@ Update this file after every meaningful Codex task, pull request, schema change,
   New foreign-key indexes are currently reported only as unused because the module has no live
   workload. The `discipline_only` route restriction is not claimed as a complete database sandbox:
   existing SportStack shared directory data remains available to signed-in accounts.
-- **Dev deployment verified:** Vercel deployment `dpl_F8E2PVxXxEoWGs6vMZF4V7r7gGJe` was `READY`
-  for exact feature commit `b517912f6fefc1836060a4b8a6e50e7f03f06710` and was verified through
-  `dev.sportstackapp.com.au`. The Dev address returned HTTP 200; its deployed bundle included
-  the discipline route and commit label, references SportStack Dev Supabase and does not reference
-  Production Supabase. Later documentation-only Dev commits may update the displayed build label
-  without changing the feature package. The signed-in owner workflow still needs acceptance testing one action at a
-  time.
+- **Dev deployment verified:** Vercel deployment `dpl_FWnuNNABUewUfSkNu2savNft7EcP` was `READY`
+  for exact guided-intake commit `df4decd622311221b07287aa02a83ff49b9b77b6` and was verified through
+  `dev.sportstackapp.com.au`. The Dev address returned HTTP 200; its deployed bundle included the
+  new guidance, tag, predictive-field and multi-allegation controls, references SportStack Dev
+  Supabase and does not reference Production Supabase. A fresh signed-in browser snapshot rendered
+  the complete revised form without a framework error. Later documentation-only Dev commits may
+  update the displayed build label without changing the feature package. Owner acceptance testing
+  is still required one action at a time.
 
 - **Guided Committee and subcommittee workflow is live on Dev:** commit `deea6c0` replaces the
   single create form with a reusable five-step workflow for Association and Club committees plus

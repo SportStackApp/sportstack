@@ -77,15 +77,16 @@ structure. The hidden direct-address portal is implemented at `/discipline`, `/d
 - A new rolled-back Dev check returned 232 fixture, 38 team, 451 person and 34 tag suggestions. It
   created a two-allegation Rule 7 test with an immediate-safety flag, confirmed the case remained
   `REGULAR`/`DRAFT`, confirmed both case and allegation tag assignments, and left zero test records.
-- The unauthenticated local browser check correctly redirected `/discipline` to sign-in. An
-  authenticated owner UI pass is still required. Vercel deployment
-  `dpl_F8E2PVxXxEoWGs6vMZF4V7r7gGJe` was `READY` for exact feature commit
-  `b517912f6fefc1836060a4b8a6e50e7f03f06710` and was verified through the Dev alias. The Dev address
-  returned HTTP 200; the deployed bundle contained the discipline route and commit label, pointed to
-  SportStack Dev Supabase and did not contain the Production Supabase project reference. The first owner test is
-  intentionally one small action: open the direct Dev `/discipline` address and confirm the private
-  case portal appears instead of the normal SportStack layout. Later documentation-only Dev commits
-  may change the displayed build label without changing the feature package.
+- The unauthenticated local browser check correctly redirected `/discipline` to sign-in. Vercel
+  deployment `dpl_FWnuNNABUewUfSkNu2savNft7EcP` was `READY` for exact guided-intake commit
+  `df4decd622311221b07287aa02a83ff49b9b77b6` and was verified through the Dev alias. The Dev address
+  returned HTTP 200; the bundle pointed to SportStack Dev Supabase and did not contain the Production
+  Supabase project reference. A fresh signed-in browser snapshot rendered the revised form, pathway
+  guidance, tags, predictive inputs and multi-allegation controls without a framework error. The
+  first owner acceptance test is intentionally one small action: click **Find out which pathway may
+  apply** and confirm that the plain-language Rule 7 explanation and official source links appear.
+  Later documentation-only Dev commits may change the displayed build label without changing the
+  feature package.
 
 ## 11 August 2026 guided Committee workflow
 
