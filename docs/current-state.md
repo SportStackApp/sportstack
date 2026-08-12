@@ -96,6 +96,19 @@ Update this file after every meaningful Codex task, pull request, schema change,
   its bundle contains the new Screen 3 guidance and Dev Supabase reference, with no Production
   project reference. The signed-in portal rendered without console errors or horizontal overflow.
   The account has no assigned case, so opening Screen 3 remains the next one-step owner test.
+- **13 August read-only realistic rehearsal:** the latest de-identified `IN0007` report and related
+  correspondence were reviewed as an unproven test scenario without copying names or correspondence
+  into the repository. The deployed intake correctly predicted the official SportStack fixture as
+  Round 13, Division 2 Open, Home `Lucas HC`, Away `Gold`, venue `John Vernon Field, Ballarat
+  Grammar`, and an estimated 3:15 pm conclusion. Two allegations remained separate, their tags did
+  not leak between allegations, the pathway help opened correctly, and the 390 px layout had no
+  horizontal overflow or console warning. Read-only rule matching returned Level 1 physical
+  guidance for reported late contact when treated as similar to pushing/grabbing/tripping; the
+  reported bite did not safely match an exact physical Schedule row and therefore remains Amber
+  human review. The report also demonstrates why later reported threats and prior-match context
+  should be preserved as evidence or separately particularised, not silently folded into the biting
+  allegation. Dev still contains zero discipline cases. The unattended-work rule prohibited a test
+  submission, so Aaron's next owner test remains creation of one controlled disposable Dev case.
 
 - **Guided Committee and subcommittee workflow is live on Dev:** commit `deea6c0` replaces the
   single create form with a reusable five-step workflow for Association and Club committees plus

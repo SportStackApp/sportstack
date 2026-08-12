@@ -119,6 +119,17 @@ structure. The hidden direct-address portal is implemented at `/discipline`, `/d
   has no assigned cases. Create one disposable case and stop when its workspace opens.
   Later documentation-only Dev commits may change the displayed build label without changing the
   feature package.
+- On 13 August, a read-only realistic rehearsal used the latest de-identified `IN0007` report and
+  related correspondence without committing names or private correspondence. SportStack's fixture
+  suggestion resolved the source inconsistency about team order as Home `Lucas HC`, Away `Gold`,
+  Round 13, Division 2 Open. The deployed intake kept two alleged acts and their descriptor tags
+  separate, rendered at 390 px without overflow or console warnings, and exposed the complete
+  jurisdiction help. Read-only rule matching treated reported late contact as possible Level 1
+  physical guidance but sent the reported bite to Amber because biting does not safely match an
+  exact listed physical row. A reported later threat and prior-match history remain evidence or
+  possible separately particularised allegations, not assumed facts within the bite allegation.
+  No case was submitted because `docs/overnight-agent-plan.md` prohibits unattended live database
+  writes; live Dev still has zero discipline cases.
 
 ## 11 August 2026 guided Committee workflow
 
