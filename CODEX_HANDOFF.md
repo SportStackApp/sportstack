@@ -98,6 +98,16 @@ structure. The hidden direct-address portal is implemented at `/discipline`, `/d
   retained no access for an actual-conflict replacement, rejected an invalid actual-conflict/
   managed combination and left zero test cases. Function grants are authenticated-only, direct
   table insert is revoked and the fixed empty function search path was verified live.
+- Focused ESLint, five investigator validation tests, TypeScript, the production build and
+  `git diff --check` pass. Full repository lint remains at its existing baseline of 360 errors and
+  78 warnings. React review found no new Screen 3 correctness or accessibility error; its remaining
+  Screen 3 advice is maintainability-only because the guided form is large.
+- Vercel deployment `dpl_BZbwC86F3y6JrFGfV3HZHqdURQMb` is `READY` for exact Screen 3 commit
+  `e8018598a4a6d4d30cd0ff61293379005f3537df` and owns `dev.sportstackapp.com.au`. The address
+  returned 200; its deployed bundle contains the Screen 3 wording and Dev Supabase reference, with
+  no Production project reference. The signed-in Cases page rendered without a console error or
+  horizontal overflow. No assigned case exists for that account, so visual form acceptance remains
+  the next owner test.
 - The unauthenticated local browser check correctly redirected `/discipline` to sign-in. Vercel
   deployment `dpl_HU2QXTrCJmoEzMrRfKawDZnTUpfY` was `READY` for exact preliminary-screening commit
   `e6b73dfe19ce55da7512296b12f15ee1a6970fdf` and was verified through the Dev alias. The Dev address

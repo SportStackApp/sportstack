@@ -197,3 +197,10 @@ The final Supabase review found no anonymous discipline RPC, no discipline table
 missing foreign-key index warning. The adviser continues to flag the authenticated client RPCs as
 security-definer functions; this is intentional because each function validates `auth.uid()` and
 the required association or case role before changing data.
+
+Screen 3 commit `e801859` passed focused ESLint, five investigator validation tests, TypeScript,
+the production build and `git diff --check`. Vercel deployment
+`dpl_BZbwC86F3y6JrFGfV3HZHqdURQMb` is `READY` on the Dev alias. Its bundle contains the Screen 3
+guidance and Dev Supabase reference and contains no Production project reference. A signed-in portal
+check rendered without a console error or horizontal overflow; form-level owner acceptance remains
+pending because the account has no assigned case.

@@ -90,6 +90,12 @@ Update this file after every meaningful Codex task, pull request, schema change,
   form without a framework error. Later documentation-only Dev commits may
   update the displayed build label without changing the feature package. Owner acceptance testing
   is still required one action at a time.
+- **Investigation Setup deployment verified:** Vercel deployment
+  `dpl_BZbwC86F3y6JrFGfV3HZHqdURQMb` is `READY` for exact Screen 3 commit
+  `e8018598a4a6d4d30cd0ff61293379005f3537df` and owns the Dev alias. The Dev address returned 200;
+  its bundle contains the new Screen 3 guidance and Dev Supabase reference, with no Production
+  project reference. The signed-in portal rendered without console errors or horizontal overflow.
+  The account has no assigned case, so opening Screen 3 remains the next one-step owner test.
 
 - **Guided Committee and subcommittee workflow is live on Dev:** commit `deea6c0` replaces the
   single create form with a reusable five-step workflow for Association and Club committees plus
