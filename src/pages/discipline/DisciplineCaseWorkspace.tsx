@@ -65,12 +65,19 @@ import {
 } from "@/features/discipline/DisciplineUi";
 import { DisciplineTagPicker } from "@/features/discipline/DisciplineTagPicker";
 import {
+  ScreeningGuidance,
+  TribunalReadinessLegend,
+} from "@/features/discipline/DisciplineScreeningGuidance";
+import { TRIBUNAL_READINESS_CONTENT } from "@/features/discipline/disciplineIntakeContent";
+import {
   formatMelbourneDateTime,
   formatStatus,
 } from "@/features/discipline/format";
 import type {
   ClassificationResult,
   DisciplineAllegation,
+  DisciplineAssessment,
+  DisciplineClassificationRule,
   DisciplineWorkspaceData,
 } from "@/features/discipline/types";
 import { useToast } from "@/hooks/use-toast";
@@ -97,19 +104,19 @@ const NEXT_STATUS: Record<string, string | undefined> = {
 };
 
 const PERSON_CATEGORIES = [
-  ["MATCH_PARTICIPANT", "Match participant"],
-  ["SPECTATOR", "Spectator"],
-  ["OFFICIAL", "Official"],
+  ["MATCH_PARTICIPANT", "Match participant - player, coach or team official"],
+  ["SPECTATOR", "Match spectator"],
+  ["OFFICIAL", "Match, team, HV or HA official"],
 ] as const;
 
 const OTHER_OFFENCES = [
-  ["INFLUENCE_OFFICIAL", "Repeated attempts to influence an official"],
-  ["PUBLIC_PERSONAL_ATTACK", "Unfair public personal attack"],
-  ["NOT_LEAVING_FIELD", "Not leaving the field when directed"],
-  ["UNFIT_STATE", "Participation in an unfit state"],
-  ["UNAUTHORISED_FIELD_ENTRY", "Unauthorised field entry"],
+  ["INFLUENCE_OFFICIAL", "Constant or repeated attempts to influence an official's decision"],
+  ["PUBLIC_PERSONAL_ATTACK", "Unfair public statement involving a personal attack"],
+  ["NOT_LEAVING_FIELD", "Not leaving the field of play when directed"],
+  ["UNFIT_STATE", "Participation in a match in an unfit state"],
+  ["UNAUTHORISED_FIELD_ENTRY", "Unauthorised entry to the field of play"],
   ["DISREPUTE", "Bringing the game into disrepute"],
-  ["CONTEMPT", "Contempt of Tribunal or appeal process"],
+  ["CONTEMPT", "Contempt of the Tribunal or appeals process"],
 ] as const;
 
 function profileLabel(data: DisciplineWorkspaceData, userId: string) {
@@ -121,38 +128,132 @@ function profileLabel(data: DisciplineWorkspaceData, userId: string) {
   );
 }
 
+function allegationDescriptorLabels(
+  data: DisciplineWorkspaceData,
+  allegationId: string,
+) {
+  const tagById = new Map(data.tags.map((tag) => [tag.id, tag]));
+  return data.allegationTags
+    .filter((assignment) => assignment.allegation_id === allegationId)
+    .map((assignment) => tagById.get(assignment.tag_id)?.label)
+    .filter((label): label is string => Boolean(label));
+}
+
+function ScreeningCheck({
+  checked,
+  disabled,
+  title,
+  description,
+  onChange,
+}: {
+  checked: boolean;
+  disabled: boolean;
+  title: string;
+  description: string;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex items-start gap-3 rounded-lg border p-3 text-sm">
+      <Checkbox
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={(value) => onChange(value === true)}
+      />
+      <span>
+        <span className="font-medium">{title}</span>
+        <span className="mt-1 block text-xs text-muted-foreground">
+          {description}
+        </span>
+      </span>
+    </label>
+  );
+}
+
+function savedClassificationResult(
+  assessment: DisciplineAssessment | undefined,
+  classificationRules: DisciplineClassificationRule[],
+): ClassificationResult | null {
+  if (!assessment) return null;
+  const readiness = ["GREEN", "AMBER", "RED"].includes(
+    assessment.tribunal_readiness,
+  )
+    ? (assessment.tribunal_readiness as ClassificationResult["tribunal_readiness"])
+    : "AMBER";
+  const matchedRule = classificationRules.find(
+    (rule) => rule.id === assessment.classification_rule_id,
+  );
+  return {
+    classification_code: assessment.classification_code,
+    classification_label: assessment.classification_label,
+    tribunal_readiness: readiness,
+    penalty_guidance: assessment.penalty_guidance,
+    explanation: assessment.explanation,
+    source_warning: matchedRule?.source_warning,
+  };
+}
+
 function ClassificationForm({
   caseId,
   allegation,
+  assessments,
+  classificationRules,
+  descriptorLabels,
+  canRecord,
   onSaved,
 }: {
   caseId: string;
   allegation: DisciplineAllegation;
+  assessments: DisciplineAssessment[];
+  classificationRules: DisciplineClassificationRule[];
+  descriptorLabels: string[];
+  canRecord: boolean;
   onSaved: () => Promise<unknown>;
 }) {
-  const [category, setCategory] = useState("LANGUAGE");
-  const [personCategory, setPersonCategory] = useState("MATCH_PARTICIPANT");
-  const [physicalKind, setPhysicalKind] = useState("PUSH_GRAB_TRIP");
-  const [contactMade, setContactMade] = useState(true);
-  const [otherOffence, setOtherOffence] = useState("INFLUENCE_OFFICIAL");
-  const [protectedBasis, setProtectedBasis] = useState("__none__");
+  const [category, setCategory] = useState("");
+  const [personCategory, setPersonCategory] = useState("");
+  const [physicalKind, setPhysicalKind] = useState("");
+  const [contactMade, setContactMade] = useState<boolean | null>(null);
+  const [otherOffence, setOtherOffence] = useState("");
+  const [protectedBasis, setProtectedBasis] = useState("");
   const [frustrationOnly, setFrustrationOnly] = useState(false);
   const [offensive, setOffensive] = useState(false);
   const [repeated, setRepeated] = useState(false);
   const [incitement, setIncitement] = useState(false);
-  const [result, setResult] = useState<ClassificationResult | null>(null);
+  const [result, setResult] = useState<ClassificationResult | null>(() =>
+    savedClassificationResult(assessments[0], classificationRules),
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const languageAnswerSelected =
+    frustrationOnly || offensive || repeated || incitement;
+  const formComplete =
+    category === "REVIEW_REQUIRED" ||
+    (category === "LANGUAGE" &&
+      languageAnswerSelected &&
+      (frustrationOnly || Boolean(personCategory))) ||
+    (category === "PHYSICAL" &&
+      Boolean(physicalKind) &&
+      Boolean(personCategory) &&
+      contactMade !== null) ||
+    (category === "VILIFICATION" &&
+      Boolean(protectedBasis) &&
+      Boolean(personCategory)) ||
+    (category === "OTHER" && Boolean(otherOffence));
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!canRecord || !formComplete) {
+      setError("Complete the required factual questions before recording guidance.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     const answers: Record<string, unknown> = { category };
     if (category === "LANGUAGE") {
       Object.assign(answers, {
         frustration_only: frustrationOnly,
-        offensive,
+        offensive: offensive || repeated,
         repeated,
         incitement_to_violence: incitement,
         person_category: frustrationOnly ? "N_A" : personCategory,
@@ -161,7 +262,7 @@ function ClassificationForm({
     if (category === "PHYSICAL")
       Object.assign(answers, {
         physical_kind: physicalKind,
-        contact_made: contactMade,
+        contact_made: contactMade === true,
         person_category: personCategory,
       });
     if (category === "VILIFICATION")
@@ -196,28 +297,52 @@ function ClassificationForm({
           If the allegation were proven exactly as reported, which Schedule
           wording may apply?
         </p>
+        <p className="mt-2 whitespace-pre-wrap rounded-md bg-muted/60 p-3 text-sm">
+          {allegation.description}
+        </p>
+        {descriptorLabels.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {descriptorLabels.map((label) => (
+              <Badge key={label} variant="outline">
+                {label}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label>Conduct category</Label>
-          <Select value={category} onValueChange={setCategory}>
+          <Label>What conduct is described in this allegation?</Label>
+          <Select
+            value={category}
+            onValueChange={setCategory}
+            disabled={!canRecord}
+          >
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Select the closest category" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="LANGUAGE">Language or gesture</SelectItem>
               <SelectItem value="PHYSICAL">Physical conduct</SelectItem>
               <SelectItem value="VILIFICATION">Vilification</SelectItem>
               <SelectItem value="OTHER">Other listed offence</SelectItem>
+              <SelectItem value="REVIEW_REQUIRED">
+                Does not fit or is unclear
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
-        {category !== "OTHER" ? (
+        {["LANGUAGE", "PHYSICAL", "VILIFICATION"].includes(category) &&
+        !(category === "LANGUAGE" && frustrationOnly) ? (
           <div className="space-y-2">
-            <Label>Directed toward</Label>
-            <Select value={personCategory} onValueChange={setPersonCategory}>
+            <Label>Who was the reported conduct directed towards?</Label>
+            <Select
+              value={personCategory}
+              onValueChange={setPersonCategory}
+              disabled={!canRecord}
+            >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Select the Schedule group" />
               </SelectTrigger>
               <SelectContent>
                 {PERSON_CATEGORIES.map(([value, label]) => (
@@ -231,69 +356,123 @@ function ClassificationForm({
         ) : null}
       </div>
       {category === "LANGUAGE" ? (
-        <div className="grid gap-3 md:grid-cols-2">
-          {[
-            ["Frustration only", frustrationOnly, setFrustrationOnly],
-            [
-              "Offensive, insulting, abusive or intimidating",
-              offensive,
-              setOffensive,
-            ],
-            ["Repeated", repeated, setRepeated],
-            ["Incitement to violence", incitement, setIncitement],
-          ].map(([label, checked, setter]) => (
-            <label
-              key={String(label)}
-              className="flex items-center gap-3 rounded-lg border p-3 text-sm"
-            >
-              <Checkbox
-                checked={checked as boolean}
-                onCheckedChange={(value) =>
-                  (setter as (value: boolean) => void)(value === true)
+        <div className="space-y-3">
+          <p className="text-sm font-medium">
+            Which wording is described by the allegation?
+          </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <ScreeningCheck
+              checked={frustrationOnly}
+              disabled={!canRecord}
+              title="Language or gestures in frustration only"
+              description="Use only when none of the other language descriptions below is reported."
+              onChange={(checked) => {
+                setFrustrationOnly(checked);
+                if (checked) {
+                  setOffensive(false);
+                  setRepeated(false);
+                  setIncitement(false);
                 }
-              />
-              {String(label)}
-            </label>
-          ))}
+              }}
+            />
+            <ScreeningCheck
+              checked={offensive}
+              disabled={!canRecord}
+              title="Offensive, insulting, abusive or intimidating"
+              description="The reported language or gestures use one or more of these Schedule descriptions."
+              onChange={(checked) => {
+                setOffensive(checked);
+                if (checked) setFrustrationOnly(false);
+              }}
+            />
+            <ScreeningCheck
+              checked={repeated}
+              disabled={!canRecord}
+              title="Repeated use of offensive, abusive or intimidating language or gestures"
+              description="Select only when repetition is actually described in the allegation."
+              onChange={(checked) => {
+                setRepeated(checked);
+                if (checked) {
+                  setOffensive(true);
+                  setFrustrationOnly(false);
+                }
+              }}
+            />
+            <ScreeningCheck
+              checked={incitement}
+              disabled={!canRecord}
+              title="Incitement to violence"
+              description="The reported words or gestures allegedly encouraged violence."
+              onChange={(checked) => {
+                setIncitement(checked);
+                if (checked) setFrustrationOnly(false);
+              }}
+            />
+          </div>
         </div>
       ) : null}
       {category === "PHYSICAL" ? (
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>Physical conduct alleged</Label>
-            <Select value={physicalKind} onValueChange={setPhysicalKind}>
+            <Label>Which physical-conduct wording is reported?</Label>
+            <Select
+              value={physicalKind}
+              onValueChange={setPhysicalKind}
+              disabled={!canRecord}
+            >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Select the closest wording" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="PUSH_GRAB_TRIP">
-                  Push, grab, trip or similar
+                  Pushing, grabbing, tripping or similar
                 </SelectItem>
                 <SelectItem value="ATTEMPTED_STRIKE">
-                  Attempted strike
+                  Attempted strike with body or implement
                 </SelectItem>
-                <SelectItem value="STRIKE">Strike</SelectItem>
+                <SelectItem value="STRIKE">
+                  Strike with body or implement
+                </SelectItem>
                 <SelectItem value="OTHER">
                   Does not fit listed wording
                 </SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
-            <Checkbox
-              checked={contactMade}
-              onCheckedChange={(value) => setContactMade(value === true)}
-            />
-            Contact was made
-          </label>
+          <div className="space-y-2">
+            <Label>Does the allegation say contact was made?</Label>
+            <Select
+              value={
+                contactMade === null ? "" : contactMade ? "YES" : "NO"
+              }
+              onValueChange={(value) => setContactMade(value === "YES")}
+              disabled={!canRecord}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select yes or no" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="YES">Yes - contact is reported</SelectItem>
+                <SelectItem value="NO">No - no contact is reported</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              The Schedule separates an attempted strike from a strike where
+              contact was made. An inconsistent answer will require human review.
+            </p>
+          </div>
         </div>
       ) : null}
       {category === "VILIFICATION" ? (
         <div className="space-y-2">
-          <Label>Alleged protected characteristic basis</Label>
-          <Select value={protectedBasis} onValueChange={setProtectedBasis}>
+          <Label>Which listed characteristic is the reported basis?</Label>
+          <Select
+            value={protectedBasis}
+            onValueChange={setProtectedBasis}
+            disabled={!canRecord}
+          >
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Select the reported basis" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">No listed basis recorded</SelectItem>
@@ -316,14 +495,22 @@ function ClassificationForm({
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            This records what is alleged only. Selecting a characteristic does
+            not decide that vilification occurred.
+          </p>
         </div>
       ) : null}
       {category === "OTHER" ? (
         <div className="space-y-2">
-          <Label>Exact Schedule offence</Label>
-          <Select value={otherOffence} onValueChange={setOtherOffence}>
+          <Label>Which exact Schedule row most closely matches?</Label>
+          <Select
+            value={otherOffence}
+            onValueChange={setOtherOffence}
+            disabled={!canRecord}
+          >
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Select a listed offence" />
             </SelectTrigger>
             <SelectContent>
               {OTHER_OFFENCES.map(([value, label]) => (
@@ -335,8 +522,27 @@ function ClassificationForm({
           </Select>
         </div>
       ) : null}
+      {category === "REVIEW_REQUIRED" ? (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Human classification review will be recorded</AlertTitle>
+          <AlertDescription>
+            Use this when the allegation does not safely match one exact
+            Schedule row. Do not force uncertain facts into a listed category.
+          </AlertDescription>
+        </Alert>
+      ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <Button type="submit" disabled={submitting}>
+      {!canRecord ? (
+        <p className="text-sm text-muted-foreground">
+          Your assigned case role can view this screening but cannot record a
+          preliminary classification.
+        </p>
+      ) : null}
+      <Button
+        type="submit"
+        disabled={submitting || !canRecord || !formComplete}
+      >
         {submitting ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
@@ -347,16 +553,20 @@ function ClassificationForm({
       {result ? (
         <Alert
           className={cn(
-            result.tribunal_readiness === "RED" && "border-red-500",
-            result.tribunal_readiness === "AMBER" && "border-amber-500",
+            TRIBUNAL_READINESS_CONTENT[result.tribunal_readiness].className,
           )}
         >
           <Scale className="h-4 w-4" />
           <AlertTitle>
-            {result.tribunal_readiness}: {result.classification_label}
+            {TRIBUNAL_READINESS_CONTENT[result.tribunal_readiness].title}
+            {" - "}
+            {result.classification_label}
           </AlertTitle>
           <AlertDescription>
-            <p>{result.explanation}</p>
+            <p>
+              {TRIBUNAL_READINESS_CONTENT[result.tribunal_readiness].description}
+            </p>
+            <p className="mt-2">{result.explanation}</p>
             {result.penalty_guidance ? (
               <p className="mt-2 font-medium">
                 Penalty guidance only: {result.penalty_guidance}
@@ -365,6 +575,14 @@ function ClassificationForm({
             {result.source_warning ? (
               <p className="mt-2 text-amber-700 dark:text-amber-300">
                 Source warning: {result.source_warning}
+              </p>
+            ) : null}
+            {assessments.length > 0 ? (
+              <p className="mt-2 text-xs opacity-80">
+                Latest saved check: {formatMelbourneDateTime(assessments[0].assessed_at)}.
+                {assessments.length > 1
+                  ? ` ${assessments.length} preliminary checks are preserved in the case record.`
+                  : " This preliminary check is preserved in the case record."}
               </p>
             ) : null}
           </AlertDescription>
@@ -963,9 +1181,47 @@ export default function DisciplineCaseWorkspace() {
         </TabsContent>
 
         <TabsContent value="screening" className="space-y-5">
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Screen 2: Preliminary classification</CardTitle>
+                  <CardDescription className="mt-1 max-w-3xl">
+                    Compare each allegation with the verified Schedule wording
+                    and identify whether Tribunal preparation may be needed. Do
+                    not decide whether the allegation is true on this screen.
+                  </CardDescription>
+                </div>
+                <ScreeningGuidance />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ol className="grid gap-3 text-sm md:grid-cols-3">
+                <li className="rounded-lg border bg-background p-3">
+                  <strong>1. Review the allegation</strong>
+                  <span className="mt-1 block text-muted-foreground">
+                    Check the neutral wording and reported-fact descriptors.
+                  </span>
+                </li>
+                <li className="rounded-lg border bg-background p-3">
+                  <strong>2. Answer factual questions</strong>
+                  <span className="mt-1 block text-muted-foreground">
+                    Use the report as written. Do not fill gaps with assumptions.
+                  </span>
+                </li>
+                <li className="rounded-lg border bg-background p-3">
+                  <strong>3. Record guidance</strong>
+                  <span className="mt-1 block text-muted-foreground">
+                    The result plans the pathway and remains separate from findings.
+                  </span>
+                </li>
+              </ol>
+              <TribunalReadinessLegend />
+            </CardContent>
+          </Card>
           <WorkflowSection
-            title="Allegations"
-            description="Each allegation has its own preserved revision history and classification."
+            title="Review allegations before screening"
+            description="Each separate reported act has its own preserved wording, descriptors and classification history. Revise it only when the source information needs correction or clearer particulars."
             kind="FACT"
           >
             <div className="space-y-3">
@@ -978,20 +1234,13 @@ export default function DisciplineCaseWorkspace() {
                     {allegation.description}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1">
-                    {data.allegationTags
-                      .filter(
-                        (assignment) =>
-                          assignment.allegation_id === allegation.id,
-                      )
-                      .map((assignment) =>
-                        data.tags.find((tag) => tag.id === assignment.tag_id),
-                      )
-                      .filter((tag) => Boolean(tag))
-                      .map((tag) => (
-                        <Badge key={tag!.id} variant="outline">
-                          {tag!.label}
+                    {allegationDescriptorLabels(data, allegation.id).map(
+                      (label) => (
+                        <Badge key={label} variant="outline">
+                          {label}
                         </Badge>
-                      ))}
+                      ),
+                    )}
                   </div>
                   {allegation.initial_classification_code ? (
                     <Badge variant="secondary" className="mt-2">
@@ -1118,9 +1367,19 @@ export default function DisciplineCaseWorkspace() {
           </WorkflowSection>
           <WorkflowSection
             title="Preliminary classification and Tribunal readiness"
-            description="This assumes the reported facts are proven only for screening. It is not a finding."
+            description="For this comparison only, assume the allegation is proven exactly as currently reported. The result is planning guidance, not a finding, charge or automatic penalty."
             kind="JUDGEMENT"
           >
+            {!canInvestigate ? (
+              <Alert className="mb-4">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>Read-only screening view</AlertTitle>
+                <AlertDescription>
+                  Your assigned case role can see recorded guidance. A Case
+                  Coordinator or assigned investigator records new screening.
+                </AlertDescription>
+              </Alert>
+            ) : null}
             <div className="space-y-4">
               {data.allegations.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -1132,6 +1391,17 @@ export default function DisciplineCaseWorkspace() {
                     key={allegation.id}
                     caseId={caseId}
                     allegation={allegation}
+                    assessments={data.assessments.filter(
+                      (assessment) =>
+                        assessment.allegation_id === allegation.id &&
+                        assessment.assessment_stage === "PRELIMINARY",
+                    )}
+                    classificationRules={data.classificationRules}
+                    descriptorLabels={allegationDescriptorLabels(
+                      data,
+                      allegation.id,
+                    )}
+                    canRecord={canInvestigate}
                     onSaved={refresh}
                   />
                 ))

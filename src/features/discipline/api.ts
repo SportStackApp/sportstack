@@ -101,6 +101,7 @@ export async function loadDisciplineWorkspace(
     peopleResult,
     allegationsResult,
     assessmentsResult,
+    classificationRulesResult,
     setupsResult,
     notificationsResult,
     witnessesResult,
@@ -147,6 +148,11 @@ export async function loadDisciplineWorkspace(
       .select("*")
       .eq("case_id", caseId)
       .order("assessed_at", { ascending: false }),
+    supabase
+      .from("discipline_classification_rules")
+      .select("*")
+      .eq("rule_pack_id", incidentCase.rule_pack_id)
+      .order("priority", { ascending: false }),
     supabase
       .from("discipline_investigator_setups")
       .select("*")
@@ -223,6 +229,7 @@ export async function loadDisciplineWorkspace(
     peopleResult,
     allegationsResult,
     assessmentsResult,
+    classificationRulesResult,
     setupsResult,
     notificationsResult,
     witnessesResult,
@@ -248,6 +255,7 @@ export async function loadDisciplineWorkspace(
     people: peopleResult.data ?? [],
     allegations: allegationsResult.data ?? [],
     assessments: assessmentsResult.data ?? [],
+    classificationRules: classificationRulesResult.data ?? [],
     investigatorSetups: setupsResult.data ?? [],
     notifications: notificationsResult.data ?? [],
     witnesses: witnessesResult.data ?? [],

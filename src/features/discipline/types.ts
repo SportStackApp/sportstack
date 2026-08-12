@@ -16,6 +16,8 @@ export type DisciplineAllegation =
   Database["public"]["Tables"]["discipline_allegations"]["Row"];
 export type DisciplineAssessment =
   Database["public"]["Tables"]["discipline_classification_assessments"]["Row"];
+export type DisciplineClassificationRule =
+  Database["public"]["Tables"]["discipline_classification_rules"]["Row"];
 export type DisciplineMember =
   Database["public"]["Tables"]["discipline_case_members"]["Row"];
 export type DisciplinePerson =
@@ -72,6 +74,7 @@ export type DisciplineWorkspaceData = {
   people: DisciplinePerson[];
   allegations: DisciplineAllegation[];
   assessments: DisciplineAssessment[];
+  classificationRules: DisciplineClassificationRule[];
   investigatorSetups: DisciplineInvestigatorSetup[];
   notifications: DisciplineNotification[];
   witnesses: DisciplineWitness[];

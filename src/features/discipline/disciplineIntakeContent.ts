@@ -2,8 +2,34 @@ export const HV_RULES_URL =
   "https://cdn.revolutionise.com.au/cups/vichockey/files/tuqrabulv5ovd3og.pdf";
 export const HV_INCIDENT_FORM_URL =
   "https://cdn.revolutionise.com.au/cups/vichockey/files/qwitffhsg8wpy0lk.docx";
+export const HV_SCHEDULES_URL =
+  "https://cdn.revolutionise.com.au/cups/vichockey/files/jnpjob9q1ytyxveo.pdf";
 export const HA_DISCIPLINE_POLICY_URL =
   "https://www.hockeyballarat.com.au/uploads/1/4/8/3/148316959/de3wntx1qsqupsyp.pdf";
+
+export const TRIBUNAL_READINESS_CONTENT = {
+  GREEN: {
+    title: "Green - no current direct-Tribunal trigger",
+    description:
+      "The recorded facts match a Schedule row that is not marked for immediate Tribunal referral. This does not mean the allegation is minor, proven or finished.",
+    className:
+      "border-emerald-500/40 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-100",
+  },
+  AMBER: {
+    title: "Amber - classification review required",
+    description:
+      "The answers do not safely match one verified Schedule row. Seek human classification advice and prepare for the possibility of a Tribunal if the facts change.",
+    className:
+      "border-amber-500/40 bg-amber-50 text-amber-950 dark:bg-amber-950/30 dark:text-amber-100",
+  },
+  RED: {
+    title: "Red - prepare for direct Tribunal referral",
+    description:
+      "The selected Schedule row is marked for immediate Tribunal referral. This is a preparation flag only; it is not a finding of guilt.",
+    className:
+      "border-red-500/40 bg-red-50 text-red-950 dark:bg-red-950/30 dark:text-red-100",
+  },
+} as const;
 
 export const JURISDICTION_HELP: Record<
   string,
