@@ -66,12 +66,13 @@ structure. The hidden direct-address portal is implemented at `/discipline`, `/d
   `20260812116000_incident_discipline_report_hash.sql` fixed it and the complete test then passed.
 - The unauthenticated local browser check correctly redirected `/discipline` to sign-in. An
   authenticated owner UI pass is still required. Vercel deployment
-  `dpl_F8E2PVxXxEoWGs6vMZF4V7r7gGJe` is `READY` for exact feature commit
-  `b517912f6fefc1836060a4b8a6e50e7f03f06710` and owns the Dev alias. The Dev address returned HTTP
-  200; the deployed bundle contains the discipline route and commit label, points to SportStack Dev
-  Supabase and does not contain the Production Supabase project reference. The first owner test is
+  `dpl_F8E2PVxXxEoWGs6vMZF4V7r7gGJe` was `READY` for exact feature commit
+  `b517912f6fefc1836060a4b8a6e50e7f03f06710` and was verified through the Dev alias. The Dev address
+  returned HTTP 200; the deployed bundle contained the discipline route and commit label, pointed to
+  SportStack Dev Supabase and did not contain the Production Supabase project reference. The first owner test is
   intentionally one small action: open the direct Dev `/discipline` address and confirm the private
-  case portal appears instead of the normal SportStack layout.
+  case portal appears instead of the normal SportStack layout. Later documentation-only Dev commits
+  may change the displayed build label without changing the feature package.
 
 ## 11 August 2026 guided Committee workflow
 
