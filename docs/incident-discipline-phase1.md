@@ -80,6 +80,63 @@ The Hockey Australia policy is still linked by Hockey Ballarat, but its stated r
   therefore records the actual person or HB body that authorised the appointment and labels the
   authority mapping as **Local interpretation — needs formal HB confirmation**.
 
+### Investigator email and onboarding follow-up
+
+The current Dev screen can appoint only an existing SportStack profile. A future improvement should
+make the investigator's email address mandatory and allow their name to be entered as free text.
+When the verified email already belongs to a SportStack account, the appointment should link that
+account. When it does not, the person should receive an invitation to create or claim an account
+before accessing the case. An investigator may belong to another hockey association; the access
+created by this appointment must still be limited to the Hockey Ballarat discipline portal and the
+specific Hockey Ballarat case role. It must not infer a Hockey Ballarat club membership or broader
+Hockey Ballarat permissions. Invitation status, email verification, acceptance and revocation should
+remain auditable. This is a recorded product recommendation, not part of the current Phase 1 build.
+
+## Incident 007 Dev workflow exercise
+
+Case `HB-DIS-2026-0016` was progressed in the Dev database on 13/08/2026 as a workflow exercise.
+The source set used for the exercise was the de-identified `IN0007 Incident report JH.pdf`, Tom
+McMurrie's written response dated 12/08/2026 and the related appointment correspondence. No
+Production system was used.
+
+The exercise deliberately accepted the reporter's first-hand claims as true at Aaron's direction so
+the remaining screens could be tested. Every generated clarification and finding was labelled as a
+workflow simulation. It must not be treated as a genuine witness statement, independent
+corroboration or a real disciplinary conclusion.
+
+The simulated findings recorded were:
+
+- Allegation 1, late physical contact: `SUBSTANTIATED`, preliminary code `VIOLENT_L1`. The exercise
+  notes the difference between "very forceful" in the report and the later description of only a
+  bump, with no injury or interruption to play.
+- Allegation 2, bite through the shirt: `SUBSTANTIATED` only under the report-as-true exercise
+  assumption, with exercise code `VIOLENT_L3`. The record also preserves Tom's denial, no marks or
+  injury, no umpire observation, no card, the disputed meaning of the reported response and the
+  missing junior and umpire statements.
+- Allegation 3, reported threat: `UNABLE_TO_DETERMINE`, with
+  `CLASSIFICATION_REVIEW_REQUIRED`. Accepting Jason's report as truthful establishes that the words
+  were reported to him; it does not establish that Tom said them. The direct junior account and a
+  specific response from Tom remain necessary.
+
+The Case Coordinator browser session could enter the finding forms even though the audited database
+function correctly permits only the Lead Investigator to save them. The forms should be disabled or
+hidden for other roles before data entry, with a plain explanation. For this Dev exercise only, the
+three simulated findings and the signed report snapshot were recorded through the existing audited
+functions as the appointed Tim placeholder after a rollback test. Verification found three findings,
+one 64-character SHA-256 report snapshot and case status `REPORT_SIGNED`.
+
+The workflow then stopped correctly because no Decision Maker has been assigned. This exposes a
+larger product gap: the current Phase 1 decision screen models one Decision Maker, while the planned
+HB safeguard is a three-person non-conflicted review panel. Before a real outcome is recorded, the
+module needs panel-member appointment, individual independence and experience checks, receipt of the
+same report and evidence, individual decisions/reasons, abstention or recusal handling, and a properly
+constituted and minuted final process. Tim and the conflicted committee members must remain excluded
+from the merits decision.
+
+The original PDF and email source copies are summarised in immutable Dev evidence records, but their
+private binary uploads remain pending. The simulated clarification record is clearly titled
+`workflow exercise only`.
+
 ## Source ambiguities to retain
 
 - Schedule 1 clause 4.1 refers to Rule 7.17(a) for Tribunal notification. The notice requirements appear in Rule 7.18(a).
