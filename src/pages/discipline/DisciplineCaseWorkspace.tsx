@@ -48,12 +48,14 @@ import {
   assignDisciplineCaseMember,
   authoriseNaturalJusticeOverride,
   createDisciplineEvidenceLink,
+  finaliseDisciplineReviewPanelDecision,
   loadDisciplineWorkspace,
   recordClassification,
-  recordDisciplineDecision,
+  recordDisciplineReviewPanelVote,
   recordInvestigatorSetup,
   saveAllegation,
   saveDisciplineFinding,
+  saveDisciplineReviewPanel,
   setDeadlineCompletion,
   setDisciplinePortalAccess,
   signDisciplineReport,
@@ -65,6 +67,7 @@ import {
 } from "@/features/discipline/DisciplineUi";
 import { DisciplineTagPicker } from "@/features/discipline/DisciplineTagPicker";
 import { DisciplineInvestigatorSetupPanel } from "@/features/discipline/DisciplineInvestigatorSetup";
+import { DisciplineReviewPanel } from "@/features/discipline/DisciplineReviewPanel";
 import {
   ScreeningGuidance,
   TribunalReadinessLegend,
@@ -86,7 +89,7 @@ import { useDisciplineAccess } from "@/features/discipline/useDisciplineAccess";
 import { cn } from "@/lib/utils";
 import { combineZonedDateTime } from "@/lib/timezoneDateTime";
 
-const STAGES = [
+const BASE_STAGES = [
   "DRAFT",
   "SCREENING",
   "INVESTIGATOR_SETUP",
@@ -94,7 +97,6 @@ const STAGES = [
   "FINDINGS",
   "REPORT_SIGNED",
   "HB_DECISION",
-  "CLOSED",
 ];
 const NEXT_STATUS: Record<string, string | undefined> = {
   DRAFT: "SCREENING",
@@ -777,6 +779,10 @@ export default function DisciplineCaseWorkspace() {
 
   const data = workspaceQuery.data;
   const incidentCase = data.incidentCase;
+  const displayedStages = [
+    ...BASE_STAGES,
+    incidentCase.status === "REFERRED" ? "REFERRED" : "CLOSED",
+  ];
   const nextDeadline =
     data.deadlines.find((deadline) => !deadline.completed_at) ?? null;
   const nextStatus = NEXT_STATUS[incidentCase.status];
@@ -867,21 +873,21 @@ export default function DisciplineCaseWorkspace() {
 
       <div className="overflow-x-auto rounded-lg border bg-card p-3 print:hidden">
         <ol className="flex min-w-max items-center gap-2">
-          {STAGES.map((stage, index) => (
+          {displayedStages.map((stage, index) => (
             <li key={stage} className="flex items-center gap-2">
               <span
                 className={cn(
                   "rounded-full px-3 py-1.5 text-xs font-medium",
                   stage === incidentCase.status
                     ? "bg-primary text-primary-foreground"
-                    : STAGES.indexOf(incidentCase.status) > index
+                    : displayedStages.indexOf(incidentCase.status) > index
                       ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
                       : "bg-muted text-muted-foreground",
                 )}
               >
                 {formatStatus(stage)}
               </span>
-              {index < STAGES.length - 1 ? (
+              {index < displayedStages.length - 1 ? (
                 <span className="text-muted-foreground">→</span>
               ) : null}
             </li>
@@ -1494,11 +1500,7 @@ export default function DisciplineCaseWorkspace() {
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
-                      {[
-                        "CASE_COORDINATOR",
-                        "DECISION_MAKER",
-                        "READ_ONLY",
-                      ].map((value) => (
+                      {["CASE_COORDINATOR", "READ_ONLY"].map((value) => (
                         <SelectItem key={value} value={value}>
                           {formatStatus(value)}
                         </SelectItem>
@@ -2075,14 +2077,56 @@ export default function DisciplineCaseWorkspace() {
             kind="JUDGEMENT"
           >
             <div className="space-y-4">
-              {data.allegations.map((allegation) => (
-                <FindingForm
-                  key={allegation.id}
-                  caseId={caseId}
-                  allegation={allegation}
-                  onSaved={refresh}
-                />
-              ))}
+              {data.allegations.map((allegation) => {
+                const finding = data.findings.find(
+                  (item) => item.allegation_id === allegation.id,
+                );
+                return isLead ? (
+                  <FindingForm
+                    key={allegation.id}
+                    caseId={caseId}
+                    allegation={allegation}
+                    onSaved={refresh}
+                  />
+                ) : (
+                  <Card key={allegation.id}>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        Allegation {allegation.allegation_number}:{" "}
+                        {allegation.title}
+                      </CardTitle>
+                      <CardDescription>
+                        Investigator findings are read-only for this case role.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      {finding ? (
+                        <>
+                          <Badge>
+                            {formatStatus(finding.recommended_finding)}
+                          </Badge>
+                          <div>
+                            <p className="font-medium">Reasoning</p>
+                            <p className="whitespace-pre-wrap text-muted-foreground">
+                              {finding.reasoning}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-medium">Supporting evidence</p>
+                            <p className="whitespace-pre-wrap text-muted-foreground">
+                              {finding.supporting_evidence}
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-muted-foreground">
+                          No formal finding recorded.
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </WorkflowSection>
           <Card>
@@ -2125,101 +2169,33 @@ export default function DisciplineCaseWorkspace() {
         </TabsContent>
 
         <TabsContent value="decision" className="space-y-5">
-          <WorkflowSection
-            title="Hockey Ballarat decision"
-            description="Rule 7.7 outcomes. Tribunal and mediation pathways are recorded as Phase 2 referrals."
-            kind="JUDGEMENT"
-          >
-            {data.decisions.map((decision) => (
-              <Alert key={decision.id} className="mb-4">
-                <CheckCircle2 className="h-4 w-4" />
-                <AlertTitle>{formatStatus(decision.outcome)}</AlertTitle>
-                <AlertDescription>
-                  {decision.decision_reason} · {decision.rule_reference} ·{" "}
-                  {formatMelbourneDateTime(decision.decided_at)}
-                </AlertDescription>
-              </Alert>
-            ))}
-            {isDecisionMaker ? (
-              <form
-                className="grid gap-4"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const form = new FormData(event.currentTarget);
-                  void runAction("Hockey Ballarat decision recorded", () =>
-                    recordDisciplineDecision(caseId, {
-                      outcome: String(form.get("outcome")),
-                      reason: String(form.get("reason")),
-                      ruleReference: String(form.get("ruleReference")),
-                      recommendationFollowed: form.get("followed") === "on",
-                      differenceReason: String(
-                        form.get("differenceReason") || "",
-                      ),
-                    }),
-                  );
-                }}
-              >
-                <div className="space-y-2">
-                  <Label>Outcome</Label>
-                  <Select name="outcome" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select outcome" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[
-                        "NO_ACTION",
-                        "MISCONDUCT_PENALTY_GUIDANCE",
-                        "TRIBUNAL_REFERRAL",
-                        "MEDIATION_REFERRAL",
-                        "COMBINATION_REFERRAL",
-                        "OTHER_APPROPRIATE_COURSE",
-                      ].map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {formatStatus(value)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Decision reasoning</Label>
-                  <Textarea name="reason" required minLength={10} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Rule source</Label>
-                  <Input
-                    name="ruleReference"
-                    defaultValue="HV Competition Rules 2026, Rule 7.7"
-                    required
-                  />
-                </div>
-                <label className="flex items-center gap-3 rounded-lg border p-3">
-                  <Checkbox name="followed" />
-                  Investigator recommendation followed
-                </label>
-                <div className="space-y-2">
-                  <Label>Reason for any difference</Label>
-                  <Textarea name="differenceReason" />
-                </div>
-                <Button
-                  type="submit"
-                  disabled={
-                    busy ||
-                    !["REPORT_SIGNED", "HB_DECISION"].includes(
-                      incidentCase.status,
-                    )
-                  }
-                >
-                  Record final decision
-                </Button>
-              </form>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Only the assigned Decision Maker can record the Hockey Ballarat
-                decision.
-              </p>
-            )}
-          </WorkflowSection>
+          <DisciplineReviewPanel
+            key={data.reviewPanels[0]?.updated_at || "new-review-panel"}
+            data={data}
+            currentUserId={user!.id}
+            canCoordinate={canCoordinate}
+            isDecisionMaker={isDecisionMaker}
+            busy={busy}
+            onSavePanel={(values) =>
+              void runAction("Review panel setup saved", () =>
+                saveDisciplineReviewPanel(caseId, values),
+              )
+            }
+            onVote={(values) =>
+              void runAction("Independent panel vote recorded", () =>
+                recordDisciplineReviewPanelVote(caseId, values),
+              )
+            }
+            onFinalise={(meetingReference, processNote) =>
+              void runAction("Review panel majority finalised", () =>
+                finaliseDisciplineReviewPanelDecision(
+                  caseId,
+                  meetingReference,
+                  processNote,
+                ),
+              )
+            }
+          />
         </TabsContent>
 
         <TabsContent value="timeline">

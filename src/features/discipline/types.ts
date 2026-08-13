@@ -55,6 +55,12 @@ export type DisciplineFinding =
   Database["public"]["Tables"]["discipline_findings"]["Row"];
 export type DisciplineDecision =
   Database["public"]["Tables"]["discipline_decisions"]["Row"];
+export type DisciplineReviewPanel =
+  Database["public"]["Tables"]["discipline_review_panels"]["Row"];
+export type DisciplineReviewPanelMember =
+  Database["public"]["Tables"]["discipline_review_panel_members"]["Row"];
+export type DisciplineReviewPanelVote =
+  Database["public"]["Tables"]["discipline_review_panel_votes"]["Row"];
 export type DisciplineReportSnapshot =
   Database["public"]["Tables"]["discipline_report_snapshots"]["Row"];
 export type DisciplineAuditEvent =
@@ -101,6 +107,9 @@ export type DisciplineWorkspaceData = {
   naturalJustice: DisciplineNaturalJusticeCheck[];
   findings: DisciplineFinding[];
   decisions: DisciplineDecision[];
+  reviewPanels: DisciplineReviewPanel[];
+  reviewPanelMembers: DisciplineReviewPanelMember[];
+  reviewPanelVotes: DisciplineReviewPanelVote[];
   reportSnapshots: DisciplineReportSnapshot[];
   auditEvents: DisciplineAuditEvent[];
   ruleClauses: DisciplineRuleClause[];
@@ -115,12 +124,45 @@ export type DisciplineWorkspaceData = {
   }>;
 };
 
+export type DisciplineReviewPanelMemberInput = {
+  seat_number: number;
+  full_name: string;
+  email: string;
+  profile_id?: string;
+  organisation?: string;
+  role_or_position?: string;
+  invitation_status: "NOT_SENT" | "SENT" | "ACCEPTED" | "DECLINED";
+  training_experience: string;
+  club_affiliation?: string;
+  committee_role?: string;
+  relationship_to_parties?: string;
+  competitive_interest?: string;
+  conflict_factors: string[];
+  actual_conflict: boolean;
+  perceived_conflict: boolean;
+  conflict_decision: "NO_CONFLICT" | "MANAGED" | "REPLACE_MEMBER";
+  conflict_reason: string;
+};
+
+export type DisciplineReviewPanelInput = {
+  appointmentAuthority: string;
+  authorityReference?: string;
+  processNotes: string;
+  members: DisciplineReviewPanelMemberInput[];
+};
+
+export type DisciplineReviewPanelVoteInput = {
+  outcome: string;
+  decisionReason: string;
+  ruleReference: string;
+  recommendationFollowed: boolean;
+  differenceReason?: string;
+  changeReason?: string;
+};
+
 export type DisciplineIntakeTagOption = {
   id: string;
-  scope:
-    | "JURISDICTION_REASON"
-    | "SAFETY_RISK"
-    | "ALLEGATION_DESCRIPTOR";
+  scope: "JURISDICTION_REASON" | "SAFETY_RISK" | "ALLEGATION_DESCRIPTOR";
   key: string;
   label: string;
   description: string;

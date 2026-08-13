@@ -2963,33 +2963,51 @@ export type Database = {
           case_id: string
           decided_at: string
           decided_by: string
+          decision_method: string | null
           decision_reason: string
           difference_reason: string | null
           id: string
+          majority_count: number | null
+          meeting_reference: string | null
+          minority_count: number | null
           outcome: string
+          panel_vote_summary: Json | null
           recommendation_followed: boolean | null
+          review_panel_id: string | null
           rule_reference: string
         }
         Insert: {
           case_id: string
           decided_at?: string
           decided_by: string
+          decision_method?: string | null
           decision_reason: string
           difference_reason?: string | null
           id?: string
+          majority_count?: number | null
+          meeting_reference?: string | null
+          minority_count?: number | null
           outcome: string
+          panel_vote_summary?: Json | null
           recommendation_followed?: boolean | null
+          review_panel_id?: string | null
           rule_reference: string
         }
         Update: {
           case_id?: string
           decided_at?: string
           decided_by?: string
+          decision_method?: string | null
           decision_reason?: string
           difference_reason?: string | null
           id?: string
+          majority_count?: number | null
+          meeting_reference?: string | null
+          minority_count?: number | null
           outcome?: string
+          panel_vote_summary?: Json | null
           recommendation_followed?: boolean | null
+          review_panel_id?: string | null
           rule_reference?: string
         }
         Relationships: [
@@ -3005,6 +3023,13 @@ export type Database = {
             columns: ["decided_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_decisions_review_panel_id_fkey"
+            columns: ["review_panel_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_review_panels"
             referencedColumns: ["id"]
           },
         ]
@@ -3704,6 +3729,283 @@ export type Database = {
           {
             foreignKeyName: "discipline_report_snapshots_signed_by_fkey"
             columns: ["signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_review_panel_members: {
+        Row: {
+          accepted_at: string | null
+          active: boolean
+          actual_conflict: boolean
+          case_id: string
+          club_affiliation: string | null
+          committee_role: string | null
+          competitive_interest: string | null
+          conflict_decision: string
+          conflict_factors: string[]
+          conflict_reason: string
+          created_at: string
+          created_by: string
+          email: string
+          full_name: string
+          id: string
+          invitation_status: string
+          invited_at: string | null
+          organisation: string | null
+          panel_id: string
+          perceived_conflict: boolean
+          profile_id: string | null
+          relationship_to_parties: string | null
+          role_or_position: string | null
+          seat_number: number
+          training_experience: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          active?: boolean
+          actual_conflict?: boolean
+          case_id: string
+          club_affiliation?: string | null
+          committee_role?: string | null
+          competitive_interest?: string | null
+          conflict_decision: string
+          conflict_factors?: string[]
+          conflict_reason: string
+          created_at?: string
+          created_by: string
+          email: string
+          full_name: string
+          id?: string
+          invitation_status?: string
+          invited_at?: string | null
+          organisation?: string | null
+          panel_id: string
+          perceived_conflict?: boolean
+          profile_id?: string | null
+          relationship_to_parties?: string | null
+          role_or_position?: string | null
+          seat_number: number
+          training_experience: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          accepted_at?: string | null
+          active?: boolean
+          actual_conflict?: boolean
+          case_id?: string
+          club_affiliation?: string | null
+          committee_role?: string | null
+          competitive_interest?: string | null
+          conflict_decision?: string
+          conflict_factors?: string[]
+          conflict_reason?: string
+          created_at?: string
+          created_by?: string
+          email?: string
+          full_name?: string
+          id?: string
+          invitation_status?: string
+          invited_at?: string | null
+          organisation?: string | null
+          panel_id?: string
+          perceived_conflict?: boolean
+          profile_id?: string | null
+          relationship_to_parties?: string | null
+          role_or_position?: string | null
+          seat_number?: number
+          training_experience?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_review_panel_members_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panel_members_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panel_members_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_review_panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panel_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panel_members_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_review_panel_votes: {
+        Row: {
+          case_id: string
+          change_reason: string | null
+          decision_reason: string
+          difference_reason: string | null
+          id: string
+          outcome: string
+          panel_id: string
+          panel_member_id: string
+          recommendation_followed: boolean
+          revision_number: number
+          rule_reference: string
+          submitted_at: string
+          submitted_by: string
+          supersedes_vote_id: string | null
+        }
+        Insert: {
+          case_id: string
+          change_reason?: string | null
+          decision_reason: string
+          difference_reason?: string | null
+          id?: string
+          outcome: string
+          panel_id: string
+          panel_member_id: string
+          recommendation_followed: boolean
+          revision_number: number
+          rule_reference: string
+          submitted_at?: string
+          submitted_by: string
+          supersedes_vote_id?: string | null
+        }
+        Update: {
+          case_id?: string
+          change_reason?: string | null
+          decision_reason?: string
+          difference_reason?: string | null
+          id?: string
+          outcome?: string
+          panel_id?: string
+          panel_member_id?: string
+          recommendation_followed?: boolean
+          revision_number?: number
+          rule_reference?: string
+          submitted_at?: string
+          submitted_by?: string
+          supersedes_vote_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_review_panel_votes_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panel_votes_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_review_panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panel_votes_panel_member_id_fkey"
+            columns: ["panel_member_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_review_panel_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panel_votes_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panel_votes_supersedes_vote_id_fkey"
+            columns: ["supersedes_vote_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_review_panel_votes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_review_panels: {
+        Row: {
+          appointment_authority: string
+          authority_reference: string | null
+          case_id: string
+          created_at: string
+          created_by: string
+          id: string
+          process_notes: string
+          required_member_count: number
+          status: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          appointment_authority: string
+          authority_reference?: string | null
+          case_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          process_notes: string
+          required_member_count?: number
+          status?: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          appointment_authority?: string
+          authority_reference?: string | null
+          case_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          process_notes?: string
+          required_member_count?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_review_panels_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panels_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panels_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -11691,6 +11993,14 @@ export type Database = {
         Args: { p_storage_name: string }
         Returns: boolean
       }
+      finalise_discipline_review_panel_decision: {
+        Args: {
+          p_case_id: string
+          p_meeting_reference: string
+          p_process_note: string
+        }
+        Returns: string
+      }
       get_active_permission_mode: { Args: never; Returns: Json }
       get_committee_meeting_item_links: {
         Args: { p_committee_id: string }
@@ -11978,14 +12288,6 @@ export type Database = {
         }
         Returns: string
       }
-      record_mvp_result_check: {
-        Args: { p_comment?: string; p_response: string; p_session_id: string }
-        Returns: Json
-      }
-      record_mvp_result_check_module_impl_20260802115000: {
-        Args: { p_comment?: string; p_response: string; p_session_id: string }
-        Returns: Json
-      }
       record_discipline_investigator_setup: {
         Args: {
           p_actual_conflict: boolean
@@ -12007,6 +12309,18 @@ export type Database = {
           p_training_experience: string
         }
         Returns: string
+      }
+      record_discipline_review_panel_vote: {
+        Args: { p_case_id: string; p_change_reason?: string; p_vote: Json }
+        Returns: string
+      }
+      record_mvp_result_check: {
+        Args: { p_comment?: string; p_response: string; p_session_id: string }
+        Returns: Json
+      }
+      record_mvp_result_check_module_impl_20260802115000: {
+        Args: { p_comment?: string; p_response: string; p_session_id: string }
+        Returns: Json
       }
       reopen_discipline_stage: {
         Args: { p_case_id: string; p_previous_status: string; p_reason: string }
@@ -12140,6 +12454,10 @@ export type Database = {
       save_discipline_intake: {
         Args: { p_case_id: string; p_intake: Json; p_reason: string }
         Returns: Json
+      }
+      save_discipline_review_panel: {
+        Args: { p_case_id: string; p_members: Json; p_panel: Json }
+        Returns: string
       }
       save_permission_assignment: {
         Args: {

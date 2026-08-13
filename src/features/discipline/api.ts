@@ -7,6 +7,8 @@ import type {
   DisciplineInvestigatorSetupInput,
   DisciplinePortalContext,
   DisciplineWorkspaceData,
+  DisciplineReviewPanelInput,
+  DisciplineReviewPanelVoteInput,
   NewDisciplineCaseInput,
 } from "./types";
 
@@ -110,6 +112,9 @@ export async function loadDisciplineWorkspace(
     naturalJusticeResult,
     findingsResult,
     decisionsResult,
+    reviewPanelsResult,
+    reviewPanelMembersResult,
+    reviewPanelVotesResult,
     reportSnapshotsResult,
     auditResult,
     clausesResult,
@@ -190,6 +195,21 @@ export async function loadDisciplineWorkspace(
       .eq("case_id", caseId)
       .order("decided_at", { ascending: false }),
     supabase
+      .from("discipline_review_panels")
+      .select("*")
+      .eq("case_id", caseId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("discipline_review_panel_members")
+      .select("*")
+      .eq("case_id", caseId)
+      .order("seat_number"),
+    supabase
+      .from("discipline_review_panel_votes")
+      .select("*")
+      .eq("case_id", caseId)
+      .order("submitted_at", { ascending: false }),
+    supabase
       .from("discipline_report_snapshots")
       .select("*")
       .eq("case_id", caseId)
@@ -238,6 +258,9 @@ export async function loadDisciplineWorkspace(
     naturalJusticeResult,
     findingsResult,
     decisionsResult,
+    reviewPanelsResult,
+    reviewPanelMembersResult,
+    reviewPanelVotesResult,
     reportSnapshotsResult,
     auditResult,
     clausesResult,
@@ -264,6 +287,9 @@ export async function loadDisciplineWorkspace(
     naturalJustice: naturalJusticeResult.data ?? [],
     findings: findingsResult.data ?? [],
     decisions: decisionsResult.data ?? [],
+    reviewPanels: reviewPanelsResult.data ?? [],
+    reviewPanelMembers: reviewPanelMembersResult.data ?? [],
+    reviewPanelVotes: reviewPanelVotesResult.data ?? [],
     reportSnapshots: reportSnapshotsResult.data ?? [],
     auditEvents: auditResult.data ?? [],
     ruleClauses: clausesResult.data ?? [],
@@ -618,24 +644,58 @@ export async function saveDisciplineFinding(
   return data;
 }
 
-export async function recordDisciplineDecision(
+export async function saveDisciplineReviewPanel(
   caseId: string,
-  values: {
-    outcome: string;
-    reason: string;
-    ruleReference: string;
-    recommendationFollowed: boolean;
-    differenceReason?: string;
-  },
+  values: DisciplineReviewPanelInput,
 ) {
-  const { data, error } = await supabase.rpc("record_discipline_decision", {
+  const { data, error } = await supabase.rpc("save_discipline_review_panel", {
     p_case_id: caseId,
-    p_outcome: values.outcome,
-    p_decision_reason: values.reason,
-    p_rule_reference: values.ruleReference,
-    p_recommendation_followed: values.recommendationFollowed,
-    p_difference_reason: (values.differenceReason || null) as unknown as string,
+    p_panel: {
+      appointment_authority: values.appointmentAuthority,
+      authority_reference: values.authorityReference || null,
+      process_notes: values.processNotes,
+    } as Json,
+    p_members: values.members as unknown as Json,
   });
+  throwIfError(error);
+  return data;
+}
+
+export async function recordDisciplineReviewPanelVote(
+  caseId: string,
+  values: DisciplineReviewPanelVoteInput,
+) {
+  const { data, error } = await supabase.rpc(
+    "record_discipline_review_panel_vote",
+    {
+      p_case_id: caseId,
+      p_vote: {
+        outcome: values.outcome,
+        decision_reason: values.decisionReason,
+        rule_reference: values.ruleReference,
+        recommendation_followed: values.recommendationFollowed,
+        difference_reason: values.differenceReason || null,
+      } as Json,
+      p_change_reason: values.changeReason || undefined,
+    },
+  );
+  throwIfError(error);
+  return data;
+}
+
+export async function finaliseDisciplineReviewPanelDecision(
+  caseId: string,
+  meetingReference: string,
+  processNote: string,
+) {
+  const { data, error } = await supabase.rpc(
+    "finalise_discipline_review_panel_decision",
+    {
+      p_case_id: caseId,
+      p_meeting_reference: meetingReference,
+      p_process_note: processNote,
+    },
+  );
   throwIfError(error);
   return data;
 }
