@@ -74,6 +74,7 @@ export function DisciplinePhase2Workflow({
 }) {
   const [stage, setStage] = useState<Phase2Stage>("NOTICE");
   const [mode, setMode] = useState<Phase2Mode>("SIMULATION");
+  const [errors, setErrors] = useState<string[]>([]);
   const latest = useMemo(
     () => data.phase2StageRecords.find((record) => record.stage === stage && record.workflow_mode === mode),
     [data.phase2StageRecords, mode, stage],
@@ -91,8 +92,9 @@ export function DisciplinePhase2Workflow({
     setDrafts((previous) => ({ ...previous, [draftKey]: { ...current, ...changes } }));
   const updatePayload = (key: string, value: Json) => update({ payload: { ...current.payload, [key]: value } });
   const submit = () => {
-    const errors = validatePhase2Stage(stage, current.status, mode, current.payload);
-    if (errors.length) return window.alert(errors.join("\n"));
+    const validationErrors = validatePhase2Stage(stage, current.status, mode, current.payload);
+    setErrors(validationErrors);
+    if (validationErrors.length) return;
     onSave(stage, current.status, mode, current.payload);
   };
 
@@ -112,6 +114,17 @@ export function DisciplinePhase2Workflow({
           <CardDescription>Complete each stage in order. Every save creates an audited revision.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
+          {errors.length ? (
+            <Alert variant="destructive" className="md:col-span-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Complete these items before saving</AlertTitle>
+              <AlertDescription>
+                <ul className="list-disc space-y-1 pl-5">
+                  {errors.map((error) => <li key={error}>{error}</li>)}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          ) : null}
           <div className="space-y-2">
             <Label>Workflow stage</Label>
             <Select value={stage} onValueChange={(value) => setStage(value as Phase2Stage)}>
