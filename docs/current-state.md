@@ -51,6 +51,11 @@ Update this file after every meaningful Codex task, pull request, schema change,
   appointments align private case roles atomically; a replacement decision records the rejected
   check without granting investigator access. The exact HB equivalent of the HV CEO/delegate
   appointment authority remains visibly labelled as a local interpretation requiring approval.
+  The HB Decision screen now records a three-person independent review panel with mandatory email,
+  account linking before acceptance, suitability and conflict checks, private individual votes,
+  append-only vote revisions and a database-calculated 2-1 or 3-0 majority. It explicitly labels
+  three members as an HB operating safeguard rather than Rule 7 wording, and allows a report to have
+  no overall outcome recommendation.
   The UI labels information as **Fact**, **Rule**, **Judgement** or
   **Local interpretation** and never decides guilt or automatically applies a penalty.
 - **Accuracy corrections are locked into the Dev rule pack:** finals timing requires the relevant
@@ -59,7 +64,7 @@ Update this file after every meaningful Codex task, pull request, schema change,
   Schedules `$500` contempt conflict remains visible. Business-day meaning, NIF adoption/contact,
   authority mappings, natural-justice safeguards, fines/fees and other local treatments remain
   `REVIEW_REQUIRED` until Hockey Ballarat approves them. See `docs/incident-discipline-phase1.md`.
-- **Dev database only:** ten additive local migration files create 29 RLS-protected
+- **Dev database only:** fourteen additive local migration files create 32 RLS-protected
   `discipline_*` tables, a 20 MB private evidence bucket, role-checking functions, UTC/Melbourne
   deadline calculations, 32 classification rows, 10 deadline definitions, 12 local-variation
   records and the verified 2026 Victorian holiday calendar. All migrations passed rollback dry
@@ -74,6 +79,11 @@ Update this file after every meaningful Codex task, pull request, schema change,
   one role-checking atomic write function. Authenticated direct table inserts are revoked. A live
   rolled-back workflow test passed accepted lead/support assignment, replacement-without-access
   and invalid conflict-decision rejection, then confirmed zero test cases remained.
+- **Independent review database evidence:** four live Dev migrations add panel, member and
+  append-only vote records; make pre-final votes visible only to their author; cover the new foreign
+  keys; and preserve a null recommendation relationship when the signed report does not propose one
+  overall Rule 7.7 outcome. Rolled-back tests passed three-member readiness, role exclusion, vote
+  privacy, 2-1 majority calculation, post-final visibility and the no-recommendation case.
 - **Security review:** case content is assignment-only even for Association/Super Admin roles;
   configuration and case access are separate. Supabase reports no anonymous discipline function
   warning or discipline table without RLS. Its authenticated security-definer warnings are
@@ -97,21 +107,18 @@ Update this file after every meaningful Codex task, pull request, schema change,
   project reference. The signed-in portal rendered without console errors or horizontal overflow.
   The original empty-case owner-test checkpoint has now been superseded by the live Dev case below.
 - **13 August Incident 007 Dev case run:** authorised de-identified email material was entered only
-  in the private Dev portal as `HB-DIS-2026-0016`. The intake linked the official Round 13 fixture
-  and retained three separate unproven allegations: reported late physical contact, a reported bite
-  and a separately reported threat. The earlier-match claim remains context rather than a fourth
-  allegation because the source lacks sufficient particulars. Preliminary screening preserved
-  Green `VIOLENT_L1` planning guidance for the late contact, while both the bite and threat remain
-  Amber `CLASSIFICATION_REVIEW_REQUIRED`; neither safely matches one verified Schedule row on the
-  current particulars. The case has one notice, four witness follow-ups, three evidence/action-note
-  records and 32 append-only timeline events. The original report and written response are explicitly
-  marked for private source-file upload before findings; no correspondence or attachment was copied
-  into the repository. The case is correctly stopped at `INVESTIGATOR_SETUP`: the notice records an
-  appointment, but the available correspondence does not establish the investigator's training or
-  experience, actual/perceived conflict declarations or the exact HB appointment authority. The UI
-  blocked advancement without an accepted independence check. Report receipt, appointment and
-  affected-party-notification deadlines are recorded complete; investigation and outcome deadlines
-  remain open. Dev database verification passed, with no Main, Production or `prod` change.
+  in the private Dev portal as `HB-DIS-2026-0016`. It retains three separate allegations, preliminary
+  screening, Tim's recorded appointment/independence check, notices, witness follow-ups, evidence
+  notes, natural-justice checks, three simulated findings and one immutable signed report snapshot.
+  At Aaron's direction, the exercise accepted the reporter's account as true only to continue the
+  workflow; every derived record says it is a simulation rather than genuine corroboration or a real
+  disciplinary finding. The Lead Investigator finding forms are now read-only for the Case
+  Coordinator. The deployed panel screen saved three reserved Codex Dev accounts as clearly labelled
+  simulated reviewers, each with a placeholder email and no-conflict test record. Three audited
+  simulated votes produced a 3-0 `TRIBUNAL_REFERRAL`, stored the report's overall recommendation
+  relationship as null, and moved the case to `REFERRED`. The final screen shows the complete panel,
+  individual reasons and majority. No real HB panel was appointed, no notification was sent and no
+  Main, Production or `prod` system was changed.
 
 - **Guided Committee and subcommittee workflow is live on Dev:** commit `deea6c0` replaces the
   single create form with a reusable five-step workflow for Association and Club committees plus

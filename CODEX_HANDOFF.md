@@ -10,6 +10,35 @@ Future agents should start by reading these files in order:
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
+## 13 August 2026 Incident 007 review-panel continuation
+
+- Dev commits `8e5b9d1` and `a72a9a0` replace the single Decision Maker form with a three-person
+  independent review panel. The screen explains the HB local-safeguard status and links the HV
+  Rules, HB addendum and Sport Integrity Australia investigation guidance.
+- Each member record has free-text name, mandatory email, searchable optional account link,
+  suitability facts, affiliations/interests, conflict descriptors, separate actual/perceived
+  questions, a conflict result and invitation state. Acceptance requires a linked account. A Case
+  Coordinator or investigator on the case cannot be appointed as a panel member.
+- Panel votes are append-only revisions. Before finalisation, RLS returns only the signed-in
+  member's own vote; the Case Coordinator receives no vote content. All three current votes are
+  required and the database permits only a 2-1 or 3-0 majority. A three-way split is blocked. The
+  complete panel vote record becomes visible after finalisation.
+- The walkthrough exposed that a signed report may contain findings without one overall outcome
+  recommendation. Migration `20260813130941 allow_no_investigator_outcome_recommendation` and the
+  UI now preserve that as null instead of forcing an inaccurate yes/no answer.
+- Dev case `HB-DIS-2026-0016` is now `REFERRED`. The deployed coordinator screen saved three
+  reserved Codex accounts as clearly labelled simulated reviewers. Three audited simulated votes
+  produced a 3-0 `TRIBUNAL_REFERRAL`. The authority, member checks, reasons and outcome all state
+  that this was a Dev workflow exercise, not a real appointment, merits decision or sanction. No
+  email or other notification was sent.
+- Rolled-back database tests passed member exclusion, readiness, private voting, a 2-1 majority,
+  post-final vote visibility and the null-recommendation path. Focused lint, nine discipline tests,
+  TypeScript and build pass. Full lint remains baseline debt at 360 errors and 78 warnings.
+- Four additive review-panel migrations are live on SportStack Dev as `20260813124625`,
+  `20260813125316`, `20260813125705` and `20260813130941`. The new tables have RLS, explicit grants,
+  covered foreign keys and role-checking authenticated RPCs. Production, `main`, `prod`, domains and
+  secrets remain untouched.
+
 ## 12 August 2026 Incident & Discipline Phase 1
 
 Aaron approved a Dev-first implementation with content accuracy at least as important as page

@@ -118,20 +118,33 @@ The simulated findings recorded were:
   were reported to him; it does not establish that Tom said them. The direct junior account and a
   specific response from Tom remain necessary.
 
-The Case Coordinator browser session could enter the finding forms even though the audited database
-function correctly permits only the Lead Investigator to save them. The forms should be disabled or
-hidden for other roles before data entry, with a plain explanation. For this Dev exercise only, the
-three simulated findings and the signed report snapshot were recorded through the existing audited
-functions as the appointed Tim placeholder after a rollback test. Verification found three findings,
-one 64-character SHA-256 report snapshot and case status `REPORT_SIGNED`.
+The Case Coordinator browser session originally exposed editable finding forms even though the
+audited database function correctly permitted only the Lead Investigator to save them. The deployed
+workspace now shows read-only finding summaries to every other case role. For this Dev exercise only,
+the three simulated findings and the signed report snapshot were recorded through the existing
+audited functions as the appointed Tim placeholder after a rollback test. Verification found three
+findings and one 64-character SHA-256 report snapshot.
 
-The workflow then stopped correctly because no Decision Maker has been assigned. This exposes a
-larger product gap: the current Phase 1 decision screen models one Decision Maker, while the planned
-HB safeguard is a three-person non-conflicted review panel. Before a real outcome is recorded, the
-module needs panel-member appointment, individual independence and experience checks, receipt of the
-same report and evidence, individual decisions/reasons, abstention or recusal handling, and a properly
-constituted and minuted final process. Tim and the conflicted committee members must remain excluded
-from the merits decision.
+The next Dev build replaced the single Decision Maker form with the planned three-person review
+panel safeguard. Each member record now requires a free-text name, mandatory email, suitability
+reason, affiliations/interests, separate actual and perceived conflict answers, a recorded conflict
+result and an optional SportStack account link. Acceptance requires a linked account. The three
+accepted members receive case-limited Decision Maker access, while Tim, the Case Coordinator and
+other investigators cannot be appointed to the panel. Invitation status is recorded but Phase 1
+does not yet send invitation emails.
+
+Each accepted member records an independent outcome, reasons and rule source. Votes are append-only
+revisions and remain visible only to their author until finalisation. The system requires all three
+current votes and calculates a 2-1 or 3-0 majority; it rejects a three-way split. The final record
+retains every vote and the formal meeting or resolution reference. The UI and database allow **no
+overall recommendation recorded**, because an investigator may provide findings without proposing
+one Rule 7.7 outcome.
+
+For workflow testing only, three reserved Codex Dev accounts were saved through the deployed screen
+as clearly labelled simulated reviewers. They recorded three simulated Tribunal-referral votes under
+Aaron's report-as-true exercise direction. The database finalised a 3-0 majority and moved the case
+to `REFERRED`. The authority, member checks, reasons and outcome all state that no real HB panel was
+appointed and no real disciplinary determination was made. No notification was sent.
 
 The original PDF and email source copies are summarised in immutable Dev evidence records, but their
 private binary uploads remain pending. The simulated clarification record is clearly titled
@@ -213,7 +226,7 @@ Evidence files use short-lived signed links; the original object and evidence re
 overwritten. Signed report snapshots retain their SHA-256 hash and any authorised natural-justice
 override reason.
 
-The ten local migration files and the versions recorded by the live Dev migration history are:
+The fourteen local migration files and the versions recorded by the live Dev migration history are:
 
 | Local migration file | Live Dev version and name |
 |---|---|
@@ -227,6 +240,10 @@ The ten local migration files and the versions recorded by the live Dev migratio
 | `20260812162815_improve_discipline_intake_guidance.sql` | `20260812064047 improve_discipline_intake_guidance` |
 | `20260812164333_index_discipline_intake_links.sql` | `20260812064352 index_discipline_intake_links` |
 | `20260812235915_improve_discipline_investigator_setup.sql` | `20260812140314 improve_discipline_investigator_setup` |
+| `20260813224228_discipline_review_panel_workflow.sql` | `20260813124625 discipline_review_panel_workflow` |
+| `20260813225158_discipline_review_vote_privacy.sql` | `20260813125316 discipline_review_vote_privacy` |
+| `20260813225641_index_discipline_review_panel_foreign_keys.sql` | `20260813125705 index_discipline_review_panel_foreign_keys` |
+| `20260813230835_allow_no_investigator_outcome_recommendation.sql` | `20260813130941 allow_no_investigator_outcome_recommendation` |
 
 Supabase assigned the live versions at application time; the migration names identify the matching
 local files.
@@ -248,6 +265,11 @@ Rolled-back live Dev checks confirmed:
 - an accepted investigator setup atomically assigned one lead and one support role, an actual
   conflict replacement retained no investigator access, and an invalid actual-conflict/managed
   combination was rejected; and
+- a three-member panel became ready only after three eligible linked acceptances, panel members
+  could see only their own vote before finalisation, the Case Coordinator could see no vote content,
+  a 2-1 majority calculated correctly, and all three votes became visible after finalisation; and
+- a report with no overall outcome recommendation stored the panel relationship as null rather than
+  forcing a false followed/not-followed answer; and
 - every test transaction rolled back without leaving a case, person, finding or report record.
 
 The final Supabase review found no anonymous discipline RPC, no discipline table without RLS and no

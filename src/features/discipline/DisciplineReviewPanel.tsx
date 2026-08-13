@@ -376,9 +376,13 @@ export function DisciplineReviewPanel({
               ).length
             }{" "}
             accepted.
-            {panel.status === "READY"
-              ? " The Case Coordinator can now advance the case to HB Decision."
-              : " All three eligible members must accept and link a SportStack account before deliberation opens."}
+            {panel.status === "COMPLETE"
+              ? " The majority decision is finalised and the complete vote record is now visible."
+              : panel.status === "DELIBERATING"
+                ? " Voting is in progress. Individual votes remain private until finalisation."
+                : panel.status === "READY"
+                  ? " The Case Coordinator can now advance the case to HB Decision."
+                  : " All three eligible members must accept and link a SportStack account before deliberation opens."}
           </AlertDescription>
         </Alert>
       ) : (
@@ -532,7 +536,12 @@ export function DisciplineReviewPanel({
                     <SelectItem value="__none__">
                       No account linked yet
                     </SelectItem>
-                    {data.profileOptions
+                    {[...data.profileOptions]
+                      .sort(
+                        (left, right) =>
+                          Number(right.id === member.profileId) -
+                          Number(left.id === member.profileId),
+                      )
                       .filter((profile) => {
                         const query = (profileSearches[member.seatNumber] || "")
                           .trim()
