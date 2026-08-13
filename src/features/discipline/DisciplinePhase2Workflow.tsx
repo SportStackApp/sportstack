@@ -115,6 +115,16 @@ export function DisciplinePhase2Workflow({
         </AlertDescription>
       </Alert>
 
+      {stage === "CLOSURE" ? (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>A long suspension has a separate later review pathway</AlertTitle>
+          <AlertDescription>
+            HV Rule 7.26 permits a person suspended for longer than 12 months to request a review only after serving at least 12 months. That future request is not part of this case-closure screen.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>Post-referral workflow</CardTitle>

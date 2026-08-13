@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-08-13
+Last updated: 2026-08-14
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -56,11 +56,14 @@ Update this file after every meaningful Codex task, pull request, schema change,
   append-only vote revisions and a database-calculated 2-1 or 3-0 majority. It explicitly labels
   three members as an HB operating safeguard rather than Rule 7 wording, and allows a report to have
   no overall outcome recommendation.
-  Tribunal Preparation is now the first Phase 2 extension. It explains the Rule 7.17 membership,
+  Tribunal Preparation and the complete post-referral pathway are now implemented as the Phase 2
+  extension. Tribunal Preparation explains the Rule 7.17 membership,
   Chair and independence requirements; records the HB referral authority, receiving contact,
   presenter, hearing logistics and three proposed member seats; and separates setup from readiness.
-  It does not appoint people, send invitations or notices, schedule a hearing, determine an outcome
-  or impose a sanction.
+  The Outcome tab then guides the coordinator through Notice Pack, Hearing Record, Determination
+  and Sanctions, Appeal Pathway and Final Closure. Every save creates an append-only revision.
+  Real notice issue is blocked until Tribunal Preparation is `READY`; simulations are clearly
+  separated and cannot issue email, appoint people, impose a real sanction or close the real case.
   The UI labels information as **Fact**, **Rule**, **Judgement** or
   **Local interpretation** and never decides guilt or automatically applies a penalty.
 - **Accuracy corrections are locked into the Dev rule pack:** finals timing requires the relevant
@@ -69,7 +72,7 @@ Update this file after every meaningful Codex task, pull request, schema change,
   Schedules `$500` contempt conflict remains visible. Business-day meaning, NIF adoption/contact,
   authority mappings, natural-justice safeguards, fines/fees and other local treatments remain
   `REVIEW_REQUIRED` until Hockey Ballarat approves them. See `docs/incident-discipline-phase1.md`.
-- **Dev database only:** sixteen additive local migration files create 34 RLS-protected
+- **Dev database only:** eighteen additive local migration files create 35 RLS-protected
   `discipline_*` tables, a 20 MB private evidence bucket, role-checking functions, UTC/Melbourne
   deadline calculations, 32 classification rows, 10 deadline definitions, 12 local-variation
   records and the verified 2026 Victorian holiday calendar. All migrations passed rollback dry
@@ -98,6 +101,16 @@ Update this file after every meaningful Codex task, pull request, schema change,
   The rollback workflow test passed coordinator-only writes, Tribunal-member visibility and complete
   cleanup; the hardening migration restored authenticated function access and covered all new
   foreign keys.
+- **Post-referral database evidence:** live Dev migrations
+  `20260813182611 discipline_phase2_completion_workflow` and
+  `20260813183733 harden_discipline_phase2_appeal_and_closure` add one RLS-protected, append-only
+  stage-record table and a coordinator-only save function. Database rules enforce stage order,
+  simulation acknowledgement, Rule 7.18 notice safeguards, Rule 7.19-7.21 hearing/determination
+  checks, the Rule 7.22-7.25 appeal pathway and closure controls. A final appeal additionally
+  requires an independent three-person Appeal Board, qualified Chair, affected people heard, a new
+  hearing on the merits and a majority basis. Closure after a proved charge requires a decision
+  notice reference, sanctions-register treatment and administrative-fee treatment. Only a real
+  closure changes the case to `CLOSED`.
 - **Security review:** case content is assignment-only even for Association/Super Admin roles;
   configuration and case access are separate. Supabase reports no anonymous discipline function
   warning or discipline table without RLS. Its authenticated security-definer warnings are
@@ -147,6 +160,15 @@ Update this file after every meaningful Codex task, pull request, schema change,
   placeholder seats and explicitly unresolved authority, Chair and hearing details. A live Dev
   database read confirmed `SETUP`, no hearing time, no formal authority confirmation, zero accepted
   members and zero accepted Chairs.
+
+- **14 August Incident 007 post-referral run:** the complete downstream pathway was exercised in
+  SportStack Dev as five explicit `SIMULATION` records: Notice `ISSUED`, Hearing `COMPLETED`,
+  Determination `FINAL`, Appeal `NO_APPEAL` and Closure `CLOSED`. The strengthened closure check was
+  saved as append-only revision 2 with a simulated decision-notice reference, sanctions-register
+  treatment and fee treatment. No email, meeting, real finding, sanction, appeal or publication was
+  created. A live database read confirms the real case `HB-DIS-2026-0016` remains `REFERRED` with no
+  `closed_at` value. A suspension longer than 12 months has a separate later Rule 7.26 review path
+  after at least 12 months; it is explained but is not part of ordinary case closure.
 
 - **Guided Committee and subcommittee workflow is live on Dev:** commit `deea6c0` replaces the
   single create form with a reusable five-step workflow for Association and Club committees plus

@@ -4,9 +4,9 @@ Status: Dev implementation specification. The 2026 rule pack remains `REVIEW_REQ
 
 ## Purpose and boundary
 
-This module supports Hockey Ballarat staff through intake, screening, investigation, report sign-off and an HB decision. It records facts, rules, human judgements and local interpretations separately. It does not determine guilt, impose a penalty automatically, or run a Tribunal, mediation, appeal, suspension or publication process.
+This module supports Hockey Ballarat staff through intake, screening, investigation, report sign-off and an HB decision. The Dev extension now also records the later Tribunal notice, hearing, determination, appeal and closure workflow. It records facts, rules, human judgements and local interpretations separately. It never determines guilt or imposes a penalty automatically.
 
-Phase 1 finishes when a matter is closed, or referred to the relevant later process.
+Phase 1 finishes when a matter is closed or referred. The Phase 2 extension records the later human-led process but does not send formal notices, constitute a Tribunal, or apply sanctions automatically.
 
 ## Verified source set
 
@@ -146,6 +146,30 @@ Aaron's report-as-true exercise direction. The database finalised a 3-0 majority
 to `REFERRED`. The authority, member checks, reasons and outcome all state that no real HB panel was
 appointed and no real disciplinary determination was made. No notification was sent.
 
+The remaining standard post-referral path is now implemented in the Dev Outcome tab. It records:
+
+1. the Rule 7.18 notice particulars, relied-on evidence, hearing details, response rights and proof
+   of external service;
+2. the Rule 7.19-7.20 hearing record, including charges, plea, parties heard, evidence and natural
+   justice;
+3. the Rule 7.20-7.21 result for each charge, standard of proof, panel majority, reasons, penalty
+   submissions and sanction treatment;
+4. the Rule 7.22-7.25 appeal deadline, application/stay, three-member independent Appeal Board,
+   new hearing on the merits and final majority result; and
+5. notification, appeal completion, records, privacy/publication, sanction-register, fee and final
+   closure checks.
+
+Every save creates a new revision. A real Notice cannot be marked `ISSUED` until Tribunal
+Preparation is `READY`, and a simulation can never change the real case status. Incident 007 was
+saved through all five stages as an expressly acknowledged Dev simulation. The latest simulated
+closure is revision 2 and includes the strengthened decision-notice, sanctions-register and
+administrative-fee fields. The real case remains `REFERRED`; no email, Tribunal, finding, penalty,
+appeal, publication or closure was created.
+
+Rule 7.26 is not another ordinary step in every case. It creates a separate later review request for
+a person suspended for longer than 12 months, only after at least 12 months has been served. The UI
+explains that future pathway at closure without pretending it is applicable to Incident 007.
+
 The original PDF and email source copies are summarised in immutable Dev evidence records, but their
 private binary uploads remain pending. The simulated clarification record is clearly titled
 `workflow exercise only`.
@@ -226,7 +250,7 @@ Evidence files use short-lived signed links; the original object and evidence re
 overwritten. Signed report snapshots retain their SHA-256 hash and any authorised natural-justice
 override reason.
 
-The sixteen local migration files and the versions recorded by the live Dev migration history are:
+The eighteen local migration files and the versions recorded by the live Dev migration history are:
 
 | Local migration file | Live Dev version and name |
 |---|---|
@@ -246,6 +270,8 @@ The sixteen local migration files and the versions recorded by the live Dev migr
 | `20260813230835_allow_no_investigator_outcome_recommendation.sql` | `20260813130941 allow_no_investigator_outcome_recommendation` |
 | `20260813235900_discipline_tribunal_preparation.sql` | `20260813132301 discipline_tribunal_preparation` |
 | `20260814000500_harden_discipline_tribunal_preparation.sql` | `20260813133852 harden_discipline_tribunal_preparation` |
+| `20260814010000_discipline_phase2_completion_workflow.sql` | `20260813182611 discipline_phase2_completion_workflow` |
+| `20260814012000_harden_discipline_phase2_appeal_and_closure.sql` | `20260813183733 harden_discipline_phase2_appeal_and_closure` |
 
 Supabase assigned the live versions at application time; the migration names identify the matching
 local files.

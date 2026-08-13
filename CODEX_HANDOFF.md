@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-13
+Last updated: 2026-08-14
 
 Future agents should start by reading these files in order:
 
@@ -9,6 +9,29 @@ Future agents should start by reading these files in order:
 3. `docs/project-brief.md` — concise product and architecture context.
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 14 August 2026 complete post-referral discipline workflow
+
+- The Dev Outcome tab now covers the remaining standard flow: Notice Pack, Hearing Record,
+  Determination and Sanctions, Appeal Pathway and Final Closure. It explains and links the relevant
+  HV Rules. Every save is an append-only revision, and simulations are visibly separated from real
+  proceeding records.
+- Real Notice `ISSUED` is blocked until Tribunal Preparation is `READY`. The database rechecks the
+  coordinator role, stage order and required safeguards. A final appeal requires an independent
+  three-member Appeal Board, eligible Chair, affected people heard, a new hearing on the merits and
+  a majority basis. Closure after a proved charge requires a decision-notification reference,
+  sanctions-register treatment and administrative-fee treatment.
+- Additive Dev migrations `20260813182611 discipline_phase2_completion_workflow` and
+  `20260813183733 harden_discipline_phase2_appeal_and_closure` are applied. The table has RLS and
+  assigned-case read access; the authenticated write function rechecks Case Coordinator access.
+  Rolled-back stage-order, readiness, appeal and closure tests passed.
+- Case `HB-DIS-2026-0016` was taken through all five stages in `SIMULATION` mode. Closure revision 2
+  satisfies the strengthened controls. No real email, Tribunal, finding, sanction, appeal,
+  publication or closure occurred; the real case remains `REFERRED` with `closed_at` null.
+- Rule 7.26 is explained as a separate future pathway for a suspension longer than 12 months, after
+  at least 12 months has been served. It is not a normal closure stage. The HB equivalents for
+  appeal recipient, fee/delegation, publication and retention still need formal local confirmation.
+- Production, `main`, `prod`, domains and secrets were not changed.
 
 ## 13 August 2026 Tribunal Preparation continuation
 
