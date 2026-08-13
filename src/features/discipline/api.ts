@@ -118,6 +118,7 @@ export async function loadDisciplineWorkspace(
     reviewPanelVotesResult,
     tribunalPreparationsResult,
     tribunalMembersResult,
+    phase2StageRecordsResult,
     reportSnapshotsResult,
     auditResult,
     clausesResult,
@@ -223,6 +224,11 @@ export async function loadDisciplineWorkspace(
       .eq("case_id", caseId)
       .order("seat_number"),
     supabase
+      .from("discipline_phase2_stage_records")
+      .select("*")
+      .eq("case_id", caseId)
+      .order("recorded_at", { ascending: false }),
+    supabase
       .from("discipline_report_snapshots")
       .select("*")
       .eq("case_id", caseId)
@@ -276,6 +282,7 @@ export async function loadDisciplineWorkspace(
     reviewPanelVotesResult,
     tribunalPreparationsResult,
     tribunalMembersResult,
+    phase2StageRecordsResult,
     reportSnapshotsResult,
     auditResult,
     clausesResult,
@@ -307,6 +314,7 @@ export async function loadDisciplineWorkspace(
     reviewPanelVotes: reviewPanelVotesResult.data ?? [],
     tribunalPreparations: tribunalPreparationsResult.data ?? [],
     tribunalMembers: tribunalMembersResult.data ?? [],
+    phase2StageRecords: phase2StageRecordsResult.data ?? [],
     reportSnapshots: reportSnapshotsResult.data ?? [],
     auditEvents: auditResult.data ?? [],
     ruleClauses: clausesResult.data ?? [],
@@ -746,6 +754,24 @@ export async function saveDisciplineTribunalPreparation(
       p_members: values.members as unknown as Json,
     },
   );
+  throwIfError(error);
+  return data;
+}
+
+export async function saveDisciplinePhase2Stage(
+  caseId: string,
+  stage: string,
+  status: string,
+  workflowMode: string,
+  payload: Record<string, Json>,
+) {
+  const { data, error } = await supabase.rpc("save_discipline_phase2_stage", {
+    p_case_id: caseId,
+    p_stage: stage,
+    p_status: status,
+    p_workflow_mode: workflowMode,
+    p_payload: payload,
+  });
   throwIfError(error);
   return data;
 }

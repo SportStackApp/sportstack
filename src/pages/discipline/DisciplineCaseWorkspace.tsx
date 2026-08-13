@@ -57,6 +57,7 @@ import {
   saveDisciplineFinding,
   saveDisciplineReviewPanel,
   saveDisciplineTribunalPreparation,
+  saveDisciplinePhase2Stage,
   setDeadlineCompletion,
   setDisciplinePortalAccess,
   signDisciplineReport,
@@ -70,6 +71,7 @@ import { DisciplineTagPicker } from "@/features/discipline/DisciplineTagPicker";
 import { DisciplineInvestigatorSetupPanel } from "@/features/discipline/DisciplineInvestigatorSetup";
 import { DisciplineReviewPanel } from "@/features/discipline/DisciplineReviewPanel";
 import { DisciplineTribunalPreparation } from "@/features/discipline/DisciplineTribunalPreparation";
+import { DisciplinePhase2Workflow } from "@/features/discipline/DisciplinePhase2Workflow";
 import {
   ScreeningGuidance,
   TribunalReadinessLegend,
@@ -907,6 +909,7 @@ export default function DisciplineCaseWorkspace() {
             "findings",
             "decision",
             "tribunal",
+            "outcome",
             "timeline",
             "rules",
           ].map((tab) => (
@@ -2213,6 +2216,20 @@ export default function DisciplineCaseWorkspace() {
             onSave={(values) =>
               void runAction("Tribunal preparation saved", () =>
                 saveDisciplineTribunalPreparation(caseId, values),
+              )
+            }
+          />
+        </TabsContent>
+
+        <TabsContent value="outcome" className="space-y-5">
+          <DisciplinePhase2Workflow
+            key={data.phase2StageRecords[0]?.recorded_at || "new-phase2-workflow"}
+            data={data}
+            canCoordinate={canCoordinate}
+            busy={busy}
+            onSave={(stage, status, workflowMode, payload) =>
+              void runAction(`${formatStatus(stage)} ${formatStatus(status)} saved`, () =>
+                saveDisciplinePhase2Stage(caseId, stage, status, workflowMode, payload),
               )
             }
           />

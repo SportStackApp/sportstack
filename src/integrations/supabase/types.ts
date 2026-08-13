@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       administration_audit_log: {
@@ -3607,6 +3632,60 @@ export type Database = {
           {
             foreignKeyName: "discipline_notifications_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_phase2_stage_records: {
+        Row: {
+          case_id: string
+          id: string
+          payload: Json
+          recorded_at: string
+          recorded_by: string
+          revision_number: number
+          source_references: string[]
+          stage: string
+          status: string
+          workflow_mode: string
+        }
+        Insert: {
+          case_id: string
+          id?: string
+          payload: Json
+          recorded_at?: string
+          recorded_by: string
+          revision_number: number
+          source_references?: string[]
+          stage: string
+          status: string
+          workflow_mode?: string
+        }
+        Update: {
+          case_id?: string
+          id?: string
+          payload?: Json
+          recorded_at?: string
+          recorded_by?: string
+          revision_number?: number
+          source_references?: string[]
+          stage?: string
+          status?: string
+          workflow_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_phase2_stage_records_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_phase2_stage_records_recorded_by_fkey"
+            columns: ["recorded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -12675,6 +12754,16 @@ export type Database = {
         Args: { p_case_id: string; p_intake: Json; p_reason: string }
         Returns: Json
       }
+      save_discipline_phase2_stage: {
+        Args: {
+          p_case_id: string
+          p_payload: Json
+          p_stage: string
+          p_status: string
+          p_workflow_mode: string
+        }
+        Returns: string
+      }
       save_discipline_review_panel: {
         Args: { p_case_id: string; p_members: Json; p_panel: Json }
         Returns: string
@@ -13082,6 +13171,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       action_status_enum: [

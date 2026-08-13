@@ -65,6 +65,8 @@ export type DisciplineTribunalPreparation =
   Database["public"]["Tables"]["discipline_tribunal_preparations"]["Row"];
 export type DisciplineTribunalMember =
   Database["public"]["Tables"]["discipline_tribunal_members"]["Row"];
+export type DisciplinePhase2StageRecord =
+  Database["public"]["Tables"]["discipline_phase2_stage_records"]["Row"];
 export type DisciplineReportSnapshot =
   Database["public"]["Tables"]["discipline_report_snapshots"]["Row"];
 export type DisciplineAuditEvent =
@@ -116,6 +118,7 @@ export type DisciplineWorkspaceData = {
   reviewPanelVotes: DisciplineReviewPanelVote[];
   tribunalPreparations: DisciplineTribunalPreparation[];
   tribunalMembers: DisciplineTribunalMember[];
+  phase2StageRecords: DisciplinePhase2StageRecord[];
   reportSnapshots: DisciplineReportSnapshot[];
   auditEvents: DisciplineAuditEvent[];
   ruleClauses: DisciplineRuleClause[];
