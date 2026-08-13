@@ -3871,7 +3871,7 @@ export type Database = {
           outcome: string
           panel_id: string
           panel_member_id: string
-          recommendation_followed: boolean
+          recommendation_followed: boolean | null
           revision_number: number
           rule_reference: string
           submitted_at: string
@@ -3887,7 +3887,7 @@ export type Database = {
           outcome: string
           panel_id: string
           panel_member_id: string
-          recommendation_followed: boolean
+          recommendation_followed?: boolean | null
           revision_number: number
           rule_reference: string
           submitted_at?: string
@@ -3903,7 +3903,7 @@ export type Database = {
           outcome?: string
           panel_id?: string
           panel_member_id?: string
-          recommendation_followed?: boolean
+          recommendation_followed?: boolean | null
           revision_number?: number
           rule_reference?: string
           submitted_at?: string

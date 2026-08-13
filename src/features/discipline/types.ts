@@ -155,7 +155,7 @@ export type DisciplineReviewPanelVoteInput = {
   outcome: string;
   decisionReason: string;
   ruleReference: string;
-  recommendationFollowed: boolean;
+  recommendationFollowed: boolean | null;
   differenceReason?: string;
   changeReason?: string;
 };

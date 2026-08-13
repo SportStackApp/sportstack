@@ -754,12 +754,19 @@ export function DisciplineReviewPanel({
               onSubmit={(event) => {
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
+                const recommendationPosition = String(
+                  form.get("recommendationPosition"),
+                );
                 onVote({
                   outcome: String(form.get("outcome")),
                   decisionReason: String(form.get("decisionReason")),
                   ruleReference: String(form.get("ruleReference")),
                   recommendationFollowed:
-                    form.get("recommendationFollowed") === "on",
+                    recommendationPosition === "FOLLOWED"
+                      ? true
+                      : recommendationPosition === "NOT_FOLLOWED"
+                        ? false
+                        : null,
                   differenceReason: String(form.get("differenceReason") || ""),
                   changeReason: String(form.get("changeReason") || ""),
                 });
@@ -800,13 +807,35 @@ export function DisciplineReviewPanel({
                   required
                 />
               </div>
-              <label className="flex items-center gap-3 rounded-lg border p-3">
-                <Checkbox
-                  name="recommendationFollowed"
-                  defaultChecked={ownVote?.recommendation_followed ?? true}
-                />
-                Investigator recommendation followed
-              </label>
+              <div className="space-y-2">
+                <Label>Relationship to the investigator's recommendation</Label>
+                <Select
+                  name="recommendationPosition"
+                  defaultValue={
+                    ownVote?.recommendation_followed === true
+                      ? "FOLLOWED"
+                      : ownVote?.recommendation_followed === false
+                        ? "NOT_FOLLOWED"
+                        : "NO_RECOMMENDATION"
+                  }
+                  required
+                >
+                  <SelectTrigger className="w-full min-w-0 overflow-hidden">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NO_RECOMMENDATION">
+                      No overall outcome recommendation was recorded
+                    </SelectItem>
+                    <SelectItem value="FOLLOWED">
+                      Overall outcome recommendation followed
+                    </SelectItem>
+                    <SelectItem value="NOT_FOLLOWED">
+                      Overall outcome recommendation not followed
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label>Reason for any difference</Label>
                 <Textarea
