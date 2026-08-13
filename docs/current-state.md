@@ -56,6 +56,11 @@ Update this file after every meaningful Codex task, pull request, schema change,
   append-only vote revisions and a database-calculated 2-1 or 3-0 majority. It explicitly labels
   three members as an HB operating safeguard rather than Rule 7 wording, and allows a report to have
   no overall outcome recommendation.
+  Tribunal Preparation is now the first Phase 2 extension. It explains the Rule 7.17 membership,
+  Chair and independence requirements; records the HB referral authority, receiving contact,
+  presenter, hearing logistics and three proposed member seats; and separates setup from readiness.
+  It does not appoint people, send invitations or notices, schedule a hearing, determine an outcome
+  or impose a sanction.
   The UI labels information as **Fact**, **Rule**, **Judgement** or
   **Local interpretation** and never decides guilt or automatically applies a penalty.
 - **Accuracy corrections are locked into the Dev rule pack:** finals timing requires the relevant
@@ -64,7 +69,7 @@ Update this file after every meaningful Codex task, pull request, schema change,
   Schedules `$500` contempt conflict remains visible. Business-day meaning, NIF adoption/contact,
   authority mappings, natural-justice safeguards, fines/fees and other local treatments remain
   `REVIEW_REQUIRED` until Hockey Ballarat approves them. See `docs/incident-discipline-phase1.md`.
-- **Dev database only:** fourteen additive local migration files create 32 RLS-protected
+- **Dev database only:** sixteen additive local migration files create 34 RLS-protected
   `discipline_*` tables, a 20 MB private evidence bucket, role-checking functions, UTC/Melbourne
   deadline calculations, 32 classification rows, 10 deadline definitions, 12 local-variation
   records and the verified 2026 Victorian holiday calendar. All migrations passed rollback dry
@@ -84,6 +89,15 @@ Update this file after every meaningful Codex task, pull request, schema change,
   keys; and preserve a null recommendation relationship when the signed report does not propose one
   overall Rule 7.7 outcome. Rolled-back tests passed three-member readiness, role exclusion, vote
   privacy, 2-1 majority calculation, post-final visibility and the no-recommendation case.
+- **Tribunal-preparation database evidence:** live Dev migrations
+  `20260813132301 discipline_tribunal_preparation` and
+  `20260813133852 harden_discipline_tribunal_preparation` add RLS-protected preparation/member
+  records and one role-checking atomic save function. Readiness requires a formally confirmed
+  authority mapping, fixed hearing details, two accepted independent members, an accepted Chair
+  and either confirmed Victorian legal-practice eligibility or a recorded formal HB variation.
+  The rollback workflow test passed coordinator-only writes, Tribunal-member visibility and complete
+  cleanup; the hardening migration restored authenticated function access and covered all new
+  foreign keys.
 - **Security review:** case content is assignment-only even for Association/Super Admin roles;
   configuration and case access are separate. Supabase reports no anonymous discipline function
   warning or discipline table without RLS. Its authenticated security-definer warnings are
@@ -112,6 +126,11 @@ Update this file after every meaningful Codex task, pull request, schema change,
   screen shows `REFERRED`, a complete three-member panel, all linked reviewer labels, the three
   simulated reasons and a 3-0 majority. The completed-state message and selected-account reload
   display were corrected during the live walkthrough.
+- **Tribunal Preparation deployment verified:** Vercel deployment
+  `dpl_BXKA2d8mA39ChMutTG9Bq4visuyW` is `READY` for exact commit
+  `95dd3dffb70992dd6b44d2b3f5409a6a1c8f37cc` and owns the Dev alias. The signed-in Incident 007
+  screen rendered the source guidance, readiness checklist, hearing preparation and three proposed
+  member seats. The deployed UI saved a clearly labelled Dev exercise as `SETUP`, not `READY`.
 - **13 August Incident 007 Dev case run:** authorised de-identified email material was entered only
   in the private Dev portal as `HB-DIS-2026-0016`. It retains three separate allegations, preliminary
   screening, Tim's recorded appointment/independence check, notices, witness follow-ups, evidence
@@ -124,7 +143,10 @@ Update this file after every meaningful Codex task, pull request, schema change,
   simulated votes produced a 3-0 `TRIBUNAL_REFERRAL`, stored the report's overall recommendation
   relationship as null, and moved the case to `REFERRED`. The final screen shows the complete panel,
   individual reasons and majority. No real HB panel was appointed, no notification was sent and no
-  Main, Production or `prod` system was changed.
+  Main, Production or `prod` system was changed. Tribunal Preparation now holds three unaccepted
+  placeholder seats and explicitly unresolved authority, Chair and hearing details. A live Dev
+  database read confirmed `SETUP`, no hearing time, no formal authority confirmation, zero accepted
+  members and zero accepted Chairs.
 
 - **Guided Committee and subcommittee workflow is live on Dev:** commit `deea6c0` replaces the
   single create form with a reusable five-step workflow for Association and Club committees plus

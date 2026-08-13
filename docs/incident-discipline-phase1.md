@@ -226,7 +226,7 @@ Evidence files use short-lived signed links; the original object and evidence re
 overwritten. Signed report snapshots retain their SHA-256 hash and any authorised natural-justice
 override reason.
 
-The fourteen local migration files and the versions recorded by the live Dev migration history are:
+The sixteen local migration files and the versions recorded by the live Dev migration history are:
 
 | Local migration file | Live Dev version and name |
 |---|---|
@@ -244,6 +244,8 @@ The fourteen local migration files and the versions recorded by the live Dev mig
 | `20260813225158_discipline_review_vote_privacy.sql` | `20260813125316 discipline_review_vote_privacy` |
 | `20260813225641_index_discipline_review_panel_foreign_keys.sql` | `20260813125705 index_discipline_review_panel_foreign_keys` |
 | `20260813230835_allow_no_investigator_outcome_recommendation.sql` | `20260813130941 allow_no_investigator_outcome_recommendation` |
+| `20260813235900_discipline_tribunal_preparation.sql` | `20260813132301 discipline_tribunal_preparation` |
+| `20260814000500_harden_discipline_tribunal_preparation.sql` | `20260813133852 harden_discipline_tribunal_preparation` |
 
 Supabase assigned the live versions at application time; the migration names identify the matching
 local files.
@@ -270,6 +272,10 @@ Rolled-back live Dev checks confirmed:
   a 2-1 majority calculated correctly, and all three votes became visible after finalisation; and
 - a report with no overall outcome recommendation stored the panel relationship as null rather than
   forcing a false followed/not-followed answer; and
+- Tribunal preparation allowed coordinator-only setup, made the preparation visible to an assigned
+  Tribunal member and rolled back cleanly; its readiness rules require confirmed authority mapping,
+  hearing details, at least two accepted independent members, an accepted Chair and the recorded
+  Rule 7.17 Chair treatment; and
 - every test transaction rolled back without leaving a case, person, finding or report record.
 
 The final Supabase review found no anonymous discipline RPC, no discipline table without RLS and no

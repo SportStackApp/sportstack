@@ -10,6 +10,28 @@ Future agents should start by reading these files in order:
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
+## 13 August 2026 Tribunal Preparation continuation
+
+- Dev commit `95dd3df` adds the first Phase 2 screen after a Tribunal referral. It records referral
+  authority, receiving body/contact, HB presenter, hearing logistics, Chair treatment and three
+  proposed Tribunal seats. It explains and links the HV Rule 7.17 source and HB addendum.
+- Readiness is database-calculated, not a UI claim. It requires formal authority mapping, a hearing
+  time/place, at least two accepted independent members, an accepted Chair and either confirmed
+  eligibility to engage in legal practice in Victoria or a cited formal HB variation. Free-text
+  identity is supported, but acceptance requires a linked SportStack account.
+- Dev case `HB-DIS-2026-0016` was completed through this screen as a workflow exercise. It saved as
+  `SETUP`, with three unaccepted placeholder seats, no hearing, no formal authority confirmation and
+  no accepted Chair. The notes make clear that no real appointment, invitation or notice occurred.
+- Live Dev migrations `20260813132301 discipline_tribunal_preparation` and
+  `20260813133852 harden_discipline_tribunal_preparation` are applied. The second restores the
+  authenticated grant for the private-helper-dependent save RPC and adds all missing foreign-key
+  indexes. Rolled-back live tests passed coordinator-only writes, member visibility and cleanup.
+- Focused lint, 13 discipline tests, TypeScript, build and diff checks passed before deployment.
+  Vercel deployment `dpl_BXKA2d8mA39ChMutTG9Bq4visuyW` is `READY` on the Dev alias for exact commit
+  `95dd3dffb70992dd6b44d2b3f5409a6a1c8f37cc`. Production, `main`, `prod`, domains and secrets were
+  not changed. The next build is the Tribunal Notice Pack; it may prepare drafts but must not issue
+  a formal notice while the current readiness items remain unresolved.
+
 ## 13 August 2026 Incident 007 review-panel continuation
 
 - Dev commits `8e5b9d1` and `a72a9a0` replace the single Decision Maker form with a three-person
