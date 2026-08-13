@@ -9,6 +9,7 @@ import type {
   DisciplineWorkspaceData,
   DisciplineReviewPanelInput,
   DisciplineReviewPanelVoteInput,
+  DisciplineTribunalPreparationInput,
   NewDisciplineCaseInput,
 } from "./types";
 
@@ -115,6 +116,8 @@ export async function loadDisciplineWorkspace(
     reviewPanelsResult,
     reviewPanelMembersResult,
     reviewPanelVotesResult,
+    tribunalPreparationsResult,
+    tribunalMembersResult,
     reportSnapshotsResult,
     auditResult,
     clausesResult,
@@ -210,6 +213,16 @@ export async function loadDisciplineWorkspace(
       .eq("case_id", caseId)
       .order("submitted_at", { ascending: false }),
     supabase
+      .from("discipline_tribunal_preparations")
+      .select("*")
+      .eq("case_id", caseId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("discipline_tribunal_members")
+      .select("*")
+      .eq("case_id", caseId)
+      .order("seat_number"),
+    supabase
       .from("discipline_report_snapshots")
       .select("*")
       .eq("case_id", caseId)
@@ -261,6 +274,8 @@ export async function loadDisciplineWorkspace(
     reviewPanelsResult,
     reviewPanelMembersResult,
     reviewPanelVotesResult,
+    tribunalPreparationsResult,
+    tribunalMembersResult,
     reportSnapshotsResult,
     auditResult,
     clausesResult,
@@ -290,6 +305,8 @@ export async function loadDisciplineWorkspace(
     reviewPanels: reviewPanelsResult.data ?? [],
     reviewPanelMembers: reviewPanelMembersResult.data ?? [],
     reviewPanelVotes: reviewPanelVotesResult.data ?? [],
+    tribunalPreparations: tribunalPreparationsResult.data ?? [],
+    tribunalMembers: tribunalMembersResult.data ?? [],
     reportSnapshots: reportSnapshotsResult.data ?? [],
     auditEvents: auditResult.data ?? [],
     ruleClauses: clausesResult.data ?? [],
@@ -694,6 +711,39 @@ export async function finaliseDisciplineReviewPanelDecision(
       p_case_id: caseId,
       p_meeting_reference: meetingReference,
       p_process_note: processNote,
+    },
+  );
+  throwIfError(error);
+  return data;
+}
+
+export async function saveDisciplineTribunalPreparation(
+  caseId: string,
+  values: DisciplineTribunalPreparationInput,
+) {
+  const { data, error } = await supabase.rpc(
+    "save_discipline_tribunal_preparation",
+    {
+      p_case_id: caseId,
+      p_preparation: {
+        referral_basis: values.referralBasis,
+        appointment_authority: values.appointmentAuthority,
+        authority_reference: values.authorityReference || null,
+        authority_mapping_confirmed: values.authorityMappingConfirmed,
+        receiving_body: values.receivingBody,
+        receiving_contact_name: values.receivingContactName,
+        receiving_contact_email: values.receivingContactEmail,
+        hb_presenter_name: values.hbPresenterName,
+        hb_presenter_email: values.hbPresenterEmail,
+        hearing_mode: values.hearingMode,
+        hearing_at: values.hearingAt || null,
+        hearing_location: values.hearingLocation,
+        chair_requirement_treatment: values.chairRequirementTreatment,
+        chair_approval_reference: values.chairApprovalReference || null,
+        two_member_reason: values.twoMemberReason || null,
+        preparation_notes: values.preparationNotes,
+      } as Json,
+      p_members: values.members as unknown as Json,
     },
   );
   throwIfError(error);

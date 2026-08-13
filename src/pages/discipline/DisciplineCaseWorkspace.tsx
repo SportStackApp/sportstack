@@ -56,6 +56,7 @@ import {
   saveAllegation,
   saveDisciplineFinding,
   saveDisciplineReviewPanel,
+  saveDisciplineTribunalPreparation,
   setDeadlineCompletion,
   setDisciplinePortalAccess,
   signDisciplineReport,
@@ -68,6 +69,7 @@ import {
 import { DisciplineTagPicker } from "@/features/discipline/DisciplineTagPicker";
 import { DisciplineInvestigatorSetupPanel } from "@/features/discipline/DisciplineInvestigatorSetup";
 import { DisciplineReviewPanel } from "@/features/discipline/DisciplineReviewPanel";
+import { DisciplineTribunalPreparation } from "@/features/discipline/DisciplineTribunalPreparation";
 import {
   ScreeningGuidance,
   TribunalReadinessLegend,
@@ -904,6 +906,7 @@ export default function DisciplineCaseWorkspace() {
             "investigation",
             "findings",
             "decision",
+            "tribunal",
             "timeline",
             "rules",
           ].map((tab) => (
@@ -2193,6 +2196,23 @@ export default function DisciplineCaseWorkspace() {
                   meetingReference,
                   processNote,
                 ),
+              )
+            }
+          />
+        </TabsContent>
+
+        <TabsContent value="tribunal" className="space-y-5">
+          <DisciplineTribunalPreparation
+            key={
+              data.tribunalPreparations[0]?.updated_at ||
+              "new-tribunal-preparation"
+            }
+            data={data}
+            canCoordinate={canCoordinate}
+            busy={busy}
+            onSave={(values) =>
+              void runAction("Tribunal preparation saved", () =>
+                saveDisciplineTribunalPreparation(caseId, values),
               )
             }
           />

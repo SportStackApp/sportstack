@@ -61,6 +61,10 @@ export type DisciplineReviewPanelMember =
   Database["public"]["Tables"]["discipline_review_panel_members"]["Row"];
 export type DisciplineReviewPanelVote =
   Database["public"]["Tables"]["discipline_review_panel_votes"]["Row"];
+export type DisciplineTribunalPreparation =
+  Database["public"]["Tables"]["discipline_tribunal_preparations"]["Row"];
+export type DisciplineTribunalMember =
+  Database["public"]["Tables"]["discipline_tribunal_members"]["Row"];
 export type DisciplineReportSnapshot =
   Database["public"]["Tables"]["discipline_report_snapshots"]["Row"];
 export type DisciplineAuditEvent =
@@ -110,6 +114,8 @@ export type DisciplineWorkspaceData = {
   reviewPanels: DisciplineReviewPanel[];
   reviewPanelMembers: DisciplineReviewPanelMember[];
   reviewPanelVotes: DisciplineReviewPanelVote[];
+  tribunalPreparations: DisciplineTribunalPreparation[];
+  tribunalMembers: DisciplineTribunalMember[];
   reportSnapshots: DisciplineReportSnapshot[];
   auditEvents: DisciplineAuditEvent[];
   ruleClauses: DisciplineRuleClause[];
@@ -158,6 +164,46 @@ export type DisciplineReviewPanelVoteInput = {
   recommendationFollowed: boolean | null;
   differenceReason?: string;
   changeReason?: string;
+};
+
+export type DisciplineTribunalMemberInput = {
+  seat_number: number;
+  full_name: string;
+  email: string;
+  profile_id?: string;
+  organisation?: string;
+  role_or_position?: string;
+  invitation_status: "NOT_SENT" | "SENT" | "ACCEPTED" | "DECLINED";
+  is_chair: boolean;
+  legal_eligibility_confirmed: boolean;
+  involved_club_role: boolean;
+  hb_governance_role: boolean;
+  direct_interest: boolean;
+  relationship_affecting_independence: boolean;
+  conflict_factors: string[];
+  conflict_decision: "CLEARED" | "MANAGED" | "REPLACE_MEMBER";
+  conflict_reason: string;
+  availability_notes: string;
+};
+
+export type DisciplineTribunalPreparationInput = {
+  referralBasis: string;
+  appointmentAuthority: string;
+  authorityReference?: string;
+  authorityMappingConfirmed: boolean;
+  receivingBody: string;
+  receivingContactName: string;
+  receivingContactEmail: string;
+  hbPresenterName: string;
+  hbPresenterEmail: string;
+  hearingMode: string;
+  hearingAt?: string;
+  hearingLocation: string;
+  chairRequirementTreatment: string;
+  chairApprovalReference?: string;
+  twoMemberReason?: string;
+  preparationNotes: string;
+  members: DisciplineTribunalMemberInput[];
 };
 
 export type DisciplineIntakeTagOption = {

@@ -4182,6 +4182,226 @@ export type Database = {
           },
         ]
       }
+      discipline_tribunal_members: {
+        Row: {
+          active: boolean
+          availability_notes: string
+          case_id: string
+          conflict_decision: string
+          conflict_factors: string[]
+          conflict_reason: string
+          created_at: string
+          created_by: string
+          direct_interest: boolean
+          email: string
+          full_name: string
+          hb_governance_role: boolean
+          id: string
+          invitation_status: string
+          involved_club_role: boolean
+          is_chair: boolean
+          legal_eligibility_confirmed: boolean
+          organisation: string | null
+          preparation_id: string
+          profile_id: string | null
+          relationship_affecting_independence: boolean
+          role_or_position: string | null
+          seat_number: number
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          active?: boolean
+          availability_notes: string
+          case_id: string
+          conflict_decision: string
+          conflict_factors?: string[]
+          conflict_reason: string
+          created_at?: string
+          created_by: string
+          direct_interest?: boolean
+          email: string
+          full_name: string
+          hb_governance_role?: boolean
+          id?: string
+          invitation_status?: string
+          involved_club_role?: boolean
+          is_chair?: boolean
+          legal_eligibility_confirmed?: boolean
+          organisation?: string | null
+          preparation_id: string
+          profile_id?: string | null
+          relationship_affecting_independence?: boolean
+          role_or_position?: string | null
+          seat_number: number
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          active?: boolean
+          availability_notes?: string
+          case_id?: string
+          conflict_decision?: string
+          conflict_factors?: string[]
+          conflict_reason?: string
+          created_at?: string
+          created_by?: string
+          direct_interest?: boolean
+          email?: string
+          full_name?: string
+          hb_governance_role?: boolean
+          id?: string
+          invitation_status?: string
+          involved_club_role?: boolean
+          is_chair?: boolean
+          legal_eligibility_confirmed?: boolean
+          organisation?: string | null
+          preparation_id?: string
+          profile_id?: string | null
+          relationship_affecting_independence?: boolean
+          role_or_position?: string | null
+          seat_number?: number
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_tribunal_members_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_tribunal_members_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_tribunal_members_preparation_id_fkey"
+            columns: ["preparation_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_tribunal_preparations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_tribunal_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_tribunal_members_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_tribunal_preparations: {
+        Row: {
+          appointment_authority: string
+          authority_mapping_confirmed: boolean
+          authority_reference: string | null
+          case_id: string
+          chair_approval_reference: string | null
+          chair_requirement_treatment: string
+          created_at: string
+          created_by: string
+          hb_presenter_email: string
+          hb_presenter_name: string
+          hearing_at: string | null
+          hearing_location: string
+          hearing_mode: string
+          id: string
+          preparation_notes: string
+          receiving_body: string
+          receiving_contact_email: string
+          receiving_contact_name: string
+          referral_basis: string
+          status: string
+          two_member_reason: string | null
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          appointment_authority: string
+          authority_mapping_confirmed?: boolean
+          authority_reference?: string | null
+          case_id: string
+          chair_approval_reference?: string | null
+          chair_requirement_treatment: string
+          created_at?: string
+          created_by: string
+          hb_presenter_email: string
+          hb_presenter_name: string
+          hearing_at?: string | null
+          hearing_location: string
+          hearing_mode: string
+          id?: string
+          preparation_notes: string
+          receiving_body: string
+          receiving_contact_email: string
+          receiving_contact_name: string
+          referral_basis: string
+          status?: string
+          two_member_reason?: string | null
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          appointment_authority?: string
+          authority_mapping_confirmed?: boolean
+          authority_reference?: string | null
+          case_id?: string
+          chair_approval_reference?: string | null
+          chair_requirement_treatment?: string
+          created_at?: string
+          created_by?: string
+          hb_presenter_email?: string
+          hb_presenter_name?: string
+          hearing_at?: string | null
+          hearing_location?: string
+          hearing_mode?: string
+          id?: string
+          preparation_notes?: string
+          receiving_body?: string
+          receiving_contact_email?: string
+          receiving_contact_name?: string
+          referral_basis?: string
+          status?: string
+          two_member_reason?: string | null
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_tribunal_preparations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_tribunal_preparations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_tribunal_preparations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discipline_witnesses: {
         Row: {
           allegation_id: string | null
@@ -12457,6 +12677,10 @@ export type Database = {
       }
       save_discipline_review_panel: {
         Args: { p_case_id: string; p_members: Json; p_panel: Json }
+        Returns: string
+      }
+      save_discipline_tribunal_preparation: {
+        Args: { p_case_id: string; p_members: Json; p_preparation: Json }
         Returns: string
       }
       save_permission_assignment: {
