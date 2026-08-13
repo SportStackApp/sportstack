@@ -95,20 +95,23 @@ Update this file after every meaningful Codex task, pull request, schema change,
   `e8018598a4a6d4d30cd0ff61293379005f3537df` and owns the Dev alias. The Dev address returned 200;
   its bundle contains the new Screen 3 guidance and Dev Supabase reference, with no Production
   project reference. The signed-in portal rendered without console errors or horizontal overflow.
-  The account has no assigned case, so opening Screen 3 remains the next one-step owner test.
-- **13 August read-only realistic rehearsal:** the latest de-identified `IN0007` report and related
-  correspondence were reviewed as an unproven test scenario without copying names or correspondence
-  into the repository. The deployed intake correctly predicted the official SportStack fixture as
-  Round 13, Division 2 Open, Home `Lucas HC`, Away `Gold`, venue `John Vernon Field, Ballarat
-  Grammar`, and an estimated 3:15 pm conclusion. Two allegations remained separate, their tags did
-  not leak between allegations, the pathway help opened correctly, and the 390 px layout had no
-  horizontal overflow or console warning. Read-only rule matching returned Level 1 physical
-  guidance for reported late contact when treated as similar to pushing/grabbing/tripping; the
-  reported bite did not safely match an exact physical Schedule row and therefore remains Amber
-  human review. The report also demonstrates why later reported threats and prior-match context
-  should be preserved as evidence or separately particularised, not silently folded into the biting
-  allegation. Dev still contains zero discipline cases. The unattended-work rule prohibited a test
-  submission, so Aaron's next owner test remains creation of one controlled disposable Dev case.
+  The original empty-case owner-test checkpoint has now been superseded by the live Dev case below.
+- **13 August Incident 007 Dev case run:** authorised de-identified email material was entered only
+  in the private Dev portal as `HB-DIS-2026-0016`. The intake linked the official Round 13 fixture
+  and retained three separate unproven allegations: reported late physical contact, a reported bite
+  and a separately reported threat. The earlier-match claim remains context rather than a fourth
+  allegation because the source lacks sufficient particulars. Preliminary screening preserved
+  Green `VIOLENT_L1` planning guidance for the late contact, while both the bite and threat remain
+  Amber `CLASSIFICATION_REVIEW_REQUIRED`; neither safely matches one verified Schedule row on the
+  current particulars. The case has one notice, four witness follow-ups, three evidence/action-note
+  records and 32 append-only timeline events. The original report and written response are explicitly
+  marked for private source-file upload before findings; no correspondence or attachment was copied
+  into the repository. The case is correctly stopped at `INVESTIGATOR_SETUP`: the notice records an
+  appointment, but the available correspondence does not establish the investigator's training or
+  experience, actual/perceived conflict declarations or the exact HB appointment authority. The UI
+  blocked advancement without an accepted independence check. Report receipt, appointment and
+  affected-party-notification deadlines are recorded complete; investigation and outcome deadlines
+  remain open. Dev database verification passed, with no Main, Production or `prod` change.
 
 - **Guided Committee and subcommittee workflow is live on Dev:** commit `deea6c0` replaces the
   single create form with a reusable five-step workflow for Association and Club committees plus
