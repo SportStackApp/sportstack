@@ -38,6 +38,9 @@ Future agents should start by reading these files in order:
   `20260813125316`, `20260813125705` and `20260813130941`. The new tables have RLS, explicit grants,
   covered foreign keys and role-checking authenticated RPCs. Production, `main`, `prod`, domains and
   secrets remain untouched.
+- Vercel deployment `dpl_nvum4aYqAtC3WFAKr8uwj1vQWzoE` is `READY` on the Dev alias for exact commit
+  `7aec329e84ec56bc9f4da6d0f822292e96462968`. The signed-in final screen shows `REFERRED`, the
+  complete panel, all linked account labels, the three simulated reasons and the 3-0 majority.
 
 ## 12 August 2026 Incident & Discipline Phase 1
 

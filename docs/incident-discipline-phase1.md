@@ -283,3 +283,8 @@ the production build and `git diff --check`. Vercel deployment
 guidance and Dev Supabase reference and contains no Production project reference. A signed-in portal
 check rendered without a console error or horizontal overflow; form-level owner acceptance remains
 pending because the account has no assigned case.
+
+Review-panel commit `7aec329` is deployed as Vercel deployment
+`dpl_nvum4aYqAtC3WFAKr8uwj1vQWzoE`, which is `READY` on the Dev alias. The signed-in Incident 007
+screen shows the complete panel, all linked reviewer labels after reload, the three simulated reasons,
+the 3-0 majority and final `REFERRED` status.

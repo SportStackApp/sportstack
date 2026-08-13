@@ -106,6 +106,12 @@ Update this file after every meaningful Codex task, pull request, schema change,
   its bundle contains the new Screen 3 guidance and Dev Supabase reference, with no Production
   project reference. The signed-in portal rendered without console errors or horizontal overflow.
   The original empty-case owner-test checkpoint has now been superseded by the live Dev case below.
+- **Review panel deployment verified:** Vercel deployment
+  `dpl_nvum4aYqAtC3WFAKr8uwj1vQWzoE` is `READY` for exact commit
+  `7aec329e84ec56bc9f4da6d0f822292e96462968` and owns the Dev alias. The signed-in Incident 007
+  screen shows `REFERRED`, a complete three-member panel, all linked reviewer labels, the three
+  simulated reasons and a 3-0 majority. The completed-state message and selected-account reload
+  display were corrected during the live walkthrough.
 - **13 August Incident 007 Dev case run:** authorised de-identified email material was entered only
   in the private Dev portal as `HB-DIS-2026-0016`. It retains three separate allegations, preliminary
   screening, Tim's recorded appointment/independence check, notices, witness follow-ups, evidence
