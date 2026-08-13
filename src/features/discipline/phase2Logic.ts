@@ -40,7 +40,7 @@ export const PHASE2_STAGES: Array<{
     title: "Appeal pathway",
     source: "HV Rules 7.22–7.25, pages 35–38",
     guidance:
-      "Record decision notification, the calculated deadline and the confirmed HB appeal destination. A lodged appeal stays execution under the source rule.",
+      "Record decision notification, the calculated deadline and the confirmed HB appeal destination. A lodged appeal stays execution and requires an independent Appeal Board and a new hearing on the merits.",
   },
   {
     key: "CLOSURE",
@@ -113,6 +113,15 @@ export function blankPhase2Payload(stage: Phase2Stage): Record<string, Json> {
       application_received_at: "",
       stay_applied: false,
       fee_status: "NOT_APPLICABLE_OR_UNCONFIRMED",
+      applicant_and_grounds: "",
+      cooperation_eligibility: "",
+      panel_appointment_authority: "",
+      panel_composition: "",
+      qualified_chair_confirmed: false,
+      panel_independence_confirmed: false,
+      affected_people_heard: false,
+      new_hearing_on_merits: false,
+      appeal_majority_basis: "",
       appeal_outcome: "",
     };
   return {
@@ -123,6 +132,9 @@ export function blankPhase2Payload(stage: Phase2Stage): Record<string, Json> {
     privacy_review_complete: false,
     publication_treatment: "HB local treatment not yet confirmed",
     retention_treatment: "HB local treatment not yet confirmed",
+    decision_notice_reference: "",
+    sanctions_register_updated: false,
+    administrative_fee_treatment: "",
     closure_summary: "",
   };
 }
@@ -170,12 +182,23 @@ export function validatePhase2Stage(
       errors.push("Record the lodged application and stay.");
     if (status === "FINAL" && text("appeal_outcome").length < 10)
       errors.push("Record the final appeal outcome.");
+    if (status === "FINAL" && (
+      text("panel_appointment_authority").length < 3 ||
+      text("panel_composition").length < 10 ||
+      !checked("qualified_chair_confirmed") ||
+      !checked("panel_independence_confirmed") ||
+      !checked("affected_people_heard") ||
+      !checked("new_hearing_on_merits") ||
+      text("appeal_majority_basis").length < 10
+    )) errors.push("Complete the Appeal Board appointment, independence, Chair, hearing and majority checks.");
   }
   if (stage === "CLOSURE" && status === "CLOSED") {
     ["outcome_notified", "appeal_complete", "records_complete", "privacy_review_complete"].forEach(
       (key) => !checked(key) && errors.push("Complete every closure safeguard."),
     );
     if (text("closure_summary").length < 20) errors.push("Record a complete closure summary.");
+    if (text("decision_notice_reference").length < 3)
+      errors.push("Record the decision-notification reference.");
   }
   return [...new Set(errors)];
 }

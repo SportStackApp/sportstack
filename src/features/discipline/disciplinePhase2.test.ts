@@ -33,4 +33,16 @@ describe("post-referral discipline workflow", () => {
     value.closure_summary = "The simulated case record is complete and retained for workflow testing.";
     expect(validatePhase2Stage("CLOSURE", "CLOSED", "SIMULATION", value).length).toBeGreaterThan(0);
   });
+
+  it("requires the complete Appeal Board safeguards before a final appeal", () => {
+    const value = blankPhase2Payload("APPEAL");
+    value.simulation_acknowledged = true;
+    value.decision_notified_at = "2026-08-20T20:00";
+    value.appeal_deadline_at = "2026-08-24T12:00";
+    value.pathway_confirmation = "Dev pathway confirmation only.";
+    value.appeal_outcome = "The simulated appeal was dismissed.";
+    expect(validatePhase2Stage("APPEAL", "FINAL", "SIMULATION", value)).toContain(
+      "Complete the Appeal Board appointment, independence, Chair, hearing and majority checks.",
+    );
+  });
 });
