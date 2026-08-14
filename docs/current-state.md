@@ -3575,6 +3575,8 @@ What changed:
 - Defined required offer deadlines, materialised reminders and recipient-facing offer notes.
 - Confirmed that an Umpire's acceptance records willingness only. The original offerer must select
   and confirm one accepted Umpire before SportStack creates the official assignment.
+- Recorded the fail-closed rule as “no until yes”: no response, acceptance, expiry or single willing
+  respondent may be treated as confirmation automatically.
 - Defined a non-blocking Umpire Match Voting roster check that distinguishes confirmed mismatch,
   no roster and unverifiable identity instead of treating every uncertain identity as wrongdoing.
 - Rechecked the live Dev schema read-only. The current fixture, notification, availability,

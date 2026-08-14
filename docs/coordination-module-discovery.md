@@ -69,12 +69,15 @@ The live schema must be checked again immediately before an implementation migra
    access-control boundary.
 3. **Confirmation fills the position.** Several people may accept the same offer. The original
    offerer chooses and confirms one accepted person through a secure database transaction.
-4. **History is retained.** Declines, expired offers, replacements and material fixture changes
+4. **No until yes.** Unless that explicit confirmation succeeds, the person is not rostered, the
+   position is not filled and no assignment exists. Acceptance, expiry or having only one willing
+   respondent must never auto-confirm an assignment.
+5. **History is retained.** Declines, expired offers, replacements and material fixture changes
    remain auditable.
-5. **Recipient information is preserved.** The note shown with an offer is an immutable snapshot.
-6. **Warnings do not invent facts.** Unknown availability or an unlinked voting identity is shown
+6. **Recipient information is preserved.** The note shown with an offer is an immutable snapshot.
+7. **Warnings do not invent facts.** Unknown availability or an unlinked voting identity is shown
    as unknown or unverifiable, not automatically treated as a conflict or mismatch.
-7. **The model is generic but the first interface is specific.** The storage model can support
+8. **The model is generic but the first interface is specific.** The storage model can support
    future positions while the first screen clearly shows Umpire 1, Umpire 2, Technical Bench 1 and
    Technical Bench 2.
 
@@ -335,6 +338,9 @@ Confirmation must use a separate database transaction, not a sequence of browser
 
 This makes the offerer's confirmation the single event that fills the position. An exceptional
 Super Admin recovery action may be designed later, but it must require a reason and remain audited.
+The database should represent “yes” by the successful creation of the confirmed assignment, not by
+a nullable or assumed confirmation flag. A missing, failed or abandoned confirmation therefore
+remains “no”.
 
 ## Deadlines and reminders
 
