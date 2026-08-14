@@ -4,43 +4,60 @@ export type PlayerExplorerIdentityStatus =
   | "unlinked"
   | "identity_conflict";
 
-export type PlayerExplorerNumericMetric =
+export type PlayerExplorerEntityField =
+  | "season"
+  | "competition"
+  | "association"
+  | "club"
+  | "division"
+  | "team";
+
+export type PlayerExplorerDimensionField =
+  | PlayerExplorerEntityField
+  | "round"
+  | "game_date";
+
+export type PlayerExplorerMeasureField =
   | "games_played"
   | "goals"
   | "green_cards"
   | "yellow_cards"
   | "red_cards";
 
-export type PlayerExplorerMetric = PlayerExplorerNumericMetric | "played_in_round";
-export type PlayerExplorerNumericOperator = "eq" | "gt" | "gte" | "lt" | "lte";
-export type PlayerExplorerOperator = PlayerExplorerNumericOperator | "includes";
+export type PlayerExplorerFilterField = PlayerExplorerDimensionField | PlayerExplorerMeasureField;
+export type PlayerExplorerFilterOperator = "eq" | "gt" | "gte" | "lt" | "lte" | "between";
+export type PlayerExplorerFilterLogic = "and" | "or";
 
-export interface PlayerExplorerCondition {
-  metric: PlayerExplorerMetric;
-  operator: PlayerExplorerOperator;
-  value: number;
+export interface PlayerExplorerFilterCondition {
+  id: string;
+  field: PlayerExplorerFilterField;
+  operator: PlayerExplorerFilterOperator;
+  value: string;
+  toValue: string;
 }
 
-export interface PlayerExplorerQuery {
-  scope: {
-    seasonId: string | null;
-    competitionId: string | null;
-    associationId: string | null;
-    clubId: string | null;
-    divisionId: string | null;
-    teamId: string | null;
-  };
-  window: {
-    roundFrom: number | null;
-    roundTo: number | null;
-    dateFrom: string | null;
-    dateTo: string | null;
-  };
-  conditions: PlayerExplorerCondition[];
-  logic: "and";
+export interface PlayerExplorerFilterGroup {
+  id: string;
+  logic: PlayerExplorerFilterLogic;
+  conditions: PlayerExplorerFilterCondition[];
 }
+
+export interface PlayerExplorerFilterExpression {
+  logic: PlayerExplorerFilterLogic;
+  groups: PlayerExplorerFilterGroup[];
+}
+
+export interface PlayerExplorerFilterOption {
+  value: string;
+  label: string;
+}
+
+export type PlayerExplorerFilterOptions = Partial<
+  Record<PlayerExplorerEntityField, PlayerExplorerFilterOption[]>
+>;
 
 export interface PlayerExplorerRecord {
+  appearanceId: string;
   matchId: string;
   revsportsPlayerId: string;
   sourcePlayerName: string;
@@ -85,48 +102,68 @@ export interface PlayerExplorerProfile {
   isPlaceholder: boolean;
 }
 
-export const PLAYER_EXPLORER_METRIC_LABELS: Record<PlayerExplorerMetric, string> = {
-  played_in_round: "Played in round",
-  games_played: "Games played",
-  goals: "Goals",
-  green_cards: "Green cards",
-  yellow_cards: "Yellow cards",
-  red_cards: "Red cards",
+export const PLAYER_EXPLORER_FIELD_DEFINITIONS: Record<
+  PlayerExplorerFilterField,
+  { label: string; category: "Scope" | "Match" | "Player totals"; valueType: "entity" | "number" | "date" }
+> = {
+  season: { label: "Season", category: "Scope", valueType: "entity" },
+  competition: { label: "Competition", category: "Scope", valueType: "entity" },
+  association: { label: "Association", category: "Scope", valueType: "entity" },
+  club: { label: "Club", category: "Scope", valueType: "entity" },
+  division: { label: "Division / grade", category: "Scope", valueType: "entity" },
+  team: { label: "Team", category: "Scope", valueType: "entity" },
+  round: { label: "Round", category: "Match", valueType: "number" },
+  game_date: { label: "Game date", category: "Match", valueType: "date" },
+  games_played: { label: "Games played", category: "Player totals", valueType: "number" },
+  goals: { label: "Goals", category: "Player totals", valueType: "number" },
+  green_cards: { label: "Green cards", category: "Player totals", valueType: "number" },
+  yellow_cards: { label: "Yellow cards", category: "Player totals", valueType: "number" },
+  red_cards: { label: "Red cards", category: "Player totals", valueType: "number" },
 };
 
-export const PLAYER_EXPLORER_OPERATOR_LABELS: Record<PlayerExplorerOperator, string> = {
-  includes: "includes",
-  eq: "equals",
-  gt: "more than",
-  gte: "at least",
-  lt: "less than",
-  lte: "at most",
-};
+export const PLAYER_EXPLORER_FIELDS = Object.keys(
+  PLAYER_EXPLORER_FIELD_DEFINITIONS,
+) as PlayerExplorerFilterField[];
 
-export const EMPTY_PLAYER_EXPLORER_QUERY: PlayerExplorerQuery = {
-  scope: {
-    seasonId: null,
-    competitionId: null,
-    associationId: null,
-    clubId: null,
-    divisionId: null,
-    teamId: null,
-  },
-  window: {
-    roundFrom: null,
-    roundTo: null,
-    dateFrom: null,
-    dateTo: null,
-  },
-  conditions: [],
+let filterItemId = 0;
+
+export const createPlayerExplorerCondition = (
+  field: PlayerExplorerFilterField = "games_played",
+  operator: PlayerExplorerFilterOperator = "gt",
+  value = "",
+  toValue = "",
+): PlayerExplorerFilterCondition => ({
+  id: `player-explorer-condition-${filterItemId += 1}`,
+  field,
+  operator,
+  value,
+  toValue,
+});
+
+export const createPlayerExplorerGroup = (
+  conditions: PlayerExplorerFilterCondition[] = [],
+  logic: PlayerExplorerFilterLogic = "and",
+): PlayerExplorerFilterGroup => ({
+  id: `player-explorer-group-${filterItemId += 1}`,
+  logic,
+  conditions,
+});
+
+export const createEmptyPlayerExplorerExpression = (): PlayerExplorerFilterExpression => ({
   logic: "and",
-};
+  groups: [createPlayerExplorerGroup()],
+});
 
-export const cloneEmptyPlayerExplorerQuery = (): PlayerExplorerQuery => ({
-  scope: { ...EMPTY_PLAYER_EXPLORER_QUERY.scope },
-  window: { ...EMPTY_PLAYER_EXPLORER_QUERY.window },
-  conditions: [],
+export const createPlayerExplorerExample = (): PlayerExplorerFilterExpression => ({
   logic: "and",
+  groups: [createPlayerExplorerGroup([
+    createPlayerExplorerCondition("round", "between", "1", "10"),
+    createPlayerExplorerCondition("games_played", "gt", "10"),
+    createPlayerExplorerCondition("goals", "gt", "3"),
+    createPlayerExplorerCondition("green_cards", "eq", "0"),
+    createPlayerExplorerCondition("yellow_cards", "eq", "0"),
+    createPlayerExplorerCondition("red_cards", "eq", "0"),
+  ])],
 });
 
 export const resolvePlayerExplorerIdentity = ({
@@ -176,67 +213,163 @@ export const resolvePlayerExplorerIdentity = ({
   };
 };
 
-const matchesOptionalId = (selectedId: string | null, recordId: string | null) =>
-  !selectedId || selectedId === recordId;
+const isMeasureField = (field: PlayerExplorerFilterField): field is PlayerExplorerMeasureField =>
+  PLAYER_EXPLORER_FIELD_DEFINITIONS[field].category === "Player totals";
 
-export const recordMatchesPlayerExplorerQuery = (
+const compareValue = (
+  actual: number | string | null,
+  condition: PlayerExplorerFilterCondition,
+) => {
+  if (actual === null) return false;
+  const definition = PLAYER_EXPLORER_FIELD_DEFINITIONS[condition.field];
+  const expected = definition.valueType === "number" ? Number(condition.value) : condition.value;
+  const upper = definition.valueType === "number" ? Number(condition.toValue) : condition.toValue;
+
+  if (condition.operator === "eq") return actual === expected;
+  if (condition.operator === "gt") return actual > expected;
+  if (condition.operator === "gte") return actual >= expected;
+  if (condition.operator === "lt") return actual < expected;
+  if (condition.operator === "lte") return actual <= expected;
+  return actual >= expected && actual <= upper;
+};
+
+const recordValue = (
   record: PlayerExplorerRecord,
-  query: PlayerExplorerQuery,
-) => {
-  const { scope, window } = query;
-  if (!matchesOptionalId(scope.seasonId, record.seasonId)) return false;
-  if (!matchesOptionalId(scope.competitionId, record.competitionId)) return false;
-  if (!matchesOptionalId(scope.associationId, record.associationId)) return false;
-  if (!matchesOptionalId(scope.clubId, record.clubId)) return false;
-  if (!matchesOptionalId(scope.divisionId, record.divisionId)) return false;
-  if (!matchesOptionalId(scope.teamId, record.teamId)) return false;
-
-  if (window.roundFrom !== null && (record.roundNumber === null || record.roundNumber < window.roundFrom)) {
-    return false;
-  }
-  if (window.roundTo !== null && (record.roundNumber === null || record.roundNumber > window.roundTo)) {
-    return false;
-  }
-  if (window.dateFrom && (!record.gameDate || record.gameDate < window.dateFrom)) return false;
-  if (window.dateTo && (!record.gameDate || record.gameDate > window.dateTo)) return false;
-
-  return true;
-};
-
-const compareNumericValue = (
-  actual: number,
-  operator: PlayerExplorerOperator,
-  expected: number,
-) => {
-  if (operator === "eq") return actual === expected;
-  if (operator === "gt") return actual > expected;
-  if (operator === "gte") return actual >= expected;
-  if (operator === "lt") return actual < expected;
-  if (operator === "lte") return actual <= expected;
-  return false;
-};
-
-const resultMatchesCondition = (
-  result: PlayerExplorerResult,
-  condition: PlayerExplorerCondition,
-) => {
-  if (condition.metric === "played_in_round") {
-    return condition.operator === "includes" && result.roundsPlayed.includes(condition.value);
-  }
-
-  const metricValue: Record<PlayerExplorerNumericMetric, number> = {
-    games_played: result.gamesPlayed,
-    goals: result.goals,
-    green_cards: result.greenCards,
-    yellow_cards: result.yellowCards,
-    red_cards: result.redCards,
+  field: PlayerExplorerDimensionField,
+): number | string | null => {
+  const values: Record<PlayerExplorerDimensionField, number | string | null> = {
+    season: record.seasonId,
+    competition: record.competitionId,
+    association: record.associationId,
+    club: record.clubId,
+    division: record.divisionId,
+    team: record.teamId,
+    round: record.roundNumber,
+    game_date: record.gameDate,
   };
-  return compareNumericValue(metricValue[condition.metric], condition.operator, condition.value);
+  return values[field];
 };
 
-export const buildPlayerExplorerResults = (
+const aggregateMeasure = (
   records: PlayerExplorerRecord[],
-  query: PlayerExplorerQuery,
+  field: PlayerExplorerMeasureField,
+) => {
+  if (field === "games_played") return new Set(records.map((record) => record.matchId)).size;
+  return records.reduce((total, record) => {
+    if (field === "goals") return total + record.goals;
+    if (field === "green_cards") return total + record.greenCards;
+    if (field === "yellow_cards") return total + record.yellowCards;
+    return total + record.redCards;
+  }, 0);
+};
+
+const uniqueRecords = (records: PlayerExplorerRecord[]) => [
+  ...new Map(records.map((record) => [record.appearanceId, record])).values(),
+];
+
+const evaluateGroup = (
+  playerRecords: PlayerExplorerRecord[],
+  group: PlayerExplorerFilterGroup,
+) => {
+  if (group.conditions.length === 0) return playerRecords;
+
+  if (group.logic === "and") {
+    const dimensionConditions = group.conditions.filter((condition) => !isMeasureField(condition.field));
+    const measureConditions = group.conditions.filter((condition) => isMeasureField(condition.field));
+    const scopedRecords = playerRecords.filter((record) => dimensionConditions.every((condition) =>
+      compareValue(recordValue(record, condition.field as PlayerExplorerDimensionField), condition),
+    ));
+    if (scopedRecords.length === 0) return [];
+    const measuresPass = measureConditions.every((condition) =>
+      compareValue(aggregateMeasure(scopedRecords, condition.field as PlayerExplorerMeasureField), condition),
+    );
+    return measuresPass ? scopedRecords : [];
+  }
+
+  const matches: PlayerExplorerRecord[] = [];
+  for (const condition of group.conditions) {
+    if (isMeasureField(condition.field)) {
+      if (compareValue(aggregateMeasure(playerRecords, condition.field), condition)) {
+        matches.push(...playerRecords);
+      }
+    } else {
+      matches.push(...playerRecords.filter((record) =>
+        compareValue(recordValue(record, condition.field), condition),
+      ));
+    }
+  }
+  return uniqueRecords(matches);
+};
+
+export const validatePlayerExplorerExpression = (
+  expression: PlayerExplorerFilterExpression,
+) => {
+  const totalConditions = expression.groups.reduce(
+    (total, group) => total + group.conditions.length,
+    0,
+  );
+  if (totalConditions > 0 && expression.groups.some((group) => group.conditions.length === 0)) {
+    return "Remove the empty group or add a condition to it.";
+  }
+
+  for (const group of expression.groups) {
+    for (const condition of group.conditions) {
+      const definition = PLAYER_EXPLORER_FIELD_DEFINITIONS[condition.field];
+      if (!condition.value.trim()) return `Enter a value for ${definition.label}.`;
+      if (condition.operator === "between" && !condition.toValue.trim()) {
+        return `Enter both From and To values for ${definition.label}.`;
+      }
+      if (definition.valueType === "entity" && condition.operator !== "eq") {
+        return `${definition.label} only supports "is" in this version.`;
+      }
+      if (definition.valueType === "number") {
+        const values = condition.operator === "between"
+          ? [condition.value, condition.toValue]
+          : [condition.value];
+        if (values.some((value) => !Number.isInteger(Number(value)) || Number(value) < 0)) {
+          return `${definition.label} must use whole numbers of zero or more.`;
+        }
+      }
+      if (
+        condition.operator === "between"
+        && (definition.valueType === "number"
+          ? Number(condition.value) > Number(condition.toValue)
+          : condition.value > condition.toValue)
+      ) {
+        return `${definition.label} From value cannot be after its To value.`;
+      }
+    }
+  }
+  return null;
+};
+
+export const filterPlayerExplorerRecords = (
+  records: PlayerExplorerRecord[],
+  expression: PlayerExplorerFilterExpression,
+) => {
+  if (expression.groups.length === 0) return records;
+  const byPlayer = new Map<string, PlayerExplorerRecord[]>();
+  for (const record of records) {
+    const playerRecords = byPlayer.get(record.revsportsPlayerId) || [];
+    playerRecords.push(record);
+    byPlayer.set(record.revsportsPlayerId, playerRecords);
+  }
+
+  const filtered: PlayerExplorerRecord[] = [];
+  for (const playerRecords of byPlayer.values()) {
+    const groupMatches = expression.groups.map((group) => evaluateGroup(playerRecords, group));
+    if (expression.logic === "and") {
+      if (groupMatches.some((matches) => matches.length === 0)) continue;
+      filtered.push(...uniqueRecords(groupMatches.flat()));
+    } else {
+      filtered.push(...uniqueRecords(groupMatches.flat()));
+    }
+  }
+  return uniqueRecords(filtered);
+};
+
+export const aggregatePlayerExplorerRecords = (
+  records: PlayerExplorerRecord[],
 ): PlayerExplorerResult[] => {
   const grouped = new Map<
     string,
@@ -244,8 +377,6 @@ export const buildPlayerExplorerResults = (
   >();
 
   for (const record of records) {
-    if (!recordMatchesPlayerExplorerQuery(record, query)) continue;
-
     const existing = grouped.get(record.revsportsPlayerId);
     const result = existing || {
       revsportsPlayerId: record.revsportsPlayerId,
@@ -276,7 +407,6 @@ export const buildPlayerExplorerResults = (
     if (record.gameDate && (!result.latestGameDate || record.gameDate > result.latestGameDate)) {
       result.latestGameDate = record.gameDate;
     }
-
     grouped.set(record.revsportsPlayerId, result);
   }
 
@@ -287,7 +417,6 @@ export const buildPlayerExplorerResults = (
       teamNames: [...teamNameSet].sort((left, right) => left.localeCompare(right)),
       roundsPlayed: [...roundSet].sort((left, right) => left - right),
     }))
-    .filter((result) => query.conditions.every((condition) => resultMatchesCondition(result, condition)))
     .sort((left, right) =>
       right.gamesPlayed - left.gamesPlayed || left.displayName.localeCompare(right.displayName),
     );

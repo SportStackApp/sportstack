@@ -35,16 +35,21 @@ Update this file after every meaningful Codex task, pull request, schema change,
   see its menu item.
 - It reads the existing RevSports V2 source tables through the signed-in browser Supabase client.
   It loads clean SportStack scope and match metadata first, requests attended/non-removed
-  appearances only for the selected matches in bounded chunks, then aggregates by
+  appearances in bounded chunks on the first search, then caches and aggregates them by
   `revsports_player_id` in the application. It does not run dynamic SQL or accept arbitrary SQL.
-- Filters cover season, competition, Association -> Club -> Division -> Team, round/date windows,
-  played-in-round, games, goals and each card colour. Conditions are AND-only. Games are distinct
-  matches; appearance statistics are summed. Results show linked, placeholder, unlinked and
-  identity-conflict states without silently choosing between conflicting links.
+- The filter area now follows a Looker-style field/operator/value pattern. Season, competition,
+  Association, Club, Division/grade, Team, Round and Game date are filter fields rather than fixed
+  controls. Numeric and date fields support From/To `between` values. Filters can be combined as
+  All/Any conditions inside clickable groups and All/Any groups across the search. In an All
+  conditions group, player totals are calculated only from appearance rows matching that group's
+  scope filters. Games are distinct matches; appearance statistics are summed.
+- Results show linked, placeholder, unlinked and identity-conflict states without silently choosing
+  between conflicting links.
 - The 14 August live Dev recheck found 800 V2 matches, 12,395 appearance rows and 7,809 usable
   attended/non-removed rows. Source and external-identity SELECT policies still require
   authenticated `is_super_admin()`. Current Wimmera appearance coverage remains incomplete.
-- Five focused aggregation/identity tests, focused lint, TypeScript and the production build pass.
+- Eight focused aggregation/filter/identity tests, focused lint, TypeScript and the production
+  build pass. Full repository lint remains baseline debt at 360 errors and 78 warnings.
   Full repository lint remains baseline debt at 360 errors and 78 warnings. No database migration,
   RLS change, Edge Function or Production change is included.
 

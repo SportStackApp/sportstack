@@ -13,20 +13,24 @@ Future agents should start by reading these files in order:
 ## 14 August 2026 Player Explorer Stage 2
 
 - A read-only Super Admin Player Explorer is implemented at `/admin/player-explorer` under the
-  Data Quality menu. It combines season, competition, the existing Association -> Club -> Division
-  -> Team cascade, round/date windows and AND-only games/goals/card/played-round conditions.
+  Data Quality menu. Its Looker-style filter rows treat season, competition, Association, Club,
+  Division/grade, Team, Round and Game date as fields alongside games, goals and card totals.
+  Numeric/date filters support From/To `between` values, and filters can be combined through
+  All/Any conditions inside All/Any groups.
 - The browser uses the existing publishable Supabase client and live RLS. It fetches clean scope and
-  match metadata, then attended/non-removed V2 appearances for matching IDs in 50-match chunks.
-  Aggregation is application-side by `revsports_player_id`; distinct matches count as games.
+  match metadata, then attended/non-removed V2 appearances in 50-match chunks on the first search
+  and caches them for later filter changes. Aggregation is application-side by
+  `revsports_player_id`; distinct matches count as games. In an All conditions group, totals are
+  calculated from rows matching that group's scope fields.
 - Identity display checks both `profiles.revsports_player_id` and matched
   `external_entities`/`external_entity_links`. Conflicts are labelled and left unresolved. The page
   does not reuse the legacy `revsports_players` history helper.
 - Live Dev still has 800 V2 matches, 12,395 appearance rows and 7,809 usable rows. The relevant
   source/external SELECT policies remain Super Admin-only. No migration, RLS change, Edge Function,
   Production change or feature-data write was made.
-- Focused lint, five Vitest checks, TypeScript and build pass. Full lint remains at its known
-  360-error/78-warning baseline. The remaining checkpoint is a signed-in Dev owner smoke test of
-  the example search; current Wimmera appearance coverage is still incomplete.
+- Eight focused Vitest checks, focused lint, TypeScript and the production build pass for the
+  grouped-filter refinement. Full lint remains at its known 360-error/78-warning baseline. The
+  signed-in Dev owner smoke test remains; current Wimmera appearance coverage is still incomplete.
 
 ## 14 August 2026 complete post-referral discipline workflow
 

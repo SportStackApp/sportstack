@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildPlayerExplorerResults,
-  cloneEmptyPlayerExplorerQuery,
+  aggregatePlayerExplorerRecords,
+  createEmptyPlayerExplorerExpression,
+  createPlayerExplorerCondition,
+  createPlayerExplorerGroup,
+  filterPlayerExplorerRecords,
   resolvePlayerExplorerIdentity,
+  validatePlayerExplorerExpression,
+  type PlayerExplorerFilterExpression,
   type PlayerExplorerProfile,
   type PlayerExplorerRecord,
 } from "./playerExplorer";
 
 const baseRecord: PlayerExplorerRecord = {
+  appearanceId: "appearance-1",
   matchId: "match-1",
   revsportsPlayerId: "rev-player-1",
   sourcePlayerName: "Alex Player",
@@ -29,16 +35,20 @@ const baseRecord: PlayerExplorerRecord = {
   redCards: 0,
 };
 
+const expressionWith = (
+  groups: PlayerExplorerFilterExpression["groups"],
+  logic: PlayerExplorerFilterExpression["logic"] = "and",
+): PlayerExplorerFilterExpression => ({ groups, logic });
+
 describe("Player Explorer aggregation", () => {
   it("counts distinct matches while summing appearance statistics", () => {
-    const query = cloneEmptyPlayerExplorerQuery();
     const records = [
       baseRecord,
-      { ...baseRecord, teamId: "team-2", teamName: "Fill-in team", goals: 1 },
-      { ...baseRecord, matchId: "match-2", roundNumber: 9, goals: 2 },
+      { ...baseRecord, appearanceId: "appearance-2", teamId: "team-2", teamName: "Fill-in team", goals: 1 },
+      { ...baseRecord, appearanceId: "appearance-3", matchId: "match-2", roundNumber: 9, goals: 2 },
     ];
 
-    expect(buildPlayerExplorerResults(records, query)[0]).toMatchObject({
+    expect(aggregatePlayerExplorerRecords(records)[0]).toMatchObject({
       gamesPlayed: 2,
       goals: 5,
       teamNames: ["Fill-in team", "Pumas"],
@@ -46,39 +56,100 @@ describe("Player Explorer aggregation", () => {
     });
   });
 
-  it("applies the scope, window and all conditions together", () => {
-    const query = cloneEmptyPlayerExplorerQuery();
-    query.scope.teamId = "team-1";
-    query.window.roundFrom = 1;
-    query.window.roundTo = 10;
-    query.conditions = [
-      { metric: "played_in_round", operator: "includes", value: 8 },
-      { metric: "games_played", operator: "gte", value: 2 },
-      { metric: "goals", operator: "gt", value: 3 },
-      { metric: "green_cards", operator: "eq", value: 0 },
-      { metric: "yellow_cards", operator: "eq", value: 0 },
-      { metric: "red_cards", operator: "eq", value: 0 },
+  it("calculates totals inside the dimensions of an AND group", () => {
+    const records = [
+      { ...baseRecord, appearanceId: "appearance-1", roundNumber: 1, goals: 2 },
+      { ...baseRecord, appearanceId: "appearance-2", matchId: "match-2", roundNumber: 8, goals: 2 },
+      { ...baseRecord, appearanceId: "appearance-3", matchId: "match-3", roundNumber: 11, goals: 10 },
     ];
+    const expression = expressionWith([createPlayerExplorerGroup([
+      createPlayerExplorerCondition("round", "between", "1", "10"),
+      createPlayerExplorerCondition("goals", "gt", "3"),
+    ])]);
 
+    const filtered = filterPlayerExplorerRecords(records, expression);
+    expect(filtered.map((record) => record.roundNumber)).toEqual([1, 8]);
+    expect(aggregatePlayerExplorerRecords(filtered)[0]).toMatchObject({ gamesPlayed: 2, goals: 4 });
+  });
+
+  it("supports OR conditions inside a group", () => {
     const records = [
       baseRecord,
-      { ...baseRecord, matchId: "match-2", roundNumber: 9, goals: 2 },
-      { ...baseRecord, matchId: "match-3", roundNumber: 11, goals: 10 },
-      { ...baseRecord, matchId: "match-4", teamId: "team-2", goals: 10 },
+      { ...baseRecord, appearanceId: "appearance-2", matchId: "match-2", roundNumber: 9 },
+      {
+        ...baseRecord,
+        appearanceId: "appearance-3",
+        matchId: "match-3",
+        revsportsPlayerId: "rev-player-2",
+        roundNumber: 9,
+        redCards: 1,
+      },
+    ];
+    const expression = expressionWith([createPlayerExplorerGroup([
+      createPlayerExplorerCondition("round", "eq", "8"),
+      createPlayerExplorerCondition("red_cards", "gt", "0"),
+    ], "or")]);
+
+    expect(filterPlayerExplorerRecords(records, expression).map((record) => record.appearanceId)).toEqual([
+      "appearance-1",
+      "appearance-3",
+    ]);
+  });
+
+  it("requires ALL groups and accepts ANY matching group", () => {
+    const records = [
+      baseRecord,
+      {
+        ...baseRecord,
+        appearanceId: "appearance-2",
+        matchId: "match-2",
+        revsportsPlayerId: "rev-player-2",
+        roundNumber: 9,
+      },
+      {
+        ...baseRecord,
+        appearanceId: "appearance-3",
+        matchId: "match-3",
+        revsportsPlayerId: "rev-player-3",
+        teamId: "team-2",
+        roundNumber: 8,
+      },
+    ];
+    const groups = [
+      createPlayerExplorerGroup([createPlayerExplorerCondition("team", "eq", "team-1")]),
+      createPlayerExplorerGroup([createPlayerExplorerCondition("round", "eq", "8")]),
     ];
 
-    expect(buildPlayerExplorerResults(records, query)).toHaveLength(1);
-    expect(buildPlayerExplorerResults(records, query)[0]).toMatchObject({ gamesPlayed: 2, goals: 4 });
+    expect(filterPlayerExplorerRecords(records, expressionWith(groups, "and")).map((record) => record.appearanceId)).toEqual([
+      "appearance-1",
+    ]);
+    expect(filterPlayerExplorerRecords(records, expressionWith(groups, "or")).map((record) => record.appearanceId)).toEqual([
+      "appearance-1",
+      "appearance-2",
+      "appearance-3",
+    ]);
   });
 
   it("does not combine players who share the same name", () => {
-    const query = cloneEmptyPlayerExplorerQuery();
-    const results = buildPlayerExplorerResults(
-      [baseRecord, { ...baseRecord, revsportsPlayerId: "rev-player-2", profileId: "profile-2" }],
-      query,
-    );
+    const expression = createEmptyPlayerExplorerExpression();
+    const records = [
+      baseRecord,
+      {
+        ...baseRecord,
+        appearanceId: "appearance-2",
+        revsportsPlayerId: "rev-player-2",
+        profileId: "profile-2",
+      },
+    ];
 
-    expect(results).toHaveLength(2);
+    expect(aggregatePlayerExplorerRecords(filterPlayerExplorerRecords(records, expression))).toHaveLength(2);
+  });
+
+  it("validates both values for a between filter", () => {
+    const expression = expressionWith([createPlayerExplorerGroup([
+      createPlayerExplorerCondition("round", "between", "1", ""),
+    ])]);
+    expect(validatePlayerExplorerExpression(expression)).toContain("both From and To");
   });
 });
 
