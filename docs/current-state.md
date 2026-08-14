@@ -28,6 +28,21 @@ Update this file after every meaningful Codex task, pull request, schema change,
 7. Latest pull requests and commits
 8. Live Supabase checks
 
+## Main staging release — 14 August 2026
+
+- Aaron explicitly approved the full Dev-to-Main promotion, including the Main-default-branch
+  activation of the scheduled Production scraper workflow's V2 fixture importer.
+- Main was fast-forwarded to exact application commit
+  `c50eb87d6a08e84d9ccfee12978dbb6a8a475de6`. Vercel deployment
+  `dpl_3C9JfKKRK6BUDMc8KQo4oicHYu4s` is `READY` for Main.
+- The Main address returned HTTP 200. Its signed-out discipline route redirected to login with the
+  requested return path and no console errors. The deployed bundle contains the post-referral
+  workflow and Rule 7.26 guidance, references only the Dev Supabase project and contains no
+  Production Supabase project reference.
+- Focused development-plan lint, TypeScript, build, 52 JavaScript tests and 149 Python tests passed
+  on the promoted tip. `origin/dev` and `origin/main` matched after the push. Production `prod` was
+  not promoted.
+
 ## Player Explorer Stage 2
 
 - The read-only Super Admin Player Explorer is implemented at `/admin/player-explorer` and is

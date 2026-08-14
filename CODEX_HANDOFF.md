@@ -10,6 +10,21 @@ Future agents should start by reading these files in order:
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
+## 14 August 2026 Dev to Main staging promotion
+
+- Aaron explicitly approved promotion of the full Dev backlog, including activation from Main of
+  the V2 importer changes in the scheduled Production scraper workflow. Main was fast-forwarded
+  without a merge commit or force-push.
+- The exact promoted application commit was `c50eb87d6a08e84d9ccfee12978dbb6a8a475de6`.
+  Vercel deployment `dpl_3C9JfKKRK6BUDMc8KQo4oicHYu4s` reached `READY` for Main.
+- `https://main.sportstackapp.com.au` returned HTTP 200. A signed-out discipline case request
+  redirected to login with its return path preserved and no browser console errors. The deployed
+  bundle contains the complete post-referral workflow and Rule 7.26 guidance, references SportStack
+  Dev Supabase `icqegnpjbizccjebjfhb`, and does not reference Production Supabase.
+- Release checks passed on the actual Dev tip: focused development-plan lint, TypeScript, build,
+  52 JavaScript tests and 149 Python regression tests. The unrelated untracked committee migration
+  remained untouched. The `prod` branch was not changed.
+
 ## 14 August 2026 Player Explorer Stage 2
 
 - A read-only Super Admin Player Explorer is implemented at `/admin/player-explorer` under the
