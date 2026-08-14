@@ -50,6 +50,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
   authenticated `is_super_admin()`. Current Wimmera appearance coverage remains incomplete.
 - Eight focused aggregation/filter/identity tests, focused lint, TypeScript and the production
   build pass. Full repository lint remains baseline debt at 360 errors and 78 warnings.
+- Dev commit `0063b2b` deployed successfully and the Dev Quality workflow passed. The connected
+  browser test account is Association Admin-only, so it confirmed the route gate but could not
+  complete the remaining signed-in Super Admin interaction test.
   Full repository lint remains baseline debt at 360 errors and 78 warnings. No database migration,
   RLS change, Edge Function or Production change is included.
 

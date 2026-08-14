@@ -31,6 +31,9 @@ Future agents should start by reading these files in order:
 - Eight focused Vitest checks, focused lint, TypeScript and the production build pass for the
   grouped-filter refinement. Full lint remains at its known 360-error/78-warning baseline. The
   signed-in Dev owner smoke test remains; current Wimmera appearance coverage is still incomplete.
+- Dev commit `0063b2b` deployed successfully and Dev Quality passed. Browser verification saw the
+  expected Dev version and no console errors, but the connected Codex test account is Association
+  Admin-only and correctly redirected away from the Super Admin route.
 
 ## 14 August 2026 complete post-referral discipline workflow
 
