@@ -28,6 +28,26 @@ Update this file after every meaningful Codex task, pull request, schema change,
 7. Latest pull requests and commits
 8. Live Supabase checks
 
+## Player Explorer Stage 2
+
+- The read-only Super Admin Player Explorer is implemented at `/admin/player-explorer` and is
+  listed under **Admin > Data Quality**. Association, Club and lower modes cannot open the route or
+  see its menu item.
+- It reads the existing RevSports V2 source tables through the signed-in browser Supabase client.
+  It loads clean SportStack scope and match metadata first, requests attended/non-removed
+  appearances only for the selected matches in bounded chunks, then aggregates by
+  `revsports_player_id` in the application. It does not run dynamic SQL or accept arbitrary SQL.
+- Filters cover season, competition, Association -> Club -> Division -> Team, round/date windows,
+  played-in-round, games, goals and each card colour. Conditions are AND-only. Games are distinct
+  matches; appearance statistics are summed. Results show linked, placeholder, unlinked and
+  identity-conflict states without silently choosing between conflicting links.
+- The 14 August live Dev recheck found 800 V2 matches, 12,395 appearance rows and 7,809 usable
+  attended/non-removed rows. Source and external-identity SELECT policies still require
+  authenticated `is_super_admin()`. Current Wimmera appearance coverage remains incomplete.
+- Five focused aggregation/identity tests, focused lint, TypeScript and the production build pass.
+  Full repository lint remains baseline debt at 360 errors and 78 warnings. No database migration,
+  RLS change, Edge Function or Production change is included.
+
 ## Current priority
 
 - **Incident & Discipline Phase 1 is implemented on Dev and awaiting owner acceptance:** the hidden

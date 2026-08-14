@@ -44,6 +44,7 @@ import {
   ShieldCheck,
   Radar,
   ReceiptText,
+  UserSearch,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -120,6 +121,7 @@ const ADMIN_DROPDOWN_SECTIONS: NavSection[] = [
       { path: "/admin/bulk-import", label: "Bulk Import", icon: GitMerge },
       { path: "/admin/fixture-import", label: "Fixture Import", icon: Calendar },
       { path: "/admin/revsports-entities", label: "RevSports Review", icon: GitMerge },
+      { path: "/admin/player-explorer", label: "Player Explorer", icon: UserSearch },
       { path: "/admin/revsports-mappings", label: "Legacy Direct Mappings", icon: GitMerge },
       { path: "/admin/revsports-unmatched", label: "Legacy Unmatched Queue", icon: AlertTriangle },
     ],

@@ -59,6 +59,7 @@ import RevSportsMappings from "./pages/admin/RevSportsMappings";
 import RevSportsUnmatched from "./pages/admin/RevSportsUnmatched";
 import ErrorLogs from "./pages/admin/ErrorLogs";
 import RevSportsEntityReview from "./pages/admin/RevSportsEntityReview";
+import PlayerExplorer from "./pages/admin/PlayerExplorer";
 import MvpVotingAdmin from "./pages/admin/MvpVotingAdmin";
 import Analytics from "./pages/admin/Analytics";
 import FeedbackResponses from "./pages/admin/FeedbackResponses";
@@ -215,6 +216,7 @@ const App = () => (
                       <Route path="/admin/error-logs" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><ErrorLogs /></ModeRouteGate>} />
                       <Route path="/admin/feedback" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><FeedbackResponses /></ModeRouteGate>} />
                       <Route path="/admin/revsports-entities" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><RevSportsEntityReview /></ModeRouteGate>} />
+                      <Route path="/admin/player-explorer" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><PlayerExplorer /></ModeRouteGate>} />
                       <Route path="/admin/fixtures" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><FixturesManagement /></ModeRouteGate>} />
                       <Route path="/admin/fixture-import" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><FixtureImport /></ModeRouteGate>} />
                       <Route path="/admin/venues" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><VenuesManagement /></ModeRouteGate>} />

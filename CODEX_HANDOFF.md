@@ -10,6 +10,24 @@ Future agents should start by reading these files in order:
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
+## 14 August 2026 Player Explorer Stage 2
+
+- A read-only Super Admin Player Explorer is implemented at `/admin/player-explorer` under the
+  Data Quality menu. It combines season, competition, the existing Association -> Club -> Division
+  -> Team cascade, round/date windows and AND-only games/goals/card/played-round conditions.
+- The browser uses the existing publishable Supabase client and live RLS. It fetches clean scope and
+  match metadata, then attended/non-removed V2 appearances for matching IDs in 50-match chunks.
+  Aggregation is application-side by `revsports_player_id`; distinct matches count as games.
+- Identity display checks both `profiles.revsports_player_id` and matched
+  `external_entities`/`external_entity_links`. Conflicts are labelled and left unresolved. The page
+  does not reuse the legacy `revsports_players` history helper.
+- Live Dev still has 800 V2 matches, 12,395 appearance rows and 7,809 usable rows. The relevant
+  source/external SELECT policies remain Super Admin-only. No migration, RLS change, Edge Function,
+  Production change or feature-data write was made.
+- Focused lint, five Vitest checks, TypeScript and build pass. Full lint remains at its known
+  360-error/78-warning baseline. The remaining checkpoint is a signed-in Dev owner smoke test of
+  the example search; current Wimmera appearance coverage is still incomplete.
+
 ## 14 August 2026 complete post-referral discipline workflow
 
 - The Dev Outcome tab now covers the remaining standard flow: Notice Pack, Hearing Record,

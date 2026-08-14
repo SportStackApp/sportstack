@@ -1,6 +1,6 @@
 # SportStack Navigation Audit
 
-Last reviewed: 1 August 2026
+Last reviewed: 14 August 2026
 
 ## Navigation structure
 
@@ -24,7 +24,8 @@ Last reviewed: 1 August 2026
 - People and access: `/admin/users`, `/admin/requests`, `/admin/roles-permissions` according to
   scope.
 - Data quality: `/admin/bulk-import`, `/admin/fixture-import`, `/admin/revsports-entities`,
-  `/admin/revsports-mappings`, `/admin/revsports-unmatched` for Super Admin.
+  `/admin/player-explorer`, `/admin/revsports-mappings`, `/admin/revsports-unmatched` for Super
+  Admin. Player Explorer is read-only and uses the RevSports V2 source model.
 - Voting: `/admin/mvp-voting`, `/admin/umpire-voting`, `/admin/analytics` according to scope.
 - Modules and support: `/admin/safety-risk`, `/admin/module-preview`, `/admin/feedback`,
   `/admin/error-logs` according to scope.

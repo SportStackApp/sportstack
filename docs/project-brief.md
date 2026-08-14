@@ -174,6 +174,7 @@ Admin:
 - `/admin/revsports-mappings`
 - `/admin/revsports-unmatched`
 - `/admin/revsports-entities`
+- `/admin/player-explorer` (read-only Super Admin RevSports V2 player filtering)
 - `/admin/fixtures`
 - `/admin/fixture-import`
 - `/admin/venues`
