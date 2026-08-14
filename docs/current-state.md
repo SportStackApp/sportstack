@@ -3562,10 +3562,11 @@ Risk level:
 What changed:
 
 - Added a docs-only technical specification for scoped fixture and volunteer coordination.
-- Separated required positions, multi-recipient offers and accepted assignments so one open position
-  can be offered safely to several people.
-- Defined required offer deadlines, materialised reminders, recipient-facing offer notes and an
-  atomic first-acceptance workflow for owner review.
+- Separated required positions, multi-recipient offer responses and confirmed assignments so one
+  open position can be offered safely to several people.
+- Defined required offer deadlines, materialised reminders and recipient-facing offer notes.
+- Confirmed that an Umpire's acceptance records willingness only. The original offerer must select
+  and confirm one accepted Umpire before SportStack creates the official assignment.
 - Defined a non-blocking Umpire Match Voting roster check that distinguishes confirmed mismatch,
   no roster and unverifiable identity instead of treating every uncertain identity as wrongdoing.
 - Rechecked the live Dev schema read-only. The current fixture, notification, availability,
@@ -3587,9 +3588,8 @@ Checks run:
 
 What Aaron should review next:
 
-1. Confirm whether the first valid acceptance wins a position or the coordinator chooses later.
-2. Choose the default offer deadline and reminder timings.
-3. Confirm who reviews Umpire Match Voting roster mismatch flags.
+1. Choose the default offer deadline and reminder timings.
+2. Confirm who reviews Umpire Match Voting roster mismatch flags.
 
 Risk level:
 
@@ -3598,7 +3598,7 @@ Risk level:
 
 Unknowns still needing confirmation:
 
-- The nine decisions listed in `docs/coordination-module-discovery.md` remain open and must be
+- The eight decisions listed in `docs/coordination-module-discovery.md` remain open and must be
   resolved before an implementation migration is designed.
 
 ## How to update this file

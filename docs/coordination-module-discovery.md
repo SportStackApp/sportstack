@@ -25,6 +25,9 @@ second fixture system or a full events system.
 - A coordinator requires both a coordination responsibility and an organisation scope.
 - Offers must support Accept and Decline responses.
 - One position can be offered to several eligible people at the same time.
+- An Umpire accepting an offer records their willingness; it does not fill the position.
+- The person who sent the offer must explicitly confirm one accepted Umpire before the assignment
+  becomes official.
 - Every offer must have a response deadline.
 - Pending recipients must receive reminders before the deadline.
 - An offer can contain a recipient-facing note, including important difficulty or payment information.
@@ -64,8 +67,8 @@ The live schema must be checked again immediately before an implementation migra
    position is successfully filled.
 2. **Organisation scope is enforced in the database.** Hiding controls in the interface is not an
    access-control boundary.
-3. **Acceptance is atomic.** If several people are offered one position, only one can win it even
-   when two people accept at nearly the same time.
+3. **Confirmation fills the position.** Several people may accept the same offer. The original
+   offerer chooses and confirms one accepted person through a secure database transaction.
 4. **History is retained.** Declines, expired offers, replacements and material fixture changes
    remain auditable.
 5. **Recipient information is preserved.** The note shown with an offer is an immutable snapshot.
@@ -85,7 +88,8 @@ Keeping separate states avoids one ambiguous status field trying to describe sev
 |---|---|
 | `OPEN` | The position needs someone and has no active offer. |
 | `OFFERING` | One or more people have a pending offer. |
-| `FILLED` | An accepted assignment currently fills the position. |
+| `AWAITING_CONFIRMATION` | At least one person accepted, but the offerer has not confirmed anyone. |
+| `FILLED` | A confirmed assignment currently fills the position. |
 | `CANCELLED` | The position is no longer required. |
 | `COMPLETED` | The duty occurred and the final assignment is retained. |
 
@@ -95,17 +99,18 @@ Keeping separate states avoids one ambiguous status field trying to describe sev
 |---|---|
 | `DRAFT` | Prepared but not visible to the recipient. |
 | `PENDING` | Sent and awaiting a response before the deadline. |
-| `ACCEPTED` | This recipient accepted and won the position. |
+| `ACCEPTED_AWAITING_CONFIRMATION` | The recipient is willing, but is not yet rostered. |
+| `CONFIRMED` | The original offerer selected this accepted recipient. |
 | `DECLINED` | The recipient declined, optionally with a reason. |
 | `EXPIRED` | The response deadline passed without acceptance. |
 | `WITHDRAWN` | The coordinator withdrew the offer before it was filled. |
-| `FILLED_BY_ANOTHER` | Another recipient accepted the same position first. |
+| `NOT_SELECTED` | The original offerer confirmed another accepted recipient. |
 
 ### Assignment state
 
 | State | Meaning |
 |---|---|
-| `ACCEPTED` | The person has accepted the current fixture/activity details. |
+| `CONFIRMED` | The original offerer confirmed the person for the current duty details. |
 | `RECONFIRMATION_REQUIRED` | A material fixture/activity change needs a new response. |
 | `CANCELLED` | The duty was cancelled without a replacement. |
 | `REPLACED` | A different person now fills the position. |
@@ -178,13 +183,13 @@ template version. Database constraints should prevent a position from linking to
 An offer batch represents one coordinator action for one open position. Store:
 
 - position;
-- coordinator;
+- original offerer, immutable after sending;
 - sent time;
 - required response deadline;
 - immutable recipient-facing note;
 - optional internal coordinator note stored separately;
 - status;
-- selected recipient offer, when filled; and
+- confirmed recipient offer, when filled; and
 - created/updated timestamps.
 
 The recipient-facing note must be visible before Accept or Decline. Examples include:
@@ -229,18 +234,20 @@ This supports several reminders, reliable retries and evidence of what was sent.
 should come from an organisation setting or coordinator-selected schedule. The exact default timing
 remains an owner decision.
 
-All future reminders are cancelled when the recipient responds, the offer is withdrawn, another
-recipient fills the position, the position is cancelled or the deadline passes.
+All future reminders are cancelled when the recipient responds, the offer is withdrawn, the
+offerer confirms someone, the position is cancelled or the deadline passes.
 
 ### Assignments
 
-An assignment is created when a person successfully accepts an offer. Store:
+An assignment is created only when the original offerer confirms a person whose offer response is
+`ACCEPTED_AWAITING_CONFIRMATION`. Store:
 
 - position;
 - assigned person;
-- accepted offer;
-- assigned by/coordinator;
-- accepted time;
+- confirmed offer response;
+- original offerer;
+- recipient acceptance time;
+- offerer confirmation time;
 - state;
 - effective start and end time snapshot;
 - replacement relationship; and
@@ -255,10 +262,11 @@ Keep an append-only event trail for important changes such as:
 
 - offer sent;
 - reminder sent;
-- accepted or declined;
+- accepted and awaiting confirmation, or declined;
+- offerer confirmed a recipient;
+- accepted recipient not selected;
 - deadline expired;
 - offer withdrawn;
-- position filled by another recipient;
 - fixture changed;
 - reconfirmation requested;
 - assignment cancelled or replaced; and
@@ -291,32 +299,42 @@ module.
 4. SportStack validates scope, capability, fixture timing and duplicate recipients.
 5. Sending creates one offer batch, recipient records, reminder schedule and in-app notifications.
 6. Each recipient sees the same position, deadline and recipient-facing note with Accept and Decline.
-7. The first valid acceptance fills the position.
-8. In the same database transaction, SportStack creates the assignment, marks that recipient
-   `ACCEPTED`, marks the other pending recipients `FILLED_BY_ANOTHER`, cancels their reminders and
-   creates their outcome notifications.
-9. If everyone declines or expires, the position returns to `OPEN` and the coordinator is notified.
+7. A recipient accepts before the deadline. Their response becomes
+   `ACCEPTED_AWAITING_CONFIRMATION`, their reminders stop and the original offerer is notified.
+8. Other recipients may still accept or decline while the offer remains open.
+9. The original offerer reviews the accepted recipients and explicitly confirms one.
+10. In the confirmation database transaction, SportStack creates the assignment, marks the selected
+    response `CONFIRMED`, marks the other active responses `NOT_SELECTED`, cancels remaining
+    reminders and creates outcome notifications.
+11. If everyone declines or expires without an acceptance, the position returns to `OPEN` and the
+    offerer is notified.
+12. If one or more people accept but nobody is confirmed, the position remains
+    `AWAITING_CONFIRMATION` and appears as urgent work for the original offerer.
 
-“First valid acceptance wins” is the recommended version 1 rule because it gives recipients an
-immediate, clear result. It remains an owner decision before build. If the preferred rule is instead
-“coordinator chooses after responses”, the workflow and wording need a different state model.
+### Secure acceptance and atomic confirmation
 
-### Atomic acceptance requirement
+Accept must use a tightly permissioned database function that:
 
-Accept must use a database transaction through a tightly permissioned function, not a sequence of
-browser writes. The transaction should:
+- authenticates the current recipient;
+- confirms the deadline has not passed;
+- confirms the recipient's offer is still pending;
+- records `ACCEPTED_AWAITING_CONFIRMATION` and the response time;
+- cancels that recipient's future reminders; and
+- notifies the original offerer without creating an assignment.
 
-- authenticate the current recipient;
-- lock the position and open offer batch;
-- confirm the deadline has not passed;
-- confirm the recipient's offer is still pending;
+Confirmation must use a separate database transaction, not a sequence of browser writes. It should:
+
+- authenticate that the current user is the original offerer;
+- lock the position and offer batch;
+- confirm the selected response is `ACCEPTED_AWAITING_CONFIRMATION`;
 - confirm the position has no current assignment;
-- create the accepted assignment;
-- close all competing offers and reminders; and
+- create the confirmed assignment;
+- mark the selected response `CONFIRMED`;
+- close competing responses as `NOT_SELECTED` and cancel their reminders; and
 - write notifications and history.
 
-If two people accept at nearly the same time, one succeeds and the other receives “This position was
-just filled by another person.” The second person must not appear assigned.
+This makes the offerer's confirmation the single event that fills the position. An exceptional
+Super Admin recovery action may be designed later, but it must require a reason and remain audited.
 
 ## Deadlines and reminders
 
@@ -330,8 +348,10 @@ just filled by another person.” The second person must not appear assigned.
 - Reminder notifications need stable deduplication keys.
 - A final deadline job expires pending offers and alerts the coordinator when the position is still
   unfilled.
+- An acceptance immediately alerts the original offerer that confirmation is required. Accepted
+  responses remain valid after the response deadline, but do not fill the position by themselves.
 - The coordinator dashboard should show “respond by”, next reminder, expired offers and urgent
-  vacancies.
+  vacancies, plus accepted responses awaiting offerer confirmation.
 
 The existing scheduled notification-dispatch pattern should be extended or reused only after its
 message-type and authorisation boundaries are reviewed. Version 1 should support in-app reminders;
@@ -351,15 +371,15 @@ is still needed for date/time ranges, conditional notes and recurring patterns.
 Recommended version 1 rules:
 
 - unavailable is a visible conflict warning;
-- an overlapping accepted assignment is a strong conflict warning;
+- an overlapping confirmed assignment is a strong conflict warning;
 - unknown availability is permitted but clearly labelled;
 - coordinators may proceed through a warning when policy allows; and
-- the acceptance transaction rechecks hard conflicts so stale screens cannot create two overlapping
-  assignments unintentionally.
+- the confirmation transaction rechecks hard conflicts so stale screens cannot create two
+  overlapping assignments unintentionally.
 
 The exact hard-conflict and override policy remains open.
 
-## Fixture changes after acceptance
+## Fixture changes after confirmation
 
 Material changes include fixture date, start time, venue, pitch, teams or cancellation.
 
@@ -368,7 +388,7 @@ Recommended behaviour:
 - record the changed fields in assignment history;
 - notify all affected recipients and coordinators;
 - cancel pending offers when their original timing is no longer valid;
-- mark accepted assignments `RECONFIRMATION_REQUIRED` for material schedule/location changes; and
+- mark confirmed assignments `RECONFIRMATION_REQUIRED` for material schedule/location changes; and
 - keep the original acceptance and offer note in history.
 
 A score or other non-roster fixture update should not request reconfirmation.
@@ -377,7 +397,7 @@ A score or other non-roster fixture update should not request reconfirmation.
 
 ### Intended rule
 
-After a Umpire Match Voting submission is received, compare its Umpire identity with the accepted or
+After a Umpire Match Voting submission is received, compare its Umpire identity with the confirmed or
 completed Umpire assignments for that fixture.
 
 Possible check results:
@@ -386,7 +406,7 @@ Possible check results:
 |---|---|
 | `MATCHED` | The linked submitting Umpire is rostered for the fixture. |
 | `MISMATCH` | The linked submitting Umpire is known and is not rostered. |
-| `NO_ROSTER` | The fixture has no accepted/completed Umpire assignment to compare. |
+| `NO_ROSTER` | The fixture has no confirmed/completed Umpire assignment to compare. |
 | `UNVERIFIABLE` | The submission identity is text-only, unresolved or otherwise cannot be safely linked. |
 | `VALID_PROXY` | An authorised administrator submitted for a rostered Umpire. |
 
@@ -421,7 +441,7 @@ immediately.
   check so history reflects what happened.
 - Never auto-link a person using name text alone when the match is ambiguous.
 
-The roster checked should be the final accepted/replacement history effective for that fixture, not
+The roster checked should be the final confirmed/replacement history effective for that fixture, not
 merely the first person offered the game.
 
 ## Notifications
@@ -432,9 +452,10 @@ Initial notification types should include:
 - offer reminder;
 - offer declined;
 - offer expired;
-- position filled by another recipient;
+- response accepted and awaiting offerer confirmation;
+- recipient confirmed for the assignment;
+- accepted recipient not selected;
 - offer withdrawn;
-- assignment accepted;
 - replacement required;
 - fixture changed/reconfirmation required; and
 - Umpire Match Voting roster mismatch awaiting review.
@@ -451,7 +472,8 @@ existing `notifications` subscription.
 ### Coordinator dashboard
 
 Show upcoming fixtures/activities, open positions, pending offers with deadlines, next reminders,
-declines, expired offers, availability conflicts, accepted assignments and replacement needs.
+declines, expired offers, responses awaiting confirmation, availability conflicts, confirmed
+assignments and replacement needs.
 
 ### Fixture coordination
 
@@ -461,7 +483,8 @@ or offer recipients, response states, deadline and actions permitted within the 
 ### My assignments and offers
 
 Show pending offers first, with the deadline, offer note, fixture/activity details and Accept or
-Decline. Keep accepted, replaced, cancelled and completed history separate.
+Decline. Clearly separate `Accepted — awaiting confirmation` from confirmed, replaced, cancelled
+and completed assignments.
 
 ### People pool
 
@@ -480,12 +503,14 @@ fixture roster, replacement history and a permission-controlled review action.
 - People may manage only their own availability unless a separately approved delegation exists.
 - Coordinators may manage positions, offers and assignments only for their responsibility and
   organisation scope.
+- Only the original offerer may confirm an accepted response in the normal workflow. Another
+  coordinator with the same scope cannot silently take over that confirmation.
 - Umpire coordinators do not automatically gain Volunteer coordination access.
 - Capability alone does not grant coordinator access.
 - Association scope may include child clubs/teams only through one documented hierarchy function.
 - Cross-club assignment is denied unless an explicit policy permits it.
 - Workflow writes should use narrow database functions. Direct table updates must not bypass offer
-  deadlines, atomic acceptance, scope or history.
+  deadlines, offerer confirmation, scope or history.
 - New public-schema tables require explicit API grants and Row Level Security policies.
 - Helper functions should use a fixed `search_path`; elevated functions must not be executable by
   `PUBLIC` by default.
@@ -499,7 +524,7 @@ Club Admin, Team Admin, each coordinator responsibility and the assignment recip
 
 ### Phase 0 — approve the design
 
-- Decide the offer-selection rule, default deadline, reminder timings and conflict override policy.
+- Decide the default deadline, reminder timings and conflict override policy.
 - Confirm who reviews Umpire Match Voting roster mismatch flags.
 - Recheck the live schema, existing permission helpers and notification dispatcher.
 - Dry-run Umpire name-to-profile matching and report matched, ambiguous and unmatched counts without
@@ -515,7 +540,7 @@ Club Admin, Team Admin, each coordinator responsibility and the assignment recip
 ### Phase 2 — fixture offer workflow
 
 - Add multi-recipient offers, required deadlines and recipient-facing notes.
-- Add atomic first-acceptance handling and replacement history.
+- Add recipient acceptance, original-offerer confirmation and replacement history.
 - Add in-app notifications, scheduled reminders and expiry processing.
 - Build Coordinator, Fixture Coordination and My Offers/Assignments views.
 - Add the Umpire Match Voting roster check and review queue.
@@ -543,19 +568,18 @@ Club Admin, Team Admin, each coordinator responsibility and the assignment recip
 
 ## Decisions required before implementation
 
-1. Does the first valid acceptance win, or does the coordinator choose after receiving responses?
-2. What is the default response period for an Umpire offer?
-3. How many reminders are sent, and how long before the deadline are they due?
-4. Can a coordinator override an availability or overlapping-assignment warning?
-5. Which role reviews Umpire Match Voting roster mismatch flags at association and club level?
-6. Can a club coordinator offer a position to a person connected only to another club?
-7. Are Umpire, Technical Bench and Volunteer separate responsibilities by default?
-8. Should a sent offer note be corrected by withdrawing and resending, or by a visible revision?
-9. Is in-app delivery alone sufficient for the first Dev test?
+1. What is the default response period for an Umpire offer?
+2. How many reminders are sent, and how long before the deadline are they due?
+3. Can a coordinator override an availability or overlapping-assignment warning?
+4. Which role reviews Umpire Match Voting roster mismatch flags at association and club level?
+5. Can a club coordinator offer a position to a person connected only to another club?
+6. Are Umpire, Technical Bench and Volunteer separate responsibilities by default?
+7. Should a sent offer note be corrected by withdrawing and resending, or by a visible revision?
+8. Is in-app delivery alone sufficient for the first Dev test?
 
 ## Implementation gate
 
 No database migration, Row Level Security change, live permission grant or production change should
-begin from this document alone. The next step is owner review of the nine decisions above, followed
+begin from this document alone. The next step is owner review of the eight decisions above, followed
 by a current-schema technical plan containing proposed SQL objects, permission tests, rollback
 tests, data-migration counts and one small owner test at a time.
