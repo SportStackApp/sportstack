@@ -3537,6 +3537,50 @@ Risk level:
 
 - Medium. Stage 2 has four additive Dev migrations, private Storage and two authenticated Dev Edge Functions. Production is unchanged.
 
+## 14 August 2026 - Coordination Module discovery specification
+
+What changed:
+
+- Added a docs-only technical specification for scoped fixture and volunteer coordination.
+- Separated required positions, multi-recipient offers and accepted assignments so one open position
+  can be offered safely to several people.
+- Defined required offer deadlines, materialised reminders, recipient-facing offer notes and an
+  atomic first-acceptance workflow for owner review.
+- Defined a non-blocking Umpire Match Voting roster check that distinguishes confirmed mismatch,
+  no roster and unverifiable identity instead of treating every uncertain identity as wrongdoing.
+- Rechecked the live Dev schema read-only. The current fixture, notification, availability,
+  permission, role and voting-submission records remain the intended integration points, and no
+  Coordination offer or official-assignment table currently exists.
+
+Files changed:
+
+- `CODEX_HANDOFF.md`
+- `docs/coordination-module-discovery.md`
+- `docs/current-state.md`
+
+Checks run:
+
+- Live Dev schema metadata was queried read-only; no database data or structure was changed.
+- Documentation diff and Markdown formatting checks are recorded in the task handoff.
+- Application lint, TypeScript and build checks were not required because no application,
+  dependency or generated source file changed.
+
+What Aaron should review next:
+
+1. Confirm whether the first valid acceptance wins a position or the coordinator chooses later.
+2. Choose the default offer deadline and reminder timings.
+3. Confirm who reviews Umpire Match Voting roster mismatch flags.
+
+Risk level:
+
+- Low. This is documentation and read-only discovery only. It includes no migration, Row Level
+  Security change, permission grant, Dev data change or Production change.
+
+Unknowns still needing confirmation:
+
+- The nine decisions listed in `docs/coordination-module-discovery.md` remain open and must be
+  resolved before an implementation migration is designed.
+
 ## How to update this file
 
 When Codex finishes a task, add a dated entry with:
