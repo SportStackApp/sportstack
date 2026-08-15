@@ -1,5 +1,27 @@
 # Incident & Discipline Phase 1
 
+## Corrected decision and Tribunal model — 15 August 2026
+
+The workflow now distinguishes the Hockey Ballarat Rule 7.7 decision from the formal Tribunal:
+
+1. the committee or Case Coordinator receives and triages the complaint;
+2. the committee records jurisdiction, immediate safety action and conflicts;
+3. the committee appoints an investigator;
+4. the Lead Investigator investigates, gives procedural fairness and signs a recommendation;
+5. non-conflicted Hockey Ballarat decision makers record the Rule 7.7 outcome for an ordinary
+   matter, including any Tribunal referral; and
+6. a formal Tribunal appointed under Rule 7.17 conducts the Rule 7.18–7.21 process where required.
+
+The former independent review-panel records are retained for audit but are not a required new-case
+stage. Existing Incident 007 rows were not deleted or rewritten. The direct Rule 7.1 path is
+available for a qualifying last regular round or finals matter without forcing an ordinary
+investigation sequence.
+
+The redesign also adds immutable neutral person references, an anonymised print view, audited
+immediate-risk assessments, compact intake dialogs, private source-document upload and
+stage-specific server permissions. Hockey Ballarat's local replacement for HV references to the
+CEO or delegate remains `UNKNOWN — needs confirmation` and is shown as a warning in the interface.
+
 Status: Dev implementation specification. The 2026 rule pack remains `REVIEW_REQUIRED` until Hockey Ballarat approves the local interpretation items below.
 
 ## Purpose and boundary

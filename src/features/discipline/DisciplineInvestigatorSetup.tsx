@@ -38,7 +38,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { combineZonedDateTime } from "@/lib/timezoneDateTime";
 import { cn } from "@/lib/utils";
-import { HB_BYLAW_ADDENDUM_URL, HV_RULES_URL } from "./disciplineIntakeContent";
+import { HB_BYLAW_ADDENDUM_URL, HV_RULES_URL, SIA_INVESTIGATION_GUIDE_URL } from "./disciplineIntakeContent";
 import {
   CONFLICT_DECISIONS,
   CONFLICT_FACTORS,
@@ -192,6 +192,12 @@ function InvestigatorGuidance() {
                   Hockey Ballarat By-law Addendum 2026
                 </SourceLink>
                 {" — clauses 2.1 and 3.1."}
+              </li>
+              <li>
+                <SourceLink href={SIA_INVESTIGATION_GUIDE_URL}>
+                  Sport Integrity Australia investigation guide
+                </SourceLink>
+                {" — conflict identification and management, sections 3.3–3.4."}
               </li>
             </ul>
           </section>
@@ -450,6 +456,8 @@ export function DisciplineInvestigatorSetupPanel({
         title="Recorded appointment and independence checks"
         description="Each saved check is retained. The newest record appears first."
         kind="FACT"
+        responsibleRole="Committee / Case Coordinator"
+        reviewRole="Appointed investigator"
       >
         <SavedSetups data={data} />
       </WorkflowSection>
@@ -459,6 +467,8 @@ export function DisciplineInvestigatorSetupPanel({
           title="Record a new appointment and independence check"
           description="Do not assume a blank disclosure means no conflict. Ask the questions and record the answers."
           kind="JUDGEMENT"
+          responsibleRole="Committee / Case Coordinator"
+          reviewRole="Appointed investigator"
         >
           <form className="space-y-6" onSubmit={submit} noValidate>
             {errors.length > 0 ? (

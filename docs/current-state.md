@@ -43,6 +43,28 @@ Update this file after every meaningful Codex task, pull request, schema change,
   on the promoted tip. `origin/dev` and `origin/main` matched after the push. Production `prod` was
   not promoted.
 
+## Incident and Discipline workflow redesign — 15 August 2026
+
+- The Dev database now uses the corrected branch: a signed investigation report returns to
+  non-conflicted Hockey Ballarat decision makers for the Rule 7.7 outcome, or is referred to the
+  formal Tribunal. A qualifying final-round/finals matter can use the direct Rule 7.1 Tribunal
+  branch. A separate mandatory three-person review panel is no longer required.
+- Incident 007's existing review-panel records remain unchanged and are displayed as read-only
+  legacy audit history.
+- Every case person now has an immutable case-unique neutral reference. Signed investigation
+  snapshots include the neutral people register and exclude the identity mapping from the merits
+  report.
+- An audited `discipline_risk_assessments` table records likelihood, severity, mitigation,
+  responsibility, review timing and tags. Server functions enforce committee, investigator,
+  Tribunal and appeal-stage responsibilities.
+- The intake UI is compact and dialog-based: case title and private source documents appear first;
+  match, people, risk and allegation details open only when requested; predictive suggestions wait
+  for three characters and never prevent free text; person roles use a controlled single choice.
+- Pathway, conflict and Tribunal guidance links to the checked official sources and keeps the
+  unresolved Hockey Ballarat authority/adoption mapping visibly flagged.
+- Local quality checks passed for focused discipline lint, TypeScript, production build and 22
+  discipline tests. The repository-wide lint still has the known unrelated baseline debt.
+
 ## Player Explorer saved and scheduled searches — 15 August 2026
 
 - The Super Admin Player Explorer is implemented at `/admin/player-explorer` and is

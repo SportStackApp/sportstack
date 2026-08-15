@@ -3,11 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
+  Edit3,
   FileText,
   Loader2,
+  Paperclip,
   Plus,
   ShieldAlert,
   Trash2,
+  Upload,
+  Users,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -22,14 +26,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { DisciplineTagPicker } from "@/features/discipline/DisciplineTagPicker";
-import { JurisdictionGuidance } from "@/features/discipline/DisciplineIntakeGuidance";
+import {
+  ConflictGuidance,
+  JurisdictionGuidance,
+  JurisdictionPathwayDetails,
+} from "@/features/discipline/DisciplineIntakeGuidance";
 import { JURISDICTION_HELP } from "@/features/discipline/disciplineIntakeContent";
 import { PredictiveTextInput } from "@/features/discipline/PredictiveTextInput";
 import {
+  addDisciplineCasePerson,
+  addDisciplineEvidence,
   createDisciplineCase,
   loadAssociationOptions,
   loadDisciplineIntakeOptions,
+  recordDisciplineRiskAssessment,
 } from "@/features/discipline/api";
 import {
   InformationBadge,
@@ -60,12 +80,31 @@ type LinkedTextValue = {
 };
 
 type PersonDraft = {
+  localId: string;
+  caseRole: "REPORTER" | "REPORTED_PERSON" | "WITNESS" | "AFFECTED_PERSON" | "OTHER";
   fullName: string;
   organisation: string;
   personRole: string;
+  otherRole: string;
   email: string;
   profileId?: string;
   clubId?: string;
+};
+
+type RiskAssessmentDraft = {
+  riskDescription: string;
+  likelihood: string;
+  severity: string;
+  mitigationAction: string;
+  responsiblePerson: string;
+  reviewAt: string;
+};
+
+type SourceDocumentDraft = {
+  localId: string;
+  documentType: "COMPLAINT" | "RESPONSE" | "ACTION" | "OTHER";
+  title: string;
+  file: File;
 };
 
 type AllegationDraft = {
@@ -78,11 +117,23 @@ type AllegationDraft = {
   tagIds: string[];
 };
 
-const emptyPerson = (): PersonDraft => ({
+const emptyPerson = (caseRole: PersonDraft["caseRole"] = "REPORTER"): PersonDraft => ({
+  localId: crypto.randomUUID(),
+  caseRole,
   fullName: "",
   organisation: "",
   personRole: "",
+  otherRole: "",
   email: "",
+});
+
+const emptyRiskAssessment = (): RiskAssessmentDraft => ({
+  riskDescription: "",
+  likelihood: "",
+  severity: "",
+  mitigationAction: "",
+  responsiblePerson: "",
+  reviewAt: "",
 });
 
 const newAllegation = (
@@ -104,14 +155,12 @@ const tagsFor = (
 ) => options?.tags.filter((tag) => tag.scope === scope) ?? [];
 
 function PersonFields({
-  heading,
   prefix,
   value,
   onChange,
   profiles,
   clubs,
 }: {
-  heading: string;
   prefix: string;
   value: PersonDraft;
   onChange: (value: PersonDraft) => void;
@@ -119,8 +168,25 @@ function PersonFields({
   clubs: DisciplineIntakeOptions["clubs"];
 }) {
   return (
-    <div className="space-y-4 rounded-lg border p-4">
-      <h3 className="font-semibold">{heading}</h3>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Person category</Label>
+        <Select
+          value={value.caseRole}
+          onValueChange={(caseRole) =>
+            onChange({ ...value, caseRole: caseRole as PersonDraft["caseRole"] })
+          }
+        >
+          <SelectTrigger aria-label="Person category"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="REPORTER">Reporter</SelectItem>
+            <SelectItem value="REPORTED_PERSON">Reported person</SelectItem>
+            <SelectItem value="WITNESS">Witness</SelectItem>
+            <SelectItem value="AFFECTED_PERSON">Affected person</SelectItem>
+            <SelectItem value="OTHER">Other person</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <PredictiveTextInput
         id={`${prefix}-name`}
         label="Full name"
@@ -155,17 +221,31 @@ function PersonFields({
           }
         />
         <div className="space-y-2">
-          <Label htmlFor={`${prefix}-role`}>Role</Label>
-          <Input
-            id={`${prefix}-role`}
-            value={value.personRole}
-            onChange={(event) =>
-              onChange({ ...value, personRole: event.target.value })
-            }
-            placeholder="Player, umpire, coach…"
-          />
+          <Label>Role</Label>
+          <Select value={value.personRole} onValueChange={(personRole) => onChange({ ...value, personRole })}>
+            <SelectTrigger aria-label="Role"><SelectValue placeholder="Select a role" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Player">Player</SelectItem>
+              <SelectItem value="Umpire">Umpire</SelectItem>
+              <SelectItem value="Coach">Coach</SelectItem>
+              <SelectItem value="Spectator">Spectator</SelectItem>
+              <SelectItem value="Volunteer">Volunteer</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
+      {value.personRole === "Other" ? (
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}-other-role`}>Other role description</Label>
+          <Input
+            id={`${prefix}-other-role`}
+            value={value.otherRole}
+            placeholder="Describe the person's role"
+            onChange={(event) => onChange({ ...value, otherRole: event.target.value })}
+          />
+        </div>
+      ) : null}
       <div className="space-y-2">
         <Label htmlFor={`${prefix}-email`}>Email</Label>
         <Input
@@ -181,8 +261,46 @@ function PersonFields({
   );
 }
 
+function AllegationEditorDialog({
+  allegation,
+  number,
+  tags,
+  onChange,
+}: {
+  allegation: AllegationDraft;
+  number: number;
+  tags: DisciplineIntakeTagOption[];
+  onChange: (patch: Partial<AllegationDraft>) => void;
+}) {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button type="button" variant="outline" size="sm">
+          <Edit3 className="mr-2 h-4 w-4" /> {allegation.title ? "Edit" : "Complete"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Allegation {number}</DialogTitle>
+          <DialogDescription>Record one separate reported act. This is an allegation, not a finding.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2"><Label htmlFor={`allegation-title-${allegation.localId}`}>Neutral allegation title</Label><Input id={`allegation-title-${allegation.localId}`} value={allegation.title} onChange={(event) => onChange({ title: event.target.value })} placeholder="For example: Reported language near the home dugout" minLength={3} required /></div>
+          <div className="space-y-2"><Label htmlFor={`allegation-description-${allegation.localId}`}>Reported facts and known particulars</Label><Textarea id={`allegation-description-${allegation.localId}`} value={allegation.description} onChange={(event) => onChange({ description: event.target.value })} placeholder="Record who allegedly did what, when and where. Identify uncertainty." minLength={5} required /></div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-2"><Label htmlFor={`allegation-date-${allegation.localId}`}>Date</Label><Input id={`allegation-date-${allegation.localId}`} type="date" value={allegation.incidentDate} onChange={(event) => onChange({ incidentDate: event.target.value })} /></div>
+            <div className="space-y-2"><Label htmlFor={`allegation-time-${allegation.localId}`}>Time</Label><Input id={`allegation-time-${allegation.localId}`} type="time" value={allegation.incidentTime} onChange={(event) => onChange({ incidentTime: event.target.value })} /></div>
+            <div className="space-y-2"><Label htmlFor={`allegation-location-${allegation.localId}`}>Location</Label><Input id={`allegation-location-${allegation.localId}`} value={allegation.location} onChange={(event) => onChange({ location: event.target.value })} /></div>
+          </div>
+          <DisciplineTagPicker label="Reported-fact descriptors" description="Select factual descriptors for searching and triage. The information button explains each tag without selecting it." tags={tags} selectedIds={allegation.tagIds} onChange={(tagIds) => onChange({ tagIds })} />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function NewDisciplineCase() {
-  const { context } = useDisciplineAccess();
+  const { context, user } = useDisciplineAccess();
   const associationsQuery = useQuery({
     queryKey: ["discipline-associations", context?.association_ids],
     queryFn: () => loadAssociationOptions(context?.association_ids ?? []),
@@ -212,9 +330,13 @@ export default function NewDisciplineCase() {
   const [incidentDate, setIncidentDate] = useState("");
   const [incidentTime, setIncidentTime] = useState("");
   const [incidentLocation, setIncidentLocation] = useState("");
-  const [reporter, setReporter] = useState<PersonDraft>(emptyPerson);
-  const [reportedPerson, setReportedPerson] =
-    useState<PersonDraft>(emptyPerson);
+  const [people, setPeople] = useState<PersonDraft[]>([]);
+  const [personEditor, setPersonEditor] = useState<PersonDraft | null>(null);
+  const [personDialogOpen, setPersonDialogOpen] = useState(false);
+  const [matchDialogOpen, setMatchDialogOpen] = useState(false);
+  const [riskDialogOpen, setRiskDialogOpen] = useState(false);
+  const [riskAssessment, setRiskAssessment] = useState<RiskAssessmentDraft>(emptyRiskAssessment);
+  const [sourceDocuments, setSourceDocuments] = useState<SourceDocumentDraft[]>([]);
   const [allegations, setAllegations] = useState<AllegationDraft[]>(() => [
     newAllegation(),
   ]);
@@ -299,12 +421,47 @@ export default function NewDisciplineCase() {
     );
   };
 
+  const savePerson = () => {
+    if (!personEditor?.fullName.trim()) return;
+    setPeople((current) => {
+      const exists = current.some((person) => person.localId === personEditor.localId);
+      return exists
+        ? current.map((person) => person.localId === personEditor.localId ? personEditor : person)
+        : [...current, personEditor];
+    });
+    setPersonDialogOpen(false);
+    setPersonEditor(null);
+  };
+
+  const addSourceDocuments = (files: FileList | null) => {
+    if (!files) return;
+    setSourceDocuments((current) => [
+      ...current,
+      ...Array.from(files).map((file) => ({
+        localId: crypto.randomUUID(),
+        documentType: "COMPLAINT" as const,
+        title: file.name,
+        file,
+      })),
+    ]);
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
     const form = new FormData(event.currentTarget);
     try {
+      if (checks.immediateRisk && (
+        riskAssessment.riskDescription.trim().length < 5
+        || !riskAssessment.likelihood
+        || !riskAssessment.severity
+        || riskAssessment.mitigationAction.trim().length < 5
+      )) {
+        throw new Error("Complete the immediate risk assessment before creating the case.");
+      }
+      const reporter = people.find((person) => person.caseRole === "REPORTER");
+      const reportedPerson = people.find((person) => person.caseRole === "REPORTED_PERSON");
       const caseId = await createDisciplineCase({
         association_id: associationId,
         title: String(form.get("title") || ""),
@@ -312,7 +469,7 @@ export default function NewDisciplineCase() {
         jurisdiction_reason: String(form.get("jurisdictionReason") || ""),
         jurisdiction_tag_ids: jurisdictionTagIds,
         immediate_safety_risk: checks.immediateRisk,
-        immediate_safety_action: String(form.get("immediateAction") || ""),
+        immediate_safety_action: riskAssessment.mitigationAction,
         safety_tag_ids: safetyTagIds,
         fixture_id: fixtureId,
         competition_id: competition.id,
@@ -356,22 +513,22 @@ export default function NewDisciplineCase() {
         report_complete: checks.reportComplete,
         desired_outcome_included: checks.desiredOutcome,
         prior_presentation_completed: checks.priorPresentation,
-        reporter: {
+        reporter: reporter ? {
           full_name: reporter.fullName,
           organisation: reporter.organisation,
-          person_role: reporter.personRole,
+          person_role: reporter.personRole === "Other" ? reporter.otherRole : reporter.personRole,
           email: reporter.email,
           profile_id: reporter.profileId,
           club_id: reporter.clubId,
-        },
-        reported_person: {
+        } : undefined,
+        reported_person: reportedPerson ? {
           full_name: reportedPerson.fullName,
           organisation: reportedPerson.organisation,
-          person_role: reportedPerson.personRole,
+          person_role: reportedPerson.personRole === "Other" ? reportedPerson.otherRole : reportedPerson.personRole,
           email: reportedPerson.email,
           profile_id: reportedPerson.profileId,
           club_id: reportedPerson.clubId,
-        },
+        } : undefined,
         allegations: allegations.map((allegation) => ({
           title: allegation.title,
           description: allegation.description,
@@ -386,9 +543,57 @@ export default function NewDisciplineCase() {
           tag_ids: allegation.tagIds,
         })),
       });
+      if (!user) throw new Error("Your signed-in profile could not be confirmed.");
+
+      const primaryIds = new Set([reporter?.localId, reportedPerson?.localId].filter(Boolean));
+      await Promise.all(
+        people
+          .filter((person) => !primaryIds.has(person.localId))
+          .map((person) => addDisciplineCasePerson(caseId, user.id, {
+            caseRole: person.caseRole,
+            fullName: person.fullName,
+            organisation: person.organisation,
+            personRole: person.personRole === "Other" ? person.otherRole : person.personRole,
+            email: person.email,
+            profileId: person.profileId,
+            clubId: person.clubId,
+          })),
+      );
+
+      if (checks.immediateRisk) {
+        await recordDisciplineRiskAssessment(caseId, {
+          risk_description: riskAssessment.riskDescription,
+          likelihood: riskAssessment.likelihood,
+          severity: riskAssessment.severity,
+          mitigation_action: riskAssessment.mitigationAction,
+          responsible_person: riskAssessment.responsiblePerson,
+          review_at: riskAssessment.reviewAt ? new Date(riskAssessment.reviewAt).toISOString() : undefined,
+          tag_ids: safetyTagIds,
+        });
+      }
+
+      const failedDocuments: string[] = [];
+      for (const document of sourceDocuments) {
+        try {
+          await addDisciplineEvidence(caseId, user.id, {
+            evidenceType: document.documentType,
+            title: document.title,
+            source: "Intake upload",
+            evidenceBasis: "DIRECT",
+            notes: "Original source document received at intake.",
+            file: document.file,
+            receivedAt: new Date().toISOString(),
+          });
+        } catch {
+          failedDocuments.push(document.title);
+        }
+      }
       toast({
         title: "Case created",
-        description: `${allegations.length} allegation${allegations.length === 1 ? "" : "s"} recorded with the private case.`,
+        description: failedDocuments.length
+          ? `The case was saved. Retry these documents from Evidence: ${failedDocuments.join(", ")}.`
+          : `${allegations.length} allegation${allegations.length === 1 ? "" : "s"} and ${sourceDocuments.length} source document${sourceDocuments.length === 1 ? "" : "s"} recorded.`,
+        variant: failedDocuments.length ? "destructive" : undefined,
       });
       navigate(`/discipline/cases/${caseId}`);
     } catch (caught) {
@@ -430,12 +635,74 @@ export default function NewDisciplineCase() {
       ) : null}
 
       <WorkflowSection
-        title="1. Safety and jurisdiction triage"
+        title="1. Case name and source documents"
+        description="Name the case, then attach the original complaint, responses and any action already taken. Uploaded originals remain authoritative."
+        kind="FACT"
+        responsibleRole="Committee / Case Coordinator"
+      >
+        <div className="space-y-2">
+          <Label htmlFor="title">Case title</Label>
+          <Input id="title" name="title" required minLength={3} placeholder="Short neutral identifier for the incident" />
+        </div>
+        <div className="mt-5 rounded-lg border border-dashed p-4">
+          <Label htmlFor="source-documents" className="flex cursor-pointer items-center gap-2 font-medium">
+            <Upload className="h-4 w-4" /> Add source documents
+          </Label>
+          <Input
+            id="source-documents"
+            type="file"
+            multiple
+            className="mt-3"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp"
+            onChange={(event) => {
+              addSourceDocuments(event.target.files);
+              event.currentTarget.value = "";
+            }}
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Private files only. Maximum 20 MB each. AI extraction is not active; a person must read and confirm all entered facts.
+          </p>
+        </div>
+        <div className="mt-4 space-y-2">
+          {sourceDocuments.map((document) => (
+            <div key={document.localId} className="flex items-center gap-3 rounded-lg border px-3 py-2">
+              <Paperclip className="h-4 w-4 shrink-0" />
+              <Input
+                aria-label={`Title for ${document.file.name}`}
+                value={document.title}
+                onChange={(event) => setSourceDocuments((current) => current.map((item) => item.localId === document.localId ? { ...item, title: event.target.value } : item))}
+                className="min-w-0 flex-1"
+              />
+              <Select
+                value={document.documentType}
+                onValueChange={(documentType) => setSourceDocuments((current) => current.map((item) => item.localId === document.localId ? { ...item, documentType: documentType as SourceDocumentDraft["documentType"] } : item))}
+              >
+                <SelectTrigger className="w-36" aria-label={`Document type for ${document.file.name}`}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="COMPLAINT">Complaint</SelectItem>
+                  <SelectItem value="RESPONSE">Response</SelectItem>
+                  <SelectItem value="ACTION">Action taken</SelectItem>
+                  <SelectItem value="OTHER">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="ghost" size="icon" aria-label={`Remove ${document.file.name}`} onClick={() => setSourceDocuments((current) => current.filter((item) => item.localId !== document.localId))}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      </WorkflowSection>
+
+      <WorkflowSection
+        title="2. Safety and jurisdiction triage"
         description="Deal with urgent safety first, then record which process may apply and why."
         kind="JUDGEMENT"
+        responsibleRole="Committee / Case Coordinator"
+        reviewRole="Non-conflicted committee members"
       >
-        <div className="mb-5">
+        <div className="mb-5 flex flex-wrap gap-2">
           <JurisdictionGuidance />
+          <ConflictGuidance />
         </div>
         <div className="grid gap-5 md:grid-cols-2">
           <div className="space-y-2">
@@ -486,6 +753,7 @@ export default function NewDisciplineCase() {
             <InformationBadge kind="JUDGEMENT" />
             <AlertTitle className="mt-2">{pathwayHelp.title}</AlertTitle>
             <AlertDescription>{pathwayHelp.summary}</AlertDescription>
+            <div className="mt-3"><JurisdictionPathwayDetails pathway={jurisdiction} /></div>
           </Alert>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="jurisdictionReason">
@@ -515,9 +783,11 @@ export default function NewDisciplineCase() {
           <label className="flex items-start gap-3 rounded-lg border p-4 md:col-span-2">
             <Checkbox
               checked={checks.immediateRisk}
-              onCheckedChange={(value) =>
-                setCheck("immediateRisk", value === true)
-              }
+              onCheckedChange={(value) => {
+                const checked = value === true;
+                setCheck("immediateRisk", checked);
+                if (checked) setRiskDialogOpen(true);
+              }}
             />
             <span>
               <span className="font-medium">Immediate safety risk identified</span>
@@ -529,29 +799,35 @@ export default function NewDisciplineCase() {
             </span>
           </label>
           {checks.immediateRisk ? (
-            <>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="immediateAction">Immediate safety action taken</Label>
-                <Textarea
-                  id="immediateAction"
-                  name="immediateAction"
-                  minLength={5}
-                  required
-                  placeholder="Record who was contacted, what was done, when it happened and any instructions received."
-                />
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3 md:col-span-2">
+              <div>
+                <p className="font-medium">{riskAssessment.riskDescription || "Risk assessment not completed"}</p>
+                <p className="text-sm text-muted-foreground">
+                  {riskAssessment.likelihood && riskAssessment.severity ? `${riskAssessment.likelihood.replaceAll("_", " ")} likelihood · ${riskAssessment.severity.toLowerCase()} severity` : "Likelihood and severity required"}
+                  {riskAssessment.mitigationAction ? ` · Action: ${riskAssessment.mitigationAction}` : ""}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Protective interim action only — not a finding of guilt.</p>
               </div>
-              <div className="md:col-span-2">
-                <DisciplineTagPicker
-                  label="Immediate safety descriptors"
-                  description="Select all that describe the reported risk or action. Follow current emergency, police and child-protection procedures where required."
-                  tags={tagsFor(options, "SAFETY_RISK")}
-                  selectedIds={safetyTagIds}
-                  onChange={setSafetyTagIds}
-                />
-              </div>
-            </>
+              <Button type="button" variant="outline" size="sm" onClick={() => setRiskDialogOpen(true)}><Edit3 className="mr-2 h-4 w-4" /> Edit risk assessment</Button>
+            </div>
           ) : null}
         </div>
+        <Dialog open={riskDialogOpen} onOpenChange={setRiskDialogOpen}>
+          <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto">
+            <DialogHeader><DialogTitle>Immediate safety risk assessment</DialogTitle><DialogDescription>Record a proportionate protective response separately from any finding about the allegation.</DialogDescription></DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2"><Label htmlFor="risk-description">Risk description</Label><Textarea id="risk-description" value={riskAssessment.riskDescription} onChange={(event) => setRiskAssessment((current) => ({ ...current, riskDescription: event.target.value }))} /></div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2"><Label>Likelihood</Label><Select value={riskAssessment.likelihood} onValueChange={(likelihood) => setRiskAssessment((current) => ({ ...current, likelihood }))}><SelectTrigger aria-label="Risk likelihood"><SelectValue placeholder="Select likelihood" /></SelectTrigger><SelectContent><SelectItem value="RARE">Rare</SelectItem><SelectItem value="UNLIKELY">Unlikely</SelectItem><SelectItem value="POSSIBLE">Possible</SelectItem><SelectItem value="LIKELY">Likely</SelectItem><SelectItem value="ALMOST_CERTAIN">Almost certain</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>Severity</Label><Select value={riskAssessment.severity} onValueChange={(severity) => setRiskAssessment((current) => ({ ...current, severity }))}><SelectTrigger aria-label="Risk severity"><SelectValue placeholder="Select severity" /></SelectTrigger><SelectContent><SelectItem value="INSIGNIFICANT">Insignificant</SelectItem><SelectItem value="MINOR">Minor</SelectItem><SelectItem value="MODERATE">Moderate</SelectItem><SelectItem value="MAJOR">Major</SelectItem><SelectItem value="SEVERE">Severe</SelectItem></SelectContent></Select></div>
+              </div>
+              <div className="space-y-2"><Label htmlFor="risk-action">Mitigation or interim action</Label><Textarea id="risk-action" value={riskAssessment.mitigationAction} onChange={(event) => setRiskAssessment((current) => ({ ...current, mitigationAction: event.target.value }))} /></div>
+              <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="risk-owner">Responsible person (optional)</Label><Input id="risk-owner" value={riskAssessment.responsiblePerson} onChange={(event) => setRiskAssessment((current) => ({ ...current, responsiblePerson: event.target.value }))} /></div><div className="space-y-2"><Label htmlFor="risk-review">Review date and time (optional)</Label><Input id="risk-review" type="datetime-local" value={riskAssessment.reviewAt} onChange={(event) => setRiskAssessment((current) => ({ ...current, reviewAt: event.target.value }))} /></div></div>
+              <DisciplineTagPicker label="Risk descriptors" description="Select all factual descriptors that apply." tags={tagsFor(options, "SAFETY_RISK")} selectedIds={safetyTagIds} onChange={setSafetyTagIds} />
+            </div>
+            <DialogFooter><Button type="button" onClick={() => setRiskDialogOpen(false)} disabled={riskAssessment.riskDescription.trim().length < 5 || !riskAssessment.likelihood || !riskAssessment.severity || riskAssessment.mitigationAction.trim().length < 5}>Save risk assessment</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
         {referralPath ? (
           <Alert className="mt-5">
             <ShieldAlert className="h-4 w-4" />
@@ -575,10 +851,21 @@ export default function NewDisciplineCase() {
       </WorkflowSection>
 
       <WorkflowSection
-        title="2. Match and incident facts"
+        title="3. Match and incident facts"
         description="Start with a known fixture to fill the existing SportStack facts, or type any field manually."
         kind="FACT"
+        responsibleRole="Committee / Case Coordinator"
       >
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+          <div>
+            <p className="font-medium">{homeTeam.value && awayTeam.value ? `${homeTeam.value} v ${awayTeam.value}` : "No match details recorded"}</p>
+            <p className="text-sm text-muted-foreground">{[competition.value, grade.value, roundLabel, matchDate].filter(Boolean).join(" · ") || "Select a fixture or enter the match manually."}</p>
+          </div>
+          <Button type="button" variant="outline" onClick={() => setMatchDialogOpen(true)}>{homeTeam.value || matchDate ? <Edit3 className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />} {homeTeam.value || matchDate ? "Edit match details" : "Add match details"}</Button>
+        </div>
+        <Dialog open={matchDialogOpen} onOpenChange={setMatchDialogOpen}>
+          <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+            <DialogHeader><DialogTitle>Match and incident details</DialogTitle><DialogDescription>Choose a fixture for predictive fill or enter the details manually.</DialogDescription></DialogHeader>
         {optionsQuery.isLoading ? (
           <p className="mb-4 flex items-center text-sm text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading SportStack suggestions…
@@ -602,20 +889,10 @@ export default function NewDisciplineCase() {
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <div className="space-y-2 lg:col-span-2">
-            <Label htmlFor="title">Case title</Label>
-            <Input
-              id="title"
-              name="title"
-              required
-              minLength={3}
-              placeholder="Short neutral identifier for the incident"
-            />
-          </div>
           <div className="space-y-2">
-            <Label>Round type</Label>
+            <Label id="round-type-label">Round type</Label>
             <Select value={roundType} onValueChange={setRoundType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger aria-labelledby="round-type-label"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="REGULAR">Regular round</SelectItem>
                 <SelectItem value="LAST_REGULAR">Last regular round</SelectItem>
@@ -712,37 +989,44 @@ export default function NewDisciplineCase() {
             <Input id="incident-location" value={incidentLocation} onChange={(event) => setIncidentLocation(event.target.value)} placeholder="For example: pitch, dugout, changeroom or car park" />
           </div>
         </div>
+            <DialogFooter><Button type="button" onClick={() => setMatchDialogOpen(false)} disabled={!matchDate || !matchTime}>Save match details</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
       </WorkflowSection>
 
       <WorkflowSection
-        title="3. People named in the report"
-        description="Select an existing SportStack record when it is clearly the same person or club. Otherwise type the report wording as free text."
+        title="4. People named in the report"
+        description="Names remain private. Each saved person receives a stable neutral reference for investigation and reporting."
         kind="FACT"
+        responsibleRole="Committee / Case Coordinator"
       >
-        <div className="grid gap-5 lg:grid-cols-2">
-          <PersonFields
-            heading="Reporter"
-            prefix="reporter"
-            value={reporter}
-            onChange={setReporter}
-            profiles={options?.profiles ?? []}
-            clubs={options?.clubs ?? []}
-          />
-          <PersonFields
-            heading="Person reported"
-            prefix="reported"
-            value={reportedPerson}
-            onChange={setReportedPerson}
-            profiles={options?.profiles ?? []}
-            clubs={options?.clubs ?? []}
-          />
+        <div className="space-y-2">
+          {people.map((person) => {
+            const roleNumber = people.filter((item) => item.caseRole === person.caseRole).findIndex((item) => item.localId === person.localId) + 1;
+            const reference = `${person.caseRole === "REPORTED_PERSON" ? "Reported Person" : person.caseRole === "AFFECTED_PERSON" ? "Affected Person" : person.caseRole === "OTHER" ? "Other Person" : person.caseRole.charAt(0) + person.caseRole.slice(1).toLowerCase()} ${roleNumber}`;
+            return (
+              <div key={person.localId} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                <div className="min-w-0"><p className="font-medium">{reference}</p><p className="truncate text-sm text-muted-foreground">{person.fullName} · {person.personRole === "Other" ? person.otherRole : person.personRole || "Role not recorded"}{person.organisation ? ` · ${person.organisation}` : ""}</p></div>
+                <div className="flex gap-1"><Button type="button" variant="ghost" size="icon" aria-label={`Edit ${reference}`} onClick={() => { setPersonEditor(person); setPersonDialogOpen(true); }}><Edit3 className="h-4 w-4" /></Button><Button type="button" variant="ghost" size="icon" aria-label={`Remove ${reference}`} onClick={() => setPeople((current) => current.filter((item) => item.localId !== person.localId))}><Trash2 className="h-4 w-4" /></Button></div>
+              </div>
+            );
+          })}
         </div>
+        <Button type="button" variant="outline" className="mt-3" onClick={() => { setPersonEditor(emptyPerson()); setPersonDialogOpen(true); }}><Users className="mr-2 h-4 w-4" /> Add a person</Button>
+        <Dialog open={personDialogOpen} onOpenChange={setPersonDialogOpen}>
+          <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto">
+            <DialogHeader><DialogTitle>{people.some((person) => person.localId === personEditor?.localId) ? "Edit person" : "Add a person"}</DialogTitle><DialogDescription>Type the name freely. SportStack suggestions appear only after three characters and are optional.</DialogDescription></DialogHeader>
+            {personEditor ? <PersonFields prefix={`person-${personEditor.localId}`} value={personEditor} onChange={setPersonEditor} profiles={options?.profiles ?? []} clubs={options?.clubs ?? []} /> : null}
+            <DialogFooter><Button type="button" onClick={savePerson} disabled={!personEditor?.fullName.trim() || !personEditor?.personRole || (personEditor.personRole === "Other" && !personEditor.otherRole.trim())}>Save person</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
       </WorkflowSection>
 
       <WorkflowSection
-        title="4. Allegations from this incident report"
+        title="5. Allegations from this incident report"
         description="Create one neutral allegation for each separate reported act. All allegations below are saved together in the same private case."
         kind="FACT"
+        responsibleRole="Committee / Case Coordinator"
       >
         <Alert className="mb-5">
           <FileText className="h-4 w-4" />
@@ -754,72 +1038,19 @@ export default function NewDisciplineCase() {
             as proven or combine unrelated acts into one allegation.
           </AlertDescription>
         </Alert>
-        <div className="space-y-5">
+        <div className="space-y-2">
           {allegations.map((allegation, index) => (
-            <div key={allegation.localId} className="space-y-4 rounded-lg border p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold">Allegation {index + 1}</h3>
-                  <p className="text-xs text-muted-foreground">One separate reported act or course of conduct.</p>
-                </div>
+            <div key={allegation.localId} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+              <div className="min-w-0">
+                <h3 className="font-semibold">Allegation {index + 1}: {allegation.title || "Not completed"}</h3>
+                <p className="truncate text-sm text-muted-foreground">{allegation.description || "Add the reported facts and known particulars."}</p>
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <AllegationEditorDialog allegation={allegation} number={index + 1} tags={tagsFor(options, "ALLEGATION_DESCRIPTOR")} onChange={(patch) => updateAllegation(allegation.localId, patch)} />
                 {allegations.length > 1 ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAllegations((current) => current.filter((item) => item.localId !== allegation.localId))}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" /> Remove
-                  </Button>
+                  <Button type="button" variant="ghost" size="icon" aria-label={`Remove allegation ${index + 1}`} onClick={() => setAllegations((current) => current.filter((item) => item.localId !== allegation.localId))}><Trash2 className="h-4 w-4" /></Button>
                 ) : null}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor={`allegation-title-${allegation.localId}`}>Neutral allegation title</Label>
-                <Input
-                  id={`allegation-title-${allegation.localId}`}
-                  value={allegation.title}
-                  onChange={(event) => updateAllegation(allegation.localId, { title: event.target.value })}
-                  placeholder="For example: Reported language near the home dugout"
-                  minLength={3}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`allegation-description-${allegation.localId}`}>Reported facts and known particulars</Label>
-                <Textarea
-                  id={`allegation-description-${allegation.localId}`}
-                  value={allegation.description}
-                  onChange={(event) => updateAllegation(allegation.localId, { description: event.target.value })}
-                  placeholder="Record the act described in the report, the people involved, approximate timing, location and any words attributed. Identify uncertainty."
-                  minLength={5}
-                  required
-                />
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor={`allegation-date-${allegation.localId}`}>Date</Label>
-                  <Input id={`allegation-date-${allegation.localId}`} type="date" value={allegation.incidentDate} onChange={(event) => updateAllegation(allegation.localId, { incidentDate: event.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`allegation-time-${allegation.localId}`}>Time</Label>
-                  <Input id={`allegation-time-${allegation.localId}`} type="time" value={allegation.incidentTime} onChange={(event) => updateAllegation(allegation.localId, { incidentTime: event.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`allegation-location-${allegation.localId}`}>Location</Label>
-                  <Input id={`allegation-location-${allegation.localId}`} value={allegation.location} onChange={(event) => updateAllegation(allegation.localId, { location: event.target.value })} />
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Blank allegation date, time or location fields inherit the
-                overall incident details recorded in section 2.
-              </p>
-              <DisciplineTagPicker
-                label="Reported-fact descriptors"
-                description="Select all useful descriptors. These tags support searching and triage only; classification and findings happen later."
-                tags={tagsFor(options, "ALLEGATION_DESCRIPTOR")}
-                selectedIds={allegation.tagIds}
-                onChange={(tagIds) => updateAllegation(allegation.localId, { tagIds })}
-              />
             </div>
           ))}
         </div>
@@ -843,9 +1074,10 @@ export default function NewDisciplineCase() {
       </WorkflowSection>
 
       <WorkflowSection
-        title="5. Report receipt and formal checks"
+        title="6. Report receipt and formal checks"
         description="Record what was received without changing the original report. A missing item is flagged for human review; it is not silently treated as fatal."
         kind="RULE"
+        responsibleRole="Committee / Case Coordinator"
       >
         <Alert className="mb-5">
           <FileText className="h-4 w-4" />

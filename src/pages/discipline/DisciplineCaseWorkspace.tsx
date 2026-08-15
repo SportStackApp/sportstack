@@ -48,14 +48,13 @@ import {
   assignDisciplineCaseMember,
   authoriseNaturalJusticeOverride,
   createDisciplineEvidenceLink,
-  finaliseDisciplineReviewPanelDecision,
   loadDisciplineWorkspace,
   recordClassification,
-  recordDisciplineReviewPanelVote,
+  recordDisciplineDecision,
   recordInvestigatorSetup,
+  referDisciplineCaseToTribunal,
   saveAllegation,
   saveDisciplineFinding,
-  saveDisciplineReviewPanel,
   saveDisciplineTribunalPreparation,
   saveDisciplinePhase2Stage,
   setDeadlineCompletion,
@@ -69,9 +68,10 @@ import {
 } from "@/features/discipline/DisciplineUi";
 import { DisciplineTagPicker } from "@/features/discipline/DisciplineTagPicker";
 import { DisciplineInvestigatorSetupPanel } from "@/features/discipline/DisciplineInvestigatorSetup";
-import { DisciplineReviewPanel } from "@/features/discipline/DisciplineReviewPanel";
+import { DisciplineCommitteeDecision } from "@/features/discipline/DisciplineCommitteeDecision";
 import { DisciplineTribunalPreparation } from "@/features/discipline/DisciplineTribunalPreparation";
 import { DisciplinePhase2Workflow } from "@/features/discipline/DisciplinePhase2Workflow";
+import { canCompleteWorkflowStage } from "@/features/discipline/workflowLogic";
 import {
   ScreeningGuidance,
   TribunalReadinessLegend,
@@ -731,6 +731,7 @@ export default function DisciplineCaseWorkspace() {
   const { context: portalContext } = useDisciplineAccess();
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showIdentities, setShowIdentities] = useState(false);
   const [newAllegationTagIds, setNewAllegationTagIds] = useState<string[]>([]);
   const workspaceQuery = useQuery({
     queryKey: ["discipline-workspace", caseId],
@@ -801,6 +802,7 @@ export default function DisciplineCaseWorkspace() {
   ].includes(activeMember?.case_role || "");
   const isLead = activeMember?.case_role === "LEAD_INVESTIGATOR";
   const isDecisionMaker = activeMember?.case_role === "DECISION_MAKER";
+  const canDecide = canCoordinate || isDecisionMaker;
 
   return (
     <div className="space-y-6 animate-fade-in print:bg-white">
@@ -825,10 +827,15 @@ export default function DisciplineCaseWorkspace() {
             {incidentCase.title}
           </p>
         </div>
-        <Button variant="outline" onClick={() => window.print()}>
-          <Printer className="mr-2 h-4 w-4" />
-          Print current view
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={() => setShowIdentities((current) => !current)}>
+            {showIdentities ? "Use neutral references" : "Show restricted identities"}
+          </Button>
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="mr-2 h-4 w-4" />
+            Print anonymised view
+          </Button>
+        </div>
       </div>
       {actionError ? (
         <Alert variant="destructive">
@@ -921,7 +928,7 @@ export default function DisciplineCaseWorkspace() {
 
         <TabsContent value="overview" className="space-y-5">
           <div className="grid gap-4 lg:grid-cols-2">
-            <WorkflowSection title="Case facts" kind="FACT">
+            <WorkflowSection title="Case facts" kind="FACT" responsibleRole="Committee / Case Coordinator">
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
                 <dt className="text-muted-foreground">Competition</dt>
                 <dd>{incidentCase.competition || "Not recorded"}</dd>
@@ -943,7 +950,7 @@ export default function DisciplineCaseWorkspace() {
                 <dd>{formatStatus(incidentCase.pathway)}</dd>
               </dl>
             </WorkflowSection>
-            <WorkflowSection title="Rule version snapshot" kind="RULE">
+            <WorkflowSection title="Rule version snapshot" kind="RULE" responsibleRole="Committee / Case Coordinator">
               <p className="font-medium">{data.rulePack.title}</p>
               <p className="text-sm text-muted-foreground">
                 Version {data.rulePack.version} · {data.rulePack.timezone}
@@ -958,6 +965,7 @@ export default function DisciplineCaseWorkspace() {
             title="Deadlines"
             description="Deadlines use Melbourne time and the configured HB business-day calendar."
             kind="RULE"
+            responsibleRole="Committee / Case Coordinator"
           >
             <div className="space-y-3">
               {data.deadlines.length === 0 ? (
@@ -1029,6 +1037,7 @@ export default function DisciplineCaseWorkspace() {
           <WorkflowSection
             title="Jurisdiction and formal report facts"
             kind="FACT"
+            responsibleRole="Committee / Case Coordinator"
           >
             <dl className="grid gap-3 text-sm md:grid-cols-2">
               <div>
@@ -1125,11 +1134,13 @@ export default function DisciplineCaseWorkspace() {
             title="People"
             description="Reporter, reported person, affected people and witnesses are case records, not portal users."
             kind="FACT"
+            responsibleRole="Committee / Case Coordinator"
           >
             <div className="space-y-2">
               {data.people.map((person) => (
                 <div key={person.id} className="rounded-lg border p-3 text-sm">
-                  <span className="font-medium">{person.full_name}</span> ·{" "}
+                  <span className="font-medium print:hidden">{showIdentities ? person.full_name : person.case_reference}</span>
+                  <span className="hidden font-medium print:inline">{person.case_reference}</span> ·{" "}
                   {formatStatus(person.case_role)}
                   {person.organisation ? ` · ${person.organisation}` : ""}
                 </div>
@@ -1251,6 +1262,7 @@ export default function DisciplineCaseWorkspace() {
             title="Review allegations before screening"
             description="Each separate reported act has its own preserved wording, descriptors and classification history. Revise it only when the source information needs correction or clearer particulars."
             kind="FACT"
+            responsibleRole="Committee / Case Coordinator"
           >
             <div className="space-y-3">
               {data.allegations.map((allegation) => (
@@ -1395,6 +1407,7 @@ export default function DisciplineCaseWorkspace() {
             title="Preliminary classification and Tribunal readiness"
             description="For this comparison only, assume the allegation is proven exactly as currently reported. The result is planning guidance, not a finding, charge or automatic penalty."
             kind="JUDGEMENT"
+            responsibleRole="Committee / Case Coordinator"
           >
             {!canInvestigate ? (
               <Alert className="mb-4">
@@ -1452,6 +1465,7 @@ export default function DisciplineCaseWorkspace() {
             title="Case and portal access administration"
             description="Use this area for exceptional access changes. An accepted appointment above manages the normal lead and support investigator roles automatically."
             kind="JUDGEMENT"
+            responsibleRole="Committee / Case Coordinator"
           >
             <div className="space-y-2">
               {data.members.map((member) => (
@@ -1629,7 +1643,7 @@ export default function DisciplineCaseWorkspace() {
           </WorkflowSection>
 
           <div className="grid gap-5 xl:grid-cols-2">
-            <WorkflowSection title="Initial notifications" kind="FACT">
+            <WorkflowSection title="Initial notifications" kind="FACT" responsibleRole="Lead Investigator">
               <div className="space-y-2">
                 {data.notifications.map((notice) => (
                   <div
@@ -1705,7 +1719,7 @@ export default function DisciplineCaseWorkspace() {
                 </form>
               ) : null}
             </WorkflowSection>
-            <WorkflowSection title="Witness register" kind="FACT">
+            <WorkflowSection title="Witness register" kind="FACT" responsibleRole="Lead Investigator">
               <div className="space-y-2">
                 {data.witnesses.map((witness) => (
                   <div
@@ -1815,6 +1829,7 @@ export default function DisciplineCaseWorkspace() {
             title="Evidence register"
             description="Files are private and immutable. A replacement must be uploaded as a new version."
             kind="FACT"
+            responsibleRole="Lead Investigator"
           >
             <div className="grid gap-3 md:grid-cols-2">
               {data.evidence.map((item) => (
@@ -1994,6 +2009,8 @@ export default function DisciplineCaseWorkspace() {
             title="Natural justice safeguards"
             description="This is an HB operating safeguard pending formal approval; it is not presented as the exact wording of Rule 7.12."
             kind="LOCAL INTERPRETATION"
+            responsibleRole="Lead Investigator"
+            reviewRole="Case Coordinator"
           >
             <div className="space-y-3">
               {data.naturalJustice.map((check) => (
@@ -2081,6 +2098,7 @@ export default function DisciplineCaseWorkspace() {
             title="Investigator findings by allegation"
             description="Preliminary classification remains separate. Each finding revision is preserved."
             kind="JUDGEMENT"
+            responsibleRole="Lead Investigator"
           >
             <div className="space-y-4">
               {data.allegations.map((allegation) => {
@@ -2175,30 +2193,19 @@ export default function DisciplineCaseWorkspace() {
         </TabsContent>
 
         <TabsContent value="decision" className="space-y-5">
-          <DisciplineReviewPanel
-            key={data.reviewPanels[0]?.updated_at || "new-review-panel"}
+          <DisciplineCommitteeDecision
+            key={data.decisions[0]?.decided_at || data.incidentCase.status}
             data={data}
-            currentUserId={user!.id}
-            canCoordinate={canCoordinate}
-            isDecisionMaker={isDecisionMaker}
+            canDecide={canDecide}
             busy={busy}
-            onSavePanel={(values) =>
-              void runAction("Review panel setup saved", () =>
-                saveDisciplineReviewPanel(caseId, values),
+            onDecision={(values) =>
+              void runAction("Rule 7.7 decision recorded", () =>
+                recordDisciplineDecision(caseId, values),
               )
             }
-            onVote={(values) =>
-              void runAction("Independent panel vote recorded", () =>
-                recordDisciplineReviewPanelVote(caseId, values),
-              )
-            }
-            onFinalise={(meetingReference, processNote) =>
-              void runAction("Review panel majority finalised", () =>
-                finaliseDisciplineReviewPanelDecision(
-                  caseId,
-                  meetingReference,
-                  processNote,
-                ),
+            onDirectTribunalReferral={(reason, authorityReference) =>
+              void runAction("Case referred to the formal Tribunal", () =>
+                referDisciplineCaseToTribunal(caseId, reason, authorityReference),
               )
             }
           />
@@ -2225,7 +2232,7 @@ export default function DisciplineCaseWorkspace() {
           <DisciplinePhase2Workflow
             key={data.phase2StageRecords[0]?.recorded_at || "new-phase2-workflow"}
             data={data}
-            canCoordinate={canCoordinate}
+            canEditStage={(stage) => canCompleteWorkflowStage(stage, activeMember ? [activeMember.case_role] : [])}
             busy={busy}
             onSave={(stage, status, workflowMode, payload) =>
               void runAction(`${formatStatus(stage)} ${formatStatus(status)} saved`, () =>
@@ -2236,7 +2243,7 @@ export default function DisciplineCaseWorkspace() {
         </TabsContent>
 
         <TabsContent value="timeline">
-          <WorkflowSection title="Append-only case timeline" kind="FACT">
+          <WorkflowSection title="Append-only case timeline" kind="FACT" responsibleRole="System audit record">
             <div className="space-y-3">
               {data.auditEvents.map((event) => (
                 <div
@@ -2258,7 +2265,7 @@ export default function DisciplineCaseWorkspace() {
         </TabsContent>
 
         <TabsContent value="rules" className="space-y-5">
-          <WorkflowSection title="Verified rule citations" kind="RULE">
+          <WorkflowSection title="Verified rule citations" kind="RULE" responsibleRole="Case Coordinator">
             <div className="space-y-3">
               {data.ruleClauses.map((clause) => (
                 <div key={clause.id} className="rounded-lg border p-4">
@@ -2294,6 +2301,7 @@ export default function DisciplineCaseWorkspace() {
           <WorkflowSection
             title="Local variations and unresolved source issues"
             kind="LOCAL INTERPRETATION"
+            responsibleRole="Committee / Case Coordinator"
           >
             <div className="space-y-3">
               {data.localVariations.map((variation) => (

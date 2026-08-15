@@ -18,6 +18,7 @@ type PredictiveTextInputProps<T extends PredictiveOption> = {
   placeholder?: string;
   required?: boolean;
   helperText?: string;
+  minimumCharacters?: number;
 };
 
 export function PredictiveTextInput<T extends PredictiveOption>({
@@ -29,10 +30,20 @@ export function PredictiveTextInput<T extends PredictiveOption>({
   onChange,
   placeholder,
   required,
-  helperText = "Choose a suggestion or type a different value.",
+  helperText = "Type at least three characters for suggestions, or keep your free-text entry.",
+  minimumCharacters = 3,
 }: PredictiveTextInputProps<T>) {
   const generatedId = useId().replaceAll(":", "");
   const listId = `${id}-${generatedId}-options`;
+  const query = value.trim().toLocaleLowerCase();
+  const visibleOptions =
+    query.length >= minimumCharacters
+      ? options.filter((option) =>
+          `${option.label} ${option.description ?? ""}`
+            .toLocaleLowerCase()
+            .includes(query),
+        )
+      : [];
 
   return (
     <div className="space-y-2">
@@ -40,7 +51,7 @@ export function PredictiveTextInput<T extends PredictiveOption>({
       <Input
         id={id}
         name={name}
-        list={listId}
+        list={visibleOptions.length > 0 ? listId : undefined}
         value={value}
         onChange={(event) => {
           const nextValue = event.target.value;
@@ -57,7 +68,7 @@ export function PredictiveTextInput<T extends PredictiveOption>({
         autoComplete="off"
       />
       <datalist id={listId}>
-        {options.map((option) => (
+        {visibleOptions.map((option) => (
           <option
             key={option.id}
             value={option.label}

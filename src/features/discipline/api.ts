@@ -88,6 +88,57 @@ export async function createDisciplineCase(input: NewDisciplineCaseInput) {
   return data;
 }
 
+export async function recordDisciplineRiskAssessment(
+  caseId: string,
+  values: {
+    risk_description: string;
+    likelihood: string;
+    severity: string;
+    mitigation_action: string;
+    responsible_person?: string;
+    review_at?: string;
+    tag_ids?: string[];
+  },
+) {
+  const { data, error } = await supabase.rpc(
+    "record_discipline_risk_assessment",
+    { p_case_id: caseId, p_assessment: values as unknown as Json },
+  );
+  throwIfError(error);
+  return data;
+}
+
+export async function recordDisciplineDecision(
+  caseId: string,
+  values: {
+    outcome: string;
+    decisionReason: string;
+    ruleReference: string;
+    recommendationFollowed: boolean;
+    differenceReason?: string;
+  },
+) {
+  const { data, error } = await supabase.rpc("record_discipline_decision", {
+    p_case_id: caseId,
+    p_outcome: values.outcome,
+    p_decision_reason: values.decisionReason,
+    p_rule_reference: values.ruleReference,
+    p_recommendation_followed: values.recommendationFollowed,
+    p_difference_reason: values.differenceReason || null,
+  });
+  throwIfError(error);
+  return data;
+}
+
+export async function referDisciplineCaseToTribunal(caseId: string, reason: string, authorityReference: string) {
+  const { error } = await supabase.rpc("refer_discipline_case_to_tribunal", {
+    p_case_id: caseId,
+    p_reason: reason,
+    p_authority_reference: authorityReference,
+  });
+  throwIfError(error);
+}
+
 export async function loadDisciplineWorkspace(
   caseId: string,
 ): Promise<DisciplineWorkspaceData> {
@@ -103,6 +154,7 @@ export async function loadDisciplineWorkspace(
     deadlinesResult,
     membersResult,
     peopleResult,
+    riskAssessmentsResult,
     allegationsResult,
     assessmentsResult,
     classificationRulesResult,
@@ -148,6 +200,11 @@ export async function loadDisciplineWorkspace(
       .select("*")
       .eq("case_id", caseId)
       .order("created_at"),
+    supabase
+      .from("discipline_risk_assessments")
+      .select("*")
+      .eq("case_id", caseId)
+      .order("revision_number", { ascending: false }),
     supabase
       .from("discipline_allegations")
       .select("*")
@@ -267,6 +324,7 @@ export async function loadDisciplineWorkspace(
     deadlinesResult,
     membersResult,
     peopleResult,
+    riskAssessmentsResult,
     allegationsResult,
     assessmentsResult,
     classificationRulesResult,
@@ -299,6 +357,7 @@ export async function loadDisciplineWorkspace(
     deadlines: deadlinesResult.data ?? [],
     members: membersResult.data ?? [],
     people: peopleResult.data ?? [],
+    riskAssessments: riskAssessmentsResult.data ?? [],
     allegations: allegationsResult.data ?? [],
     assessments: assessmentsResult.data ?? [],
     classificationRules: classificationRulesResult.data ?? [],
@@ -486,6 +545,8 @@ export async function addDisciplineCasePerson(
     phone?: string;
     isJunior?: boolean;
     notes?: string;
+    profileId?: string;
+    clubId?: string;
   },
 ) {
   const { error } = await supabase.from("discipline_case_people").insert({
@@ -498,6 +559,8 @@ export async function addDisciplineCasePerson(
     phone: values.phone || null,
     is_junior: values.isJunior,
     notes: values.notes || null,
+    profile_id: values.profileId || null,
+    club_id: values.clubId || null,
     created_by: userId,
     updated_by: userId,
   });

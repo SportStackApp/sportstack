@@ -70,12 +70,12 @@ const FIELD_LAYOUT: Record<Phase2Stage, Array<[string, string, "text" | "email" 
 
 export function DisciplinePhase2Workflow({
   data,
-  canCoordinate,
+  canEditStage,
   busy,
   onSave,
 }: {
   data: DisciplineWorkspaceData;
-  canCoordinate: boolean;
+  canEditStage: (stage: Phase2Stage) => boolean;
   busy: boolean;
   onSave: (stage: Phase2Stage, status: string, mode: Phase2Mode, payload: Record<string, Json>) => void;
 }) {
@@ -93,6 +93,14 @@ export function DisciplinePhase2Workflow({
     payload: latest ? (latest.payload as Record<string, Json>) : blankPhase2Payload(stage),
   };
   const guidance = PHASE2_STAGES.find((item) => item.key === stage)!;
+  const canEdit = canEditStage(stage);
+  const responsibleRole = {
+    NOTICE: "Case Coordinator / Tribunal administrator",
+    HEARING: "Formal Tribunal",
+    DETERMINATION: "Formal Tribunal",
+    APPEAL: "Appeal administrator / Appeal Board",
+    CLOSURE: "Committee / Case Coordinator",
+  }[stage];
   const preparationReady = data.tribunalPreparations[0]?.status === "READY";
   const realIssueBlocked = mode === "REAL" && stage === "NOTICE" && current.status === "ISSUED" && !preparationReady;
   const update = (changes: Partial<typeof current>) =>
@@ -171,39 +179,40 @@ export function DisciplinePhase2Workflow({
           <a href={HV_RULES_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
             {guidance.source}<ExternalLink className="h-3.5 w-3.5" />
           </a>
+          <p className="text-xs text-muted-foreground">Completed by: {responsibleRole}</p>
           {latest ? <p className="text-xs text-muted-foreground">Latest: revision {latest.revision_number}, {formatStatus(latest.status)}, saved {formatMelbourneDateTime(latest.recorded_at)}</p> : null}
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>Stage status</Label>
-            <Select value={current.status} onValueChange={(status) => update({ status })} disabled={!canCoordinate || busy}>
+            <Select value={current.status} onValueChange={(status) => update({ status })} disabled={!canEdit || busy}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{PHASE2_STATUS_OPTIONS[stage].map((status) => <SelectItem key={status} value={status}>{formatStatus(status)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           {mode === "SIMULATION" ? (
             <label className="flex items-center gap-3 rounded-lg border border-amber-300 p-3 text-sm">
-              <Checkbox checked={current.payload.simulation_acknowledged === true} onCheckedChange={(value) => updatePayload("simulation_acknowledged", value === true)} disabled={!canCoordinate || busy} />
+              <Checkbox checked={current.payload.simulation_acknowledged === true} onCheckedChange={(value) => updatePayload("simulation_acknowledged", value === true)} disabled={!canEdit || busy} />
               <span>I confirm this is a Dev workflow simulation only.</span>
             </label>
           ) : null}
           {FIELD_LAYOUT[stage].map(([key, label, type]) => type === "checkbox" ? (
             <label key={key} className="flex items-center gap-3 rounded-lg border p-3 text-sm">
-              <Checkbox checked={current.payload[key] === true} onCheckedChange={(value) => updatePayload(key, value === true)} disabled={!canCoordinate || busy} />
+              <Checkbox checked={current.payload[key] === true} onCheckedChange={(value) => updatePayload(key, value === true)} disabled={!canEdit || busy} />
               <span>{label}</span>
             </label>
           ) : (
             <div key={key} className={type === "textarea" ? "space-y-2 md:col-span-2" : "space-y-2"}>
               <Label>{label}</Label>
               {type === "textarea" ? (
-                <Textarea value={String(current.payload[key] ?? "")} onChange={(event) => updatePayload(key, event.target.value)} disabled={!canCoordinate || busy} />
+                <Textarea value={String(current.payload[key] ?? "")} onChange={(event) => updatePayload(key, event.target.value)} disabled={!canEdit || busy} />
               ) : (
-                <Input type={type} value={String(current.payload[key] ?? "")} onChange={(event) => updatePayload(key, event.target.value)} disabled={!canCoordinate || busy} />
+                <Input type={type} value={String(current.payload[key] ?? "")} onChange={(event) => updatePayload(key, event.target.value)} disabled={!canEdit || busy} />
               )}
             </div>
           ))}
           <div className="md:col-span-2 flex flex-wrap items-center gap-3">
-            <Button onClick={submit} disabled={!canCoordinate || busy || realIssueBlocked}>
+            <Button onClick={submit} disabled={!canEdit || busy || realIssueBlocked}>
               <Save className="mr-2 h-4 w-4" />Save {mode === "SIMULATION" ? "simulation" : "real record"}
             </Button>
             {realIssueBlocked ? <Badge variant="destructive">Blocked until Tribunal Preparation is Ready</Badge> : null}

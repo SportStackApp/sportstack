@@ -199,6 +199,7 @@ export function DisciplineTribunalPreparation({
 
   return (
     <form className="space-y-5" onSubmit={submit}>
+      <p className="text-sm text-muted-foreground">Completed by: Committee / Case Coordinator. Determination is completed by the appointed formal Tribunal.</p>
       <Alert className="border-amber-500/40 bg-amber-500/5">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>

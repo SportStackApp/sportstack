@@ -22,6 +22,8 @@ export type DisciplineMember =
   Database["public"]["Tables"]["discipline_case_members"]["Row"];
 export type DisciplinePerson =
   Database["public"]["Tables"]["discipline_case_people"]["Row"];
+export type DisciplineRiskAssessment =
+  Database["public"]["Tables"]["discipline_risk_assessments"]["Row"];
 export type DisciplineInvestigatorSetup =
   Database["public"]["Tables"]["discipline_investigator_setups"]["Row"];
 
@@ -103,6 +105,7 @@ export type DisciplineWorkspaceData = {
   deadlines: DisciplineDeadline[];
   members: DisciplineMember[];
   people: DisciplinePerson[];
+  riskAssessments: DisciplineRiskAssessment[];
   allegations: DisciplineAllegation[];
   assessments: DisciplineAssessment[];
   classificationRules: DisciplineClassificationRule[];
@@ -312,6 +315,17 @@ export type NewDisciplineCaseInput = {
     profile_id?: string;
     club_id?: string;
   };
+  people?: Array<{
+    case_role: "REPORTER" | "REPORTED_PERSON" | "WITNESS" | "AFFECTED_PERSON" | "OTHER";
+    full_name: string;
+    organisation?: string;
+    person_role?: string;
+    email?: string;
+    phone?: string;
+    is_junior?: boolean;
+    profile_id?: string;
+    club_id?: string;
+  }>;
   allegations: Array<{
     title: string;
     description: string;

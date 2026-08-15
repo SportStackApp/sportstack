@@ -39,11 +39,15 @@ export function WorkflowSection({
   title,
   description,
   kind,
+  responsibleRole,
+  reviewRole,
   children,
 }: {
   title: string;
   description?: string;
   kind: InformationKind;
+  responsibleRole?: string;
+  reviewRole?: string;
   children: ReactNode;
 }) {
   return (
@@ -54,6 +58,18 @@ export function WorkflowSection({
           <InformationBadge kind={kind} />
         </div>
         {description ? <CardDescription>{description}</CardDescription> : null}
+        {responsibleRole ? (
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <span className="rounded-full border px-2 py-1">
+              Completed by: {responsibleRole}
+            </span>
+            {reviewRole ? (
+              <span className="rounded-full border px-2 py-1">
+                Reviewed by: {reviewRole}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>

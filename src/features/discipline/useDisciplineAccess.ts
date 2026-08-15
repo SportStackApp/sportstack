@@ -13,6 +13,7 @@ export function useDisciplineAccess() {
   });
 
   return {
+    user,
     context: query.data,
     loading: authLoading || (Boolean(user) && query.isLoading),
     error: query.error instanceof Error ? query.error.message : null,

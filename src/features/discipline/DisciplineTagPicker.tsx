@@ -1,5 +1,13 @@
-import { Check, Tags } from "lucide-react";
+import { Check, Info, Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { DisciplineIntakeTagOption } from "./types";
 
@@ -37,35 +45,47 @@ export function DisciplineTagPicker({
         {tags.map((tag) => {
           const selected = selectedIds.includes(tag.id);
           return (
-            <Button
+            <div
               key={tag.id}
-              type="button"
-              variant="outline"
-              aria-pressed={selected}
-              onClick={() => toggle(tag.id)}
               className={cn(
-                "h-auto min-h-16 items-start justify-start whitespace-normal px-3 py-2 text-left",
-                selected &&
-                  "border-primary bg-primary/10 text-foreground hover:bg-primary/15",
+                "flex min-h-10 items-center rounded-md border",
+                selected && "border-primary bg-primary/10",
               )}
             >
-              <span className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                aria-pressed={selected}
+                onClick={() => toggle(tag.id)}
+                className="h-auto min-h-10 min-w-0 flex-1 justify-start whitespace-normal px-3 py-2 text-left hover:bg-transparent"
+              >
                 <span
                   className={cn(
-                    "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                    "mr-2 flex h-4 w-4 shrink-0 items-center justify-center rounded border",
                     selected && "border-primary bg-primary text-primary-foreground",
                   )}
                 >
                   {selected ? <Check className="h-3 w-3" /> : null}
                 </span>
-                <span>
-                  <span className="block text-sm font-medium">{tag.label}</span>
-                  <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                    {tag.description}
-                  </span>
-                </span>
-              </span>
-            </Button>
+                <span className="text-sm font-medium">{tag.label}</span>
+              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button type="button" variant="ghost" size="icon" aria-label={`Information about ${tag.label}`}>
+                    <Info className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{tag.label}</DialogTitle>
+                    <DialogDescription>{tag.description}</DialogDescription>
+                  </DialogHeader>
+                  <p className="text-sm text-muted-foreground">
+                    This is a neutral descriptor used for searching and triage. Selecting it does not prove the allegation.
+                  </p>
+                </DialogContent>
+              </Dialog>
+            </div>
           );
         })}
       </div>

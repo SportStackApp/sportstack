@@ -2282,6 +2282,7 @@ export type Database = {
       discipline_case_people: {
         Row: {
           case_id: string
+          case_reference: string
           case_role: string
           club_id: string | null
           created_at: string
@@ -2300,6 +2301,7 @@ export type Database = {
         }
         Insert: {
           case_id: string
+          case_reference: string
           case_role: string
           club_id?: string | null
           created_at?: string
@@ -2318,6 +2320,7 @@ export type Database = {
         }
         Update: {
           case_id?: string
+          case_reference?: string
           case_role?: string
           club_id?: string | null
           created_at?: string
@@ -2960,9 +2963,11 @@ export type Database = {
       }
       discipline_decisions: {
         Row: {
+          authority_reference: string | null
           case_id: string
           decided_at: string
           decided_by: string
+          decision_body: string
           decision_method: string | null
           decision_reason: string
           difference_reason: string | null
@@ -2973,13 +2978,16 @@ export type Database = {
           outcome: string
           panel_vote_summary: Json | null
           recommendation_followed: boolean | null
+          resolution_reference: string | null
           review_panel_id: string | null
           rule_reference: string
         }
         Insert: {
+          authority_reference?: string | null
           case_id: string
           decided_at?: string
           decided_by: string
+          decision_body?: string
           decision_method?: string | null
           decision_reason: string
           difference_reason?: string | null
@@ -2990,13 +2998,16 @@ export type Database = {
           outcome: string
           panel_vote_summary?: Json | null
           recommendation_followed?: boolean | null
+          resolution_reference?: string | null
           review_panel_id?: string | null
           rule_reference: string
         }
         Update: {
+          authority_reference?: string | null
           case_id?: string
           decided_at?: string
           decided_by?: string
+          decision_body?: string
           decision_method?: string | null
           decision_reason?: string
           difference_reason?: string | null
@@ -3007,6 +3018,7 @@ export type Database = {
           outcome?: string
           panel_vote_summary?: Json | null
           recommendation_followed?: boolean | null
+          resolution_reference?: string | null
           review_panel_id?: string | null
           rule_reference?: string
         }
@@ -4062,6 +4074,79 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_risk_assessments: {
+        Row: {
+          case_id: string
+          id: string
+          likelihood: string
+          mitigation_action: string
+          recorded_at: string
+          recorded_by: string
+          responsible_person: string | null
+          review_at: string | null
+          revision_number: number
+          risk_description: string
+          severity: string
+          status: string
+          supersedes_assessment_id: string | null
+          tag_ids: string[]
+        }
+        Insert: {
+          case_id: string
+          id?: string
+          likelihood: string
+          mitigation_action: string
+          recorded_at?: string
+          recorded_by: string
+          responsible_person?: string | null
+          review_at?: string | null
+          revision_number: number
+          risk_description: string
+          severity: string
+          status?: string
+          supersedes_assessment_id?: string | null
+          tag_ids?: string[]
+        }
+        Update: {
+          case_id?: string
+          id?: string
+          likelihood?: string
+          mitigation_action?: string
+          recorded_at?: string
+          recorded_by?: string
+          responsible_person?: string | null
+          review_at?: string | null
+          revision_number?: number
+          risk_description?: string
+          severity?: string
+          status?: string
+          supersedes_assessment_id?: string | null
+          tag_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_risk_assessments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_risk_assessments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_risk_assessments_supersedes_assessment_id_fkey"
+            columns: ["supersedes_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_risk_assessments"
             referencedColumns: ["id"]
           },
         ]
@@ -12691,6 +12776,10 @@ export type Database = {
         Args: { p_case_id: string; p_change_reason?: string; p_vote: Json }
         Returns: string
       }
+      record_discipline_risk_assessment: {
+        Args: { p_assessment: Json; p_case_id: string }
+        Returns: string
+      }
       record_mvp_result_check: {
         Args: { p_comment?: string; p_response: string; p_session_id: string }
         Returns: Json
@@ -12698,6 +12787,14 @@ export type Database = {
       record_mvp_result_check_module_impl_20260802115000: {
         Args: { p_comment?: string; p_response: string; p_session_id: string }
         Returns: Json
+      }
+      refer_discipline_case_to_tribunal: {
+        Args: {
+          p_authority_reference: string
+          p_case_id: string
+          p_reason: string
+        }
+        Returns: undefined
       }
       reopen_discipline_stage: {
         Args: { p_case_id: string; p_previous_status: string; p_reason: string }
