@@ -174,7 +174,7 @@ Admin:
 - `/admin/revsports-mappings`
 - `/admin/revsports-unmatched`
 - `/admin/revsports-entities`
-- `/admin/player-explorer` (read-only Super Admin RevSports V2 player filtering)
+- `/admin/player-explorer` (Super Admin RevSports V2 filtering, ordered sequences and saved schedules)
 - `/admin/fixtures`
 - `/admin/fixture-import`
 - `/admin/venues`

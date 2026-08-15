@@ -1,6 +1,6 @@
 # SportStack Current State
 
-Last updated: 2026-08-14
+Last updated: 2026-08-15
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
@@ -43,9 +43,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
   on the promoted tip. `origin/dev` and `origin/main` matched after the push. Production `prod` was
   not promoted.
 
-## Player Explorer Stage 2
+## Player Explorer saved and scheduled searches — 15 August 2026
 
-- The read-only Super Admin Player Explorer is implemented at `/admin/player-explorer` and is
+- The Super Admin Player Explorer is implemented at `/admin/player-explorer` and is
   listed under **Admin > Data Quality**. Association, Club and lower modes cannot open the route or
   see its menu item.
 - It reads the existing RevSports V2 source tables through the signed-in browser Supabase client.
@@ -58,18 +58,30 @@ Update this file after every meaningful Codex task, pull request, schema change,
   All/Any conditions inside clickable groups and All/Any groups across the search. In an All
   conditions group, player totals are calculated only from appearance rows matching that group's
   scope filters. Games are distinct matches; appearance statistics are summed.
+- Sequence rules now support ordered movement searches such as **at least 7 games in Division 1,
+  then at least 1 game in Division 2 afterwards**. Ordering uses `game_date` and `game_time`; a
+  same-day transition is excluded when either time is missing because the order cannot be proved.
+- Super Admins can save a filter, load it again and choose Manual, Daily, Weekly or Monthly. The
+  protected `player_explorer_saved_searches` and `player_explorer_search_runs` tables are owner-only
+  through RLS. Authenticated clients cannot write run history or call the service-only claim RPC.
+- Recurring searches reuse the existing 15-minute `sportstack-notification-dispatch` Dev scheduler.
+  Each due run evaluates the same application-side filter engine, stores a protected result summary,
+  creates an in-app notification and sends the owner an email. No dynamic SQL or arbitrary SQL was
+  added.
 - Results show linked, placeholder, unlinked and identity-conflict states without silently choosing
   between conflicting links.
 - The 14 August live Dev recheck found 800 V2 matches, 12,395 appearance rows and 7,809 usable
   attended/non-removed rows. Source and external-identity SELECT policies still require
   authenticated `is_super_admin()`. Current Wimmera appearance coverage remains incomplete.
-- Eight focused aggregation/filter/identity tests, focused lint, TypeScript and the production
+- Ten focused aggregation/filter/identity/sequence tests, focused lint, TypeScript and the production
   build pass. Full repository lint remains baseline debt at 360 errors and 78 warnings.
-- Dev commit `0063b2b` deployed successfully and the Dev Quality workflow passed. The connected
-  browser test account is Association Admin-only, so it confirmed the route gate but could not
-  complete the remaining signed-in Super Admin interaction test.
-  Full repository lint remains baseline debt at 360 errors and 78 warnings. No database migration,
-  RLS change, Edge Function or Production change is included.
+- Live Dev migration `player_explorer_saved_and_scheduled_searches` is applied. Edge Function
+  `sportstack-notification-dispatch` version 6 is ACTIVE; an unauthorised call returned 401 and a
+  valid no-work scheduler call returned 200 with zero sends and zero failures. Supabase advisors
+  reported no new Player Explorer security finding.
+- The remaining owner test is the signed-in Super Admin interaction flow in Dev. The local server
+  starts, but this PC is missing the installed browser-verification skill's `agent-browser`
+  executable, so automated visual verification could not run. Production was not changed.
 
 ## Current priority
 

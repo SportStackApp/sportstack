@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       administration_audit_log: {
@@ -8044,6 +8019,98 @@ export type Database = {
           },
         ]
       }
+      player_explorer_saved_searches: {
+        Row: {
+          created_at: string
+          delivery_email: boolean
+          delivery_in_app: boolean
+          filter_expression: Json
+          id: string
+          last_run_at: string | null
+          name: string
+          next_run_at: string | null
+          owner_id: string
+          schedule_enabled: boolean
+          schedule_frequency: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_email?: boolean
+          delivery_in_app?: boolean
+          filter_expression?: Json
+          id?: string
+          last_run_at?: string | null
+          name: string
+          next_run_at?: string | null
+          owner_id?: string
+          schedule_enabled?: boolean
+          schedule_frequency?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_email?: boolean
+          delivery_in_app?: boolean
+          filter_expression?: Json
+          id?: string
+          last_run_at?: string | null
+          name?: string
+          next_run_at?: string | null
+          owner_id?: string
+          schedule_enabled?: boolean
+          schedule_frequency?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      player_explorer_search_runs: {
+        Row: {
+          completed_at: string | null
+          email_notified_at: string | null
+          error_message: string | null
+          id: string
+          in_app_notified_at: string | null
+          matched_player_count: number
+          result_summary: Json
+          saved_search_id: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          email_notified_at?: string | null
+          error_message?: string | null
+          id?: string
+          in_app_notified_at?: string | null
+          matched_player_count?: number
+          result_summary?: Json
+          saved_search_id: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          email_notified_at?: string | null
+          error_message?: string | null
+          id?: string
+          in_app_notified_at?: string | null
+          matched_player_count?: number
+          result_summary?: Json
+          saved_search_id?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_explorer_search_runs_saved_search_id_fkey"
+            columns: ["saved_search_id"]
+            isOneToOne: false
+            referencedRelation: "player_explorer_saved_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_position_preferences: {
         Row: {
           canonical_group: string | null
@@ -12136,6 +12203,17 @@ export type Database = {
         Args: { p_committee_id: string; p_user_id?: string }
         Returns: boolean
       }
+      claim_due_player_explorer_searches: {
+        Args: { p_limit?: number }
+        Returns: {
+          delivery_email: boolean
+          delivery_in_app: boolean
+          filter_expression: Json
+          id: string
+          name: string
+          owner_id: string
+        }[]
+      }
       claim_placeholder_profile: {
         Args: { p_real_profile_id: string }
         Returns: {
@@ -13171,9 +13249,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       action_status_enum: [

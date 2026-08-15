@@ -15,6 +15,7 @@ import {
   PLAYER_EXPLORER_FIELDS,
   createPlayerExplorerCondition,
   createPlayerExplorerGroup,
+  createPlayerExplorerSequence,
   type PlayerExplorerFilterCondition,
   type PlayerExplorerEntityField,
   type PlayerExplorerFilterExpression,
@@ -23,6 +24,7 @@ import {
   type PlayerExplorerFilterLogic,
   type PlayerExplorerFilterOperator,
   type PlayerExplorerFilterOptions,
+  type PlayerExplorerSequenceRule,
 } from "@/lib/playerExplorer";
 
 interface PlayerExplorerFilterBuilderProps {
@@ -84,6 +86,17 @@ const updateCondition = (
   ),
 }));
 
+const updateSequence = (
+  expression: PlayerExplorerFilterExpression,
+  sequenceId: string,
+  update: Partial<Omit<PlayerExplorerSequenceRule, "id">>,
+): PlayerExplorerFilterExpression => ({
+  ...expression,
+  sequences: expression.sequences.map((sequence) =>
+    sequence.id === sequenceId ? { ...sequence, ...update } : sequence,
+  ),
+});
+
 export function PlayerExplorerFilterBuilder({
   expression,
   options,
@@ -121,6 +134,16 @@ export function PlayerExplorerFilterBuilder({
       conditions: group.conditions.filter((condition) => condition.id !== conditionId),
     })),
   );
+
+  const addSequence = () => onChange({
+    ...expression,
+    sequences: [...expression.sequences, createPlayerExplorerSequence()],
+  });
+
+  const removeSequence = (sequenceId: string) => onChange({
+    ...expression,
+    sequences: expression.sequences.filter((sequence) => sequence.id !== sequenceId),
+  });
 
   return (
     <div className="overflow-hidden rounded-md border">
@@ -309,6 +332,87 @@ export function PlayerExplorerFilterBuilder({
         <Button type="button" variant="outline" size="sm" onClick={addGroup} disabled={disabled}>
           <Plus className="mr-1 h-4 w-4" />Add group
         </Button>
+
+        <div className="space-y-3 rounded-md border border-dashed p-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium">Sequence rules ({expression.sequences.length})</p>
+              <p className="text-xs text-muted-foreground">
+                Reach a game count in one division, then play in another division afterwards.
+              </p>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={addSequence} disabled={disabled}>
+              <Plus className="mr-1 h-4 w-4" />Add sequence
+            </Button>
+          </div>
+
+          {expression.sequences.map((sequence, sequenceIndex) => {
+            const divisionOptions = options.division || [];
+            return (
+              <div key={sequence.id} className="grid gap-3 rounded-md border bg-background p-3 xl:grid-cols-[auto_minmax(180px,1fr)_130px_auto_minmax(180px,1fr)_130px_auto] xl:items-end">
+                <span className="pb-2 text-sm font-medium">{sequenceIndex + 1}.</span>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">First division</label>
+                  <Select
+                    value={sequence.firstDivisionId}
+                    onValueChange={(value) => onChange(updateSequence(expression, sequence.id, { firstDivisionId: value }))}
+                    disabled={disabled || divisionOptions.length === 0}
+                  >
+                    <SelectTrigger className="w-full min-w-0 overflow-hidden" aria-label={`Sequence ${sequenceIndex + 1} first division`}>
+                      <SelectValue placeholder="Select division" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {divisionOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">At least games</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={sequence.firstMinimumGames}
+                    onChange={(event) => onChange(updateSequence(expression, sequence.id, { firstMinimumGames: event.target.value }))}
+                    disabled={disabled}
+                    aria-label={`Sequence ${sequenceIndex + 1} first division minimum games`}
+                  />
+                </div>
+                <span className="pb-2 text-center text-sm font-medium text-muted-foreground">then</span>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Next division</label>
+                  <Select
+                    value={sequence.nextDivisionId}
+                    onValueChange={(value) => onChange(updateSequence(expression, sequence.id, { nextDivisionId: value }))}
+                    disabled={disabled || divisionOptions.length === 0}
+                  >
+                    <SelectTrigger className="w-full min-w-0 overflow-hidden" aria-label={`Sequence ${sequenceIndex + 1} next division`}>
+                      <SelectValue placeholder="Select division" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {divisionOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">At least games</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={sequence.nextMinimumGames}
+                    onChange={(event) => onChange(updateSequence(expression, sequence.id, { nextMinimumGames: event.target.value }))}
+                    disabled={disabled}
+                    aria-label={`Sequence ${sequenceIndex + 1} next division minimum games`}
+                  />
+                </div>
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeSequence(sequence.id)} disabled={disabled} aria-label={`Remove sequence ${sequenceIndex + 1}`}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

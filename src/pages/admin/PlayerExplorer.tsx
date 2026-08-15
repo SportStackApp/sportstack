@@ -17,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import { PlayerExplorerFilterBuilder } from "@/components/admin/PlayerExplorerFilterBuilder";
+import { PlayerExplorerSavedSearches } from "@/components/admin/PlayerExplorerSavedSearches";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ import {
   aggregatePlayerExplorerRecords,
   createEmptyPlayerExplorerExpression,
   createPlayerExplorerExample,
+  createPlayerExplorerMovementExample,
   filterPlayerExplorerRecords,
   resolvePlayerExplorerIdentity,
   validatePlayerExplorerExpression,
@@ -65,7 +67,7 @@ type FixtureRow = Pick<
 >;
 type SourceMatchRow = Pick<
   Tables["source_revsports_matches"]["Row"],
-  "id" | "match_url" | "game_date" | "round_number" | "last_seen_at"
+  "id" | "match_url" | "game_date" | "game_time" | "round_number" | "last_seen_at"
 >;
 type AppearanceRow = Pick<
   Tables["source_revsports_player_appearances"]["Row"],
@@ -119,6 +121,7 @@ interface MatchContext {
   fixture: FixtureRow;
   roundNumber: number | null;
   gameDate: string | null;
+  gameTime: string | null;
   associationId: string | null;
   divisionId: string | null;
   competitionId: string | null;
@@ -198,6 +201,7 @@ const buildMatchContexts = (catalogue: PlayerExplorerCatalogue) => {
       fixture,
       roundNumber: match.round_number,
       gameDate: match.game_date,
+      gameTime: match.game_time,
       associationId,
       divisionId: fixture.division_id,
       competitionId,
@@ -312,6 +316,7 @@ const buildRecords = (
       seasonId: context.seasonId,
       roundNumber: context.roundNumber,
       gameDate: context.gameDate,
+      gameTime: context.gameTime,
       goals: appearance.goals,
       greenCards: appearance.green_cards,
       yellowCards: appearance.yellow_cards,
@@ -344,7 +349,7 @@ const loadCatalogue = async (): Promise<PlayerExplorerCatalogue> => {
     fetchAllPages<CompetitionRow>((from, to) => supabase.from("competitions").select("id, name, association_id, season_id").order("id").range(from, to)),
     fetchAllPages<SeasonRow>((from, to) => supabase.from("seasons").select("id, name, association_id, year").order("id").range(from, to)),
     fetchAllPages<FixtureRow>((from, to) => supabase.from("fixtures").select("id, revsports_match_url, home_team_id, away_team_id, division_id, season_id").order("id").range(from, to)),
-    fetchAllPages<SourceMatchRow>((from, to) => supabase.from("source_revsports_matches").select("id, match_url, game_date, round_number, last_seen_at").order("id").range(from, to)),
+    fetchAllPages<SourceMatchRow>((from, to) => supabase.from("source_revsports_matches").select("id, match_url, game_date, game_time, round_number, last_seen_at").order("id").range(from, to)),
     fetchAllPages<ProfileRow>((from, to) => supabase.from("profiles").select("id, first_name, last_name, is_placeholder, revsports_player_id").order("id").range(from, to)),
     fetchAllPages<ExternalEntityRow>((from, to) => supabase
       .from("external_entities")
@@ -524,7 +529,7 @@ export default function PlayerExplorer() {
             Player Explorer
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Build Looker-style rules for scope, matches and player totals. Results are read-only.
+            Build Looker-style filters, including ordered movement between divisions. Results are read-only.
           </p>
         </div>
         <Badge variant="outline" className="w-fit">
@@ -552,11 +557,21 @@ export default function PlayerExplorer() {
         </Alert>
       ) : null}
 
+      <PlayerExplorerSavedSearches
+        expression={filterExpression}
+        disabled={catalogueLoading || searching}
+        onLoad={(expression) => {
+          setFilterExpression(expression);
+          setSearchError(null);
+          setHasRun(false);
+        }}
+      />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><SlidersHorizontal className="h-5 w-5" />Search filters</CardTitle>
           <CardDescription>
-            Add scope, match and player-total rules, then combine them with AND or OR groups.
+            Add optional scope and total filters, or use a sequence rule to prove one set of games happened before another.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -578,6 +593,7 @@ export default function PlayerExplorer() {
 
               <p className="text-sm text-muted-foreground">
                 In an <strong>All conditions</strong> group, player totals are calculated inside that group&apos;s scope filters.
+                Sequence rules use match date and time to confirm that the second division game happened afterwards.
               </p>
 
               {searchError ? (
@@ -590,6 +606,10 @@ export default function PlayerExplorer() {
                   setFilterExpression(createPlayerExplorerExample());
                   setSearchError(null);
                 }} disabled={searching}>Use example</Button>
+                <Button type="button" variant="outline" onClick={() => {
+                  setFilterExpression(createPlayerExplorerMovementExample());
+                  setSearchError(null);
+                }} disabled={searching}>Use 7 then 1 example</Button>
                 <Button type="button" onClick={() => void runSearch()} disabled={searching || catalogueLoading}>
                   {searching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                   {searching ? "Searching…" : "Run search"}

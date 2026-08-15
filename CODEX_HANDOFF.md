@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-14
+Last updated: 2026-08-15
 
 Future agents should start by reading these files in order:
 
@@ -9,6 +9,32 @@ Future agents should start by reading these files in order:
 3. `docs/project-brief.md` — concise product and architecture context.
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 15 August 2026 Player Explorer sequences, saved searches and schedules
+
+- `/admin/player-explorer` now supports ordered division movement rules. The initial sequence UI asks
+  for a first division and minimum game count, followed by a second division and minimum game count.
+  The shared evaluator uses distinct matches ordered by `game_date` and `game_time`; it does not
+  claim a same-day transition when either time is missing.
+- Super Admins can save and reload filters and select Manual, Daily, Weekly or Monthly. Scheduled
+  searches always produce both an in-app notification and an email. The first automatic run occurs
+  after one full selected interval; changing the schedule to Manual pauses future runs without
+  deleting the saved filter.
+- Dev migration `20260815103000_player_explorer_saved_and_scheduled_searches.sql` adds owner-scoped
+  `player_explorer_saved_searches`, protected `player_explorer_search_runs`, RLS, explicit grants,
+  schedule preparation and the service-role-only `claim_due_player_explorer_searches(integer)` RPC.
+  Its full SQL passed a rollback test before being applied to Dev.
+- Existing Edge Function `sportstack-notification-dispatch` was extended rather than adding another
+  cron job. Dev version 6 is ACTIVE. It loads current RevSports V2 data, runs the shared application
+  evaluator, stores up to 50 result summaries, inserts the in-app result and sends via the existing
+  Resend configuration with an idempotency key.
+- Live verification: anonymous table access and authenticated run-history writes/claim execution are
+  blocked; service claim is allowed; rolled-back due-work claiming succeeded; unauthorised Edge call
+  returned 401; authorised no-work call returned 200 with zero sends/failures; no new Player Explorer
+  security advisor finding.
+- Ten focused tests, focused changed-file lint, TypeScript and production build pass. Full lint remains
+  known repository debt. `agent-browser` is unavailable on this PC, so the remaining check is Aaron's
+  signed-in Dev Super Admin visual flow. No Production system was changed.
 
 ## 14 August 2026 Dev to Main staging promotion
 

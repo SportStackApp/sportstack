@@ -4,6 +4,7 @@ import {
   createEmptyPlayerExplorerExpression,
   createPlayerExplorerCondition,
   createPlayerExplorerGroup,
+  createPlayerExplorerSequence,
   filterPlayerExplorerRecords,
   resolvePlayerExplorerIdentity,
   validatePlayerExplorerExpression,
@@ -29,6 +30,7 @@ const baseRecord: PlayerExplorerRecord = {
   seasonId: "season-1",
   roundNumber: 8,
   gameDate: "2026-06-01",
+  gameTime: "12:00:00",
   goals: 2,
   greenCards: 0,
   yellowCards: 0,
@@ -38,7 +40,7 @@ const baseRecord: PlayerExplorerRecord = {
 const expressionWith = (
   groups: PlayerExplorerFilterExpression["groups"],
   logic: PlayerExplorerFilterExpression["logic"] = "and",
-): PlayerExplorerFilterExpression => ({ groups, logic });
+): PlayerExplorerFilterExpression => ({ groups, logic, sequences: [] });
 
 describe("Player Explorer aggregation", () => {
   it("counts distinct matches while summing appearance statistics", () => {
@@ -150,6 +152,69 @@ describe("Player Explorer aggregation", () => {
       createPlayerExplorerCondition("round", "between", "1", ""),
     ])]);
     expect(validatePlayerExplorerExpression(expression)).toContain("both From and To");
+  });
+
+  it("finds a player who plays in another division after reaching seven games", () => {
+    const firstDivisionRecords = Array.from({ length: 7 }, (_, index) => ({
+      ...baseRecord,
+      appearanceId: `division-1-appearance-${index + 1}`,
+      matchId: `division-1-match-${index + 1}`,
+      gameDate: `2026-06-${String(index + 1).padStart(2, "0")}`,
+      divisionId: "division-1",
+    }));
+    const laterRecord = {
+      ...baseRecord,
+      appearanceId: "division-2-appearance-1",
+      matchId: "division-2-match-1",
+      gameDate: "2026-06-08",
+      divisionId: "division-2",
+    };
+    const sequence = {
+      ...createPlayerExplorerSequence(),
+      firstDivisionId: "division-1",
+      nextDivisionId: "division-2",
+    };
+    const expression: PlayerExplorerFilterExpression = {
+      logic: "and",
+      groups: [createPlayerExplorerGroup()],
+      sequences: [sequence],
+    };
+
+    expect(filterPlayerExplorerRecords([...firstDivisionRecords, laterRecord], expression)).toHaveLength(8);
+    expect(filterPlayerExplorerRecords([
+      laterRecord,
+      ...firstDivisionRecords.map((record) => ({ ...record, gameDate: `2026-06-${String(Number(record.gameDate.slice(-2)) + 1).padStart(2, "0")}` })),
+    ], expression)).toHaveLength(0);
+  });
+
+  it("requires times to prove order for games on the same date", () => {
+    const firstDivisionRecords = Array.from({ length: 7 }, (_, index) => ({
+      ...baseRecord,
+      appearanceId: `same-day-first-${index + 1}`,
+      matchId: `same-day-first-match-${index + 1}`,
+      gameDate: `2026-06-${String(index + 1).padStart(2, "0")}`,
+      gameTime: index === 6 ? null : "12:00:00",
+      divisionId: "division-1",
+    }));
+    const expression: PlayerExplorerFilterExpression = {
+      logic: "and",
+      groups: [createPlayerExplorerGroup()],
+      sequences: [{
+        ...createPlayerExplorerSequence(),
+        firstDivisionId: "division-1",
+        nextDivisionId: "division-2",
+      }],
+    };
+    const sameDayNext = {
+      ...baseRecord,
+      appearanceId: "same-day-next",
+      matchId: "same-day-next-match",
+      gameDate: "2026-06-07",
+      gameTime: "15:00:00",
+      divisionId: "division-2",
+    };
+
+    expect(filterPlayerExplorerRecords([...firstDivisionRecords, sameDayNext], expression)).toHaveLength(0);
   });
 });
 

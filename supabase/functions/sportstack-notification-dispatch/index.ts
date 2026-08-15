@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { processDuePlayerExplorerSearches } from "../_shared/playerExplorerScheduled.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,13 +8,14 @@ const corsHeaders = {
 };
 
 type NotificationWork = {
-  work_type: "AVAILABILITY" | "BROADCAST";
+  work_type: "AVAILABILITY" | "BROADCAST" | "PLAYER_EXPLORER";
   delivery_id: string;
   recipient_email: string;
   recipient_name: string;
   subject: string;
   body_text: string;
   action_url: string;
+  idempotency_key?: string;
 };
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
@@ -74,12 +76,15 @@ async function sendEmail(work: NotificationWork) {
     if (delay > 0) await sleep(delay);
     lastSendStartedAt = Date.now();
 
+    const requestHeaders: Record<string, string> = {
+      Authorization: `Bearer ${resendKey}`,
+      "Content-Type": "application/json",
+    };
+    if (work.idempotency_key) requestHeaders["Idempotency-Key"] = work.idempotency_key;
+
     const response = await fetch(RESEND_ENDPOINT, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: requestHeaders,
       body: JSON.stringify({
         from: fromEmail,
         to: [work.recipient_email],
@@ -128,6 +133,17 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "Invalid scheduler request" }, 401);
   }
 
+  let playerExplorer = { claimed: 0, completed: 0, partial: 0, failed: 0 };
+  try {
+    playerExplorer = await processDuePlayerExplorerSearches(serviceClient, sendEmail);
+  } catch (playerExplorerError) {
+    const message = playerExplorerError instanceof Error
+      ? playerExplorerError.message
+      : "Unknown Player Explorer scheduler error";
+    console.error("Player Explorer scheduled work failed", message);
+    playerExplorer.failed += 1;
+  }
+
   const { data, error } = await serviceClient.rpc(
     "claim_sportstack_notification_work",
     { p_limit: 50 },
@@ -168,5 +184,5 @@ Deno.serve(async (request) => {
     }
   }
 
-  return jsonResponse({ claimed: workItems.length, sent, failed });
+  return jsonResponse({ claimed: workItems.length, sent, failed, player_explorer: playerExplorer });
 });
