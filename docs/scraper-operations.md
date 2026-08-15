@@ -1,6 +1,6 @@
 # SportStack Scraper Operations
 
-Last updated: 30/07/2026
+Last updated: 15/08/2026
 
 This is the current run and backup routine for the RevSports scrapers. GitHub schedules use UTC;
 the comments below also show Melbourne time. Melbourne times move forward by one hour during
@@ -12,6 +12,7 @@ daylight saving.
 
 | Task | Routine | Backup |
 |---|---|---|
+| Mapping readiness | Tuesday at 03:00 AEST / 04:00 AEDT | No; read-only check |
 | Hockey Ballarat, Sunraysia and Wimmera match scrapers | Tuesday at 04:00 AEST / 05:00 AEDT | Yes, one compressed archive per source |
 | Player registry | Tuesday and Friday mornings | Tuesday only |
 | Player history | Tuesday at 06:00 AEST / 07:00 AEDT | Yes |
@@ -21,6 +22,7 @@ daylight saving.
 
 | Task | Routine | Backup |
 |---|---|---|
+| Mapping readiness | Friday at 22:00 AEST / 23:00 AEDT | No; read-only check |
 | Due-fixture selector | Every 15 minutes | No |
 | Exact fixture refresh | After its calculated finish, with controlled retries | No |
 | Full match catch-up | Nightly at 00:30 AEST / 01:30 AEDT | Monday early run, after Sunday matches |
@@ -54,6 +56,9 @@ access expiry uses the same finish hierarchy plus the association's existing gra
 
 ## When to run each manual option
 
+- `mapping-readiness`: read-only check that every staged match can resolve its Association,
+  competition, season, division and teams. It fails without importing fixtures when a mapping is
+  missing or inconsistent.
 - `hockey-ballarat`, `sunraysia` or `wimmera`: use when only that source is late or incorrect.
 - `due-fixture-refresh`: run the same due-fixture selection manually. Production writes still need
   `write_to_production` enabled.
@@ -77,8 +82,9 @@ manual-only fallbacks and must not be scheduled.
 ## Backup format
 
 Each selected backup run stores one private `.tar.gz` archive per source instead of separate raw
-CSV, JSON and text objects. This reduces both object count and stored bytes. Extract a downloaded
-archive with:
+CSV, JSON and text objects. The uploader builds the archive at a real temporary file path before
+sending it to Supabase Storage; this is required by the pinned Python Storage client. This reduces
+both object count and stored bytes. Extract a downloaded archive with:
 
 ```powershell
 tar -xzf source-name.tar.gz

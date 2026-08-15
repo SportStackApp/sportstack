@@ -28,6 +28,7 @@ class ScraperWorkflowRoutineTests(unittest.TestCase):
         text = (WORKFLOWS / "production-scrapers.yml").read_text(encoding="utf-8")
 
         self.assertIn('cron: "7,22,37,52 * * * *"', text)
+        self.assertIn('cron: "0 12 * * 5"', text)
         self.assertIn('cron: "30 14 * * 1-6"', text)
         self.assertIn('cron: "30 14 * * 0"', text)
         self.assertIn('cron: "0 19 * * 1"', text)
@@ -40,6 +41,24 @@ class ScraperWorkflowRoutineTests(unittest.TestCase):
         self.assertIn("secrets.SUPABASE_URL", text)
         self.assertNotIn("secrets.DEV_SUPABASE_URL", text)
         self.assertIn("inputs.write_to_production", text)
+
+    def test_mapping_readiness_checks_are_read_only_and_scheduled(self) -> None:
+        dev_text = (WORKFLOWS / "dev-scrapers.yml").read_text(encoding="utf-8")
+        production_text = (WORKFLOWS / "production-scrapers.yml").read_text(encoding="utf-8")
+
+        self.assertIn('cron: "0 17 * * 1"', dev_text)
+        self.assertIn("inputs.task == 'mapping-readiness'", dev_text)
+        self.assertIn(
+            "python scripts/import_revsports_fixtures_v2.py --require-complete",
+            dev_text,
+        )
+        self.assertIn("inputs.task == 'mapping-readiness'", production_text)
+        readiness_job = production_text.split("mapping-readiness:", 1)[1].split(
+            "storage-diagnostics:",
+            1,
+        )[0]
+        self.assertIn("--require-complete", readiness_job)
+        self.assertNotIn("--apply", readiness_job)
 
     def test_due_fixture_jobs_use_an_exact_dynamic_matrix(self) -> None:
         text = (WORKFLOWS / "production-scrapers.yml").read_text(encoding="utf-8")

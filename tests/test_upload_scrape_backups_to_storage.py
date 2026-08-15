@@ -30,9 +30,10 @@ class ScrapeBackupUploadTests(unittest.TestCase):
             (source_dir / "ignore.bin").write_bytes(b"ignore")
 
             files = uploader.collect_files(source_dir)
-            with uploader.build_compressed_archive(source_dir, files) as archive:
-                with tarfile.open(fileobj=archive, mode="r:gz") as compressed:
-                    members = sorted(compressed.getnames())
+            archive_path = source_dir / "backup.tar.gz"
+            uploader.build_compressed_archive(source_dir, files, archive_path)
+            with tarfile.open(archive_path, mode="r:gz") as compressed:
+                members = sorted(compressed.getnames())
 
             self.assertEqual(
                 ["nested/results.json", "results.csv"],
@@ -44,8 +45,10 @@ class ScrapeBackupUploadTests(unittest.TestCase):
             def __init__(self) -> None:
                 self.uploads = []
 
-            def upload(self, path, archive, options):
-                self.uploads.append((path, archive.read(2), options))
+            def upload(self, path, archive_path, options):
+                resolved_path = Path(archive_path)
+                test_case.assertTrue(resolved_path.exists())
+                self.uploads.append((path, resolved_path.read_bytes(), options))
 
         class FakeStorage:
             def __init__(self) -> None:
@@ -61,13 +64,13 @@ class ScrapeBackupUploadTests(unittest.TestCase):
 
         test_case = self
         client = FakeClient()
-        with tempfile.SpooledTemporaryFile() as archive:
-            archive.write(b"gzip-data")
-            archive.seek(0)
+        with tempfile.TemporaryDirectory() as directory:
+            archive_path = Path(directory) / "backup.tar.gz"
+            archive_path.write_bytes(b"gzip-data")
             path = uploader.upload_archive(
                 client,
                 "scrape-backups",
-                archive,
+                archive_path,
                 "hockey-ballarat/2026/07/30/010203",
                 "hockey-ballarat",
             )
@@ -77,6 +80,7 @@ class ScrapeBackupUploadTests(unittest.TestCase):
             path,
         )
         self.assertEqual(1, len(client.storage.bucket.uploads))
+        self.assertEqual(b"gzip-data", client.storage.bucket.uploads[0][1])
         self.assertEqual(
             {"content-type": "application/gzip"},
             client.storage.bucket.uploads[0][2],

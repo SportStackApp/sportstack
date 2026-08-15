@@ -11,7 +11,7 @@ from scraper.scraper import (
     extract_round_card_details,
     infer_bye_round_context,
 )
-from scripts.import_revsports_fixtures_v2 import build_rows
+from scripts.import_revsports_fixtures_v2 import build_rows, enforce_complete_mappings
 
 
 def complete_mappings() -> dict:
@@ -92,6 +92,21 @@ class RevSportsFixtureV2Tests(unittest.TestCase):
         self.assertEqual(1, len(skipped))
         self.assertIn("missing_season_mapping", skipped[0]["reason"])
         self.assertEqual(1, stats["skipped_missing_season_mapping"])
+
+    def test_read_only_mapping_readiness_fails_when_rows_are_blocked(self) -> None:
+        with self.assertRaisesRegex(SystemExit, "Mapping readiness failed: 1 row"):
+            enforce_complete_mappings(
+                [{"reason": "missing_team_mapping"}],
+                apply=False,
+                require_complete=True,
+            )
+
+    def test_normal_read_only_preview_can_report_blockers_without_failing(self) -> None:
+        enforce_complete_mappings(
+            [{"reason": "missing_team_mapping"}],
+            apply=False,
+            require_complete=False,
+        )
 
     def test_known_venue_in_pitch_field_recovers_malformed_location(self) -> None:
         rows, skipped, stats = build_rows([

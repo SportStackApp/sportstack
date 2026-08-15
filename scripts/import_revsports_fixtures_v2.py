@@ -414,9 +414,34 @@ def upsert_fixtures(client: Any, rows: list[dict]) -> int:
     return total
 
 
+def enforce_complete_mappings(
+    skipped: list[dict],
+    *,
+    apply: bool,
+    require_complete: bool,
+) -> None:
+    """Stop writes or readiness checks when required mappings are incomplete."""
+
+    if not skipped:
+        return
+    if apply:
+        raise SystemExit(
+            f"Refusing a partial fixture import: {len(skipped)} row(s) are blocked by required mappings."
+        )
+    if require_complete:
+        raise SystemExit(
+            f"Mapping readiness failed: {len(skipped)} row(s) are blocked by required mappings."
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--apply", action="store_true", help="Write resolved fixtures to the fixtures table.")
+    parser.add_argument(
+        "--require-complete",
+        action="store_true",
+        help="Return a failure for a read-only check when any required mapping is incomplete.",
+    )
     parser.add_argument("--association", help="Limit the import to one exact association name.")
     parser.add_argument("--match-url", help="Limit the import to one exact RevSports match URL.")
     args = parser.parse_args()
@@ -451,11 +476,13 @@ def main() -> None:
         for sample in skipped[:10]:
             print(sample)
 
+    enforce_complete_mappings(
+        skipped,
+        apply=args.apply,
+        require_complete=args.require_complete,
+    )
+
     if args.apply:
-        if skipped:
-            raise SystemExit(
-                f"Refusing a partial fixture import: {len(skipped)} row(s) are blocked by required mappings."
-            )
         total = upsert_fixtures(client, rows)
         print("Upserted fixtures:", total)
     else:
