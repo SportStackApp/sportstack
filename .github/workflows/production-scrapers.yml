@@ -4,6 +4,7 @@ on:
   schedule:
     # GitHub schedules use UTC. Local times move by one hour during daylight saving.
     - cron: "7,22,37,52 * * * *" # Due-fixture check every 15 minutes
+    - cron: "0 12 * * 5" # Friday evening mapping readiness check before weekend matches
     - cron: "30 14 * * 1-6" # Nightly full catch-up: 00:30 AEST / 01:30 AEDT
     - cron: "30 14 * * 0" # Monday early catch-up plus weekly backup
     - cron: "0 19 * * 1" # Tuesday morning registry plus weekly backup
@@ -22,6 +23,7 @@ on:
           - storage-retention-dry-run
           - storage-retention-apply
           - due-fixture-refresh
+          - mapping-readiness
           - all
           - match-scrapers
           - hockey-ballarat
@@ -69,6 +71,29 @@ env:
   EXPECTED_SUPABASE_PROJECT_REF: svierarfcolhcfjpmwck
 
 jobs:
+  mapping-readiness:
+    name: Check Production fixture mapping readiness
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '0 12 * * 5') ||
+      (github.event_name == 'workflow_dispatch' &&
+        inputs.task == 'mapping-readiness')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Supabase dependency
+        run: pip install -r scraper/requirements-supabase.txt
+      - name: Require complete Production fixture mappings
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scripts/import_revsports_fixtures_v2.py --require-complete
+
   storage-diagnostics:
     name: Inspect Production Storage usage
     if: >-

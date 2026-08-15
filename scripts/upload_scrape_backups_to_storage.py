@@ -53,22 +53,24 @@ def collect_files(source_dir: Path) -> list[Path]:
     return sorted(files)
 
 
-def build_compressed_archive(source_dir: Path, files: list[Path]):
-    """Return one gzip-compressed tar stream with safe relative member names."""
+def build_compressed_archive(
+    source_dir: Path,
+    files: list[Path],
+    archive_path: Path,
+) -> Path:
+    """Write one gzip-compressed tar file with safe relative member names."""
 
-    archive = tempfile.SpooledTemporaryFile(max_size=32 * 1024 * 1024)
-    with tarfile.open(fileobj=archive, mode="w:gz") as tar:
+    with tarfile.open(archive_path, mode="w:gz") as tar:
         for path in files:
             relative_path = path.relative_to(source_dir)
             tar.add(path, arcname=relative_path.as_posix(), recursive=False)
-    archive.seek(0)
-    return archive
+    return archive_path
 
 
 def upload_archive(
     client,
     bucket_name: str,
-    archive,
+    archive_path: Path,
     prefix: str,
     source_name: str,
 ) -> str:
@@ -76,14 +78,21 @@ def upload_archive(
     file_options = {"content-type": "application/gzip"}
 
     try:
-        client.storage.from_(bucket_name).upload(storage_path, archive, file_options)
+        client.storage.from_(bucket_name).upload(
+            storage_path,
+            str(archive_path),
+            file_options,
+        )
     except Exception as error:
         # Timestamped paths should be unique. Retain a safe update fallback for a
         # retried run that has the same second-level timestamp.
         if "already exists" not in str(error).lower():
             raise
-        archive.seek(0)
-        client.storage.from_(bucket_name).update(storage_path, archive, file_options)
+        client.storage.from_(bucket_name).update(
+            storage_path,
+            str(archive_path),
+            file_options,
+        )
 
     return storage_path
 
@@ -112,11 +121,16 @@ def main() -> None:
     run_stamp = datetime.now(timezone.utc).strftime("%Y/%m/%d/%H%M%S")
     prefix = f"{args.source_name}/{run_stamp}"
 
-    with build_compressed_archive(source_dir, files) as archive:
+    with tempfile.TemporaryDirectory(prefix="sportstack-scrape-backup-") as temp_dir:
+        archive_path = build_compressed_archive(
+            source_dir,
+            files,
+            Path(temp_dir) / f"{args.source_name}.tar.gz",
+        )
         upload_archive(
             client,
             args.bucket,
-            archive,
+            archive_path,
             prefix,
             args.source_name,
         )

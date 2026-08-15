@@ -28,6 +28,21 @@ Update this file after every meaningful Codex task, pull request, schema change,
 7. Latest pull requests and commits
 8. Live Supabase checks
 
+## RevSports scraper reliability repair — 15 August 2026
+
+- Production failures were traced to three incorrect Sunraysia grade-to-division links. The
+  `U11 Mixed`, `U13 Girls` and `U16 Girls` source grades now point to the same divisions as their
+  mapped teams: `Under 11 Open`, `Under 13 Girls` and `Under 16 Girls` respectively.
+- The correction updated exactly three existing mapping rows after a guarded count check. It made
+  no schema change and did not delete or recreate any fixture, team or mapping.
+- A live follow-up audit reduced the affected Sunraysia import blockers from 90 matches to zero.
+- Scraper backups now give the Supabase Python Storage client a real temporary archive path. This
+  avoids the `SpooledTemporaryFile` type error seen after the pinned Storage client moved to 2.31.
+- Dev and Production workflows now run a read-only mapping-readiness check before their routine
+  match scrapes. A blocked mapping fails this early check without importing any fixture.
+- All 152 Python tests passed. TypeScript and the production build passed. Repository-wide lint
+  still reports the pre-existing baseline debt (438 findings); none is in these scraper files.
+
 ## Main staging release — 14 August 2026
 
 - Aaron explicitly approved the full Dev-to-Main promotion, including the Main-default-branch

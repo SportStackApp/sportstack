@@ -4,6 +4,7 @@ on:
   schedule:
     # GitHub schedules use UTC. These run early morning in Melbourne.
     - cron: "0 18 * * 1" # Tuesday morning match scraper verification
+    - cron: "0 17 * * 1" # Tuesday morning read-only mapping readiness check
     - cron: "0 19 * * 1" # Tuesday morning registry plus weekly backup
     - cron: "0 19 * * 4" # Friday morning registry without another backup
     - cron: "0 20 * * 1" # Tuesday morning player history
@@ -22,6 +23,7 @@ on:
           - sunraysia
           - wimmera
           - fixture-import
+          - mapping-readiness
           - player-registry
           - player-history
           - storage-diagnostics
@@ -67,6 +69,33 @@ env:
   PYTHONUNBUFFERED: "1"
 
 jobs:
+  mapping-readiness:
+    name: Check Dev fixture mapping readiness
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '0 17 * * 1') ||
+      (github.event_name == 'workflow_dispatch' &&
+        inputs.task == 'mapping-readiness')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Supabase dependency
+        run: pip install -r scraper/requirements-supabase.txt
+
+      - name: Require complete Dev fixture mappings
+        env:
+          SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.DEV_SUPABASE_SERVICE_KEY }}
+        run: python scripts/import_revsports_fixtures_v2.py --require-complete
+
   fixture-import:
     name: RevSports fixture import to Dev
     if: >-
