@@ -42,6 +42,14 @@ Update this file after every meaningful Codex task, pull request, schema change,
   match scrapes. A blocked mapping fails this early check without importing any fixture.
 - All 152 Python tests passed. TypeScript and the production build passed. Repository-wide lint
   still reports the pre-existing baseline debt (438 findings); none is in these scraper files.
+- Approved Production refresh `31887322210` then scraped 5,363 Sunraysia rows and imported all
+  319 resolved fixtures with zero skipped. The formerly blocked game `2583904` now imports, but
+  remains scheduled with no score because RevSports had not published a result at the fresh scrape.
+- Read-only readiness runs `31887512718` (Dev) and `31888054208` (Production) both passed. Dev
+  backup verification run `31887538981` also passed and created a new private 230,143-byte
+  Sunraysia archive in `scrape-backups`.
+- The scoped scraper repair is on both `dev` and `main`. It was not merged to `prod`; scheduled
+  GitHub Actions use the default `main` branch and their environment-specific secret selectors.
 
 ## Main staging release — 14 August 2026
 
