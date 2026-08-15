@@ -64,6 +64,10 @@ Update this file after every meaningful Codex task, pull request, schema change,
   unresolved Hockey Ballarat authority/adoption mapping visibly flagged.
 - Local quality checks passed for focused discipline lint, TypeScript, production build and 22
   discipline tests. The repository-wide lint still has the known unrelated baseline debt.
+- Dev commit `f94442ac0fd724a2c0bbc332eab85a90216b4457` deployed as Vercel deployment
+  `dpl_5HMVWDSskSNDBDE6MedjdTyMWYtW` with status `READY`. The Dev alias returned HTTP 200,
+  redirected signed-out access safely to login and served the redesigned bundle with only the Dev
+  Supabase project reference. Signed-in owner interaction testing remains the next gate before Main.
 
 ## Player Explorer saved and scheduled searches — 15 August 2026
 
