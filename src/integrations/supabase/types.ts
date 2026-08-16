@@ -3135,6 +3135,86 @@ export type Database = {
           },
         ]
       }
+      discipline_evidence_status_events: {
+        Row: {
+          case_id: string
+          event_sequence: number
+          evidence_id: string | null
+          id: string
+          pressure_or_intimidation_concern: boolean
+          reason: string
+          recorded_at: string
+          recorded_by: string
+          request_source: string
+          safety_concern: boolean
+          source_references: string[]
+          status: string
+          target_type: string
+          witness_id: string | null
+        }
+        Insert: {
+          case_id: string
+          event_sequence?: never
+          evidence_id?: string | null
+          id?: string
+          pressure_or_intimidation_concern?: boolean
+          reason: string
+          recorded_at?: string
+          recorded_by: string
+          request_source: string
+          safety_concern?: boolean
+          source_references?: string[]
+          status: string
+          target_type: string
+          witness_id?: string | null
+        }
+        Update: {
+          case_id?: string
+          event_sequence?: never
+          evidence_id?: string | null
+          id?: string
+          pressure_or_intimidation_concern?: boolean
+          reason?: string
+          recorded_at?: string
+          recorded_by?: string
+          request_source?: string
+          safety_concern?: boolean
+          source_references?: string[]
+          status?: string
+          target_type?: string
+          witness_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_evidence_status_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_evidence_status_events_evidence_id_fkey"
+            columns: ["evidence_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_evidence"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_evidence_status_events_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_evidence_status_events_witness_id_fkey"
+            columns: ["witness_id"]
+            isOneToOne: false
+            referencedRelation: "discipline_witnesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discipline_finding_revisions: {
         Row: {
           case_id: string
@@ -12747,6 +12827,19 @@ export type Database = {
           p_outcome: string
           p_recommendation_followed: boolean
           p_rule_reference: string
+        }
+        Returns: string
+      }
+      record_discipline_evidence_status_event: {
+        Args: {
+          p_case_id: string
+          p_pressure_or_intimidation_concern?: boolean
+          p_reason: string
+          p_request_source: string
+          p_safety_concern?: boolean
+          p_status: string
+          p_target_id: string
+          p_target_type: string
         }
         Returns: string
       }

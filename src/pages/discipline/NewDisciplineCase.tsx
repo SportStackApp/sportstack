@@ -42,6 +42,12 @@ import {
   JurisdictionPathwayDetails,
 } from "@/features/discipline/DisciplineIntakeGuidance";
 import { JURISDICTION_HELP } from "@/features/discipline/disciplineIntakeContent";
+import {
+  clearDisciplineIntakeDraft,
+  disciplineIntakeDraftKey,
+  loadDisciplineIntakeDraft,
+  saveDisciplineIntakeDraft,
+} from "@/features/discipline/disciplineIntakeDraft";
 import { PredictiveTextInput } from "@/features/discipline/PredictiveTextInput";
 import {
   addDisciplineCasePerson,
@@ -115,6 +121,38 @@ type AllegationDraft = {
   incidentTime: string;
   location: string;
   tagIds: string[];
+};
+
+type DisciplineIntakeDraftValue = {
+  title: string;
+  jurisdictionReason: string;
+  reportDate: string;
+  reportTime: string;
+  reportMethod: string;
+  roundType: string;
+  jurisdiction: string;
+  relevantClub: "YES" | "NO" | "";
+  jurisdictionTagIds: string[];
+  safetyTagIds: string[];
+  fixtureSearch: string;
+  fixtureId?: string;
+  competition: LinkedTextValue;
+  grade: LinkedTextValue;
+  roundLabel: string;
+  homeTeam: LinkedTextValue;
+  awayTeam: LinkedTextValue;
+  venue: LinkedTextValue;
+  matchDate: string;
+  matchTime: string;
+  incidentDate: string;
+  incidentTime: string;
+  incidentLocation: string;
+  people: PersonDraft[];
+  personEditor: PersonDraft | null;
+  riskAssessment: RiskAssessmentDraft;
+  sourceDocuments: SourceDocumentDraft[];
+  allegations: AllegationDraft[];
+  checks: Record<CheckboxKey, boolean>;
 };
 
 const emptyPerson = (caseRole: PersonDraft["caseRole"] = "REPORTER"): PersonDraft => ({
@@ -313,6 +351,11 @@ export default function NewDisciplineCase() {
     enabled: Boolean(associationId),
   });
   const [roundType, setRoundType] = useState("REGULAR");
+  const [title, setTitle] = useState("");
+  const [jurisdictionReason, setJurisdictionReason] = useState("");
+  const [reportDate, setReportDate] = useState("");
+  const [reportTime, setReportTime] = useState("");
+  const [reportMethod, setReportMethod] = useState("");
   const [jurisdiction, setJurisdiction] = useState("UNASSESSED");
   const [relevantClub, setRelevantClub] = useState<"YES" | "NO" | "">("");
   const [jurisdictionTagIds, setJurisdictionTagIds] = useState<string[]>([]);
@@ -350,6 +393,9 @@ export default function NewDisciplineCase() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [draftHydratedKey, setDraftHydratedKey] = useState<string | null>(null);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -358,6 +404,151 @@ export default function NewDisciplineCase() {
       setAssociationId(associationsQuery.data[0].id);
     }
   }, [associationId, associationsQuery.data]);
+
+  const draftKey = useMemo(
+    () => user?.id && associationId
+      ? disciplineIntakeDraftKey(user.id, associationId)
+      : null,
+    [associationId, user?.id],
+  );
+
+  useEffect(() => {
+    if (!draftKey) return;
+    let cancelled = false;
+    setDraftHydratedKey(null);
+    setDraftError(null);
+    void loadDisciplineIntakeDraft<DisciplineIntakeDraftValue>(draftKey)
+      .then((envelope) => {
+        if (cancelled) return;
+        if (envelope) {
+          const draft = envelope.value;
+          setTitle(draft.title);
+          setJurisdictionReason(draft.jurisdictionReason);
+          setReportDate(draft.reportDate);
+          setReportTime(draft.reportTime);
+          setReportMethod(draft.reportMethod);
+          setRoundType(draft.roundType);
+          setJurisdiction(draft.jurisdiction);
+          setRelevantClub(draft.relevantClub);
+          setJurisdictionTagIds(draft.jurisdictionTagIds);
+          setSafetyTagIds(draft.safetyTagIds);
+          setFixtureSearch(draft.fixtureSearch);
+          setFixtureId(draft.fixtureId);
+          setCompetition(draft.competition);
+          setGrade(draft.grade);
+          setRoundLabel(draft.roundLabel);
+          setHomeTeam(draft.homeTeam);
+          setAwayTeam(draft.awayTeam);
+          setVenue(draft.venue);
+          setMatchDate(draft.matchDate);
+          setMatchTime(draft.matchTime);
+          setIncidentDate(draft.incidentDate);
+          setIncidentTime(draft.incidentTime);
+          setIncidentLocation(draft.incidentLocation);
+          setPeople(draft.people);
+          setPersonEditor(draft.personEditor);
+          setRiskAssessment(draft.riskAssessment);
+          setSourceDocuments(draft.sourceDocuments);
+          setAllegations(draft.allegations);
+          setChecks(draft.checks);
+          setDraftSavedAt(envelope.savedAt);
+        }
+        setDraftHydratedKey(draftKey);
+      })
+      .catch((caught: unknown) => {
+        if (cancelled) return;
+        setDraftError(
+          caught instanceof Error
+            ? caught.message
+            : "The incident draft could not be restored.",
+        );
+        setDraftHydratedKey(draftKey);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [draftKey]);
+
+  const draftValue = useMemo<DisciplineIntakeDraftValue>(() => ({
+    title,
+    jurisdictionReason,
+    reportDate,
+    reportTime,
+    reportMethod,
+    roundType,
+    jurisdiction,
+    relevantClub,
+    jurisdictionTagIds,
+    safetyTagIds,
+    fixtureSearch,
+    fixtureId,
+    competition,
+    grade,
+    roundLabel,
+    homeTeam,
+    awayTeam,
+    venue,
+    matchDate,
+    matchTime,
+    incidentDate,
+    incidentTime,
+    incidentLocation,
+    people,
+    personEditor,
+    riskAssessment,
+    sourceDocuments,
+    allegations,
+    checks,
+  }), [
+    allegations,
+    awayTeam,
+    checks,
+    competition,
+    fixtureId,
+    fixtureSearch,
+    grade,
+    homeTeam,
+    incidentDate,
+    incidentLocation,
+    incidentTime,
+    jurisdiction,
+    jurisdictionReason,
+    jurisdictionTagIds,
+    matchDate,
+    matchTime,
+    people,
+    personEditor,
+    relevantClub,
+    reportDate,
+    reportMethod,
+    reportTime,
+    riskAssessment,
+    roundLabel,
+    roundType,
+    safetyTagIds,
+    sourceDocuments,
+    title,
+    venue,
+  ]);
+
+  useEffect(() => {
+    if (!draftKey || draftHydratedKey !== draftKey || submitting) return;
+    const timeout = window.setTimeout(() => {
+      void saveDisciplineIntakeDraft(draftKey, draftValue)
+        .then(() => {
+          setDraftSavedAt(new Date().toISOString());
+          setDraftError(null);
+        })
+        .catch((caught: unknown) => {
+          setDraftError(
+            caught instanceof Error
+              ? caught.message
+              : "The incident draft could not be saved.",
+          );
+        });
+    }, 500);
+    return () => window.clearTimeout(timeout);
+  }, [draftHydratedKey, draftKey, draftValue, submitting]);
 
   const associationTimezone =
     associationsQuery.data?.find((item) => item.id === associationId)
@@ -450,7 +641,6 @@ export default function NewDisciplineCase() {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
-    const form = new FormData(event.currentTarget);
     try {
       if (checks.immediateRisk && (
         riskAssessment.riskDescription.trim().length < 5
@@ -464,9 +654,9 @@ export default function NewDisciplineCase() {
       const reportedPerson = people.find((person) => person.caseRole === "REPORTED_PERSON");
       const caseId = await createDisciplineCase({
         association_id: associationId,
-        title: String(form.get("title") || ""),
+        title,
         jurisdiction_path: jurisdiction,
-        jurisdiction_reason: String(form.get("jurisdictionReason") || ""),
+        jurisdiction_reason: jurisdictionReason,
         jurisdiction_tag_ids: jurisdictionTagIds,
         immediate_safety_risk: checks.immediateRisk,
         immediate_safety_action: riskAssessment.mitigationAction,
@@ -500,14 +690,14 @@ export default function NewDisciplineCase() {
           : undefined,
         venue: venue.value,
         incident_location: incidentLocation,
-        report_received_at: form.get("reportDate")
+        report_received_at: reportDate
           ? combineZonedDateTime(
-              String(form.get("reportDate")),
-              String(form.get("reportTime") || "00:00"),
+              reportDate,
+              reportTime || "00:00",
               associationTimezone,
             )
           : undefined,
-        report_method: String(form.get("reportMethod") || ""),
+        report_method: reportMethod,
         report_in_writing: checks.reportInWriting,
         prescribed_form_used: checks.prescribedForm,
         report_complete: checks.reportComplete,
@@ -595,6 +785,9 @@ export default function NewDisciplineCase() {
           : `${allegations.length} allegation${allegations.length === 1 ? "" : "s"} and ${sourceDocuments.length} source document${sourceDocuments.length === 1 ? "" : "s"} recorded.`,
         variant: failedDocuments.length ? "destructive" : undefined,
       });
+      if (draftKey) {
+        await clearDisciplineIntakeDraft(draftKey).catch(() => undefined);
+      }
       navigate(`/discipline/cases/${caseId}`);
     } catch (caught) {
       setError(
@@ -623,6 +816,23 @@ export default function NewDisciplineCase() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
+      <Alert>
+        <FileText className="h-4 w-4" />
+        <AlertTitle>Draft recovery is on</AlertTitle>
+        <AlertDescription>
+          Entered details and selected source files are saved privately in this
+          browser while you work. Returning from an official-source link or
+          refreshing this tab will restore the draft for up to seven days.
+          {draftSavedAt ? ` Last saved ${new Date(draftSavedAt).toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" })}.` : ""}
+        </AlertDescription>
+      </Alert>
+      {draftError ? (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Draft recovery unavailable</AlertTitle>
+          <AlertDescription>{draftError}</AlertDescription>
+        </Alert>
+      ) : null}
       {optionsQuery.error ? (
         <Alert>
           <AlertTriangle className="h-4 w-4" />
@@ -642,7 +852,7 @@ export default function NewDisciplineCase() {
       >
         <div className="space-y-2">
           <Label htmlFor="title">Case title</Label>
-          <Input id="title" name="title" required minLength={3} placeholder="Short neutral identifier for the incident" />
+          <Input id="title" name="title" value={title} onChange={(event) => setTitle(event.target.value)} required minLength={3} placeholder="Short neutral identifier for the incident" />
         </div>
         <div className="mt-5 rounded-lg border border-dashed p-4">
           <Label htmlFor="source-documents" className="flex cursor-pointer items-center gap-2 font-medium">
@@ -762,6 +972,8 @@ export default function NewDisciplineCase() {
             <Textarea
               id="jurisdictionReason"
               name="jurisdictionReason"
+              value={jurisdictionReason}
+              onChange={(event) => setJurisdictionReason(event.target.value)}
               placeholder={pathwayHelp.reasonPrompt}
               minLength={5}
               required
@@ -1091,15 +1303,15 @@ export default function NewDisciplineCase() {
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="reportDate">Report received date</Label>
-            <Input id="reportDate" name="reportDate" type="date" />
+            <Input id="reportDate" name="reportDate" type="date" value={reportDate} onChange={(event) => setReportDate(event.target.value)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="reportTime">Report received time</Label>
-            <Input id="reportTime" name="reportTime" type="time" />
+            <Input id="reportTime" name="reportTime" type="time" value={reportTime} onChange={(event) => setReportTime(event.target.value)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="reportMethod">Report method</Label>
-            <Input id="reportMethod" name="reportMethod" placeholder="Email, form, verbal notification…" />
+            <Input id="reportMethod" name="reportMethod" value={reportMethod} onChange={(event) => setReportMethod(event.target.value)} placeholder="Email, form, verbal notification…" />
           </div>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-2">

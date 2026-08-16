@@ -162,6 +162,7 @@ export async function loadDisciplineWorkspace(
     notificationsResult,
     witnessesResult,
     evidenceResult,
+    evidenceStatusEventsResult,
     naturalJusticeResult,
     findingsResult,
     decisionsResult,
@@ -240,6 +241,11 @@ export async function loadDisciplineWorkspace(
       .select("*")
       .eq("case_id", caseId)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("discipline_evidence_status_events")
+      .select("*")
+      .eq("case_id", caseId)
+      .order("event_sequence", { ascending: false }),
     supabase
       .from("discipline_natural_justice_checks")
       .select("*")
@@ -332,6 +338,7 @@ export async function loadDisciplineWorkspace(
     notificationsResult,
     witnessesResult,
     evidenceResult,
+    evidenceStatusEventsResult,
     naturalJusticeResult,
     findingsResult,
     decisionsResult,
@@ -365,6 +372,7 @@ export async function loadDisciplineWorkspace(
     notifications: notificationsResult.data ?? [],
     witnesses: witnessesResult.data ?? [],
     evidence: evidenceResult.data ?? [],
+    evidenceStatusEvents: evidenceStatusEventsResult.data ?? [],
     naturalJustice: naturalJusticeResult.data ?? [],
     findings: findingsResult.data ?? [],
     decisions: decisionsResult.data ?? [],
@@ -715,6 +723,49 @@ export async function createDisciplineEvidenceLink(storagePath: string) {
   if (!data?.signedUrl)
     throw new Error("A private file link could not be created.");
   return data.signedUrl;
+}
+
+export async function recordDisciplineEvidenceStatusEvent(
+  caseId: string,
+  values: {
+    targetType: "EVIDENCE" | "WITNESS";
+    targetId: string;
+    status:
+      | "WITHDRAWAL_REQUESTED"
+      | "WITHDRAWAL_CANCELLED"
+      | "EXCLUDED_FROM_RELIANCE"
+      | "RETAINED_LIMITED_WEIGHT"
+      | "RETAINED_FOR_RELIANCE"
+      | "RESTORED_FOR_CONSIDERATION";
+    requestSource:
+      | "WITNESS"
+      | "COMPLAINANT"
+      | "REPORTER"
+      | "CASE_COORDINATOR"
+      | "INVESTIGATOR"
+      | "TRIBUNAL"
+      | "OTHER";
+    reason: string;
+    safetyConcern?: boolean;
+    pressureOrIntimidationConcern?: boolean;
+  },
+) {
+  const { data, error } = await supabase.rpc(
+    "record_discipline_evidence_status_event",
+    {
+      p_case_id: caseId,
+      p_target_type: values.targetType,
+      p_target_id: values.targetId,
+      p_status: values.status,
+      p_request_source: values.requestSource,
+      p_reason: values.reason,
+      p_safety_concern: values.safetyConcern ?? false,
+      p_pressure_or_intimidation_concern:
+        values.pressureOrIntimidationConcern ?? false,
+    },
+  );
+  throwIfError(error);
+  return data;
 }
 
 export async function saveDisciplineFinding(

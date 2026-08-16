@@ -51,6 +51,8 @@ export type DisciplineWitness =
   Database["public"]["Tables"]["discipline_witnesses"]["Row"];
 export type DisciplineEvidence =
   Database["public"]["Tables"]["discipline_evidence"]["Row"];
+export type DisciplineEvidenceStatusEvent =
+  Database["public"]["Tables"]["discipline_evidence_status_events"]["Row"];
 export type DisciplineNaturalJusticeCheck =
   Database["public"]["Tables"]["discipline_natural_justice_checks"]["Row"];
 export type DisciplineFinding =
@@ -113,6 +115,7 @@ export type DisciplineWorkspaceData = {
   notifications: DisciplineNotification[];
   witnesses: DisciplineWitness[];
   evidence: DisciplineEvidence[];
+  evidenceStatusEvents: DisciplineEvidenceStatusEvent[];
   naturalJustice: DisciplineNaturalJusticeCheck[];
   findings: DisciplineFinding[];
   decisions: DisciplineDecision[];

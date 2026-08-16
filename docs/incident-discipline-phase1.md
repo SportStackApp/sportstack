@@ -272,7 +272,7 @@ Evidence files use short-lived signed links; the original object and evidence re
 overwritten. Signed report snapshots retain their SHA-256 hash and any authorised natural-justice
 override reason.
 
-The eighteen local migration files and the versions recorded by the live Dev migration history are:
+The twenty-one local migration files and the versions recorded by the live Dev migration history are:
 
 | Local migration file | Live Dev version and name |
 |---|---|
@@ -294,6 +294,9 @@ The eighteen local migration files and the versions recorded by the live Dev mig
 | `20260814000500_harden_discipline_tribunal_preparation.sql` | `20260813133852 harden_discipline_tribunal_preparation` |
 | `20260814010000_discipline_phase2_completion_workflow.sql` | `20260813182611 discipline_phase2_completion_workflow` |
 | `20260814012000_harden_discipline_phase2_appeal_and_closure.sql` | `20260813183733 harden_discipline_phase2_appeal_and_closure` |
+| `20260816204954_discipline_evidence_withdrawal_workflow.sql` | `20260816204954 discipline_evidence_withdrawal_workflow` |
+| `20260816205950_fix_discipline_pending_evidence_guard.sql` | `20260816205950 fix_discipline_pending_evidence_guard` |
+| `20260816210103_order_discipline_evidence_status_events.sql` | `20260816210103 order_discipline_evidence_status_events` |
 
 Supabase assigned the live versions at application time; the migration names identify the matching
 local files.
@@ -330,6 +333,17 @@ The final Supabase review found no anonymous discipline RPC, no discipline table
 missing foreign-key index warning. The adviser continues to flag the authenticated client RPCs as
 security-definer functions; this is intentional because each function validates `auth.uid()` and
 the required association or case role before changing data.
+
+Incident intake drafts are stored only in the signed-in user's browser, are separated by association,
+expire after seven days and are cleared after successful case creation. This prevents navigation to
+an official policy source or a browser refresh from wiping the work in progress. The original upload
+files remain authoritative when the case is created.
+
+Witness or evidence withdrawal is represented by append-only status events rather than by deleting or
+altering the original record. A pending request pauses reliance and prevents report or Tribunal
+finalisation. The Case Coordinator decides before a Tribunal Chair is accepted; afterwards only the
+linked accepted Chair may decide. The available outcomes are exclusion, retention with limited weight
+or retention for consideration, with a later authorised restoration event available when required.
 
 Screen 3 commit `e801859` passed focused ESLint, five investigator validation tests, TypeScript,
 the production build and `git diff --check`. Vercel deployment

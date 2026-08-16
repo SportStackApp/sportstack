@@ -3704,6 +3704,61 @@ Unknowns still needing confirmation:
 - The eight decisions listed in `docs/coordination-module-discovery.md` remain open and must be
   resolved before an implementation migration is designed.
 
+## 16 August 2026 - Discipline draft recovery and evidence withdrawal handling
+
+What changed:
+
+- The new-incident form now saves a private browser draft for the signed-in user and association.
+  Entered details and selected source files are restored after refresh or after returning from an
+  official external link. Drafts expire after seven days and are cleared after the case is created.
+- Witness and evidence rows now open a compact detail dialog with an append-only withdrawal and
+  decision history. A withdrawal request pauses reliance on that material without deleting or
+  rewriting the original.
+- Before an accepted Tribunal Chair is appointed, the Case Coordinator may decide a withdrawal
+  request. Once a Chair is accepted, only that linked Chair may decide whether to exclude the
+  material, retain it with limited weight or retain it for consideration.
+- A pending request blocks signing the investigation report and finalising a Tribunal determination,
+  while allowing other case work to continue. Excluded material can later be restored by an
+  authorised decision-maker through another recorded event.
+- The Dev database uses Row Level Security, denies anonymous access and direct authenticated writes,
+  and records every status event in the existing case timeline.
+
+Files changed:
+
+- `src/features/discipline/DisciplineEvidenceHandlingDialog.tsx`
+- `src/features/discipline/disciplineIntakeDraft.ts`
+- `src/features/discipline/disciplineIntakeDraft.test.ts`
+- `src/features/discipline/evidenceStatus.ts`
+- `src/features/discipline/evidenceStatus.test.ts`
+- `src/features/discipline/api.ts`
+- `src/features/discipline/types.ts`
+- `src/pages/discipline/NewDisciplineCase.tsx`
+- `src/pages/discipline/DisciplineCaseWorkspace.tsx`
+- `src/integrations/supabase/types.ts`
+- `supabase/migrations/20260816204954_discipline_evidence_withdrawal_workflow.sql`
+- `supabase/migrations/20260816205950_fix_discipline_pending_evidence_guard.sql`
+- `supabase/migrations/20260816210103_order_discipline_evidence_status_events.sql`
+
+Checks run:
+
+- All three additive migrations passed transaction rollback tests before being applied to SportStack
+  Dev. Role tests covered an investigator request, a blocked non-Chair decision and an accepted
+  Tribunal Chair decision. No test record remains.
+- Live Dev verification confirmed Row Level Security is enabled, anonymous read and function access
+  are denied, and authenticated users cannot insert directly.
+- Focused ESLint, TypeScript, the production build, six focused Vitest checks and `git diff --check`
+  pass. Full-project lint still reports the repository's existing unrelated baseline debt.
+
+What Aaron should test next:
+
+1. Enter a distinctive case title on Dev, open one official policy link, return to the incident page
+   and confirm the title and entered details are still present.
+
+Risk level:
+
+- Medium. This includes three additive Dev-only database migrations and browser-local draft storage.
+  Production is unchanged.
+
 ## How to update this file
 
 When Codex finishes a task, add a dated entry with:

@@ -71,6 +71,7 @@ import { DisciplineInvestigatorSetupPanel } from "@/features/discipline/Discipli
 import { DisciplineCommitteeDecision } from "@/features/discipline/DisciplineCommitteeDecision";
 import { DisciplineTribunalPreparation } from "@/features/discipline/DisciplineTribunalPreparation";
 import { DisciplinePhase2Workflow } from "@/features/discipline/DisciplinePhase2Workflow";
+import { DisciplineEvidenceHandlingDialog } from "@/features/discipline/DisciplineEvidenceHandlingDialog";
 import { canCompleteWorkflowStage } from "@/features/discipline/workflowLogic";
 import {
   ScreeningGuidance,
@@ -803,6 +804,19 @@ export default function DisciplineCaseWorkspace() {
   const isLead = activeMember?.case_role === "LEAD_INVESTIGATOR";
   const isDecisionMaker = activeMember?.case_role === "DECISION_MAKER";
   const canDecide = canCoordinate || isDecisionMaker;
+  const canRequestEvidenceWithdrawal = canInvestigate || [
+    "TRIBUNAL_MEMBER",
+    "TRIBUNAL_ADMINISTRATOR",
+  ].includes(activeMember?.case_role || "");
+  const acceptedTribunalChair = data.tribunalMembers.find(
+    (member) => member.active
+      && member.is_chair
+      && member.invitation_status === "ACCEPTED"
+      && member.profile_id,
+  );
+  const canResolveEvidenceWithdrawal = acceptedTribunalChair
+    ? acceptedTribunalChair.profile_id === user?.id
+    : canCoordinate;
 
   return (
     <div className="space-y-6 animate-fade-in print:bg-white">
@@ -1722,20 +1736,26 @@ export default function DisciplineCaseWorkspace() {
             <WorkflowSection title="Witness register" kind="FACT" responsibleRole="Lead Investigator">
               <div className="space-y-2">
                 {data.witnesses.map((witness) => (
-                  <div
+                  <DisciplineEvidenceHandlingDialog
                     key={witness.id}
-                    className="rounded-lg border p-3 text-sm"
+                    caseId={caseId}
+                    targetType="WITNESS"
+                    targetId={witness.id}
+                    title={witness.name}
+                    summary={`${witness.direct_witness ? "Direct witness" : "Direct status not confirmed"} · Response ${formatMelbourneDateTime(witness.response_received_at)}`}
+                    events={data.evidenceStatusEvents}
+                    canRequest={canRequestEvidenceWithdrawal}
+                    canDecide={canResolveEvidenceWithdrawal}
+                    onSaved={refresh}
                   >
-                    <p className="font-medium">{witness.name}</p>
-                    <p className="text-muted-foreground">
-                      {witness.can_address} ·{" "}
-                      {witness.direct_witness
-                        ? "Direct witness"
-                        : "Direct status not confirmed"}
-                      {" · "}Response{" "}
-                      {formatMelbourneDateTime(witness.response_received_at)}
-                    </p>
-                  </div>
+                    <dl className="grid gap-3 sm:grid-cols-2">
+                      <div><dt className="font-medium">Facts they may address</dt><dd className="text-muted-foreground">{witness.can_address}</dd></div>
+                      <div><dt className="font-medium">Role and club</dt><dd className="text-muted-foreground">{witness.role_and_club || "Not recorded"}</dd></div>
+                      <div><dt className="font-medium">Contact details</dt><dd className="text-muted-foreground">{witness.contact_details || "Not recorded"}</dd></div>
+                      <div><dt className="font-medium">Request and response</dt><dd className="text-muted-foreground">Requested {formatMelbourneDateTime(witness.request_sent_at)} · Received {formatMelbourneDateTime(witness.response_received_at)}</dd></div>
+                      <div><dt className="font-medium">Witness status</dt><dd className="text-muted-foreground">{witness.direct_witness ? "Direct witness" : "Direct status not confirmed"}{witness.is_junior ? " · Junior" : ""}{witness.follow_up_required ? " · Follow-up required" : ""}</dd></div>
+                    </dl>
+                  </DisciplineEvidenceHandlingDialog>
                 ))}
               </div>
               {canInvestigate ? (
@@ -1833,22 +1853,29 @@ export default function DisciplineCaseWorkspace() {
           >
             <div className="grid gap-3 md:grid-cols-2">
               {data.evidence.map((item) => (
-                <div key={item.id} className="rounded-lg border p-3 text-sm">
-                  <p className="font-medium">{item.title}</p>
-                  <p className="text-muted-foreground">
-                    {item.evidence_type} · {formatStatus(item.evidence_basis)} ·
-                    version {item.version_number}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Received {formatMelbourneDateTime(item.received_at)} ·
-                    Shared{" "}
-                    {formatMelbourneDateTime(
-                      item.shared_with_reported_person_at,
-                    )}
-                  </p>
+                <DisciplineEvidenceHandlingDialog
+                  key={item.id}
+                  caseId={caseId}
+                  targetType="EVIDENCE"
+                  targetId={item.id}
+                  title={item.title}
+                  summary={`${item.evidence_type} · ${formatStatus(item.evidence_basis)} · version ${item.version_number}`}
+                  events={data.evidenceStatusEvents}
+                  canRequest={canRequestEvidenceWithdrawal}
+                  canDecide={canResolveEvidenceWithdrawal}
+                  onSaved={refresh}
+                >
+                  <dl className="grid gap-3 sm:grid-cols-2">
+                    <div><dt className="font-medium">Type and basis</dt><dd className="text-muted-foreground">{item.evidence_type} · {formatStatus(item.evidence_basis)}</dd></div>
+                    <div><dt className="font-medium">Source</dt><dd className="text-muted-foreground">{item.source}</dd></div>
+                    <div><dt className="font-medium">Version</dt><dd className="text-muted-foreground">{item.version_number}{item.supersedes_evidence_id ? " · Supersedes an earlier version" : ""}</dd></div>
+                    <div><dt className="font-medium">Received and shared</dt><dd className="text-muted-foreground">Received {formatMelbourneDateTime(item.received_at)} · Shared {formatMelbourneDateTime(item.shared_with_reported_person_at)}</dd></div>
+                    {item.notes ? <div className="sm:col-span-2"><dt className="font-medium">Notes</dt><dd className="text-muted-foreground">{item.notes}</dd></div> : null}
+                  </dl>
+                  <div className="mt-4 flex flex-wrap gap-3">
                   {item.external_url ? (
                     <a
-                      className="mt-1 inline-flex items-center text-primary hover:underline"
+                      className="inline-flex items-center text-primary hover:underline"
                       href={item.external_url}
                       target="_blank"
                       rel="noreferrer"
@@ -1878,7 +1905,8 @@ export default function DisciplineCaseWorkspace() {
                       Open private file
                     </Button>
                   ) : null}
-                </div>
+                  </div>
+                </DisciplineEvidenceHandlingDialog>
               ))}
             </div>
             {canInvestigate ? (
