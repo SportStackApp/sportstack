@@ -1,7 +1,8 @@
-# SportStack Coordination Module — Discovery Specification
+# SportStack Coordination Module — Confirmed Discovery Specification
 
-- **Date:** 14 August 2026
-- **Status:** Discovery — proposed design, not approved for implementation
+- **Original proposal:** 3 August 2026
+- **Decision review completed:** 16 August 2026
+- **Status:** Discovery decisions confirmed — ready for technical implementation planning
 - **Project:** SportStack
 - **Production impact:** None
 
@@ -13,579 +14,530 @@ positions on either:
 - an existing fixture; or
 - a basic non-fixture volunteer activity.
 
-The first implementation should focus on fixture coordination for Umpires and Technical Bench
-officials. SportStack fixtures remain the source of match details. The module must not become a
-second fixture system or a full events system.
+Fixtures remain the source of match details. Coordination attaches staffing positions, offers,
+responses, confirmations and history to those fixtures. It does not become a second fixture system
+or a full events system.
 
-## Confirmed requirements
+## Core rule — no until yes
 
-- A standard fixture needs two Umpire positions and two Technical Bench positions.
-- The position model must remain configurable so other position types can be added later.
-- A person can hold several capabilities, such as Umpire, Technical Bench and Volunteer.
-- A coordinator requires both a coordination responsibility and an organisation scope.
-- Offers must support Accept and Decline responses.
-- One position can be offered to several eligible people at the same time.
-- An Umpire accepting an offer records their willingness; it does not fill the position.
-- The person who sent the offer must explicitly confirm one accepted Umpire before the assignment
-  becomes official.
-- Every offer must have a response deadline.
-- Pending recipients must receive reminders before the deadline.
-- An offer can contain a recipient-facing note, including important difficulty or payment information.
-- The system must flag when an Umpire Match Voting submission identity does not match a rostered
-  Umpire. The flag should support review and must not silently reject the submission.
-- Non-fixture volunteer activities are in scope after the fixture workflow is established.
-- Version 1 depends on in-app notifications, not email, SMS or push delivery.
+An offer recipient accepting means **I am willing**. It does not mean they are rostered.
 
-## Current-system findings
+An official assignment exists only after the offerer explicitly confirms an accepted person. Until
+that confirmation succeeds:
 
-The live SportStack Dev schema was rechecked read-only on 14 August 2026.
+- the position remains unfilled;
+- no assignment exists;
+- having only one accepted response does not auto-confirm it;
+- reaching the response deadline does not auto-confirm it; and
+- a missing, failed or abandoned confirmation remains **No**.
 
-- `fixtures` stores fixture date/time, teams, division, venue, pitch and status. It does not store
-  individual Umpire or Technical Bench assignments.
-- `fixture_availability` stores a person's status and note for a specific fixture. It is useful
-  evidence but is not a complete date/time availability system.
-- `user_roles` already supports association, club and team scope and more than one role per person.
-- `permission_assignments` provides a newer subject-and-scope permission model that should be
-  assessed before adding another permission structure.
-- `notifications` supports in-app notices, action links, fixture links and deduplication keys.
-- The existing notification dispatcher currently provides reusable dispatch infrastructure. Its
-  current message types do not yet implement coordination offers or reminders.
-- `player_vote_submissions` is the current Umpire Match Voting submission record. It supports a
-  linked Umpire profile as well as administrator proxy and public identity fields.
-- No `coordination_*`, game-offer or official-assignment tables currently exist.
-- A table named `fixture_lineup_assignments` exists for player line-ups. It is a different domain
-  and must not be reused for official or volunteer coordination.
-- Current imported Umpire names are not all safely linked to SportStack profiles. Name-only matching
-  must therefore be treated as uncertain and reviewed before any backfill.
+This rule applies to Umpires, Technical Bench officials, Supervising Umpires and Volunteers.
 
-The live schema must be checked again immediately before an implementation migration is written.
+## Confirmed fixture positions
 
-## Design principles
+Every standard fixture requires:
 
-1. **Positions, offers and assignments are different records.** A required position exists before
-   anyone is contacted. An offer asks someone to take it. An assignment is created only when the
-   position is successfully filled.
-2. **Organisation scope is enforced in the database.** Hiding controls in the interface is not an
-   access-control boundary.
-3. **Confirmation fills the position.** Several people may accept the same offer. The original
-   offerer chooses and confirms one accepted person through a secure database transaction.
-4. **No until yes.** Unless that explicit confirmation succeeds, the person is not rostered, the
-   position is not filled and no assignment exists. Acceptance, expiry or having only one willing
-   respondent must never auto-confirm an assignment.
-5. **History is retained.** Declines, expired offers, replacements and material fixture changes
-   remain auditable.
-6. **Recipient information is preserved.** The note shown with an offer is an immutable snapshot.
-7. **Warnings do not invent facts.** Unknown availability or an unlinked voting identity is shown
-   as unknown or unverifiable, not automatically treated as a conflict or mismatch.
-8. **The model is generic but the first interface is specific.** The storage model can support
-   future positions while the first screen clearly shows Umpire 1, Umpire 2, Technical Bench 1 and
-   Technical Bench 2.
-
-## Proposed terminology and states
-
-Keeping separate states avoids one ambiguous status field trying to describe several workflows.
-
-### Position state
-
-| State | Meaning |
-|---|---|
-| `OPEN` | The position needs someone and has no active offer. |
-| `OFFERING` | One or more people have a pending offer. |
-| `AWAITING_CONFIRMATION` | At least one person accepted, but the offerer has not confirmed anyone. |
-| `FILLED` | A confirmed assignment currently fills the position. |
-| `CANCELLED` | The position is no longer required. |
-| `COMPLETED` | The duty occurred and the final assignment is retained. |
-
-### Offer-recipient state
-
-| State | Meaning |
-|---|---|
-| `DRAFT` | Prepared but not visible to the recipient. |
-| `PENDING` | Sent and awaiting a response before the deadline. |
-| `ACCEPTED_AWAITING_CONFIRMATION` | The recipient is willing, but is not yet rostered. |
-| `CONFIRMED` | The original offerer selected this accepted recipient. |
-| `DECLINED` | The recipient declined, optionally with a reason. |
-| `EXPIRED` | The response deadline passed without acceptance. |
-| `WITHDRAWN` | The coordinator withdrew the offer before it was filled. |
-| `NOT_SELECTED` | The original offerer confirmed another accepted recipient. |
-
-### Assignment state
-
-| State | Meaning |
-|---|---|
-| `CONFIRMED` | The original offerer confirmed the person for the current duty details. |
-| `RECONFIRMATION_REQUIRED` | A material fixture/activity change needs a new response. |
-| `CANCELLED` | The duty was cancelled without a replacement. |
-| `REPLACED` | A different person now fills the position. |
-| `COMPLETED` | The duty occurred and remains in history. |
-
-## Proposed records
-
-Names are indicative. Exact columns, constraints and naming must be checked against the live schema
-before implementation.
-
-### Coordination capabilities
-
-Connect a person to one or more assignable capabilities:
-
-- Umpire
-- Technical Bench
-- Volunteer
-- future capability types
-
-Each capability should support association, club or team context, active dates and an active flag.
-A capability means the person is eligible for consideration; it does not give coordinator access.
-
-Before creating this record, confirm whether existing scoped `user_roles` can safely supply these
-capabilities. Avoid storing the same authority in two systems without a defined source of truth.
-
-### Coordinator authority
-
-Use permission keys for responsibility and existing assignment scope where possible:
-
-- `coordination.umpires.manage`
-- `coordination.technical_bench.manage`
-- `coordination.volunteers.manage`
-- `coordination.activities.create`
-- `coordination.roster_mismatches.review`
-
-A permission assignment must contain its association, club or team scope. A person may hold several
-responsibilities and scopes.
-
-### Position templates
-
-Define reusable requirements for a fixture type or activity type:
-
-- position type;
-- display label;
-- required count;
-- required capability;
-- ordering;
-- active dates; and
-- optional instructions.
-
-The initial standard fixture template creates:
-
-| Position type | Count |
+| Position | Required count |
 |---|---:|
 | Umpire | 2 |
 | Technical Bench | 2 |
 
-### Coordination positions
+The model remains configurable so future fixture or activity positions can be added without changing
+the offer and assignment system.
 
-Each concrete position links to exactly one source:
+Supervision is optional. A Supervising Umpire can be added to either Umpire or both at any time.
 
-- an existing fixture; or
-- a coordination activity.
+## Roles, capabilities and scope
 
-Store the position type, sequence number, required capability, state, organisation scope and source
-template version. Database constraints should prevent a position from linking to both source types.
+### Separate coordinator responsibilities
 
-### Offer batches
+- Umpire Coordinator
+- Technical Bench Coordinator
+- Volunteer Coordinator
 
-An offer batch represents one coordinator action for one open position. Store:
+One person may hold several responsibilities, but one responsibility never automatically grants
+another.
 
-- position;
-- original offerer, immutable after sending;
-- sent time;
-- required response deadline;
-- immutable recipient-facing note;
-- optional internal coordinator note stored separately;
-- status;
-- confirmed recipient offer, when filled; and
-- created/updated timestamps.
+### Umpire Coordinator
 
-The recipient-facing note must be visible before Accept or Decline. Examples include:
+Umpire coordination is association-scoped by default. Association Umpire Coordinators can manage
+the association Umpire Matrix, offers, confirmations, sign-offs, qualifications, supervision and
+roster mismatch reviews.
 
-- “If you do this game I'll pay double.”
-- “This game is likely to be difficult to umpire.”
+Club or team users require an explicit association grant before performing Umpire Coordinator work.
 
-Because these notes may contain safety, conduct or payment information, the exact offered text must
-remain in history. Editing a sent note should create a new revision and notification, not overwrite
-what recipients previously saw. Internal notes must never be included in recipient notifications.
+### Technical Bench Coordinator
 
-### Offer recipients
+There is no fixed home-club or away-club responsibility. Any authorised Technical Bench Coordinator
+can fill either position with any eligible person inside the permitted association scope.
 
-Create one record per person offered the position. Store:
+### Volunteer Coordinator
 
-- offer batch;
-- recipient profile;
-- status;
-- sent time;
-- response time;
-- optional decline reason;
-- expiry time; and
-- outcome details.
+Volunteer Coordinators work within their assigned association, club or team scope. They may create
+any basic coordination activity and define custom position names and counts.
 
-Use a unique constraint so the same person is not added twice to one offer batch. A recipient may
-only view and respond to their own offer.
-
-### Offer reminders
-
-Materialise reminder records when an offer is sent rather than relying only on a calculated timer.
-Store:
-
-- offer recipient;
-- reminder type;
-- due time;
-- sent time;
-- cancelled time;
-- dispatch attempt/status; and
-- notification reference.
-
-This supports several reminders, reliable retries and evidence of what was sent. Reminder times
-should come from an organisation setting or coordinator-selected schedule. The exact default timing
-remains an owner decision.
-
-All future reminders are cancelled when the recipient responds, the offer is withdrawn, the
-offerer confirms someone, the position is cancelled or the deadline passes.
-
-### Assignments
-
-An assignment is created only when the original offerer confirms a person whose offer response is
-`ACCEPTED_AWAITING_CONFIRMATION`. Store:
-
-- position;
-- assigned person;
-- confirmed offer response;
-- original offerer;
-- recipient acceptance time;
-- offerer confirmation time;
-- state;
-- effective start and end time snapshot;
-- replacement relationship; and
-- completion time.
-
-A partial unique constraint should allow only one current assignment for a position. Replacements
-must close the previous assignment and create a new one rather than overwrite the person.
-
-### Assignment events
-
-Keep an append-only event trail for important changes such as:
-
-- offer sent;
-- reminder sent;
-- accepted and awaiting confirmation, or declined;
-- offerer confirmed a recipient;
-- accepted recipient not selected;
-- deadline expired;
-- offer withdrawn;
-- fixture changed;
-- reconfirmation requested;
-- assignment cancelled or replaced; and
-- duty completed.
-
-Do not rely only on mutable current-state columns for audit history.
-
-### Coordination activities
-
-For non-fixture work, store a basic activity with:
-
-- name and activity type;
-- description;
-- organisation scope;
-- start and end time;
-- venue or plain-text location;
-- coordinator;
-- notes; and
-- status.
-
-Activities can use the same position, offer, reminder and assignment records as fixtures. Public
-listings, ticketing, registration, programs and detailed event administration remain outside this
+Public listings, registrations, tickets, programs and full event administration remain outside this
 module.
 
-## Multi-person offer workflow
+### Capabilities and invitations
 
-1. The coordinator selects one open position.
-2. SportStack shows eligible people, their recorded availability, current commitments and scope.
-3. The coordinator selects one or more recipients, sets a deadline and adds a recipient-facing note.
-4. SportStack validates scope, capability, fixture timing and duplicate recipients.
-5. Sending creates one offer batch, recipient records, reminder schedule and in-app notifications.
-6. Each recipient sees the same position, deadline and recipient-facing note with Accept and Decline.
-7. A recipient accepts before the deadline. Their response becomes
-   `ACCEPTED_AWAITING_CONFIRMATION`, their reminders stop and the original offerer is notified.
-8. Other recipients may still accept or decline while the offer remains open.
-9. The original offerer reviews the accepted recipients and explicitly confirms one.
-10. In the confirmation database transaction, SportStack creates the assignment, marks the selected
-    response `CONFIRMED`, marks the other active responses `NOT_SELECTED`, cancels remaining
-    reminders and creates outcome notifications.
-11. If everyone declines or expires without an acceptance, the position returns to `OPEN` and the
-    offerer is notified.
-12. If one or more people accept but nobody is confirmed, the position remains
-    `AWAITING_CONFIRMATION` and appears as urgent work for the original offerer.
+A person must have a SportStack account and the relevant capability before receiving an assignment
+offer.
 
-### Secure acceptance and atomic confirmation
+The module provides an **Invite** action:
 
-Accept must use a tightly permissioned database function that:
+- an existing user without the capability receives an in-app invitation;
+- a person without an account receives an account-invitation email;
+- capability is assigned only after the person accepts; and
+- the invitation does not reserve a position or start an assignment-offer deadline.
 
-- authenticates the current recipient;
-- confirms the deadline has not passed;
-- confirms the recipient's offer is still pending;
-- records `ACCEPTED_AWAITING_CONFIRMATION` and the response time;
-- cancels that recipient's future reminders; and
-- notifies the original offerer without creating an assignment.
+This grants an assignable capability, not coordinator access.
 
-Confirmation must use a separate database transaction, not a sequence of browser writes. It should:
+## Umpire Matrix
 
-- authenticate that the current user is the original offerer;
-- lock the position and offer batch;
-- confirm the selected response is `ACCEPTED_AWAITING_CONFIRMATION`;
-- confirm the position has no current assignment;
-- create the confirmed assignment;
-- mark the selected response `CONFIRMED`;
-- close competing responses as `NOT_SELECTED` and cancel their reminders; and
-- write notifications and history.
+The association Umpire Matrix shows:
 
-This makes the offerer's confirmation the single event that fills the position. An exceptional
-Super Admin recovery action may be designed later, but it must require a reason and remain audited.
-The database should represent “yes” by the successful creation of the confirmed assignment, not by
-a nullable or assumed confirmation flag. A missing, failed or abandoned confirmation therefore
-remains “no”.
+- all mapped Umpires in the association;
+- completed games umpired;
+- completed-game counts by grade;
+- grade eligibility and full sign-off history;
+- qualifications and expiry warnings;
+- supervising-Umpire history;
+- current offers, assignments and availability;
+- replacement-request history; and
+- restricted coordinator notes.
 
-## Deadlines and reminders
+### Grade eligibility
 
-- A sent offer cannot omit its deadline.
-- The deadline must be before the fixture/activity starts and must allow a small minimum response
-  window unless the coordinator confirms an urgent offer.
-- The action screen must show the deadline in the association timezone, normally
-  `Australia/Melbourne`, using SportStack's DD/MM/YYYY date format.
-- A scheduled dispatcher should claim due reminders safely so repeated scheduled runs do not send
-  duplicates.
-- Reminder notifications need stable deduplication keys.
-- A final deadline job expires pending offers and alerts the coordinator when the position is still
-  unfilled.
-- An acceptance immediately alerts the original offerer that confirmation is required. Accepted
-  responses remain valid after the response deadline, but do not fill the position by themselves.
-- The coordinator dashboard should show “respond by”, next reminder, expired offers and urgent
-  vacancies, plus accepted responses awaiting offerer confirmation.
+Eligibility is recorded for each grade in the coordinator's association.
 
-The existing scheduled notification-dispatch pattern should be extended or reused only after its
-message-type and authorisation boundaries are reviewed. Version 1 should support in-app reminders;
-other delivery channels can be added later without changing the offer state model.
+Each record shows:
 
-## Availability and conflict handling
+- current eligibility state;
+- who signed the Umpire off;
+- sign-off date;
+- later suspension or removal;
+- effective dates and reasons; and
+- immutable history.
 
-Version 1 should distinguish:
+Only an authorised Umpire Coordinator gives final grade sign-off. A sign-off is never deleted.
+Suspending or removing eligibility requires a reason and effective date, and notifies the Umpire.
 
-- available;
-- unavailable; and
-- unknown.
+An Umpire may still be offered a game outside their current grade eligibility. SportStack shows a
+strong warning and requires a mandatory coordinator override note.
 
-`fixture_availability` can inform the initial fixture screen, but a later availability-period record
-is still needed for date/time ranges, conditional notes and recurring patterns.
+### Qualifications
 
-Recommended version 1 rules:
+Each qualification records:
 
-- unavailable is a visible conflict warning;
-- an overlapping confirmed assignment is a strong conflict warning;
-- unknown availability is permitted but clearly labelled;
-- coordinators may proceed through a warning when policy allows; and
-- the confirmation transaction rechecks hard conflicts so stale screens cannot create two
-  overlapping assignments unintentionally.
+- qualification name — required;
+- issuing organisation — optional;
+- issue date — optional;
+- expiry date — optional;
+- supporting note — optional;
+- who added it and when; and
+- audit history.
 
-The exact hard-conflict and override policy remains open.
+An expired qualification shows a strong warning but does not hard-block an offer. Offering or
+confirming through the warning requires a mandatory coordinator note.
 
-## Fixture changes after confirmation
+### Supervising Umpires
 
-Material changes include fixture date, start time, venue, pitch, teams or cancellation.
+A Supervising Umpire:
 
-Recommended behaviour:
+- uses the same offer, acceptance and confirmation workflow when appointed before the game;
+- may also be Umpire 1 or Umpire 2;
+- may supervise the other Umpire while officiating;
+- cannot supervise themselves;
+- must be a separate third person to supervise both Umpires; and
+- may be added later by an authorised coordinator with an audited notification to affected people.
 
-- record the changed fields in assignment history;
-- notify all affected recipients and coordinators;
-- cancel pending offers when their original timing is no longer valid;
-- mark confirmed assignments `RECONFIRMATION_REQUIRED` for material schedule/location changes; and
-- keep the original acceptance and offer note in history.
+The supervisor may enter an optional free-text note linked to the fixture and individual Umpire.
+It is not a score, rating or formal assessment and cannot change grade eligibility automatically.
 
-A score or other non-roster fixture update should not request reconfirmation.
+The supervisor can view their own submitted note but cannot view the person's full notes history.
+Authorised Umpire Coordinators can add notes and view the complete log.
 
-## Umpire Match Voting roster mismatch flag
+### Restricted coordinator notes
 
-### Intended rule
+Coordinator notes operate as an append-only log visible only to authorised Umpire Coordinators.
 
-After a Umpire Match Voting submission is received, compare its Umpire identity with the confirmed or
-completed Umpire assignments for that fixture.
+Replacement-request notes are visible only to:
 
-Possible check results:
+- the Umpire who submitted the request; and
+- authorised Umpire Coordinators for the association.
+
+Health or bereavement details may be corrected or redacted by an authorised privacy administrator.
+The event, date and redaction audit remain. Abusive, threatening or harassing text is retained as
+restricted evidence and cannot be edited by the submitter after submission.
+
+No Safety or Incident and Discipline case is created or linked in the first version. Formal action
+remains outside the Coordination Module.
+
+The product decision is to retain the history permanently. Because notes can contain health or
+bereavement information, the Production plan requires a documented purpose, privacy review and
+redaction process before release.
+
+## Offer workflow
+
+### Creating an offer
+
+For one open position, the offerer can select one or more eligible recipients. One active offer group
+exists per position.
+
+While it remains open, the offerer may add more recipients. New recipients receive:
+
+- the same current note;
+- the same existing deadline; and
+- only the response time that remains.
+
+Adding recipients never restarts the deadline and is recorded in history.
+
+### Offer notes
+
+Every offer may contain a recipient-facing note, including information about payment, game
+difficulty, safety or special duties. Internal coordinator notes remain separate and are never sent
+to recipients.
+
+A sent note cannot be silently edited:
+
+- the original remains in history;
+- every active recipient receives the revision;
+- the editor and time are recorded;
+- minor spelling corrections do not reset responses; and
+- important changes involving payment, duties, difficulty, safety, time or location cancel existing
+  acceptances and require a new response.
+
+The offerer records whether a revision is minor or important.
+
+### Response deadline
+
+- Default response time: 72 hours.
+- The offerer may adjust the exact date and time.
+- An offer may be sent at any time before match/activity start.
+- The deadline may be as late as the start time but never later.
+- Offers with less than two hours remaining display **Urgent**.
+
+### Reminders
+
+For normal offers:
+
+- first reminder: 24 hours before deadline;
+- second reminder: 4 hours before deadline.
+
+For an offer shorter than 24 hours:
+
+- first reminder: halfway through the available response time;
+- second reminder: 1 hour before deadline when enough time remains.
+
+Responding, withdrawing, being confirmed, being marked not selected, withdrawal of the offer or
+fixture cancellation stops future reminders. Stable deduplication prevents duplicate reminders.
+
+### Recipient responses
+
+A recipient can:
+
+- accept;
+- decline with an optional reason; or
+- withdraw an acceptance while still awaiting offerer confirmation.
+
+Acceptance changes the response to **Accepted — awaiting confirmation**. Other recipients may still
+respond, and the offerer may wait for a preferred person or confirm any accepted person immediately.
+
+Recipients never see who else received, accepted or declined the offer.
+
+### Offerer confirmation
+
+The offerer may confirm an accepted person at any time before match/activity start. Confirmation:
+
+- creates the official assignment;
+- marks the chosen response **Confirmed**;
+- marks the remaining active recipients **Not selected**;
+- cancels their reminders; and
+- notifies everyone of the outcome.
+
+If the original offerer becomes unavailable, another authorised coordinator with the same
+responsibility and organisation scope may take over. A takeover reason is mandatory. SportStack
+records and notifies the original offerer, replacement coordinator, reason and time.
+
+### After match/activity start
+
+Normal offers and pending acceptances close at the start time.
+
+An authorised coordinator may directly record the person who actually performed the duty without
+recipient acceptance. This is an audited late roster correction and sends in-app and email notice to
+the recorded person.
+
+The notice includes **Report incorrect**. A disputed record:
+
+- remains in history;
+- pauses Matrix totals;
+- shows **Roster disputed** to the Umpire Match Voting roster check; and
+- requires an authorised coordinator to correct it or confirm it with a mandatory note.
+
+## Assignment conflicts and availability
+
+### Hard overlap rule
+
+Confirmed assignments must never overlap. SportStack hard-blocks:
+
+- two positions on the same fixture;
+- Umpire and Technical Bench duties on the same fixture;
+- fixtures or activities whose scheduled times overlap; and
+- any other overlapping confirmed duty.
+
+People may accept overlapping offers, but only a non-overlapping duty can be confirmed. The secure
+confirmation operation rechecks current assignments immediately before saving.
+
+Back-to-back duties at different venues are allowed. Travel time is the person's responsibility in
+the first version.
+
+The Supervising Umpire relationship is not treated as a conflicting second duty, but self-supervision
+is blocked.
+
+### Availability
+
+Blank availability has no effect and shows no warning.
+
+Someone explicitly marked **Unavailable** may still receive an offer. The offerer sees a strong
+warning and must enter an override note. If the person accepts and is confirmed, the fixture
+availability becomes:
+
+- **Umpiring**;
+- **Technical Bench**; or
+- **Volunteering**.
+
+When an assignment is replaced or cancelled, the role-specific availability value is cleared back
+to the default blank state. An older availability answer is not restored. Availability changes remain
+in history.
+
+When a person updates availability, SportStack checks their confirmed fixtures and activities. They
+cannot mark themselves available for an overlapping duty.
+
+### Warning overrides
+
+Grade eligibility, expired qualification and explicit-unavailability warnings may be overridden.
+Each override requires a mandatory note and records:
+
+- coordinator;
+- date and time;
+- warning type;
+- note; and
+- related offer and fixture/activity.
+
+Overlapping confirmed assignments cannot be overridden.
+
+## Replacement workflow
+
+Before confirmation, an accepted recipient may withdraw immediately and the offerer is notified.
+
+After confirmation, the person must request a replacement. The request requires a note and changes
+the roster display to **Replacement requested — not available**.
+
+The original person remains listed until a replacement is confirmed. A replacement always uses a
+new offer; earlier acceptances are never reused. Previously interested people may receive the new
+offer but must accept again.
+
+Confirming the replacement:
+
+- marks the original assignment **Replaced**;
+- creates a new confirmed assignment;
+- clears the original person's role-specific availability to blank;
+- sets the replacement person's availability; and
+- preserves the complete history.
+
+## Fixture changes
+
+Material changes are:
+
+- fixture date;
+- start time;
+- venue;
+- pitch; or
+- either team.
+
+A material change:
+
+- withdraws pending offers using the old details;
+- notifies affected people;
+- clears role-specific availability;
+- changes confirmed assignments to **Reconfirmation required**;
+- requires the person to accept the changed details; and
+- requires the offerer to confirm again.
+
+Scores and ordinary fixture notes do not trigger reconfirmation. This workflow will be tested in Dev
+and adjusted if it creates unnecessary work.
+
+## Technical Bench safeguards
+
+Technical Bench eligibility uses a separate capability.
+
+SportStack shows:
+
+- **First Technical Bench duty** when the person has no completed Technical Bench history; and
+- a pairing warning when both Technical Bench officials are under 18 on the fixture date.
+
+SportStack calculates age from each profile's date of birth on the fixture date. At least one of the
+two confirmed Technical Bench officials must be 18 or older to clear the pairing warning.
+
+If either date of birth is missing, SportStack shows **Age unknown**, never assumes the person is an
+adult, and requires a coordinator override note. Exact birth dates are not shown on the normal
+Coordination screen.
+
+These are warnings rather than hard blocks. Continuing through a first-duty, under-18 pairing or
+age-unknown warning requires a mandatory coordinator note, and every warning is rechecked at
+confirmation.
+
+## Completed-duty history
+
+An assignment counts in Umpire Matrix game and grade totals only after the fixture is completed.
+Cancelled fixtures do not count. Disputed assignments pause the count until resolved. Corrections
+recalculate totals.
+
+## Historical RevSports Umpire records
+
+Historical records use the existing player-mapping pattern:
+
+- a unique exact match may link automatically;
+- duplicate or non-exact names require manual mapping;
+- fuzzy names never assign a profile automatically;
+- unmapped records remain **Imported — unverified**; and
+- every manual mapping records who completed it and when.
+
+The coordinator can review and correct the identity, grade, fixture link and supervising-Umpire
+information, then mark the record reviewed. The original imported value remains preserved beneath an
+audited correction layer.
+
+Reviewed records count in Matrix totals and help the coordinator complete grade eligibility.
+Unreviewed records remain separate. Historical mapping does not create retrospective roster-mismatch
+alerts or automatic grade sign-off.
+
+## Umpire Match Voting roster checks
+
+After an Umpire Match Voting submission is received, compare its Umpire identity with confirmed,
+completed and corrected Umpire assignments for that fixture.
 
 | Result | Meaning |
 |---|---|
-| `MATCHED` | The linked submitting Umpire is rostered for the fixture. |
-| `MISMATCH` | The linked submitting Umpire is known and is not rostered. |
-| `NO_ROSTER` | The fixture has no confirmed/completed Umpire assignment to compare. |
-| `UNVERIFIABLE` | The submission identity is text-only, unresolved or otherwise cannot be safely linked. |
-| `VALID_PROXY` | An authorised administrator submitted for a rostered Umpire. |
+| `MATCHED` | The linked submitting Umpire is rostered. |
+| `MISMATCH` | The linked identity is known and is not rostered. |
+| `NO_ROSTER` | No confirmed/completed Umpire roster exists. |
+| `UNVERIFIABLE` | Text-only, unresolved or ambiguous identity. |
+| `VALID_PROXY` | An authorised proxy submitted for a rostered Umpire. |
+| `ROSTER_DISPUTED` | The compared late roster record is disputed. |
 
-Only `MISMATCH` should be called a confirmed mismatch. `NO_ROSTER` and `UNVERIFIABLE` need review but
-must not imply that the submitter did something wrong.
+Only `MISMATCH` is a confirmed mismatch. Association Umpire Coordinators review flags; Super Admin
+is an audited backup.
 
-### Review record
+A confirmed mismatch does not change, delete, block or reject the Umpire Match Voting submission.
+The flag, coordinator review and note remain visible while the normal voting workflow continues.
 
-Use a separate roster-check record linked one-to-one with `player_vote_submissions` rather than
-overloading voting approval fields. Store:
+Roster corrections rerun the check. Ambiguous names are never auto-linked.
 
-- submission and fixture;
-- submitted or represented Umpire profile when known;
-- matched assignment when found;
-- automated check result and time;
-- snapshot of the roster used for the check;
-- review state (`PENDING`, `CONFIRMED`, `CLEARED` or `OVERRIDDEN`);
-- reviewer, review time and reason; and
-- recheck reason/version.
+## Notifications and delivery status
 
-This keeps the voting record intact and allows a check to be rerun after a late roster correction.
-The initial check should occur as part of the secure submission workflow so the flag appears
-immediately.
+While a capability is active, required Coordination notifications cannot be disabled.
 
-### Review behaviour
+Version 1 uses:
 
-- Do not block or delete the Umpire Match Voting submission.
-- Show a visible flag in the authorised Umpire Match Voting administration view.
-- Notify or queue the appropriate reviewer without exposing private details broadly.
-- Allow an authorised reviewer to clear or confirm the flag with a required note.
-- If the actual Umpire was a late replacement, correct the coordination roster first and rerun the
-  check so history reflects what happened.
-- Never auto-link a person using name text alone when the match is ambiguous.
+- in-app notifications; and
+- email notifications.
 
-The roster checked should be the final confirmed/replacement history effective for that fixture, not
-merely the first person offered the game.
+No SMS or push delivery is included initially.
 
-## Notifications
+Notification events include invitations, offers, reminders, acceptances, declines, withdrawals,
+confirmation required, confirmed, not selected, expiry, takeover, replacement request, replacement,
+fixture change, reconfirmation, late roster addition, dispute and roster mismatch review.
 
-Initial notification types should include:
+Email links open the secure SportStack response screen; the link itself never changes state.
 
-- new offer;
-- offer reminder;
-- offer declined;
-- offer expired;
-- response accepted and awaiting offerer confirmation;
-- recipient confirmed for the assignment;
-- accepted recipient not selected;
-- offer withdrawn;
-- replacement required;
-- fixture changed/reconfirmation required; and
-- Umpire Match Voting roster mismatch awaiting review.
+Coordinators can see:
 
-Notifications should carry a direct action URL. Accept and Decline must still call the secure
-database workflow; the URL itself must not perform a state change.
+- in-app **Unread** or **Read**;
+- email **Queued**, **Sent** or **Failed**; and
+- date/time of each delivery attempt.
 
-Realtime should update the coordinator and recipient screens after a response. Adding coordination
-tables to Realtime requires a deliberate publication and RLS review; it must not be assumed from the
-existing `notifications` subscription.
+Email-open tracking is not used. A failed email warns the coordinator but does not cancel an offer
+because the in-app offer remains available.
 
 ## Main views
 
 ### Coordinator dashboard
 
-Show upcoming fixtures/activities, open positions, pending offers with deadlines, next reminders,
-declines, expired offers, responses awaiting confirmation, availability conflicts, confirmed
-assignments and replacement needs.
+Show open positions, pending offers, deadlines, next reminders, responses awaiting confirmation,
+declines, withdrawals, expired offers, confirmed assignments, replacement requests, reconfirmation,
+warning overrides and notification failures.
 
 ### Fixture coordination
 
-Show fixture details and the four initial positions. For each position, show its current assignment
-or offer recipients, response states, deadline and actions permitted within the coordinator's scope.
+Show fixture details, two Umpire positions, two Technical Bench positions and optional supervision
+links. Each position shows offer recipients, response states, deadlines, warnings and assignment
+history within the viewer's permission scope.
 
-### My assignments and offers
+### Umpire Matrix
 
-Show pending offers first, with the deadline, offer note, fixture/activity details and Accept or
-Decline. Clearly separate `Accepted — awaiting confirmation` from confirmed, replaced, cancelled
-and completed assignments.
+Show Umpires, grade eligibility, qualifications, completed-duty counts, supervision, availability,
+current workload, replacement history, imported-history review and restricted coordinator logs.
 
-### People pool
+### My offers and assignments
 
-Show capability, organisation connection, availability, overlapping commitments, current load,
-pending offers and active/disabled state. Recent declines should provide operational context but
-must not be presented as a performance score.
+Show pending offers first, including deadline, note, fixture/activity details and Accept/Decline.
+Clearly separate **Accepted — awaiting confirmation**, confirmed, replacement requested, replaced,
+cancelled and completed records.
+
+### Volunteer activities
+
+Allow authorised Volunteer Coordinators to create any basic scoped activity and position structure.
+Version 1 uses direct offers only. Browse-and-claim positions remain parked.
 
 ### Roster mismatch review
 
-Show Umpire Match Voting submissions that are mismatched, unrostered or unverifiable, with the final
-fixture roster, replacement history and a permission-controlled review action.
+Show Umpire Match Voting results that are mismatched, unrostered, unverifiable or roster-disputed,
+with final roster and correction history.
 
-## Access-control outline
+## Access-control requirements
 
-- Recipients may read and respond only to their own offers.
-- People may manage only their own availability unless a separately approved delegation exists.
-- Coordinators may manage positions, offers and assignments only for their responsibility and
-  organisation scope.
-- Only the original offerer may confirm an accepted response in the normal workflow. Another
-  coordinator with the same scope cannot silently take over that confirmation.
-- Umpire coordinators do not automatically gain Volunteer coordination access.
-- Capability alone does not grant coordinator access.
-- Association scope may include child clubs/teams only through one documented hierarchy function.
-- Cross-club assignment is denied unless an explicit policy permits it.
-- Workflow writes should use narrow database functions. Direct table updates must not bypass offer
-  deadlines, offerer confirmation, scope or history.
-- New public-schema tables require explicit API grants and Row Level Security policies.
-- Helper functions should use a fixed `search_path`; elevated functions must not be executable by
-  `PUBLIC` by default.
-- Update policies require both row-selection and resulting-row checks.
-- Realtime visibility must use the same row access rules as normal reads.
+- Recipients read and respond only to their own offers.
+- People manage only their own availability.
+- Coordinators act only within their responsibility and organisation scope.
+- Capability does not grant coordinator access.
+- Umpire grade and private-log access is association-scoped.
+- A supervisor can add and read their own supervision note but cannot read the full log.
+- Recipients never see competing recipients or their responses.
+- Normal confirmation belongs to the offerer; takeover requires equivalent scope and an audited reason.
+- Workflow writes use narrow database operations that enforce states, scope and history.
+- New exposed tables require explicit API grants and Row Level Security.
+- Elevated functions must use fixed search paths, explicit authentication/authorisation and restricted
+  execution grants.
+- Realtime visibility must obey the same row access rules as normal reads.
 
-Before migration work, produce a written permission matrix covering Super Admin, Association Admin,
-Club Admin, Team Admin, each coordinator responsibility and the assignment recipient.
+## Confirmed boundaries
 
-## Delivery plan
+- Fixtures remain the source of match information.
+- No automatic confirmation.
+- No overlapping confirmed assignments.
+- No public volunteer claiming in version 1.
+- No SMS or push notifications in version 1.
+- No automatic misconduct referral or Safety/Discipline case link.
+- No automatic grade sign-off from history or supervisor notes.
+- No fuzzy automatic identity matching.
+- No retrospective roster-mismatch flood for historical records.
+- No Production, schema, permission or live-data change is authorised by this document.
 
-### Phase 0 — approve the design
+## Remaining technical checks — not product questions
 
-- Decide the default deadline, reminder timings and conflict override policy.
-- Confirm who reviews Umpire Match Voting roster mismatch flags.
-- Recheck the live schema, existing permission helpers and notification dispatcher.
-- Dry-run Umpire name-to-profile matching and report matched, ambiguous and unmatched counts without
-  changing live data.
+Before a migration is written, the implementation plan must verify:
 
-### Phase 1 — permission and position foundation
+- the live Dev schema and grants;
+- exact permission helper functions and hierarchy behaviour;
+- account-invitation and capability-invitation reuse;
+- notification email dispatch and delivery tracking reuse;
+- all fixture mutation paths that must trigger reconfirmation;
+- match end-time fallback when `scheduled_end_at` is missing;
+- safe profile date-of-birth access without exposing the date;
+- RevSports Umpire mapping counts and ambiguous identities;
+- future-fixture position creation and idempotency; and
+- privacy approval for permanent sensitive-note history before Production.
 
-- Add or reuse coordinator permission keys and scopes.
-- Resolve the source of assignable capabilities.
-- Add configurable templates and fixture positions.
-- Add RLS, explicit API grants and append-only history.
-
-### Phase 2 — fixture offer workflow
-
-- Add multi-recipient offers, required deadlines and recipient-facing notes.
-- Add recipient acceptance, original-offerer confirmation and replacement history.
-- Add in-app notifications, scheduled reminders and expiry processing.
-- Build Coordinator, Fixture Coordination and My Offers/Assignments views.
-- Add the Umpire Match Voting roster check and review queue.
-
-### Phase 3 — broader availability
-
-- Add date/time availability periods and conditional notes.
-- Show overlap warnings and existing commitments.
-- Add recurring patterns only after a simple period model is proven.
-
-### Phase 4 — volunteer activities
-
-- Add basic non-fixture activities and configurable volunteer positions.
-- Reuse the offer, reminder, response and assignment workflows.
-- Keep full event management outside the module.
-
-### Phase 5 — later improvements
-
-- Open positions that eligible people can claim.
-- Email, push or SMS delivery.
-- Workload balancing and assignment limits.
-- Qualification/accreditation tracking.
-- Attendance, check-in and volunteer-hour reporting.
-- Bulk assignment, exports and replacement requests.
-
-## Decisions required before implementation
-
-1. What is the default response period for an Umpire offer?
-2. How many reminders are sent, and how long before the deadline are they due?
-3. Can a coordinator override an availability or overlapping-assignment warning?
-4. Which role reviews Umpire Match Voting roster mismatch flags at association and club level?
-5. Can a club coordinator offer a position to a person connected only to another club?
-6. Are Umpire, Technical Bench and Volunteer separate responsibilities by default?
-7. Should a sent offer note be corrected by withdrawing and resending, or by a visible revision?
-8. Is in-app delivery alone sufficient for the first Dev test?
-
-## Implementation gate
-
-No database migration, Row Level Security change, live permission grant or production change should
-begin from this document alone. The next step is owner review of the eight decisions above, followed
-by a current-schema technical plan containing proposed SQL objects, permission tests, rollback
-tests, data-migration counts and one small owner test at a time.
+The detailed delivery sequence, proposed records, state transitions, permission matrix and test gates
+are in `docs/coordination-module-implementation-plan.md`.

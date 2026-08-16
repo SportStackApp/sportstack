@@ -3782,6 +3782,60 @@ Risk level:
 - Medium. This includes three additive Dev-only database migrations and browser-local draft storage.
   Production is unchanged.
 
+## 16 August 2026 - Coordination Module decisions and implementation plan
+
+What changed:
+
+- Consolidated the owner decision review into the Coordination discovery specification and removed
+  the earlier eight open product questions.
+- Confirmed the full “no until yes” offer workflow: multiple recipients may accept, the offerer can
+  wait or confirm at any time, and an assignment exists only after explicit confirmation.
+- Confirmed 72-hour adjustable offers, normal and urgent reminder timings, mandatory in-app/email
+  notices, notification delivery states, withdrawal before confirmation and mandatory-note
+  replacement requests after confirmation.
+- Added association Umpire Matrix requirements covering grade sign-offs, qualifications, completed
+  history, supervising Umpires, historical RevSports mapping and restricted coordinator logs.
+- Added Technical Bench first-duty and under-18 adult-pairing warnings, strict overlap blocking,
+  role-specific fixture availability and audited warning overrides.
+- Preserved Umpire Match Voting submissions unchanged when a roster mismatch is confirmed.
+- Added a staged implementation plan with proposed record groups, state transitions, permission
+  matrix, secure operations, verification gates, owner tests and Production boundaries.
+- Rechecked relevant live Dev schema metadata read-only. Existing fixtures, date of birth,
+  divisions, availability, permissions, notifications, Umpire Match Voting submissions and
+  RevSports Umpire mappings remain the integration points; no Coordination tables exist.
+
+Files changed:
+
+- `CODEX_HANDOFF.md`
+- `docs/coordination-module-discovery.md`
+- `docs/coordination-module-implementation-plan.md`
+- `docs/current-state.md`
+
+Checks run:
+
+- Live Dev metadata queries were read-only; no database record, permission or structure changed.
+- Documentation consistency, whitespace and diff checks passed.
+- `npx tsc --noEmit` and `npm run build` passed. The existing large-bundle warning remains.
+- Full `npm run lint` retained the unrelated repository baseline of 360 errors and 78 warnings.
+  This documentation-only change adds no linted application source.
+
+What Aaron should test next:
+
+1. Read the confirmed workflow summary in `docs/coordination-module-discovery.md` and report any
+   decision that does not match the discussion before Stage 0 begins.
+
+Risk level:
+
+- Low. Documentation and read-only discovery only. No database migration, Row Level Security,
+  permission, notification schedule, live data or Production change is included.
+
+Unknowns still needing confirmation:
+
+- Product decisions are complete. The Stage 0 technical checks listed in
+  `docs/coordination-module-implementation-plan.md` remain required before a migration is proposed.
+- Permanent storage of sensitive replacement notes requires a documented privacy and redaction
+  review before Production.
+
 ## How to update this file
 
 When Codex finishes a task, add a dated entry with:
