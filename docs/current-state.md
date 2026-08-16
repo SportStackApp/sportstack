@@ -6,6 +6,29 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## Player Explorer scoped access — 16 August 2026
+
+- Player Explorer now supports Super Admin, Association Admin, Club Admin, Team Manager and Coach
+  modes. Lower roles see a fixed, locked scope at the top of the Looker-style filter builder:
+  Association; Association + Club; or Association + Club + Team respectively.
+- Scope is enforced twice. The UI removes wider options and cannot remove the fixed scope rows. Live
+  Dev RLS separately restricts RevSports matches, appearances and identity links using the current
+  signed-in Auth session and active app mode, so altering the browser cannot widen the results.
+- Super Admin remains global only in genuine Super Admin mode. A Super Admin using **Viewing as** a
+  lower role is restricted by the same active-session scope.
+- Live read checks returned 4,532 Hockey Ballarat appearances for an Association Admin, 147
+  Grampians Hockey Club appearances for a Club Admin and 147 exact-team appearances for a Team
+  Manager, with zero rows outside each scope. Anonymous access returned zero rows; genuine Super
+  Admin mode retained all 800 matches and 12,395 appearances.
+- Lower roles have manual search, sorting, copy and CSV export. Saved and recurring searches remain
+  Super Admin-only until scheduled delivery can carry and re-check an immutable scope snapshot.
+- Additive Dev migration `scope_player_explorer_access` adds private fail-closed scope helpers and
+  scoped SELECT policies. It creates no tables and changes no source data. Its full SQL and scoped
+  read checks passed rollback tests before application. Supabase reported no new Player Explorer
+  security warning; the existing unused run-history index remains informational.
+- Eighteen focused Player Explorer tests, changed-file lint, TypeScript and the production build
+  pass. The remaining owner check is one signed-in lower-role interaction flow, especially Coach.
+
 ## Player Explorer result export and sorting — 16 August 2026
 
 - The Super Admin Player Explorer results table now sorts when any visible column heading is

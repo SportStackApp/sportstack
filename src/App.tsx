@@ -104,6 +104,7 @@ const queryClient = new QueryClient();
 const ADMIN_MODES = ["super_admin", "association", "club"] as const;
 const ASSOCIATION_ADMIN_MODES = ["super_admin", "association"] as const;
 const SUPER_ADMIN_MODES = ["super_admin"] as const;
+const PLAYER_EXPLORER_MODES = ["super_admin", "association", "club", "team_manager", "coach"] as const;
 const MVP_ADMIN_MODES = ["super_admin", "association", "club", "team_manager"] as const;
 const UMPIRE_BALLOT_MODES = ["super_admin", "association", "player"] as const;
 
@@ -216,7 +217,7 @@ const App = () => (
                       <Route path="/admin/error-logs" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><ErrorLogs /></ModeRouteGate>} />
                       <Route path="/admin/feedback" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><FeedbackResponses /></ModeRouteGate>} />
                       <Route path="/admin/revsports-entities" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><RevSportsEntityReview /></ModeRouteGate>} />
-                      <Route path="/admin/player-explorer" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><PlayerExplorer /></ModeRouteGate>} />
+                      <Route path="/admin/player-explorer" element={<ModeRouteGate allowedModes={PLAYER_EXPLORER_MODES}><PlayerExplorer /></ModeRouteGate>} />
                       <Route path="/admin/fixtures" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><FixturesManagement /></ModeRouteGate>} />
                       <Route path="/admin/fixture-import" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><FixtureImport /></ModeRouteGate>} />
                       <Route path="/admin/venues" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><VenuesManagement /></ModeRouteGate>} />

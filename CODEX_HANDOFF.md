@@ -10,6 +10,25 @@ Future agents should start by reading these files in order:
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
+## 16 August 2026 Player Explorer scoped access
+
+- `/admin/player-explorer` now admits Super Admin, Association Admin, Club Admin, Team Manager and
+  Coach modes. Fixed filter rows show the immutable Association, Association + Club, or Association
+  + Club + Team boundary; entity options below are narrowed to that scope.
+- Dev migration `20260816213409_scope_player_explorer_access.sql` adds private session-bound helpers
+  and SELECT policies for V2 matches, appearances and only the relevant external identity rows. It
+  also makes the original Super Admin reads active-mode-aware so **Viewing as** cannot retain global
+  access. No table or source-data row changed.
+- Live Dev impersonation returned 4,532 Association Admin, 147 Club Admin and 147 Team Manager
+  appearances with zero outside-scope rows. Anonymous access returned zero; genuine Super Admin
+  mode retained all 800 matches and 12,395 appearances. The existing Coach test context currently
+  has no V2 rows, so a signed-in Coach owner check remains.
+- Lower roles receive manual search, sorting, copy and CSV export. Saved/recurring searches remain
+  Super Admin-only because the scheduler does not yet store an immutable role-scope snapshot.
+- The migration passed a full rollback and scoped-read test before Dev application. No new Player
+  Explorer security advisor warning appeared. Eighteen focused tests, focused lint, TypeScript and
+  build pass. Production and Main remain unchanged.
+
 ## 16 August 2026 Player Explorer result export and sorting
 
 - `/admin/player-explorer` now has clickable headings for Player, Identity, Teams, Games, Goals and

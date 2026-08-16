@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from "lucide-react";
+import { LockKeyhole, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,10 +26,12 @@ import {
   type PlayerExplorerFilterOptions,
   type PlayerExplorerSequenceRule,
 } from "@/lib/playerExplorer";
+import type { PlayerExplorerLockedFilter } from "@/lib/playerExplorerScope";
 
 interface PlayerExplorerFilterBuilderProps {
   expression: PlayerExplorerFilterExpression;
   options: PlayerExplorerFilterOptions;
+  lockedFilters?: PlayerExplorerLockedFilter[];
   disabled?: boolean;
   onChange: (expression: PlayerExplorerFilterExpression) => void;
 }
@@ -100,6 +102,7 @@ const updateSequence = (
 export function PlayerExplorerFilterBuilder({
   expression,
   options,
+  lockedFilters = [],
   disabled = false,
   onChange,
 }: PlayerExplorerFilterBuilderProps) {
@@ -107,6 +110,7 @@ export function PlayerExplorerFilterBuilder({
     (total, group) => total + group.conditions.length,
     0,
   );
+  const lockedFields = new Set(lockedFilters.map((filter) => filter.field));
 
   const setExpressionLogic = (logic: PlayerExplorerFilterLogic) => onChange({
     ...expression,
@@ -149,7 +153,7 @@ export function PlayerExplorerFilterBuilder({
     <div className="overflow-hidden rounded-md border">
       <div className="flex flex-col gap-3 bg-foreground px-4 py-3 text-background sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-medium">Filters ({conditionCount})</p>
+          <p className="font-medium">Filters ({conditionCount + lockedFilters.length})</p>
           <p className="text-xs opacity-75">Build rules using fields, operators and values.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -167,6 +171,30 @@ export function PlayerExplorerFilterBuilder({
       </div>
 
       <div className="space-y-4 bg-card p-3 sm:p-4">
+        {lockedFilters.length > 0 ? (
+          <div className="space-y-2 rounded-md border border-primary/30 bg-primary/5 p-3">
+            <div className="flex items-start gap-2">
+              <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <div>
+                <p className="text-sm font-medium">Fixed access scope</p>
+                <p className="text-xs text-muted-foreground">
+                  These filters come from your signed-in role and cannot be changed or removed.
+                </p>
+              </div>
+            </div>
+            {lockedFilters.map((filter) => (
+              <div key={filter.field} className="grid gap-2 rounded-md border bg-background p-2 lg:grid-cols-[minmax(180px,1.25fr)_minmax(150px,0.9fr)_minmax(160px,1.5fr)_auto] lg:items-center">
+                <Input value={PLAYER_EXPLORER_FIELD_DEFINITIONS[filter.field].label} disabled aria-label={`${filter.field} fixed field`} />
+                <Input value="is fixed to" disabled aria-label={`${filter.field} fixed operator`} />
+                <Input value={filter.label} disabled aria-label={`${filter.field} fixed value`} />
+                <div className="flex h-10 items-center gap-1 px-3 text-xs font-medium text-muted-foreground">
+                  <LockKeyhole className="h-3.5 w-3.5" />Locked
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         {expression.groups.length === 0 ? (
           <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
             No groups yet. Add a group to start filtering.
@@ -245,7 +273,8 @@ export function PlayerExplorerFilterBuilder({
                           <SelectGroup key={category}>
                             <SelectLabel>{category}</SelectLabel>
                             {PLAYER_EXPLORER_FIELDS.filter((field) =>
-                              PLAYER_EXPLORER_FIELD_DEFINITIONS[field].category === category,
+                              PLAYER_EXPLORER_FIELD_DEFINITIONS[field].category === category
+                              && !lockedFields.has(field as PlayerExplorerLockedFilter["field"]),
                             ).map((field) => (
                               <SelectItem key={field} value={field}>{PLAYER_EXPLORER_FIELD_DEFINITIONS[field].label}</SelectItem>
                             ))}

@@ -39,6 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useToast } from "@/hooks/use-toast";
+import { useTeamContext } from "@/contexts/TeamContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database as SupabaseDatabase } from "@/integrations/supabase/types";
 import {
@@ -63,6 +64,10 @@ import {
   type PlayerExplorerSortDirection,
   type PlayerExplorerSortKey,
 } from "@/lib/playerExplorerResults";
+import {
+  getPlayerExplorerAccessScopeKey,
+  getPlayerExplorerLockedFilters,
+} from "@/lib/playerExplorerScope";
 
 type Tables = SupabaseDatabase["public"]["Tables"];
 type AssociationRow = Pick<Tables["associations"]["Row"], "id" | "name">;
@@ -410,7 +415,12 @@ const loadCatalogue = async (): Promise<PlayerExplorerCatalogue> => {
 };
 
 export default function PlayerExplorer() {
-  const { scopeLoading, isSuperAdmin } = useAdminScope();
+  const { scopeLoading, isSuperAdmin, actorMode } = useAdminScope();
+  const {
+    selectedAssociationId,
+    selectedClubId,
+    selectedTeamId,
+  } = useTeamContext();
   const { toast } = useToast();
   const [catalogue, setCatalogue] = useState<PlayerExplorerCatalogue | null>(null);
   const [catalogueLoading, setCatalogueLoading] = useState(true);
@@ -433,8 +443,17 @@ export default function PlayerExplorer() {
   const [sortKey, setSortKey] = useState<PlayerExplorerSortKey>("gamesPlayed");
   const [sortDirection, setSortDirection] = useState<PlayerExplorerSortDirection>("desc");
 
+  const accessScopeKey = getPlayerExplorerAccessScopeKey({
+    actorMode,
+    isSuperAdmin,
+    selectedAssociationId,
+    selectedClubId,
+    selectedTeamId,
+  });
+  const canUsePlayerExplorer = accessScopeKey !== null;
+
   const fetchCatalogue = useCallback(async () => {
-    if (!isSuperAdmin) return;
+    if (!canUsePlayerExplorer || !accessScopeKey) return;
     setCatalogueLoading(true);
     setCatalogueError(null);
     recordsCacheRef.current = null;
@@ -445,12 +464,65 @@ export default function PlayerExplorer() {
     } finally {
       setCatalogueLoading(false);
     }
-  }, [isSuperAdmin]);
+  }, [accessScopeKey, canUsePlayerExplorer]);
 
   useEffect(() => {
-    if (!scopeLoading && isSuperAdmin) void fetchCatalogue();
-    if (!scopeLoading && !isSuperAdmin) setCatalogueLoading(false);
-  }, [fetchCatalogue, isSuperAdmin, scopeLoading]);
+    if (!scopeLoading && canUsePlayerExplorer) void fetchCatalogue();
+    if (!scopeLoading && !canUsePlayerExplorer) setCatalogueLoading(false);
+  }, [canUsePlayerExplorer, fetchCatalogue, scopeLoading]);
+
+  useEffect(() => {
+    setFilterExpression(createEmptyPlayerExplorerExpression());
+    setSearchError(null);
+    setHasRun(false);
+    setResults([]);
+    setMatchedAppearanceCount(0);
+    setMatchedMatchCount(0);
+    setPage(1);
+    recordsCacheRef.current = null;
+  }, [accessScopeKey]);
+
+  const scopeDetails = useMemo(() => {
+    if (!catalogue || isSuperAdmin) {
+      return {
+        associationId: null,
+        associationName: null,
+        clubId: null,
+        clubName: null,
+        teamId: null,
+        teamName: null,
+      };
+    }
+
+    const teamId = actorMode === "team_manager" || actorMode === "coach"
+      ? selectedTeamId
+      : null;
+    const team = teamId ? catalogue.teams.find((item) => item.id === teamId) : null;
+    const clubId = actorMode === "club"
+      ? selectedClubId
+      : team?.club_id || null;
+    const club = clubId ? catalogue.clubs.find((item) => item.id === clubId) : null;
+    const associationId = actorMode === "association"
+      ? selectedAssociationId
+      : club?.association_id || null;
+    const association = associationId
+      ? catalogue.associations.find((item) => item.id === associationId)
+      : null;
+
+    return {
+      associationId,
+      associationName: association?.name || null,
+      clubId,
+      clubName: club?.name || null,
+      teamId,
+      teamName: team?.name || null,
+    };
+  }, [actorMode, catalogue, isSuperAdmin, selectedAssociationId, selectedClubId, selectedTeamId]);
+
+  const lockedFilters = useMemo(
+    () => getPlayerExplorerLockedFilters(isSuperAdmin, scopeDetails),
+    [isSuperAdmin, scopeDetails],
+  );
 
   const filterOptions = useMemo<PlayerExplorerFilterOptions>(() => {
     if (!catalogue) return {};
@@ -464,15 +536,76 @@ export default function PlayerExplorer() {
       label: [row.name, context(row)].filter(Boolean).join(" — "),
     })).sort((left, right) => left.label.localeCompare(right.label));
 
+    if (isSuperAdmin) {
+      return {
+        association: labelled(catalogue.associations, () => null),
+        club: labelled(catalogue.clubs, (club) => associationNames.get(club.association_id)),
+        division: labelled(catalogue.divisions, (division) => associationNames.get(division.association_id)),
+        team: labelled(catalogue.teams, (team) => team.club_id ? clubNames.get(team.club_id) : null),
+        competition: labelled(catalogue.competitions, (competition) => associationNames.get(competition.association_id)),
+        season: labelled(catalogue.seasons, (season) => associationNames.get(season.association_id)),
+      };
+    }
+
+    const scopedClubs = catalogue.clubs.filter((club) =>
+      actorMode === "association"
+        ? club.association_id === scopeDetails.associationId
+        : club.id === scopeDetails.clubId,
+    );
+    const scopedClubIds = new Set(scopedClubs.map((club) => club.id));
+    const scopedTeams = catalogue.teams.filter((team) =>
+      actorMode === "team_manager" || actorMode === "coach"
+        ? team.id === scopeDetails.teamId
+        : scopedClubIds.has(team.club_id),
+    );
+    const scopedTeamIds = new Set(scopedTeams.map((team) => team.id));
+    const scopedFixtures = catalogue.fixtures.filter((fixture) =>
+      (fixture.home_team_id && scopedTeamIds.has(fixture.home_team_id))
+      || (fixture.away_team_id && scopedTeamIds.has(fixture.away_team_id)),
+    );
+    const scopedDivisionIds = new Set([
+      ...scopedTeams.map((team) => team.division_id).filter((id): id is string => Boolean(id)),
+      ...scopedFixtures.map((fixture) => fixture.division_id).filter((id): id is string => Boolean(id)),
+    ]);
+    const scopedDivisions = catalogue.divisions.filter((division) =>
+      actorMode === "association"
+        ? division.association_id === scopeDetails.associationId
+        : scopedDivisionIds.has(division.id),
+    );
+    const scopedCompetitionIds = new Set(
+      scopedDivisions.map((division) => division.competition_id).filter((id): id is string => Boolean(id)),
+    );
+    const scopedSeasonIds = new Set([
+      ...scopedDivisions.map((division) => division.season_id).filter((id): id is string => Boolean(id)),
+      ...scopedFixtures.map((fixture) => fixture.season_id).filter((id): id is string => Boolean(id)),
+    ]);
+
     return {
-      association: labelled(catalogue.associations, () => null),
-      club: labelled(catalogue.clubs, (club) => associationNames.get(club.association_id)),
-      division: labelled(catalogue.divisions, (division) => associationNames.get(division.association_id)),
-      team: labelled(catalogue.teams, (team) => team.club_id ? clubNames.get(team.club_id) : null),
-      competition: labelled(catalogue.competitions, (competition) => associationNames.get(competition.association_id)),
-      season: labelled(catalogue.seasons, (season) => associationNames.get(season.association_id)),
+      association: labelled(
+        catalogue.associations.filter((association) => association.id === scopeDetails.associationId),
+        () => null,
+      ),
+      club: labelled(scopedClubs, (club) => associationNames.get(club.association_id)),
+      division: labelled(scopedDivisions, (division) => associationNames.get(division.association_id)),
+      team: labelled(scopedTeams, (team) => team.club_id ? clubNames.get(team.club_id) : null),
+      competition: labelled(
+        catalogue.competitions.filter((competition) =>
+          actorMode === "association"
+            ? competition.association_id === scopeDetails.associationId
+            : scopedCompetitionIds.has(competition.id),
+        ),
+        (competition) => associationNames.get(competition.association_id),
+      ),
+      season: labelled(
+        catalogue.seasons.filter((season) =>
+          actorMode === "association"
+            ? season.association_id === scopeDetails.associationId
+            : scopedSeasonIds.has(season.id),
+        ),
+        (season) => associationNames.get(season.association_id),
+      ),
     };
-  }, [catalogue]);
+  }, [actorMode, catalogue, isSuperAdmin, scopeDetails]);
 
   const resetFilters = () => {
     setFilterExpression(createEmptyPlayerExplorerExpression());
@@ -587,12 +720,14 @@ export default function PlayerExplorer() {
     return <div className="space-y-4"><Skeleton className="h-10 w-72" /><Skeleton className="h-72 w-full" /></div>;
   }
 
-  if (!isSuperAdmin) {
+  if (!canUsePlayerExplorer) {
     return (
       <Alert variant="destructive">
         <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Super Admin access required</AlertTitle>
-        <AlertDescription>Player Explorer contains protected RevSports records and is available only in Super Admin mode.</AlertDescription>
+        <AlertTitle>Player Explorer access unavailable</AlertTitle>
+        <AlertDescription>
+          Select a confirmed Association Admin, Club Admin, Team Manager, Coach or Super Admin scope and try again.
+        </AlertDescription>
       </Alert>
     );
   }
@@ -606,7 +741,7 @@ export default function PlayerExplorer() {
             Player Explorer
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Build Looker-style filters, including ordered movement between divisions. Results are read-only.
+            Build Looker-style filters inside your access scope. Results are read-only.
           </p>
         </div>
         <Badge variant="outline" className="w-fit">
@@ -634,15 +769,25 @@ export default function PlayerExplorer() {
         </Alert>
       ) : null}
 
-      <PlayerExplorerSavedSearches
-        expression={filterExpression}
-        disabled={catalogueLoading || searching}
-        onLoad={(expression) => {
-          setFilterExpression(expression);
-          setSearchError(null);
-          setHasRun(false);
-        }}
-      />
+      {isSuperAdmin ? (
+        <PlayerExplorerSavedSearches
+          expression={filterExpression}
+          disabled={catalogueLoading || searching}
+          onLoad={(expression) => {
+            setFilterExpression(expression);
+            setSearchError(null);
+            setHasRun(false);
+          }}
+        />
+      ) : (
+        <Alert>
+          <Database className="h-4 w-4" />
+          <AlertTitle>Manual scoped search</AlertTitle>
+          <AlertDescription>
+            Copy and CSV export are available. Saved recurring searches remain Super Admin-only for now.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
@@ -661,6 +806,7 @@ export default function PlayerExplorer() {
               <PlayerExplorerFilterBuilder
                 expression={filterExpression}
                 options={filterOptions}
+                lockedFilters={lockedFilters}
                 disabled={searching}
                 onChange={(expression) => {
                   setFilterExpression(expression);

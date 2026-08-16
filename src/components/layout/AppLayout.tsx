@@ -306,6 +306,12 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       ],
     },
     {
+      heading: "Team data",
+      items: [
+        { path: "/admin/player-explorer", label: "Player Explorer", icon: UserSearch },
+      ],
+    },
+    {
       heading: "Coaching",
       items: [
         { path: "/coaching", label: "Squad", icon: ClipboardCheck },
@@ -329,6 +335,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Coaching",
       items: [
         { path: "/coaching", label: "Squad", icon: ClipboardCheck },
+        { path: "/admin/player-explorer", label: "Player Explorer", icon: UserSearch },
         { path: "/coaching/formations", label: "Formation Library", icon: LayoutGrid },
         { path: "/roster", label: "Roster", icon: Users },
         { path: "/coaching/trace", label: "Hockey Trace Lab", icon: Radar },
@@ -371,6 +378,7 @@ const ASSOCIATION_ADMIN_DROPDOWN_PATHS = new Set([
   "/admin/users",
   "/admin/requests",
   "/admin/feedback",
+  "/admin/player-explorer",
   "/admin/mvp-voting",
   "/admin/umpire-voting",
   "/admin/analytics",
@@ -386,6 +394,7 @@ const CLUB_ADMIN_DROPDOWN_PATHS = new Set([
   "/games",
   "/admin/users",
   "/admin/requests",
+  "/admin/player-explorer",
   "/admin/mvp-voting",
   "/admin/safety-risk",
   "/committee",
