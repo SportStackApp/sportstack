@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-15
+Last updated: 2026-08-16
 
 Future agents should start by reading these files in order:
 
@@ -9,6 +9,18 @@ Future agents should start by reading these files in order:
 3. `docs/project-brief.md` — concise product and architecture context.
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 16 August 2026 Player Explorer result export and sorting
+
+- `/admin/player-explorer` now has clickable headings for Player, Identity, Teams, Games, Goals and
+  each card total. A second selection reverses the sort direction; paging uses the sorted order.
+- **Copy results** produces tab-separated data for spreadsheet paste. **Download CSV** exports the
+  complete searched and sorted result set rather than only the visible page. The export includes
+  identifiers, identity state, teams, statistics, rounds and latest game date, with spreadsheet
+  formula-value protection.
+- This frontend-only change required no database, RLS, Edge Function or scheduler change. Fifteen
+  focused tests, focused lint, TypeScript and build pass; full lint remains the known baseline debt.
+  Signed-in Dev owner verification remains the final interaction check.
 
 ## 15 August 2026 Player Explorer sequences, saved searches and schedules
 

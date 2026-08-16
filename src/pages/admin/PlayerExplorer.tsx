@@ -8,9 +8,14 @@ import {
 } from "react";
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  ClipboardCopy,
   Database,
+  Download,
   Loader2,
   Search,
   SlidersHorizontal,
@@ -33,6 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAdminScope } from "@/hooks/useAdminScope";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database as SupabaseDatabase } from "@/integrations/supabase/types";
 import {
@@ -50,6 +56,13 @@ import {
   type PlayerExplorerRecord,
   type PlayerExplorerResult,
 } from "@/lib/playerExplorer";
+import {
+  buildPlayerExplorerCsv,
+  buildPlayerExplorerTsv,
+  sortPlayerExplorerResults,
+  type PlayerExplorerSortDirection,
+  type PlayerExplorerSortKey,
+} from "@/lib/playerExplorerResults";
 
 type Tables = SupabaseDatabase["public"]["Tables"];
 type AssociationRow = Pick<Tables["associations"]["Row"], "id" | "name">;
@@ -132,6 +145,13 @@ const SOURCE_NAME = "revsports";
 const PAGE_SIZE = 1000;
 const MATCH_ID_CHUNK_SIZE = 50;
 const RESULT_PAGE_SIZES = [10, 25, 50] as const;
+const NUMERIC_SORT_KEYS = new Set<PlayerExplorerSortKey>([
+  "gamesPlayed",
+  "goals",
+  "greenCards",
+  "yellowCards",
+  "redCards",
+]);
 
 const getErrorMessage = (error: unknown) => {
   if (error && typeof error === "object" && "message" in error) return String(error.message);
@@ -391,6 +411,7 @@ const loadCatalogue = async (): Promise<PlayerExplorerCatalogue> => {
 
 export default function PlayerExplorer() {
   const { scopeLoading, isSuperAdmin } = useAdminScope();
+  const { toast } = useToast();
   const [catalogue, setCatalogue] = useState<PlayerExplorerCatalogue | null>(null);
   const [catalogueLoading, setCatalogueLoading] = useState(true);
   const [catalogueError, setCatalogueError] = useState<string | null>(null);
@@ -409,6 +430,8 @@ export default function PlayerExplorer() {
   const deferredResultSearch = useDeferredValue(resultSearch.trim().toLocaleLowerCase("en-AU"));
   const [pageSize, setPageSize] = useState<(typeof RESULT_PAGE_SIZES)[number]>(25);
   const [page, setPage] = useState(1);
+  const [sortKey, setSortKey] = useState<PlayerExplorerSortKey>("gamesPlayed");
+  const [sortDirection, setSortDirection] = useState<PlayerExplorerSortDirection>("desc");
 
   const fetchCatalogue = useCallback(async () => {
     if (!isSuperAdmin) return;
@@ -488,14 +511,15 @@ export default function PlayerExplorer() {
   };
 
   const filteredResults = useMemo(() => {
-    if (!deferredResultSearch) return results;
-    return results.filter((result) => [
+    const searchedResults = deferredResultSearch ? results.filter((result) => [
       result.displayName,
       result.sourcePlayerName,
       result.revsportsPlayerId,
       ...result.teamNames,
-    ].some((value) => value.toLocaleLowerCase("en-AU").includes(deferredResultSearch)));
-  }, [deferredResultSearch, results]);
+    ].some((value) => value.toLocaleLowerCase("en-AU").includes(deferredResultSearch))) : results;
+
+    return sortPlayerExplorerResults(searchedResults, sortKey, sortDirection);
+  }, [deferredResultSearch, results, sortDirection, sortKey]);
 
   useEffect(() => setPage(1), [deferredResultSearch, pageSize]);
 
@@ -505,6 +529,59 @@ export default function PlayerExplorer() {
   const identityIssueCount = results.filter((result) =>
     result.identityStatus === "unlinked" || result.identityStatus === "identity_conflict",
   ).length;
+
+  const updateSort = (nextSortKey: PlayerExplorerSortKey) => {
+    if (nextSortKey === sortKey) {
+      setSortDirection((current) => current === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(nextSortKey);
+      setSortDirection(NUMERIC_SORT_KEYS.has(nextSortKey) ? "desc" : "asc");
+    }
+    setPage(1);
+  };
+
+  const sortIcon = (headerSortKey: PlayerExplorerSortKey) => {
+    if (headerSortKey !== sortKey) return <ArrowUpDown className="ml-1 h-3.5 w-3.5" />;
+    return sortDirection === "asc"
+      ? <ArrowUp className="ml-1 h-3.5 w-3.5" />
+      : <ArrowDown className="ml-1 h-3.5 w-3.5" />;
+  };
+
+  const ariaSort = (headerSortKey: PlayerExplorerSortKey) => {
+    if (headerSortKey !== sortKey) return "none" as const;
+    return sortDirection === "asc" ? "ascending" as const : "descending" as const;
+  };
+
+  const downloadResults = () => {
+    const csv = buildPlayerExplorerCsv(filteredResults);
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `sportstack-player-explorer-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast({
+      title: "CSV downloaded",
+      description: `${filteredResults.length} player result${filteredResults.length === 1 ? "" : "s"} exported.`,
+    });
+  };
+
+  const copyResults = async () => {
+    try {
+      await navigator.clipboard.writeText(buildPlayerExplorerTsv(filteredResults));
+      toast({
+        title: "Results copied",
+        description: `${filteredResults.length} player result${filteredResults.length === 1 ? "" : "s"} ready to paste into a spreadsheet.`,
+      });
+    } catch {
+      toast({
+        title: "Results could not be copied",
+        description: "Use Download CSV instead, or allow clipboard access in your browser.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (scopeLoading) {
     return <div className="space-y-4"><Skeleton className="h-10 w-72" /><Skeleton className="h-72 w-full" /></div>;
@@ -635,7 +712,7 @@ export default function PlayerExplorer() {
                 <CardTitle>Players</CardTitle>
                 <CardDescription>{filteredResults.length} result{filteredResults.length === 1 ? "" : "s"} shown after result search.</CardDescription>
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
                 <div className="relative min-w-0 sm:w-72">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input value={resultSearch} onChange={(event) => setResultSearch(event.target.value)} placeholder="Search player or team" className="pl-9" aria-label="Search Player Explorer results" />
@@ -644,6 +721,12 @@ export default function PlayerExplorer() {
                   <SelectTrigger className="w-full sm:w-32"><SelectValue /></SelectTrigger>
                   <SelectContent>{RESULT_PAGE_SIZES.map((size) => <SelectItem key={size} value={String(size)}>{size} rows</SelectItem>)}</SelectContent>
                 </Select>
+                <Button type="button" variant="outline" onClick={() => void copyResults()} disabled={filteredResults.length === 0}>
+                  <ClipboardCopy className="mr-2 h-4 w-4" />Copy results
+                </Button>
+                <Button type="button" variant="outline" onClick={downloadResults} disabled={filteredResults.length === 0}>
+                  <Download className="mr-2 h-4 w-4" />Download CSV
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -651,14 +734,30 @@ export default function PlayerExplorer() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Player</TableHead>
-                      <TableHead>Identity</TableHead>
-                      <TableHead className="w-64 max-w-xs">Teams</TableHead>
-                      <TableHead className="text-right">Games</TableHead>
-                      <TableHead className="text-right">Goals</TableHead>
-                      <TableHead className="text-right">Green</TableHead>
-                      <TableHead className="text-right">Yellow</TableHead>
-                      <TableHead className="text-right">Red</TableHead>
+                      <TableHead aria-sort={ariaSort("displayName")}>
+                        <Button type="button" variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => updateSort("displayName")}>Player{sortIcon("displayName")}</Button>
+                      </TableHead>
+                      <TableHead aria-sort={ariaSort("identityStatus")}>
+                        <Button type="button" variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => updateSort("identityStatus")}>Identity{sortIcon("identityStatus")}</Button>
+                      </TableHead>
+                      <TableHead className="w-64 max-w-xs" aria-sort={ariaSort("teamNames")}>
+                        <Button type="button" variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => updateSort("teamNames")}>Teams{sortIcon("teamNames")}</Button>
+                      </TableHead>
+                      <TableHead className="text-right" aria-sort={ariaSort("gamesPlayed")}>
+                        <Button type="button" variant="ghost" size="sm" className="-mr-3 ml-auto h-8 px-3" onClick={() => updateSort("gamesPlayed")}>Games{sortIcon("gamesPlayed")}</Button>
+                      </TableHead>
+                      <TableHead className="text-right" aria-sort={ariaSort("goals")}>
+                        <Button type="button" variant="ghost" size="sm" className="-mr-3 ml-auto h-8 px-3" onClick={() => updateSort("goals")}>Goals{sortIcon("goals")}</Button>
+                      </TableHead>
+                      <TableHead className="text-right" aria-sort={ariaSort("greenCards")}>
+                        <Button type="button" variant="ghost" size="sm" className="-mr-3 ml-auto h-8 px-3" onClick={() => updateSort("greenCards")}>Green{sortIcon("greenCards")}</Button>
+                      </TableHead>
+                      <TableHead className="text-right" aria-sort={ariaSort("yellowCards")}>
+                        <Button type="button" variant="ghost" size="sm" className="-mr-3 ml-auto h-8 px-3" onClick={() => updateSort("yellowCards")}>Yellow{sortIcon("yellowCards")}</Button>
+                      </TableHead>
+                      <TableHead className="text-right" aria-sort={ariaSort("redCards")}>
+                        <Button type="button" variant="ghost" size="sm" className="-mr-3 ml-auto h-8 px-3" onClick={() => updateSort("redCards")}>Red{sortIcon("redCards")}</Button>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

@@ -1,10 +1,27 @@
 # SportStack Current State
 
-Last updated: 2026-08-15
+Last updated: 2026-08-16
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
+
+## Player Explorer result export and sorting — 16 August 2026
+
+- The Super Admin Player Explorer results table now sorts when any visible column heading is
+  selected. Selecting the same heading again reverses the order; numeric columns initially sort
+  highest-first and text columns initially sort A-Z.
+- **Copy results** puts the complete current result set into a tab-separated format for pasting
+  into Excel or Google Sheets. **Download CSV** exports the same complete result set, including
+  RevSports/profile identifiers, identity status, teams, totals, rounds and latest game date.
+  Result text is protected from accidental spreadsheet formula execution.
+- Result search and column sorting are both applied before export. Pagination only changes what is
+  visible on screen and does not limit the exported rows.
+- This is a frontend-only change. It does not add or modify database tables, RLS, Edge Functions or
+  scheduled searches. Fifteen focused Player Explorer tests, changed-file lint, TypeScript and the
+  production build pass. Repository-wide lint remains at its known 360-error/78-warning baseline.
+- The remaining owner check is the signed-in Dev flow: run a search, select a heading twice, copy
+  the results into a spreadsheet and download/open the CSV.
 
 ## Voting terminology
 
