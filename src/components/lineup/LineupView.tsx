@@ -20,6 +20,10 @@ import {
 import { cn } from "@/lib/utils";
 import { Lightbulb, Save, Search, UserMinus, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
+import {
+  coordinationAvailabilityLabel,
+  type CoordinationAvailabilityStatus,
+} from "@/features/coordination/coordination";
 
 const supabase = typedSupabase as any;
 
@@ -29,7 +33,7 @@ type RosterPlayer = {
   jerseyNumber: number | null;
   membershipType: string;
   rosterPosition: string | null;
-  availability: "AVAILABLE" | "UNAVAILABLE" | "UNSURE" | "NO_RESPONSE";
+  availability: "AVAILABLE" | "UNAVAILABLE" | "UNSURE" | "MAYBE" | "NO_RESPONSE" | CoordinationAvailabilityStatus;
 };
 
 type FixtureLineup = {
@@ -56,7 +60,11 @@ const AVAILABILITY_LABELS: Record<RosterPlayer["availability"], string> = {
   AVAILABLE: "Available",
   UNAVAILABLE: "Unavailable",
   UNSURE: "Unsure",
+  MAYBE: "Maybe",
   NO_RESPONSE: "No response",
+  UMPIRING: coordinationAvailabilityLabel("UMPIRING"),
+  TECHNICAL_BENCH: coordinationAvailabilityLabel("TECHNICAL_BENCH"),
+  VOLUNTEERING: coordinationAvailabilityLabel("VOLUNTEERING"),
 };
 
 const MEMBERSHIP_ORDER: Record<string, number> = {

@@ -1,10 +1,38 @@
 # SportStack Current State
 
-Last updated: 2026-08-16
+Last updated: 2026-08-17
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
+
+## Coordination Module implemented on Development — 17 August 2026
+
+- `/coordination` now provides fixture staffing, personal offers/assignments, the association
+  Umpire Matrix, basic volunteer activities and Umpire Match Voting roster-review queues.
+- A fixture receives two Umpire and two Technical Bench positions. One offer may go to several
+  people with a private note and adjustable deadline (default 72 hours, capped at match start).
+  Accepting means willing only: the position stays unfilled until the coordinator confirms one
+  accepted person.
+- Recipients may withdraw while waiting. Confirmed people request replacement with a mandatory
+  private note; the original remains rostered until a replacement is confirmed. Confirmed duties
+  cannot overlap at all.
+- Reminder, expiry, notification, availability, material fixture-change reconfirmation, late roster
+  correction/dispute, supervision, grade sign-off, qualification and restricted-note workflows are
+  database enforced and audited.
+- New users can receive an account invitation; existing users without capability receive an in-app
+  capability invitation. Umpire or Technical Bench capability is applied only after acceptance.
+- Umpire history remains association-grade based. Technical Bench warns on first duty and when an
+  under-18 is not paired with an adult, using age on the fixture day without showing birth dates.
+  Umpire Match Voting roster differences create a review flag only and never block or change a vote.
+- Ten additive Dev migrations and the `coordination-invite` Edge Function are active as version
+  2. The shared notification dispatcher is active as Dev version 7. No backfill or Production
+  change was made.
+- Both transactional SQL suites, six frontend tests, focused lint, TypeScript, production build,
+  signed-out browser routing and unauthorised Edge checks pass. Full lint remains the known
+  360-error/78-warning baseline. Signed-in Dev owner testing is next; `main` remains unchanged.
+- Existing fixture and dashboard availability now display confirmed Coordination duties by role and
+  lock normal player-availability buttons until the assignment workflow clears the duty.
 
 ## Player Explorer scoped access — 16 August 2026
 

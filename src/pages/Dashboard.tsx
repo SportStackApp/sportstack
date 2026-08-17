@@ -39,8 +39,14 @@ import { cn, getTeamDisplayName } from "@/lib/utils";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useAppMode } from "@/contexts/AppModeContext";
 import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
+import {
+  coordinationAvailabilityLabel,
+  isCoordinationAvailability,
+  type CoordinationAvailabilityStatus,
+} from "@/features/coordination/coordination";
 
-type AvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
+type PlayerAvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
+type AvailabilityStatus = PlayerAvailabilityStatus | CoordinationAvailabilityStatus;
 
 interface GameRow {
   id: string;
@@ -95,18 +101,20 @@ const availabilityLabel = (status?: AvailabilityStatus) => {
   if (status === "AVAILABLE") return "Available";
   if (status === "UNAVAILABLE") return "Unavailable";
   if (status === "MAYBE") return "Maybe";
+  if (isCoordinationAvailability(status)) return coordinationAvailabilityLabel(status);
   return "No response";
 };
 
 interface AvailabilityControlsProps {
   current?: AvailabilityStatus;
   saving: boolean;
-  onChange: (status: AvailabilityStatus) => void;
+  onChange: (status: PlayerAvailabilityStatus) => void;
   compact?: boolean;
 }
 
-const AvailabilityControls = ({ current, saving, onChange, compact = false }: AvailabilityControlsProps) => (
-  <div className="space-y-1.5">
+const AvailabilityControls = ({ current, saving, onChange, compact = false }: AvailabilityControlsProps) => {
+  const coordinationDuty = isCoordinationAvailability(current);
+  return <div className="space-y-1.5">
     <p className={cn("text-xs text-primary-foreground/80", compact && "text-[10px]")} aria-live="polite">
       Your availability: <span className="font-semibold text-primary-foreground">{availabilityLabel(current)}</span>
       {saving && <span> · Saving…</span>}
@@ -120,10 +128,10 @@ const AvailabilityControls = ({ current, saving, onChange, compact = false }: Av
             key={status}
             aria-pressed={isSelected}
             aria-label={`${label}${isSelected ? "; selected; select again to clear" : ""}`}
-            disabled={saving}
+            disabled={saving || coordinationDuty}
             onClick={() => onChange(status)}
             className={cn(
-              "inline-flex min-h-8 items-center justify-center rounded-md border border-primary-foreground/20 px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground disabled:cursor-wait disabled:opacity-60",
+              "inline-flex min-h-8 items-center justify-center rounded-md border border-primary-foreground/20 px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground disabled:cursor-not-allowed disabled:opacity-60",
               compact && "min-h-7 px-2 text-[10px]",
               isSelected
                 ? "bg-primary-foreground text-primary"
@@ -136,8 +144,9 @@ const AvailabilityControls = ({ current, saving, onChange, compact = false }: Av
         );
       })}
     </div>
-  </div>
-);
+    {coordinationDuty && <p className="text-[10px] text-primary-foreground/75">Managed through Coordination.</p>}
+  </div>;
+};
 
 const FIXTURE_SELECT =
   "id, fixture_date, status, home_team_id, away_team_id, division_id, venue_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name), divisions:divisions!fixtures_division_id_fkey(id, name)";
@@ -566,7 +575,7 @@ const Dashboard = () => {
     };
   }, [selectedAssociationId, selectedClubId, selectedTeamId, user]);
 
-  const handleAvailabilityChange = async (gameId: string, status: AvailabilityStatus) => {
+  const handleAvailabilityChange = async (gameId: string, status: PlayerAvailabilityStatus) => {
     if (!user || availabilitySaving.has(gameId)) return;
     const previous = availability[gameId];
     const isClearing = previous === status;
@@ -819,6 +828,7 @@ const Dashboard = () => {
     if (status === "AVAILABLE") return "ring-2 ring-green-300";
     if (status === "UNAVAILABLE") return "ring-2 ring-red-300";
     if (status === "MAYBE") return "ring-2 ring-yellow-200";
+    if (isCoordinationAvailability(status)) return "ring-2 ring-sky-300";
     return "ring-1 ring-white/70";
   };
 

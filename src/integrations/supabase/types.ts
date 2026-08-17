@@ -79,6 +79,13 @@ export type Database = {
             foreignKeyName: "administration_audit_log_target_user_id_fkey"
             columns: ["target_user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "administration_audit_log_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -414,6 +421,13 @@ export type Database = {
             foreignKeyName: "availability_reminder_dispatches_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "availability_reminder_dispatches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -445,6 +459,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "clubs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_availability_reminder_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "club_availability_reminder_settings_updated_by_fkey"
@@ -544,8 +565,22 @@ export type Database = {
             foreignKeyName: "coach_position_assessments_coach_id_fkey"
             columns: ["coach_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coach_position_assessments_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_position_assessments_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "coach_position_assessments_player_id_fkey"
@@ -598,6 +633,13 @@ export type Database = {
           record_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "committee_activity_log_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "committee_activity_log_actor_id_fkey"
             columns: ["actor_id"]
@@ -701,6 +743,13 @@ export type Database = {
             foreignKeyName: "committee_agenda_templates_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "committee_agenda_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -752,6 +801,13 @@ export type Database = {
             foreignKeyName: "committee_documents_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "committee_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -783,6 +839,13 @@ export type Database = {
           record_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "committee_meeting_item_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "committee_meeting_item_links_created_by_fkey"
             columns: ["created_by"]
@@ -862,6 +925,13 @@ export type Database = {
             foreignKeyName: "committee_meeting_items_action_owner_id_fkey"
             columns: ["action_owner_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "committee_meeting_items_action_owner_id_fkey"
+            columns: ["action_owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -936,6 +1006,13 @@ export type Database = {
             foreignKeyName: "committee_meetings_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "committee_meetings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -993,6 +1070,13 @@ export type Database = {
             foreignKeyName: "committee_member_qualifications_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "committee_member_qualifications_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1040,6 +1124,13 @@ export type Database = {
             foreignKeyName: "committee_members_appointed_by_fkey"
             columns: ["appointed_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "committee_members_appointed_by_fkey"
+            columns: ["appointed_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1056,6 +1147,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "committee_positions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "committee_members_user_id_fkey"
@@ -1108,6 +1206,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "committee_messages"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "committee_messages_user_id_fkey"
@@ -1226,6 +1331,13 @@ export type Database = {
             foreignKeyName: "committee_poll_responses_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "committee_poll_responses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1272,6 +1384,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "committees"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committee_polls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "committee_polls_created_by_fkey"
@@ -1396,6 +1515,13 @@ export type Database = {
             foreignKeyName: "committees_closed_by_fkey"
             columns: ["closed_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "committees_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1405,6 +1531,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clubs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "committees_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "committees_created_by_fkey"
@@ -1520,6 +1653,13 @@ export type Database = {
             foreignKeyName: "communication_email_deliveries_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "communication_email_deliveries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1545,6 +1685,13 @@ export type Database = {
           message_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "communication_mentions_mentioned_user_id_fkey"
+            columns: ["mentioned_user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "communication_mentions_mentioned_user_id_fkey"
             columns: ["mentioned_user_id"]
@@ -1647,6 +1794,13 @@ export type Database = {
             foreignKeyName: "communication_messages_author_id_fkey"
             columns: ["author_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "communication_messages_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1656,6 +1810,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "communication_channels"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_messages_removed_by_fkey"
+            columns: ["removed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "communication_messages_removed_by_fkey"
@@ -1708,6 +1869,13 @@ export type Database = {
           replacement_content?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "communication_moderation_audit_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "communication_moderation_audit_actor_id_fkey"
             columns: ["actor_id"]
@@ -1774,8 +1942,22 @@ export type Database = {
             foreignKeyName: "communication_permissions_granted_by_fkey"
             columns: ["granted_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "communication_permissions_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "communication_permissions_user_id_fkey"
@@ -1815,6 +1997,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "communication_messages"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "communication_reactions_user_id_fkey"
@@ -1861,6 +2050,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "communication_messages"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_read_state_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "communication_read_state_user_id_fkey"
@@ -1919,6 +2115,1150 @@ export type Database = {
           },
         ]
       }
+      coordination_activities: {
+        Row: {
+          activity_type: string
+          association_id: string
+          club_id: string | null
+          coordinator_id: string
+          created_at: string
+          description: string | null
+          ends_at: string
+          id: string
+          location: string | null
+          name: string
+          notes: string | null
+          scope_type: string
+          starts_at: string
+          status: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_type?: string
+          association_id: string
+          club_id?: string | null
+          coordinator_id: string
+          created_at?: string
+          description?: string | null
+          ends_at: string
+          id?: string
+          location?: string | null
+          name: string
+          notes?: string | null
+          scope_type: string
+          starts_at: string
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_type?: string
+          association_id?: string
+          club_id?: string | null
+          coordinator_id?: string
+          created_at?: string
+          description?: string | null
+          ends_at?: string
+          id?: string
+          location?: string | null
+          name?: string
+          notes?: string | null
+          scope_type?: string
+          starts_at?: string
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_activities_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_activities_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_activities_coordinator_id_fkey"
+            columns: ["coordinator_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_activities_coordinator_id_fkey"
+            columns: ["coordinator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_activities_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_assignment_events: {
+        Row: {
+          actor_id: string | null
+          assignment_id: string | null
+          created_at: string
+          detail: Json
+          event_type: string
+          id: string
+          position_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          assignment_id?: string | null
+          created_at?: string
+          detail?: Json
+          event_type: string
+          id?: string
+          position_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          assignment_id?: string | null
+          created_at?: string
+          detail?: Json
+          event_type?: string
+          id?: string
+          position_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_assignment_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_assignment_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_assignment_events_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_assignment_events_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_assignments: {
+        Row: {
+          assigned_by: string
+          assigned_user_id: string
+          completed_at: string | null
+          confirmation_note: string | null
+          confirmed_at: string
+          confirmed_by: string
+          created_at: string
+          ends_at: string
+          id: string
+          late_assignment: boolean
+          offer_recipient_id: string | null
+          position_id: string
+          replaced_by_assignment_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by: string
+          assigned_user_id: string
+          completed_at?: string | null
+          confirmation_note?: string | null
+          confirmed_at?: string
+          confirmed_by: string
+          created_at?: string
+          ends_at: string
+          id?: string
+          late_assignment?: boolean
+          offer_recipient_id?: string | null
+          position_id: string
+          replaced_by_assignment_id?: string | null
+          starts_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string
+          assigned_user_id?: string
+          completed_at?: string | null
+          confirmation_note?: string | null
+          confirmed_at?: string
+          confirmed_by?: string
+          created_at?: string
+          ends_at?: string
+          id?: string
+          late_assignment?: boolean
+          offer_recipient_id?: string | null
+          position_id?: string
+          replaced_by_assignment_id?: string | null
+          starts_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_assignments_assigned_user_id_fkey"
+            columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_assignments_assigned_user_id_fkey"
+            columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_assignments_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_assignments_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_assignments_offer_recipient_id_fkey"
+            columns: ["offer_recipient_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_offer_recipients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_assignments_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_assignments_replaced_by_assignment_id_fkey"
+            columns: ["replaced_by_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_capabilities: {
+        Row: {
+          active: boolean
+          active_from: string
+          active_until: string | null
+          capability_type: string
+          created_at: string
+          granted_by: string | null
+          id: string
+          scope_id: string
+          scope_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          active_from?: string
+          active_until?: string | null
+          capability_type: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          scope_id: string
+          scope_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          active_from?: string
+          active_until?: string | null
+          capability_type?: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          scope_id?: string
+          scope_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_capabilities_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_capabilities_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_capabilities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_capabilities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_capability_invitations: {
+        Row: {
+          capability_type: string
+          created_at: string
+          email: string | null
+          expires_at: string
+          id: string
+          invited_by: string
+          responded_at: string | null
+          scope_id: string
+          scope_type: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          capability_type: string
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          invited_by: string
+          responded_at?: string | null
+          scope_id: string
+          scope_type: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          capability_type?: string
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          responded_at?: string | null
+          scope_id?: string
+          scope_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_capability_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_capability_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_capability_invitations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_capability_invitations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_notification_deliveries: {
+        Row: {
+          action_url: string | null
+          attempts: number
+          body_text: string
+          channel: string
+          created_at: string
+          dedupe_key: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          attempts?: number
+          body_text: string
+          channel: string
+          created_at?: string
+          dedupe_key: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          attempts?: number
+          body_text?: string
+          channel?: string
+          created_at?: string
+          dedupe_key?: string
+          entity_id?: string
+          entity_type?: string
+          event_type?: string
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_notification_deliveries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_notification_deliveries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_offer_batches: {
+        Row: {
+          created_at: string
+          current_owner_id: string
+          id: string
+          note: string | null
+          note_version: number
+          offered_by: string
+          position_id: string
+          response_deadline: string
+          status: string
+          takeover_reason: string | null
+          updated_at: string
+          urgent: boolean
+        }
+        Insert: {
+          created_at?: string
+          current_owner_id: string
+          id?: string
+          note?: string | null
+          note_version?: number
+          offered_by: string
+          position_id: string
+          response_deadline: string
+          status?: string
+          takeover_reason?: string | null
+          updated_at?: string
+          urgent?: boolean
+        }
+        Update: {
+          created_at?: string
+          current_owner_id?: string
+          id?: string
+          note?: string | null
+          note_version?: number
+          offered_by?: string
+          position_id?: string
+          response_deadline?: string
+          status?: string
+          takeover_reason?: string | null
+          updated_at?: string
+          urgent?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_offer_batches_current_owner_id_fkey"
+            columns: ["current_owner_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_offer_batches_current_owner_id_fkey"
+            columns: ["current_owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_offer_batches_offered_by_fkey"
+            columns: ["offered_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_offer_batches_offered_by_fkey"
+            columns: ["offered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_offer_batches_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_offer_note_revisions: {
+        Row: {
+          changed_by: string
+          created_at: string
+          id: string
+          material: boolean
+          note: string | null
+          offer_batch_id: string
+          version: number
+        }
+        Insert: {
+          changed_by: string
+          created_at?: string
+          id?: string
+          material?: boolean
+          note?: string | null
+          offer_batch_id: string
+          version: number
+        }
+        Update: {
+          changed_by?: string
+          created_at?: string
+          id?: string
+          material?: boolean
+          note?: string | null
+          offer_batch_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_offer_note_revisions_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_offer_note_revisions_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_offer_note_revisions_offer_batch_id_fkey"
+            columns: ["offer_batch_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_offer_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_offer_recipients: {
+        Row: {
+          acceptance_note_version: number | null
+          created_at: string
+          decline_reason: string | null
+          id: string
+          offer_batch_id: string
+          responded_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acceptance_note_version?: number | null
+          created_at?: string
+          decline_reason?: string | null
+          id?: string
+          offer_batch_id: string
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          acceptance_note_version?: number | null
+          created_at?: string
+          decline_reason?: string | null
+          id?: string
+          offer_batch_id?: string
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_offer_recipients_offer_batch_id_fkey"
+            columns: ["offer_batch_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_offer_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_offer_recipients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_offer_recipients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_offer_reminders: {
+        Row: {
+          attempts: number
+          created_at: string
+          due_at: string
+          id: string
+          last_error: string | null
+          processed_at: string | null
+          recipient_id: string
+          reminder_type: string
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          due_at: string
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          recipient_id: string
+          reminder_type: string
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          due_at?: string
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          recipient_id?: string
+          reminder_type?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_offer_reminders_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_offer_recipients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_position_templates: {
+        Row: {
+          active: boolean
+          association_id: string | null
+          created_at: string
+          fixture_type: string
+          id: string
+          position_type_id: string
+          required_count: number
+        }
+        Insert: {
+          active?: boolean
+          association_id?: string | null
+          created_at?: string
+          fixture_type?: string
+          id?: string
+          position_type_id: string
+          required_count: number
+        }
+        Update: {
+          active?: boolean
+          association_id?: string | null
+          created_at?: string
+          fixture_type?: string
+          id?: string
+          position_type_id?: string
+          required_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_position_templates_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_position_templates_position_type_id_fkey"
+            columns: ["position_type_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_position_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_position_types: {
+        Row: {
+          active: boolean
+          code: string
+          coordinator_permission: string
+          created_at: string
+          fixture_enabled: boolean
+          id: string
+          label: string
+          required_capability: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          coordinator_permission: string
+          created_at?: string
+          fixture_enabled?: boolean
+          id?: string
+          label: string
+          required_capability: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          coordinator_permission?: string
+          created_at?: string
+          fixture_enabled?: boolean
+          id?: string
+          label?: string
+          required_capability?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_position_types_coordinator_permission_fkey"
+            columns: ["coordinator_permission"]
+            isOneToOne: false
+            referencedRelation: "permission_catalogue"
+            referencedColumns: ["permission_key"]
+          },
+        ]
+      }
+      coordination_positions: {
+        Row: {
+          activity_id: string | null
+          association_id: string
+          club_id: string | null
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          fixture_id: string | null
+          id: string
+          notes: string | null
+          position_label: string
+          position_type_id: string
+          slot_number: number
+          starts_at: string
+          state: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_id?: string | null
+          association_id: string
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at: string
+          fixture_id?: string | null
+          id?: string
+          notes?: string | null
+          position_label: string
+          position_type_id: string
+          slot_number?: number
+          starts_at: string
+          state?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_id?: string | null
+          association_id?: string
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string
+          fixture_id?: string | null
+          id?: string
+          notes?: string | null
+          position_label?: string
+          position_type_id?: string
+          slot_number?: number
+          starts_at?: string
+          state?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_positions_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_positions_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_positions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_positions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_positions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_positions_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_positions_position_type_id_fkey"
+            columns: ["position_type_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_position_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_positions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_replacement_requests: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          id: string
+          note: string
+          requested_by: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          id?: string
+          note: string
+          requested_by: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+          requested_by?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_replacement_requests_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_replacement_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_replacement_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_replacement_requests_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_replacement_requests_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_supervision_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          supervised_assignment_id: string
+          supervisor_assignment_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          supervised_assignment_id: string
+          supervisor_assignment_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          supervised_assignment_id?: string
+          supervisor_assignment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_supervision_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_supervision_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_supervision_links_supervised_assignment_id_fkey"
+            columns: ["supervised_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_supervision_links_supervisor_assignment_id_fkey"
+            columns: ["supervisor_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_supervision_notes: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          supervision_link_id: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          supervision_link_id: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          supervision_link_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_supervision_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_supervision_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordination_supervision_notes_supervision_link_id_fkey"
+            columns: ["supervision_link_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_supervision_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coordination_warning_overrides: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          note: string
+          overridden_by: string
+          warning_code: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          note: string
+          overridden_by: string
+          warning_code: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          note?: string
+          overridden_by?: string
+          warning_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordination_warning_overrides_overridden_by_fkey"
+            columns: ["overridden_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coordination_warning_overrides_overridden_by_fkey"
+            columns: ["overridden_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discipline_allegation_revisions: {
         Row: {
           allegation_id: string
@@ -1969,6 +3309,13 @@ export type Database = {
             foreignKeyName: "discipline_allegation_revisions_changed_by_fkey"
             columns: ["changed_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_allegation_revisions_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2000,6 +3347,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "discipline_allegations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_allegation_tags_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_allegation_tags_assigned_by_fkey"
@@ -2084,8 +3438,22 @@ export type Database = {
             foreignKeyName: "discipline_allegations_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_allegations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_allegations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_allegations_updated_by_fkey"
@@ -2137,6 +3505,13 @@ export type Database = {
           reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "discipline_audit_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "discipline_audit_events_actor_id_fkey"
             columns: ["actor_id"]
@@ -2206,6 +3581,13 @@ export type Database = {
             foreignKeyName: "discipline_calendar_exclusions_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_calendar_exclusions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2253,6 +3635,13 @@ export type Database = {
             foreignKeyName: "discipline_case_members_assigned_by_fkey"
             columns: ["assigned_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_case_members_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2267,8 +3656,22 @@ export type Database = {
             foreignKeyName: "discipline_case_members_revoked_by_fkey"
             columns: ["revoked_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_case_members_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_case_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_case_members_user_id_fkey"
@@ -2356,6 +3759,13 @@ export type Database = {
             foreignKeyName: "discipline_case_people_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_case_people_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2363,8 +3773,22 @@ export type Database = {
             foreignKeyName: "discipline_case_people_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_case_people_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_case_people_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_case_people_updated_by_fkey"
@@ -2398,6 +3822,13 @@ export type Database = {
           tag_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "discipline_case_tags_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "discipline_case_tags_assigned_by_fkey"
             columns: ["assigned_by"]
@@ -2587,6 +4018,13 @@ export type Database = {
             foreignKeyName: "discipline_cases_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_cases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2624,6 +4062,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rg_risk_register"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_cases_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_cases_updated_by_fkey"
@@ -2701,6 +4146,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "discipline_allegations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_classification_assessments_assessed_by_fkey"
+            columns: ["assessed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_classification_assessments_assessed_by_fkey"
@@ -2869,6 +4321,13 @@ export type Database = {
             foreignKeyName: "discipline_deadline_events_actor_id_fkey"
             columns: ["actor_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_deadline_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2944,6 +4403,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "discipline_cases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_deadlines_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_deadlines_completed_by_fkey"
@@ -3029,6 +4495,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "discipline_cases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_decisions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_decisions_decided_by_fkey"
@@ -3123,6 +4596,13 @@ export type Database = {
             foreignKeyName: "discipline_evidence_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_evidence_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3203,6 +4683,13 @@ export type Database = {
             foreignKeyName: "discipline_evidence_status_events_recorded_by_fkey"
             columns: ["recorded_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_evidence_status_events_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3253,6 +4740,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "discipline_cases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_finding_revisions_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_finding_revisions_changed_by_fkey"
@@ -3347,8 +4841,22 @@ export type Database = {
             foreignKeyName: "discipline_findings_recorded_by_fkey"
             columns: ["recorded_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_findings_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_findings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_findings_updated_by_fkey"
@@ -3434,6 +4942,13 @@ export type Database = {
             foreignKeyName: "discipline_investigator_setups_appointed_by_fkey"
             columns: ["appointed_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_investigator_setups_appointed_by_fkey"
+            columns: ["appointed_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3448,8 +4963,22 @@ export type Database = {
             foreignKeyName: "discipline_investigator_setups_lead_user_id_fkey"
             columns: ["lead_user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_investigator_setups_lead_user_id_fkey"
+            columns: ["lead_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_investigator_setups_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_investigator_setups_recorded_by_fkey"
@@ -3507,6 +5036,13 @@ export type Database = {
           variation_key?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "discipline_local_variations_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "discipline_local_variations_approved_by_fkey"
             columns: ["approved_by"]
@@ -3575,6 +5111,13 @@ export type Database = {
             foreignKeyName: "discipline_natural_justice_checks_completed_by_fkey"
             columns: ["completed_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_natural_justice_checks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3606,6 +5149,13 @@ export type Database = {
           used_by_snapshot_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "discipline_natural_justice_overrides_authorised_by_fkey"
+            columns: ["authorised_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "discipline_natural_justice_overrides_authorised_by_fkey"
             columns: ["authorised_by"]
@@ -3693,8 +5243,22 @@ export type Database = {
             foreignKeyName: "discipline_notifications_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_notifications_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_notifications_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_notifications_updated_by_fkey"
@@ -3749,6 +5313,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "discipline_cases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_phase2_stage_records_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_phase2_stage_records_recorded_by_fkey"
@@ -3814,6 +5385,13 @@ export type Database = {
             foreignKeyName: "discipline_portal_access_granted_by_fkey"
             columns: ["granted_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_portal_access_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3821,8 +5399,22 @@ export type Database = {
             foreignKeyName: "discipline_portal_access_revoked_by_fkey"
             columns: ["revoked_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_portal_access_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_portal_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_portal_access_user_id_fkey"
@@ -3871,6 +5463,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "discipline_cases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_report_snapshots_signed_by_fkey"
+            columns: ["signed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_report_snapshots_signed_by_fkey"
@@ -3981,6 +5580,13 @@ export type Database = {
             foreignKeyName: "discipline_review_panel_members_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panel_members_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3995,8 +5601,22 @@ export type Database = {
             foreignKeyName: "discipline_review_panel_members_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panel_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panel_members_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_review_panel_members_updated_by_fkey"
@@ -4082,6 +5702,13 @@ export type Database = {
             foreignKeyName: "discipline_review_panel_votes_submitted_by_fkey"
             columns: ["submitted_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panel_votes_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4146,8 +5773,22 @@ export type Database = {
             foreignKeyName: "discipline_review_panels_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panels_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_review_panels_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_review_panels_updated_by_fkey"
@@ -4214,6 +5855,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "discipline_cases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_risk_assessments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_risk_assessments_recorded_by_fkey"
@@ -4338,6 +5986,13 @@ export type Database = {
             foreignKeyName: "discipline_rule_packs_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_rule_packs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4347,6 +6002,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "associations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_rule_packs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_rule_packs_created_by_fkey"
@@ -4495,6 +6157,13 @@ export type Database = {
             foreignKeyName: "discipline_tribunal_members_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_tribunal_members_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4509,8 +6178,22 @@ export type Database = {
             foreignKeyName: "discipline_tribunal_members_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_tribunal_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_tribunal_members_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_tribunal_members_updated_by_fkey"
@@ -4609,8 +6292,22 @@ export type Database = {
             foreignKeyName: "discipline_tribunal_preparations_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_tribunal_preparations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_tribunal_preparations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_tribunal_preparations_updated_by_fkey"
@@ -4695,8 +6392,22 @@ export type Database = {
             foreignKeyName: "discipline_witnesses_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "discipline_witnesses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_witnesses_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "discipline_witnesses_updated_by_fkey"
@@ -4887,6 +6598,13 @@ export type Database = {
             foreignKeyName: "expense_ai_field_suggestions_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expense_ai_field_suggestions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4968,6 +6686,13 @@ export type Database = {
             foreignKeyName: "expense_ai_processing_jobs_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expense_ai_processing_jobs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4977,6 +6702,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "expense_attachments"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_ai_processing_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "expense_ai_processing_jobs_created_by_fkey"
@@ -5056,8 +6788,22 @@ export type Database = {
             foreignKeyName: "expense_attachments_owner_user_id_fkey"
             columns: ["owner_user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expense_attachments_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "expense_attachments_uploaded_by_fkey"
@@ -5100,6 +6846,13 @@ export type Database = {
           reason_for_change?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "expense_audit_events_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "expense_audit_events_changed_by_fkey"
             columns: ["changed_by"]
@@ -5170,6 +6923,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clubs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_categories_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "expense_categories_owner_user_id_fkey"
@@ -5258,8 +7018,22 @@ export type Database = {
             foreignKeyName: "expense_export_batches_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expense_export_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_export_batches_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "expense_export_batches_owner_user_id_fkey"
@@ -5362,8 +7136,22 @@ export type Database = {
             foreignKeyName: "expense_hub_access_granted_by_fkey"
             columns: ["granted_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expense_hub_access_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_hub_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "expense_hub_access_user_id_fkey"
@@ -5436,6 +7224,13 @@ export type Database = {
             foreignKeyName: "expense_payment_methods_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expense_payment_methods_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -5443,8 +7238,22 @@ export type Database = {
             foreignKeyName: "expense_payment_methods_owner_user_id_fkey"
             columns: ["owner_user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expense_payment_methods_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_payment_methods_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "expense_payment_methods_updated_by_fkey"
@@ -5562,6 +7371,13 @@ export type Database = {
             foreignKeyName: "expense_statement_imports_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expense_statement_imports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -5569,8 +7385,22 @@ export type Database = {
             foreignKeyName: "expense_statement_imports_owner_user_id_fkey"
             columns: ["owner_user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expense_statement_imports_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_statement_imports_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "expense_statement_imports_updated_by_fkey"
@@ -5683,6 +7513,13 @@ export type Database = {
             foreignKeyName: "expense_statement_lines_owner_user_id_fkey"
             columns: ["owner_user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expense_statement_lines_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -5692,6 +7529,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "expense_payment_methods"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_statement_lines_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "expense_statement_lines_reviewed_by_fkey"
@@ -5732,6 +7576,13 @@ export type Database = {
           supplier_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "expense_supplier_aliases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "expense_supplier_aliases_created_by_fkey"
             columns: ["created_by"]
@@ -5828,6 +7679,13 @@ export type Database = {
             foreignKeyName: "expense_suppliers_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expense_suppliers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -5842,8 +7700,22 @@ export type Database = {
             foreignKeyName: "expense_suppliers_owner_user_id_fkey"
             columns: ["owner_user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expense_suppliers_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_suppliers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "expense_suppliers_updated_by_fkey"
@@ -5965,6 +7837,13 @@ export type Database = {
             foreignKeyName: "expenses_archived_by_fkey"
             columns: ["archived_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expenses_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -5993,8 +7872,22 @@ export type Database = {
             foreignKeyName: "expenses_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "expenses_owner_user_id_fkey"
@@ -6023,6 +7916,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "expense_suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "expenses_updated_by_fkey"
@@ -6145,6 +8045,13 @@ export type Database = {
             foreignKeyName: "external_entity_links_matched_by_fkey"
             columns: ["matched_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "external_entity_links_matched_by_fkey"
+            columns: ["matched_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -6239,6 +8146,13 @@ export type Database = {
             foreignKeyName: "field_templates_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "field_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -6290,6 +8204,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fixtures"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixture_availability_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "fixture_availability_user_id_fkey"
@@ -6351,6 +8272,13 @@ export type Database = {
             foreignKeyName: "fixture_fill_ins_added_by_fkey"
             columns: ["added_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fixture_fill_ins_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -6365,8 +8293,22 @@ export type Database = {
             foreignKeyName: "fixture_fill_ins_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fixture_fill_ins_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixture_fill_ins_removed_by_fkey"
+            columns: ["removed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "fixture_fill_ins_removed_by_fkey"
@@ -6434,6 +8376,13 @@ export type Database = {
             foreignKeyName: "fixture_lineup_assignments_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fixture_lineup_assignments_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -6471,6 +8420,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fixture_lineups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "fixture_lineups_created_by_fkey"
             columns: ["created_by"]
@@ -6700,6 +8656,13 @@ export type Database = {
             foreignKeyName: "formation_icons_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "formation_icons_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -6870,6 +8833,13 @@ export type Database = {
             foreignKeyName: "formations_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "formations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -6924,6 +8894,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fixtures"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lineups_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "lineups_player_id_fkey"
@@ -7009,6 +8986,13 @@ export type Database = {
             foreignKeyName: "module_feature_flags_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "module_feature_flags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -7025,6 +9009,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_feature_flags_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "module_feature_flags_updated_by_fkey"
@@ -7070,6 +9061,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mvp_voting_sessions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_result_checks_voter_profile_id_fkey"
+            columns: ["voter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "mvp_result_checks_voter_profile_id_fkey"
@@ -7176,6 +9174,13 @@ export type Database = {
             foreignKeyName: "mvp_vote_audit_changed_by_fkey"
             columns: ["changed_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "mvp_vote_audit_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -7199,6 +9204,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mvp_votes"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_vote_audit_voter_profile_id_fkey"
+            columns: ["voter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "mvp_vote_audit_voter_profile_id_fkey"
@@ -7241,6 +9253,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mvp_voting_sessions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_vote_submissions_voter_profile_id_fkey"
+            columns: ["voter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "mvp_vote_submissions_voter_profile_id_fkey"
@@ -7351,6 +9370,13 @@ export type Database = {
             foreignKeyName: "mvp_votes_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "mvp_votes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -7360,6 +9386,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "revsports_players"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_votes_voter_profile_id_fkey"
+            columns: ["voter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "mvp_votes_voter_profile_id_fkey"
@@ -7412,6 +9445,13 @@ export type Database = {
           voting_cycle?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "mvp_voting_email_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "mvp_voting_email_events_profile_id_fkey"
             columns: ["profile_id"]
@@ -7512,8 +9552,22 @@ export type Database = {
             foreignKeyName: "mvp_voting_sessions_closed_by_fkey"
             columns: ["closed_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "mvp_voting_sessions_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_voting_sessions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "mvp_voting_sessions_created_by_fkey"
@@ -7533,6 +9587,13 @@ export type Database = {
             foreignKeyName: "mvp_voting_sessions_locked_by_fkey"
             columns: ["locked_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "mvp_voting_sessions_locked_by_fkey"
+            columns: ["locked_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -7540,8 +9601,22 @@ export type Database = {
             foreignKeyName: "mvp_voting_sessions_opened_by_fkey"
             columns: ["opened_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "mvp_voting_sessions_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_voting_sessions_results_confirmed_by_fkey"
+            columns: ["results_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "mvp_voting_sessions_results_confirmed_by_fkey"
@@ -7634,6 +9709,13 @@ export type Database = {
             foreignKeyName: "notification_category_preferences_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "notification_category_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -7659,6 +9741,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "notification_preferences_user_id_fkey"
             columns: ["user_id"]
@@ -7745,6 +9834,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "notifications_user_id_fkey"
@@ -7852,6 +9948,13 @@ export type Database = {
             foreignKeyName: "permission_assignments_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "permission_assignments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -7861,6 +9964,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "permission_sets"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_assignments_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "permission_assignments_updated_by_fkey"
@@ -7925,6 +10035,13 @@ export type Database = {
             foreignKeyName: "permission_group_members_added_by_fkey"
             columns: ["added_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "permission_group_members_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -7934,6 +10051,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "permission_groups"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "permission_group_members_user_id_fkey"
@@ -7986,8 +10110,22 @@ export type Database = {
             foreignKeyName: "permission_groups_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "permission_groups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_groups_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "permission_groups_updated_by_fkey"
@@ -8049,6 +10187,13 @@ export type Database = {
             foreignKeyName: "permission_overrides_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "permission_overrides_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -8058,6 +10203,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "permission_catalogue"
             referencedColumns: ["permission_key"]
+          },
+          {
+            foreignKeyName: "permission_overrides_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "permission_overrides_updated_by_fkey"
@@ -8143,8 +10295,22 @@ export type Database = {
             foreignKeyName: "permission_sets_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "permission_sets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_sets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "permission_sets_updated_by_fkey"
@@ -8319,6 +10485,13 @@ export type Database = {
             foreignKeyName: "player_position_preferences_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "player_position_preferences_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -8360,6 +10533,13 @@ export type Database = {
           submission_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "player_vote_edits_changed_by_id_fkey"
+            columns: ["changed_by_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "player_vote_edits_changed_by_id_fkey"
             columns: ["changed_by_id"]
@@ -8414,6 +10594,13 @@ export type Database = {
           votes?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "player_vote_lines_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "player_vote_lines_profile_id_fkey"
             columns: ["profile_id"]
@@ -8565,6 +10752,13 @@ export type Database = {
             foreignKeyName: "player_vote_submissions_deleted_by_fkey"
             columns: ["deleted_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "player_vote_submissions_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -8593,6 +10787,13 @@ export type Database = {
             foreignKeyName: "player_vote_submissions_proxy_submitter_id_fkey"
             columns: ["proxy_submitter_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "player_vote_submissions_proxy_submitter_id_fkey"
+            columns: ["proxy_submitter_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -8600,8 +10801,22 @@ export type Database = {
             foreignKeyName: "player_vote_submissions_submitted_by_admin_id_fkey"
             columns: ["submitted_by_admin_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "player_vote_submissions_submitted_by_admin_id_fkey"
+            columns: ["submitted_by_admin_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_vote_submissions_umpire_user_id_fkey"
+            columns: ["umpire_user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "player_vote_submissions_umpire_user_id_fkey"
@@ -8702,8 +10917,22 @@ export type Database = {
             foreignKeyName: "profile_claim_audit_placeholder_profile_id_fkey"
             columns: ["placeholder_profile_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "profile_claim_audit_placeholder_profile_id_fkey"
+            columns: ["placeholder_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_claim_audit_real_profile_id_fkey"
+            columns: ["real_profile_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "profile_claim_audit_real_profile_id_fkey"
@@ -8762,6 +10991,13 @@ export type Database = {
             foreignKeyName: "profile_claim_reviews_placeholder_profile_id_fkey"
             columns: ["placeholder_profile_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "profile_claim_reviews_placeholder_profile_id_fkey"
+            columns: ["placeholder_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -8769,8 +11005,22 @@ export type Database = {
             foreignKeyName: "profile_claim_reviews_real_profile_id_fkey"
             columns: ["real_profile_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "profile_claim_reviews_real_profile_id_fkey"
+            columns: ["real_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_claim_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "profile_claim_reviews_reviewed_by_fkey"
@@ -8940,6 +11190,13 @@ export type Database = {
             foreignKeyName: "requests_cancelled_by_fkey"
             columns: ["cancelled_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "requests_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -8954,6 +11211,13 @@ export type Database = {
             foreignKeyName: "requests_requester_id_fkey"
             columns: ["requester_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "requests_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -8961,8 +11225,22 @@ export type Database = {
             foreignKeyName: "requests_responded_by_fkey"
             columns: ["responded_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "requests_responded_by_fkey"
+            columns: ["responded_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "requests_target_user_id_fkey"
@@ -9292,6 +11570,13 @@ export type Database = {
             foreignKeyName: "revsports_player_mappings_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "revsports_player_mappings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -9347,6 +11632,13 @@ export type Database = {
           season_yellow_cards?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "revsports_player_registry_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "revsports_player_registry_profile_id_fkey"
             columns: ["profile_id"]
@@ -9534,6 +11826,13 @@ export type Database = {
             foreignKeyName: "revsports_players_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "revsports_players_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -9627,6 +11926,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "revsports_umpire_mappings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "revsports_umpire_mappings_profile_id_fkey"
             columns: ["profile_id"]
@@ -9817,6 +12123,13 @@ export type Database = {
             foreignKeyName: "rg_audit_log_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -9906,6 +12219,13 @@ export type Database = {
             foreignKeyName: "rg_be_smart_actions_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_be_smart_actions_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -9927,6 +12247,13 @@ export type Database = {
             foreignKeyName: "rg_be_smart_actions_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_be_smart_actions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -9943,6 +12270,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_be_smart_actions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_be_smart_actions_updated_by_fkey"
@@ -10051,6 +12385,13 @@ export type Database = {
             foreignKeyName: "rg_bright_ideas_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_bright_ideas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -10058,8 +12399,22 @@ export type Database = {
             foreignKeyName: "rg_bright_ideas_decided_by_fkey"
             columns: ["decided_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_bright_ideas_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_bright_ideas_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_bright_ideas_submitted_by_fkey"
@@ -10074,6 +12429,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_bright_ideas_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_bright_ideas_updated_by_fkey"
@@ -10147,6 +12509,13 @@ export type Database = {
             foreignKeyName: "rg_comments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -10203,6 +12572,13 @@ export type Database = {
             foreignKeyName: "rg_dropdown_values_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_dropdown_values_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -10212,6 +12588,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rg_risk_settings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_dropdown_values_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_dropdown_values_updated_by_fkey"
@@ -10311,8 +12694,22 @@ export type Database = {
             foreignKeyName: "rg_quality_improvement_items_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_quality_improvement_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_quality_improvement_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_quality_improvement_items_owner_id_fkey"
@@ -10327,6 +12724,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_quality_improvement_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_quality_improvement_items_updated_by_fkey"
@@ -10422,6 +12826,13 @@ export type Database = {
             foreignKeyName: "rg_record_links_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_record_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -10445,6 +12856,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_record_links_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_record_links_updated_by_fkey"
@@ -10503,6 +12921,13 @@ export type Database = {
             foreignKeyName: "rg_risk_guidance_sections_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_risk_guidance_sections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -10512,6 +12937,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rg_risk_settings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_guidance_sections_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_risk_guidance_sections_updated_by_fkey"
@@ -10567,6 +12999,13 @@ export type Database = {
             foreignKeyName: "rg_risk_matrix_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_risk_matrix_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -10576,6 +13015,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rg_risk_settings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_matrix_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_risk_matrix_updated_by_fkey"
@@ -10711,8 +13157,22 @@ export type Database = {
             foreignKeyName: "rg_risk_register_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_risk_register_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_register_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_risk_register_owner_id_fkey"
@@ -10727,6 +13187,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_register_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_risk_register_updated_by_fkey"
@@ -10806,6 +13273,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clubs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_risk_reviews_reviewed_by_fkey"
@@ -10892,8 +13366,22 @@ export type Database = {
             foreignKeyName: "rg_risk_settings_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rg_risk_settings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_risk_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "rg_risk_settings_updated_by_fkey"
@@ -11452,6 +13940,13 @@ export type Database = {
             foreignKeyName: "team_availability_reminder_settings_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_availability_reminder_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -11545,6 +14040,13 @@ export type Database = {
             foreignKeyName: "team_memberships_invited_by_fkey"
             columns: ["invited_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_memberships_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -11554,6 +14056,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "team_memberships_user_id_fkey"
@@ -11593,6 +14102,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "team_messages_user_id_fkey"
@@ -11721,6 +14237,102 @@ export type Database = {
             foreignKeyName: "umpire_audit_log_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "umpire_audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      umpire_coordinator_notes: {
+        Row: {
+          association_id: string
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          note_kind: string
+          redacted_at: string | null
+          redacted_by: string | null
+          redaction_reason: string | null
+          user_id: string
+        }
+        Insert: {
+          association_id: string
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          note_kind?: string
+          redacted_at?: string | null
+          redacted_by?: string | null
+          redaction_reason?: string | null
+          user_id: string
+        }
+        Update: {
+          association_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          note_kind?: string
+          redacted_at?: string | null
+          redacted_by?: string | null
+          redaction_reason?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "umpire_coordinator_notes_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "umpire_coordinator_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "umpire_coordinator_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "umpire_coordinator_notes_redacted_by_fkey"
+            columns: ["redacted_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "umpire_coordinator_notes_redacted_by_fkey"
+            columns: ["redacted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "umpire_coordinator_notes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "umpire_coordinator_notes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -11811,6 +14423,85 @@ export type Database = {
           },
         ]
       }
+      umpire_grade_signoffs: {
+        Row: {
+          association_id: string
+          created_at: string
+          division_id: string
+          effective_date: string
+          id: string
+          reason: string | null
+          signed_by: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          association_id: string
+          created_at?: string
+          division_id: string
+          effective_date?: string
+          id?: string
+          reason?: string | null
+          signed_by: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          association_id?: string
+          created_at?: string
+          division_id?: string
+          effective_date?: string
+          id?: string
+          reason?: string | null
+          signed_by?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "umpire_grade_signoffs_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "umpire_grade_signoffs_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "umpire_grade_signoffs_signed_by_fkey"
+            columns: ["signed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "umpire_grade_signoffs_signed_by_fkey"
+            columns: ["signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "umpire_grade_signoffs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "umpire_grade_signoffs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       umpire_guests: {
         Row: {
           access_token: string | null
@@ -11840,6 +14531,155 @@ export type Database = {
           token_expires_at?: string | null
         }
         Relationships: []
+      }
+      umpire_match_roster_checks: {
+        Row: {
+          checked_at: string
+          created_at: string
+          detail: string | null
+          fixture_id: string | null
+          id: string
+          result: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_status: string
+          roster_snapshot: Json
+          submission_id: string
+        }
+        Insert: {
+          checked_at?: string
+          created_at?: string
+          detail?: string | null
+          fixture_id?: string | null
+          id?: string
+          result: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_status?: string
+          roster_snapshot?: Json
+          submission_id: string
+        }
+        Update: {
+          checked_at?: string
+          created_at?: string
+          detail?: string | null
+          fixture_id?: string | null
+          id?: string
+          result?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_status?: string
+          roster_snapshot?: Json
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "umpire_match_roster_checks_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "umpire_match_roster_checks_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "umpire_match_roster_checks_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "umpire_match_roster_checks_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "player_vote_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      umpire_qualifications: {
+        Row: {
+          added_by: string
+          association_id: string
+          created_at: string
+          expires_on: string | null
+          id: string
+          issued_on: string | null
+          issuer: string | null
+          name: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          added_by: string
+          association_id: string
+          created_at?: string
+          expires_on?: string | null
+          id?: string
+          issued_on?: string | null
+          issuer?: string | null
+          name: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          added_by?: string
+          association_id?: string
+          created_at?: string
+          expires_on?: string | null
+          id?: string
+          issued_on?: string | null
+          issuer?: string | null
+          name?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "umpire_qualifications_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "umpire_qualifications_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "umpire_qualifications_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "umpire_qualifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "umpire_qualifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       umpire_rounds: {
         Row: {
@@ -11916,6 +14756,13 @@ export type Database = {
             foreignKeyName: "umpire_vote_edits_edited_by_fkey"
             columns: ["edited_by"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "umpire_vote_edits_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -11972,6 +14819,13 @@ export type Database = {
             foreignKeyName: "umpire_vote_lines_umpire_user_id_fkey"
             columns: ["umpire_user_id"]
             isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "umpire_vote_lines_umpire_user_id_fkey"
+            columns: ["umpire_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -12003,6 +14857,13 @@ export type Database = {
           umpire_fixture_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "umpire_vote_submissions_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "umpire_vote_submissions_submitted_by_fkey"
             columns: ["submitted_by"]
@@ -12054,6 +14915,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "formations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_formation_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "user_formation_preferences_user_id_fkey"
@@ -12113,6 +14981,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "user_roles_user_id_fkey"
@@ -12217,7 +15092,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      coordination_umpire_matrix: {
+        Row: {
+          association_id: string | null
+          completed_games: number | null
+          display_name: string | null
+          last_completed_at: string | null
+          replacement_requests: number | null
+          upcoming_games: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_cancel_team_invite: {
@@ -12430,6 +15316,192 @@ export type Database = {
       }
       configure_sportstack_notification_cron: {
         Args: { p_project_url: string }
+        Returns: undefined
+      }
+      coordination_add_supervision_link: {
+        Args: {
+          p_actor_mode?: string
+          p_supervised_assignment_id: string
+          p_supervisor_assignment_id: string
+        }
+        Returns: string
+      }
+      coordination_add_supervision_note: {
+        Args: { p_actor_mode?: string; p_content: string; p_link_id: string }
+        Returns: string
+      }
+      coordination_add_umpire_note: {
+        Args: {
+          p_actor_mode?: string
+          p_association_id: string
+          p_content: string
+          p_note_kind?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      coordination_add_umpire_qualification: {
+        Args: {
+          p_actor_mode?: string
+          p_association_id: string
+          p_expires_on: string
+          p_issued_on: string
+          p_issuer: string
+          p_name: string
+          p_note: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      coordination_can_invite_capability: {
+        Args: {
+          p_actor_mode?: string
+          p_capability_type: string
+          p_scope_id: string
+          p_scope_type: string
+        }
+        Returns: boolean
+      }
+      coordination_confirm_offer: {
+        Args: {
+          p_actor_mode?: string
+          p_recipient_id: string
+          p_warning_override_note?: string
+        }
+        Returns: string
+      }
+      coordination_create_activity: {
+        Args: {
+          p_activity_type: string
+          p_actor_mode?: string
+          p_description: string
+          p_ends_at: string
+          p_location: string
+          p_name: string
+          p_notes: string
+          p_positions: Json
+          p_scope_id: string
+          p_scope_type: string
+          p_starts_at: string
+        }
+        Returns: string
+      }
+      coordination_create_capability_invite: {
+        Args: {
+          p_actor_mode?: string
+          p_capability_type: string
+          p_scope_id: string
+          p_scope_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      coordination_dispute_late_assignment: {
+        Args: { p_assignment_id: string; p_reason: string }
+        Returns: undefined
+      }
+      coordination_get_fixture_positions: {
+        Args: { p_actor_mode?: string; p_fixture_id: string }
+        Returns: Json
+      }
+      coordination_get_roster_review_queue: {
+        Args: { p_actor_mode?: string; p_association_id: string }
+        Returns: Json
+      }
+      coordination_get_umpire_matrix: {
+        Args: { p_actor_mode?: string; p_association_id: string }
+        Returns: Json
+      }
+      coordination_get_umpire_notes: {
+        Args: {
+          p_actor_mode?: string
+          p_association_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      coordination_late_assign: {
+        Args: {
+          p_actor_mode?: string
+          p_note?: string
+          p_position_id: string
+          p_user_id: string
+          p_warning_override_note?: string
+        }
+        Returns: string
+      }
+      coordination_list_eligible_people: {
+        Args: { p_actor_mode?: string; p_position_id: string }
+        Returns: Json
+      }
+      coordination_prepare_fixture: {
+        Args: { p_actor_mode?: string; p_fixture_id: string }
+        Returns: number
+      }
+      coordination_process_due_work: { Args: never; Returns: Json }
+      coordination_record_grade_signoff: {
+        Args: {
+          p_actor_mode?: string
+          p_association_id: string
+          p_division_id: string
+          p_effective_date: string
+          p_reason: string
+          p_status: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      coordination_redact_umpire_note: {
+        Args: { p_actor_mode?: string; p_note_id: string; p_reason: string }
+        Returns: undefined
+      }
+      coordination_request_replacement: {
+        Args: { p_assignment_id: string; p_note: string }
+        Returns: string
+      }
+      coordination_respond_capability_invite: {
+        Args: { p_accept: boolean; p_invitation_id: string }
+        Returns: string
+      }
+      coordination_respond_to_offer: {
+        Args: { p_reason?: string; p_recipient_id: string; p_response: string }
+        Returns: string
+      }
+      coordination_review_roster_check: {
+        Args: {
+          p_actor_mode?: string
+          p_check_id: string
+          p_note: string
+          p_reviewed_status: string
+        }
+        Returns: undefined
+      }
+      coordination_revise_offer_note: {
+        Args: {
+          p_actor_mode?: string
+          p_material: boolean
+          p_note: string
+          p_offer_batch_id: string
+        }
+        Returns: number
+      }
+      coordination_send_offer: {
+        Args: {
+          p_actor_mode?: string
+          p_note?: string
+          p_override_note?: string
+          p_position_id: string
+          p_recipient_ids: string[]
+          p_response_deadline?: string
+        }
+        Returns: string
+      }
+      coordination_take_over_offer: {
+        Args: {
+          p_actor_mode?: string
+          p_offer_batch_id: string
+          p_reason: string
+        }
         Returns: undefined
       }
       create_committee_agenda_template: {
@@ -13278,6 +16350,9 @@ export type Database = {
         | "UNAVAILABLE"
         | "MAYBE"
         | "NO_RESPONSE"
+        | "UMPIRING"
+        | "TECHNICAL_BENCH"
+        | "VOLUNTEERING"
       fixture_status_enum:
         | "SCHEDULED"
         | "IN_PROGRESS"
@@ -13457,6 +16532,9 @@ export const Constants = {
         "UNAVAILABLE",
         "MAYBE",
         "NO_RESPONSE",
+        "UMPIRING",
+        "TECHNICAL_BENCH",
+        "VOLUNTEERING",
       ],
       fixture_status_enum: [
         "SCHEDULED",

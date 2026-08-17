@@ -2,7 +2,7 @@
 
 - **Original proposal:** 3 August 2026
 - **Decision review completed:** 16 August 2026
-- **Status:** Discovery decisions confirmed — ready for technical implementation planning
+- **Status:** Confirmed and implemented on Development — owner testing pending
 - **Project:** SportStack
 - **Production impact:** None
 

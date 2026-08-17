@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 type NotificationWork = {
-  work_type: "AVAILABILITY" | "BROADCAST" | "PLAYER_EXPLORER";
+  work_type: "AVAILABILITY" | "BROADCAST" | "PLAYER_EXPLORER" | "COORDINATION";
   delivery_id: string;
   recipient_email: string;
   recipient_name: string;
@@ -68,7 +68,7 @@ async function sendEmail(work: NotificationWork) {
           Open SportStack
         </a>
       </p>
-      <p style="font-size:12px;color:#667085">You can change notification preferences in your SportStack profile.</p>
+      <p style="font-size:12px;color:#667085">Coordination assignment notices are operational messages and are always sent while the capability is active.</p>
     </div>`;
 
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {

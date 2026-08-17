@@ -1,7 +1,7 @@
 # SportStack Coordination Module — Implementation Plan
 
-- **Date:** 16 August 2026
-- **Status:** Planning — ready for technical review, not approved for schema implementation
+- **Date:** 17 August 2026
+- **Status:** Implemented on Development — owner testing pending
 - **Source:** `docs/coordination-module-discovery.md`
 - **Target branch:** `dev`
 - **Production:** Explicitly excluded
@@ -13,9 +13,27 @@ positions and the complete Umpire offer-to-confirmation workflow. Each stage mus
 testable and must preserve existing fixture, permission, notification and Umpire Match Voting
 behaviour.
 
+## Development implementation result
+
+- Stages 0–8 are implemented on `dev` and in SportStack Dev Supabase.
+- Standard fixtures create two Umpire and two Technical Bench positions when first opened in
+  Coordination.
+- Offers support several recipients, private notes, adjustable deadlines, reminder/expiry
+  processing, recipient withdrawal and explicit coordinator confirmation.
+- Confirmed duties hard-block time overlaps. Fixture changes, replacements, late roster correction,
+  supervision, Matrix records, roster checks and volunteer activities use audited workflows.
+- In-app notices and email delivery evidence extend the existing notification worker. Account and
+  capability invitations are handled by the new `coordination-invite` Edge Function.
+- No fixture, activity, offer, assignment or historical mapping backfill was run.
+- Dev database rollback tests, both SQL workflow suites, six frontend tests, focused lint,
+  TypeScript, build, browser smoke test and unauthorised-function checks pass.
+- Full repository lint remains at the pre-existing 360-error/78-warning baseline; no finding is in a
+  changed Coordination file.
+- Production and `main` remain unchanged. The next gate is one signed-in Dev owner test at a time.
+
 ## Current live Dev evidence
 
-Read-only metadata was rechecked on 16 August 2026.
+The live Dev implementation was rechecked on 17 August 2026.
 
 - `fixtures` supplies fixture details and includes `scheduled_end_at`.
 - `fixture_availability` stores per-person fixture availability.
@@ -27,7 +45,10 @@ Read-only metadata was rechecked on 16 August 2026.
   mandatory operational Coordination notices.
 - `player_vote_submissions` remains the active Umpire Match Voting submission record.
 - `revsports_umpire_mappings` already maps external Umpire names to profiles.
-- No Coordination tables currently exist.
+- Coordination records, RLS, explicit grants, secured operations, fixture hooks and reminder
+  processing are present. The Dev adviser reports expected notices for authenticated
+  security-definer operations and unused brand-new indexes; no missing Coordination foreign-key
+  index remains. Each exposed operation performs its own signed-in and scoped-permission check.
 
 The live schema remains authoritative and must be checked again immediately before migration work.
 
@@ -380,15 +401,17 @@ passed. Use disposable Dev accounts and clearly marked test fixtures/activities.
 - `prod`, Production Supabase, Production functions and Production notification schedules require a
   separate explicit approval.
 
-## Technical unknowns to resolve in Stage 0
+## Resolved technical checks
 
-- Exact reuse path for account invitations and capability acceptance.
-- Whether mandatory Coordination email should extend or bypass broad notification preferences.
-- Delivery-status source for queued/sent/failed email.
-- Exact fixture update hooks for reconfirmation.
-- Duration fallback for fixtures without `scheduled_end_at`.
-- Secure date-of-birth comparison method that never returns the birth date to the normal UI.
-- Exact historical mapping/backfill counts.
-- Privacy and retention approval for permanent sensitive notes before Production.
+- Account invitations use Supabase Auth invitation; capability is granted only when the person
+  accepts the separate capability invitation.
+- Mandatory operational Coordination email uses the existing notification dispatcher and its
+  delivery evidence, independently of optional marketing-style channels.
+- Fixture update hooks mark confirmed duties for reconfirmation after material changes.
+- Missing `scheduled_end_at` uses the existing association/division duration fallback, then
+  90 minutes.
+- Technical Bench pairing compares both birth dates for the fixture day and returns only a warning.
+- The three current RevSports Umpire mappings are unique. Historical data was not backfilled.
+- Privacy and retention approval for permanent sensitive notes remains a Production release gate.
 
-These are technical checks, not unresolved product decisions.
+The remaining privacy item is a release approval, not an unresolved workflow decision.

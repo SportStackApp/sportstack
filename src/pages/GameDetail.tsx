@@ -26,13 +26,20 @@ import {
   getFixtureMatchupLabel,
   isByeFixtureDisplay,
 } from "@/lib/fixtureDisplay";
+import {
+  coordinationAvailabilityLabel,
+  isCoordinationAvailability,
+  type CoordinationAvailabilityStatus,
+} from "@/features/coordination/coordination";
 
-type AvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
+type PlayerAvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
+type AvailabilityStatus = PlayerAvailabilityStatus | CoordinationAvailabilityStatus;
 
 const availabilityStatusLabel = (status: AvailabilityStatus) => {
   if (status === "AVAILABLE") return "available";
   if (status === "UNAVAILABLE") return "unavailable";
   if (status === "MAYBE") return "maybe";
+  if (isCoordinationAvailability(status)) return coordinationAvailabilityLabel(status).toLowerCase();
   return "no response";
 };
 
@@ -278,7 +285,7 @@ const GameDetail = () => {
     fetchGame();
   }, [id, user, selectedTeam?.id]);
 
-  const handleAvailability = async (status: AvailabilityStatus) => {
+  const handleAvailability = async (status: PlayerAvailabilityStatus) => {
     if (!user || !id || availabilitySaving) return;
 
     const previous = availability;
@@ -430,12 +437,14 @@ const GameDetail = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Let your coach know if you can play in this match.
+              {isCoordinationAvailability(availability)
+                ? `You are confirmed for ${coordinationAvailabilityLabel(availability)}. Request a replacement through Coordination if this changes.`
+                : "Let your coach know if you can play in this match."}
             </p>
             <div className="grid grid-cols-3 gap-3">
-              <AvailabilityButton status="AVAILABLE" current={availability} saving={availabilitySaving} onClick={() => handleAvailability("AVAILABLE")} icon={<Check className="h-5 w-5" />} label="Available" />
-              <AvailabilityButton status="UNAVAILABLE" current={availability} saving={availabilitySaving} onClick={() => handleAvailability("UNAVAILABLE")} icon={<X className="h-5 w-5" />} label="Unavailable" />
-              <AvailabilityButton status="MAYBE" current={availability} saving={availabilitySaving} onClick={() => handleAvailability("MAYBE")} icon={<HelpCircle className="h-5 w-5" />} label="Maybe" />
+              <AvailabilityButton status="AVAILABLE" current={availability} saving={availabilitySaving} locked={isCoordinationAvailability(availability)} onClick={() => handleAvailability("AVAILABLE")} icon={<Check className="h-5 w-5" />} label="Available" />
+              <AvailabilityButton status="UNAVAILABLE" current={availability} saving={availabilitySaving} locked={isCoordinationAvailability(availability)} onClick={() => handleAvailability("UNAVAILABLE")} icon={<X className="h-5 w-5" />} label="Unavailable" />
+              <AvailabilityButton status="MAYBE" current={availability} saving={availabilitySaving} locked={isCoordinationAvailability(availability)} onClick={() => handleAvailability("MAYBE")} icon={<HelpCircle className="h-5 w-5" />} label="Maybe" />
             </div>
           </CardContent>
         </Card>
@@ -513,17 +522,18 @@ const GameDetail = () => {
 };
 
 interface AvailabilityButtonProps {
-  status: AvailabilityStatus;
+  status: PlayerAvailabilityStatus;
   current: AvailabilityStatus;
   saving: boolean;
+  locked: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
 }
 
-const AvailabilityButton = ({ status, current, saving, onClick, icon, label }: AvailabilityButtonProps) => {
+const AvailabilityButton = ({ status, current, saving, locked, onClick, icon, label }: AvailabilityButtonProps) => {
   const isSelected = status === current;
-  const variants: Record<AvailabilityStatus, { selected: string; default: string }> = {
+  const variants: Record<PlayerAvailabilityStatus, { selected: string; default: string }> = {
     AVAILABLE: { selected: "bg-success text-success-foreground border-success", default: "border-success/60 bg-success/5 text-success hover:bg-success/10" },
     UNAVAILABLE: { selected: "bg-destructive text-destructive-foreground border-destructive", default: "border-destructive/60 bg-destructive/5 text-destructive hover:bg-destructive/10" },
     MAYBE: { selected: "bg-warning text-warning-foreground border-warning", default: "border-warning/70 bg-warning/10 text-foreground hover:bg-warning/20" },
@@ -534,11 +544,11 @@ const AvailabilityButton = ({ status, current, saving, onClick, icon, label }: A
     <button
       type="button"
       onClick={onClick}
-      disabled={saving}
+      disabled={saving || locked}
       aria-pressed={isSelected}
       aria-label={`${label}${isSelected ? "; selected; select again to clear" : ""}`}
       className={cn(
-        "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 disabled:cursor-wait disabled:opacity-60",
+        "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60",
         isSelected ? variants[status].selected : variants[status].default
       )}
     >

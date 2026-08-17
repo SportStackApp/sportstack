@@ -70,6 +70,7 @@ import { ModeRouteGate } from "./components/auth/ModeRouteGate";
 import ModuleLayoutPreview from "./pages/admin/ModuleLayoutPreview";
 import SafetyRiskModule from "./pages/admin/SafetyRiskModule";
 import UmpireVotingModule from "./pages/admin/UmpireVotingModule";
+import CoordinationModule from "./pages/CoordinationModule";
 
 // Entity Dashboards
 import AssociationDashboard from "./pages/AssociationDashboard";
@@ -201,6 +202,8 @@ const App = () => (
                         <Route path="reports" element={<ExpenseReportsPage />} />
                       </Route>
                       <Route path="/committee" element={<ModuleGate moduleKey="committee" moduleLabel="Committee Management"><CommitteeManagement /></ModuleGate>} />
+                      <Route path="/coordination" element={<ModuleGate moduleKey="coordination" moduleLabel="Coordination"><CoordinationModule /></ModuleGate>} />
+                      <Route path="/coordination/my-assignments" element={<ModuleGate moduleKey="coordination" moduleLabel="Coordination"><CoordinationModule /></ModuleGate>} />
                       
                       {/* Admin Routes */}
                       <Route path="/admin" element={<ModeRouteGate allowedModes={ADMIN_MODES}><AdminDashboard /></ModeRouteGate>} />

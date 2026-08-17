@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-16
+Last updated: 2026-08-17
 
 Future agents should start by reading these files in order:
 
@@ -9,6 +9,33 @@ Future agents should start by reading these files in order:
 3. `docs/project-brief.md` — concise product and architecture context.
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 17 August 2026 Coordination Module implementation
+
+- The confirmed design in `docs/coordination-module-discovery.md` is implemented on `dev`.
+  `/coordination` consolidates fixture positions, recipient work, Umpire Matrix, volunteer
+  activities and roster-review flags.
+- Migrations `20260817100124` through `20260817101000` add Coordination availability states,
+  scoped capabilities/invitations, configurable positions, multi-recipient offers, reminders,
+  explicit confirmation, assignments, replacement/reconfirmation, activities, supervision, Matrix
+  history, roster checks, RLS/grants, supporting indexes, protected confirmed-duty availability and
+  pre-email invitation authorisation.
+- The existing notification dispatcher now handles Coordination work and is ACTIVE on Dev as
+  version 7. New JWT-protected `coordination-invite` is ACTIVE as version 2; it proves scoped
+  permission before any account email can be sent.
+- Workflow rules are database enforced: no assignment before coordinator confirmation, one current
+  assignment per position, hard time-overlap rejection, mandatory replacement note, original
+  assignment retained until replacement confirmation, self-supervision rejection and roster
+  mismatch with no voting effect.
+- Tests passed: rollback migration test; workflow SQL; security/roles SQL; six focused frontend
+  tests; changed-file lint; TypeScript; build; signed-out browser route with no console error; and
+  401 responses from both Edge Functions without credentials. An ordering defect found by the
+  replacement test and a missing menu-icon import found by the browser test were fixed and retested.
+- Full lint remains the pre-existing 360-error/78-warning baseline. Test transactions left zero
+  Dev activities, positions, offers, assignments, replacements or capability invitations.
+- No historical mapping backfill, `main`, Production, domain or secret change occurred. Permanent
+  sensitive-note retention still requires approval before Production. Next step: one signed-in Dev
+  owner test at a time.
 
 ## 16 August 2026 Player Explorer scoped access
 

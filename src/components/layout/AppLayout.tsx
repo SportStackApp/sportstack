@@ -45,6 +45,7 @@ import {
   Radar,
   ReceiptText,
   UserSearch,
+  UserCheck,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -145,6 +146,7 @@ const ADMIN_DROPDOWN_SECTIONS: NavSection[] = [
     heading: "Modules",
     items: [
       { path: "/committee", label: "Committee Management", icon: Users },
+      { path: "/coordination", label: "Coordination", icon: UserCheck },
       { path: "/admin/safety-risk", label: "Safety Hub", icon: ShieldCheck },
       { path: "/admin/module-preview", label: "Module Preview", icon: ImagePlus },
     ],
@@ -188,6 +190,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Umpiring",
       items: [
         { path: "/umpire/vote", label: "Umpire Match Ballot", icon: ClipboardList },
+        { path: "/coordination", label: "Coordination", icon: UserCheck },
       ],
     },
     {
@@ -225,6 +228,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Umpiring",
       items: [
         { path: "/umpire/vote", label: "Umpire Match Ballot", icon: ClipboardList },
+        { path: "/coordination", label: "Coordination", icon: UserCheck },
         { path: "/admin/umpire-voting", label: "Umpire Match Voting", icon: Vote },
         { path: "/admin/umpire-voting?tab=leaderboard", label: "Umpire Analytics", icon: BarChart3 },
       ],
@@ -257,6 +261,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/admin", label: "Admin Dashboard", icon: LayoutDashboard },
         { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/chat", label: "Communications", icon: MessageCircle },
+        { path: "/coordination", label: "Coordination", icon: UserCheck },
       ],
     },
     {
@@ -290,6 +295,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/dashboard", label: "My Dashboard", icon: LayoutDashboard },
         { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/chat", label: "Communications", icon: MessageCircle },
+        { path: "/coordination", label: "Coordination", icon: UserCheck },
         { path: "/mvp-votes", label: "Player MVP", icon: Vote },
       ],
     },
@@ -328,6 +334,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/dashboard", label: "My Dashboard", icon: LayoutDashboard },
         { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/chat", label: "Communications", icon: MessageCircle },
+        { path: "/coordination/my-assignments", label: "My coordination", icon: UserCheck },
         { path: "/mvp-votes", label: "Player MVP", icon: Vote },
       ],
     },
@@ -349,6 +356,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/dashboard", label: "My Dashboard", icon: LayoutDashboard },
         { path: "/games", label: "Fixtures", icon: Calendar },
         { path: "/chat", label: "Communications", icon: MessageCircle },
+        { path: "/coordination/my-assignments", label: "My coordination", icon: UserCheck },
         { path: "/mvp-votes", label: "Player MVP", icon: Vote },
       ],
     },
@@ -356,6 +364,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Umpiring",
       items: [
         { path: "/umpire/vote", label: "Umpire Match Ballot", icon: ClipboardList },
+        { path: "/coordination/my-assignments", label: "My coordination", icon: UserCheck },
       ],
     },
     {
@@ -407,6 +416,7 @@ const NAV_MODULE_KEYS = [
   "committee",
   "safety_risk",
   "hockey_trace",
+  "coordination",
 ] as const;
 
 const MOBILE_NAV: Record<AppMode, NavItem[]> = {
@@ -1067,6 +1077,7 @@ const AppLayout = () => {
     if (path === "/admin/safety-risk") return moduleEnabled.safety_risk;
     if (path === "/committee") return moduleEnabled.committee;
     if (path === "/coaching/trace") return moduleEnabled.hockey_trace;
+    if (path === "/coordination" || path === "/coordination/my-assignments") return moduleEnabled.coordination;
     return true;
   };
 
