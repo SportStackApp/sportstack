@@ -136,4 +136,12 @@ begin
   if (select is_approved from public.player_vote_submissions where id=v_submission) is distinct from v_before then raise exception 'Roster check changed the voting submission.'; end if;
 end $test$;
 
+-- Exercise the two offer policies as an authenticated Data API role. This
+-- catches circular policy expansion that a migration-owner query would bypass.
+select set_config('request.jwt.claims',jsonb_build_object('sub',coordinator_id,'role','authenticated')::text,true) from coordination_role_test;
+set local role authenticated;
+select count(*) from public.coordination_offer_batches;
+select count(*) from public.coordination_offer_recipients;
+reset role;
+
 rollback;

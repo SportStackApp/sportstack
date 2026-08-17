@@ -13,6 +13,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
   migration `20260817101100_allow_coordination_module_access.sql` fixes the resolver and scoped
   feature-flag constraint; Coordination now defaults on and can be enabled or disabled through
   Roles & modules at Association, Club, Division or Team scope.
+- The same browser check then found a circular offer/privacy policy that raised a loading warning.
+  Dev migration `20260817101200_fix_coordination_offer_rls_recursion.sql` replaces the reciprocal
+  policy subqueries with private boolean helpers and keeps the original offerer/recipient access.
 - `/coordination` now provides fixture staffing, personal offers/assignments, the association
   Umpire Matrix, basic volunteer activities and Umpire Match Voting roster-review queues.
 - A fixture receives two Umpire and two Technical Bench positions. One offer may go to several
@@ -30,12 +33,14 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - Umpire history remains association-grade based. Technical Bench warns on first duty and when an
   under-18 is not paired with an adult, using age on the fixture day without showing birth dates.
   Umpire Match Voting roster differences create a review flag only and never block or change a vote.
-- Eleven additive Dev migrations and the `coordination-invite` Edge Function are active as version
+- Twelve additive Dev migrations and the `coordination-invite` Edge Function are active as version
   2. The shared notification dispatcher is active as Dev version 7. No backfill or Production
   change was made.
 - Both transactional SQL suites, the module-access regression check, six frontend tests, focused lint, TypeScript, production build,
   signed-out browser routing and unauthorised Edge checks pass. Full lint remains the known
-  360-error/78-warning baseline. Signed-in Dev owner testing is next; `main` remains unchanged.
+  360-error/78-warning baseline. A signed-in Super Admin browser check now loads the module without
+  a warning, and Kangaroos v Revengers displays both Umpire and both Technical Bench positions.
+  The remaining workflow checks will continue one at a time; `main` remains unchanged.
 - Existing fixture and dashboard availability now display confirmed Coordination duties by role and
   lock normal player-availability buttons until the assignment workflow clears the duty.
 

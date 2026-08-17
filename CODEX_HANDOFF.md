@@ -17,6 +17,10 @@ Future agents should start by reading these files in order:
   `20260817101100_allow_coordination_module_access.sql` makes Coordination default-enabled, permits
   scoped feature-flag overrides and preserves authenticated-only function grants. The administrator
   module controls now include Coordination. The rollback, live default and scoped override tests pass.
+- That access retest exposed circular RLS expansion between offer batches and recipients. Additive
+  migration `20260817101200_fix_coordination_offer_rls_recursion.sql` moves the reciprocal lookups
+  into private, authenticated helpers. Direct SELECT checks under the authenticated role and the
+  signed-in Coordination browser load now cover this regression.
 - The confirmed design in `docs/coordination-module-discovery.md` is implemented on `dev`.
   `/coordination` consolidates fixture positions, recipient work, Umpire Matrix, volunteer
   activities and roster-review flags.
@@ -39,8 +43,9 @@ Future agents should start by reading these files in order:
 - Full lint remains the pre-existing 360-error/78-warning baseline. Test transactions left zero
   Dev activities, positions, offers, assignments, replacements or capability invitations.
 - No historical mapping backfill, `main`, Production, domain or secret change occurred. Permanent
-  sensitive-note retention still requires approval before Production. Next step: one signed-in Dev
-  owner test at a time.
+  sensitive-note retention still requires approval before Production. Signed-in Super Admin access
+  and all four standard positions passed on Kangaroos v Revengers. Continue one owner workflow test
+  at a time.
 
 ## 16 August 2026 Player Explorer scoped access
 
