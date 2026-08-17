@@ -3,6 +3,13 @@
 begin;
 
 do $test$
+begin
+  if not public.resolve_module_enabled('coordination', null, null, null, null) then
+    raise exception 'Coordination should be enabled by default.';
+  end if;
+end $test$;
+
+do $test$
 declare v_table text;
 begin
   foreach v_table in array array['coordination_assignments','coordination_offer_batches','coordination_offer_recipients','umpire_coordinator_notes'] loop

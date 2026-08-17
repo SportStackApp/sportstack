@@ -22,7 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
 type ScopeType = "ASSOCIATION" | "CLUB" | "DIVISION" | "TEAM";
-type ModuleKey = "player_mvp" | "umpire_match_voting" | "committee" | "safety_risk" | "hockey_trace";
+type ModuleKey = "player_mvp" | "umpire_match_voting" | "committee" | "safety_risk" | "hockey_trace" | "coordination";
 type ModuleFlag = Tables<"module_feature_flags">;
 type TeamDivisionOption = Pick<Tables<"team_divisions">, "team_id" | "division_id">;
 
@@ -86,6 +86,12 @@ const MODULES: Array<{ key: ModuleKey; label: string; description: string; defau
     label: "Hockey Trace Lab",
     description: "Experimental trace playback and analysis tools.",
     defaultEnabled: false,
+  },
+  {
+    key: "coordination",
+    label: "Coordination",
+    description: "Fixture officials, Technical Bench and volunteer coordination.",
+    defaultEnabled: true,
   },
 ];
 
