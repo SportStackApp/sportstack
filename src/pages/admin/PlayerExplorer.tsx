@@ -131,7 +131,7 @@ interface PlayerExplorerCatalogue {
   profiles: ProfileRow[];
   externalEntities: ExternalEntityRow[];
   externalLinks: ExternalLinkRow[];
-  latestAppearanceAt: string | null;
+  latestSourceDataAt: string | null;
 }
 
 interface MatchContext {
@@ -365,7 +365,6 @@ const loadCatalogue = async (): Promise<PlayerExplorerCatalogue> => {
     profiles,
     externalEntities,
     externalLinks,
-    latestAppearanceResponse,
   ] = await Promise.all([
     fetchAllPages<AssociationRow>((from, to) => supabase.from("associations").select("id, name").order("id").range(from, to)),
     fetchAllPages<ClubRow>((from, to) => supabase.from("clubs").select("id, name, association_id").order("id").range(from, to)),
@@ -389,15 +388,15 @@ const loadCatalogue = async (): Promise<PlayerExplorerCatalogue> => {
       .in("target_table", ["profiles", "teams"])
       .order("id")
       .range(from, to)),
-    supabase
-      .from("source_revsports_player_appearances")
-      .select("last_seen_at")
-      .order("last_seen_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
   ]);
 
-  if (latestAppearanceResponse.error) throw latestAppearanceResponse.error;
+  // Match freshness is already available in the catalogue. Reusing it avoids
+  // an unbounded appearance-table scan through the scoped RLS policy.
+  const latestSourceDataAt = matches.reduce<string | null>((latest, match) => {
+    if (!match.last_seen_at) return latest;
+    return !latest || match.last_seen_at > latest ? match.last_seen_at : latest;
+  }, null);
+
   return {
     associations,
     clubs,
@@ -410,7 +409,7 @@ const loadCatalogue = async (): Promise<PlayerExplorerCatalogue> => {
     profiles,
     externalEntities,
     externalLinks,
-    latestAppearanceAt: latestAppearanceResponse.data?.last_seen_at || null,
+    latestSourceDataAt,
   };
 };
 
@@ -746,7 +745,7 @@ export default function PlayerExplorer() {
         </div>
         <Badge variant="outline" className="w-fit">
           <Database className="mr-1 h-3 w-3" />
-          V2 data: {formatFreshness(catalogue?.latestAppearanceAt || null)}
+          V2 data: {formatFreshness(catalogue?.latestSourceDataAt || null)}
         </Badge>
       </div>
 

@@ -24,6 +24,10 @@ Future agents should start by reading these files in order:
 - The exact grant set passed a rollback test before live application. Post-apply Dev checks
   confirmed authenticated helper execution and fail-closed zero-row access without a signed-in
   user. Main and Production remain unchanged.
+- The next owner refresh reached the database but timed out on the unfiltered
+  `source_revsports_player_appearances` freshness query. API logs showed the other opening requests
+  returned 200. `PlayerExplorer.tsx` now calculates freshness from the scoped V2 matches it already
+  loads, removing that unnecessary full-table RLS scan without changing data or access rules.
 
 ## 19 August 2026 scoped Umpire and Coordinator access
 

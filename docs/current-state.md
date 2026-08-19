@@ -17,6 +17,10 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - The migration passed a transaction rollback test before application. Live Dev verification then
   confirmed the authenticated policy path can call the helper, a session without a signed-in user
   sees zero external entities, and no new Player Explorer security-adviser finding appeared.
+- The next signed-in check exposed a separate timeout in the unfiltered appearance-freshness
+  request. API logs confirmed every other opening catalogue request completed. Player Explorer now
+  derives the V2 freshness date from the already-loaded scoped matches instead of scanning the
+  appearance table solely for one date.
 - Dev only. `main` and Production remain unchanged.
 
 ## Scoped Umpire and Coordinator access on Development — 19 August 2026
