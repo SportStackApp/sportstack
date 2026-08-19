@@ -6,6 +6,19 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## Player Explorer permission repair on Development — 19 August 2026
+
+- Player Explorer failed after the 17 August Coordination migration broadly revoked authenticated
+  execution across the private function schema. That reset unintentionally removed the five grants
+  required by the existing Player Explorer Row Level Security policies.
+- Additive Dev migration `20260819193617_restore_player_explorer_function_permissions.sql` restores
+  execution for `authenticated` and `service_role` on only those five helpers. `anon` and `public`
+  remain denied, and no helper definition, policy, table or source-data row changed.
+- The migration passed a transaction rollback test before application. Live Dev verification then
+  confirmed the authenticated policy path can call the helper, a session without a signed-in user
+  sees zero external entities, and no new Player Explorer security-adviser finding appeared.
+- Dev only. `main` and Production remain unchanged.
+
 ## Scoped Umpire and Coordinator access on Development — 19 August 2026
 
 - Additive Dev migration `20260819071731_scoped_umpire_and_coordinator_access.sql` makes Umpire an

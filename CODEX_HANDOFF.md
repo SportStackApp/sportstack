@@ -10,6 +10,21 @@ Future agents should start by reading these files in order:
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
+## 19 August 2026 Player Explorer permission repair
+
+- The signed-in Dev owner check exposed `permission denied for function
+  player_explorer_external_entity_in_scope`. Live privileges confirmed that all five private Player
+  Explorer helpers had lost `authenticated` execution.
+- Root cause was the broad `revoke all on all functions in schema private from
+  public,anon,authenticated` in the later Coordination foundation migration. The original Player
+  Explorer migration had correctly granted the permissions before that reset occurred.
+- Additive Dev migration `20260819193617_restore_player_explorer_function_permissions.sql` restores
+  only the five required `authenticated` and `service_role` grants while keeping `public` and
+  `anon` denied. No function body, RLS policy, table or data row changed.
+- The exact grant set passed a rollback test before live application. Post-apply Dev checks
+  confirmed authenticated helper execution and fail-closed zero-row access without a signed-in
+  user. Main and Production remain unchanged.
+
 ## 19 August 2026 scoped Umpire and Coordinator access
 
 - Dev migration `20260819071731_scoped_umpire_and_coordinator_access.sql` is active. It makes
