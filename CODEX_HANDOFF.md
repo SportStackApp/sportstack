@@ -15,7 +15,8 @@ Future agents should start by reading these files in order:
 
 - The single active priority list is now `docs/consolidated-open-items-plan.md`.
 - Repository inspection found a clean `dev` checkout at `d79067b`, matching `origin/dev` and
-  `origin/main`. `origin/prod` remains at `682b8ea`, 147 commits behind Main.
+  `origin/main` at the audit start. `origin/prod` remains at `682b8ea` and behind Main; recheck the
+  exact divergence before any release.
 - GitHub has no open issues or pull requests. The latest Dev Quality, Dev scraper and Production
   scraper workflow runs all passed. GitHub Projects could not be inventoried because the active
   token lacks `read:project`; whether a project board is used remains `UNKNOWN — needs confirmation`.

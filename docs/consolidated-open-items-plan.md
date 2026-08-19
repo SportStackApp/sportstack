@@ -4,7 +4,7 @@ Status: **active single plan**
 
 Audited: **20 August 2026**
 
-Repository baseline: **`dev` and `main` at `d79067b`; `prod` at `682b8ea`**
+Audit-start baseline: **`dev` and `main` at `d79067b`; `prod` at `682b8ea`**
 
 This is the one active implementation and cleanup plan for SportStack. Older development plans,
 handoffs, session notes and module specifications remain useful evidence, but they do not create a
@@ -20,7 +20,7 @@ decision.
 Current verified position:
 
 - the working tree is clean;
-- `dev` and `main` are aligned, while `prod` is 147 commits behind `main`;
+- `dev` and `main` are aligned, while `prod` remains separately behind Main;
 - GitHub has no open issues or pull requests;
 - the latest Dev Quality run and the latest Dev and Production scraper workflows passed;
 - all declared npm dependencies are installed, but the 20 August `npm audit --omit=dev` now reports
