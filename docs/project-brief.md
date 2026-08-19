@@ -31,7 +31,8 @@ this rollout and remains unchanged.
 
 ## Current Priority
 
-Keep work focused on the existing SportStack app and the next Player MVP Voting work.
+Use `docs/consolidated-open-items-plan.md` as the single active priority list. Keep work focused on
+accepting and cleaning up the existing SportStack app before starting another major module.
 
 Near-term priority areas:
 

@@ -1,7 +1,8 @@
 # AGENTS.md
 
 Guidance for AI coding agents (OpenAI Codex, etc.) working in the **SportStack** repository.
-Read this file first, then `docs/current-state.md`, then `docs/project-brief.md` before doing anything.
+Read this file first, then `docs/current-state.md`, then `docs/consolidated-open-items-plan.md`, then
+`docs/project-brief.md` before doing anything.
 Fuller context lives in `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` and
 `PROJECT_SCOPE_UI_UX_AND_IMPLEMENTATION_PLAN.md`.
 
@@ -53,12 +54,13 @@ drifted.
 ## Source of truth order
 1. `AGENTS.md`
 2. `docs/current-state.md`
-3. `CODEX_HANDOFF.md`
-4. `docs/project-brief.md`
-5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md`
-6. `PROJECT_SCOPE_UI_UX_AND_IMPLEMENTATION_PLAN.md`
-7. Latest pull requests and commits
-8. Live Supabase checks
+3. `docs/consolidated-open-items-plan.md`
+4. `CODEX_HANDOFF.md`
+5. `docs/project-brief.md`
+6. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md`
+7. `PROJECT_SCOPE_UI_UX_AND_IMPLEMENTATION_PLAN.md`
+8. Latest pull requests and commits
+9. Live Supabase checks
 
 If this order conflicts with older documentation, use the newer/current source and mark anything uncertain as `UNKNOWN — needs confirmation`.
 
@@ -169,9 +171,9 @@ There is no automated test suite yet. Do the relevant manual smoke test and say 
   read-only mirror plus four curated SportStack notes.
 - At the start of meaningful work, run
   `pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Fetch`, then read:
-  - `Projects/SportStack.md`
-  - `Strategy/SportStack Focus.md`
-  - `Operations/Open Items.md`
+  - `Projects/SportStack/Project Index.md`
+  - `Projects/SportStack/Status and Planning/SportStack Focus.md`
+  - `Technology and Accounts/Status and Planning/Open Items.md`
   - the mirrored `Projects/SportStack Repository/_Index.md`
 - During meaningful work, update the appropriate repository source: `docs/current-state.md`,
   `CODEX_HANDOFF.md`, `docs/scraper-operations.md`, `notes/known-issues.md`, or another scoped note.

@@ -1,4 +1,7 @@
-# SportsStack — Known Issues & Parked Tasks
+# SportStack — Known Issues & Parked Tasks
+
+> This is the supporting defect and parked-item register. Current priority and sequencing come from
+> `docs/consolidated-open-items-plan.md`.
 
 ## Duplicate Team Names in Fixture Import
 **Logged:** 14 April 2026  

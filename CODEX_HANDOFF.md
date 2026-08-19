@@ -1,14 +1,33 @@
 # Codex Handoff
 
-Last updated: 2026-08-19
+Last updated: 2026-08-20
 
 Future agents should start by reading these files in order:
 
 1. `AGENTS.md` — repository rules, safety constraints, release path and testing expectations.
 2. `docs/current-state.md` — current implementation, deployment and owner-test status.
-3. `docs/project-brief.md` — concise product and architecture context.
-4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
-5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+3. `docs/consolidated-open-items-plan.md` — the single active implementation and cleanup priority.
+4. `docs/project-brief.md` — concise product and architecture context.
+5. `docs/scraper-operations.md` — current scraper, backup and retention routine.
+6. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 20 August 2026 consolidated open-items audit
+
+- The single active priority list is now `docs/consolidated-open-items-plan.md`.
+- Repository inspection found a clean `dev` checkout at `d79067b`, matching `origin/dev` and
+  `origin/main`. `origin/prod` remains at `682b8ea`, 147 commits behind Main.
+- GitHub has no open issues or pull requests. The latest Dev Quality, Dev scraper and Production
+  scraper workflow runs all passed. GitHub Projects could not be inventoried because the active
+  token lacks `read:project`; whether a project board is used remains `UNKNOWN — needs confirmation`.
+- Live Dev read-only checks reconfirmed 201 duplicate membership groups, 44 multiple-Primary users
+  and 490 snapshot rows. Adviser review found 115 security warnings and 181 performance warnings;
+  these were added as a careful triage stream, not treated as safe bulk-cleanup targets.
+- Quality checks passed TypeScript, the production build and focused plan lint. Full lint remains at
+  its recorded 359-error/78-warning baseline. `npm audit --omit=dev` now reports one high-severity
+  transitive `nanoid` 3.3.17 advisory through PostCSS; it needs a reviewed dependency/lockfile update.
+- The plan places acceptance testing first, confirmed repairs second, database/data cleanup third,
+  documentation cleanup fourth and the Production decision last. No application code, database
+  object, data row, Production system, domain or secret changed during the audit.
 
 ## 19 August 2026 Player Explorer permission repair
 

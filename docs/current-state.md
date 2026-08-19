@@ -1,10 +1,26 @@
 # SportStack Current State
 
-Last updated: 2026-08-19
+Last updated: 2026-08-20
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
+
+## Consolidated open-items audit — 20 August 2026
+
+- `docs/consolidated-open-items-plan.md` is now the single active implementation and cleanup plan.
+- The audit found a clean working tree, aligned `dev`/`main` branches, no open GitHub issues or pull
+  requests, and green latest Dev Quality plus Dev/Production scraper workflows.
+- Live Dev still has 201 duplicate membership groups, 44 multiple-Primary users and the unchanged
+  490-row snapshot. No historical row was changed.
+- Live Dev advisers currently report 115 security warnings and 181 performance warnings. These are
+  a triage queue; no grant, policy, function, index, Auth setting or database row was changed.
+- Current dependency audit reports one high-severity transitive `nanoid` advisory through PostCSS;
+  a reviewed lockfile update is required. TypeScript, production build and focused plan lint pass.
+  Full lint remains at the known 359-error/78-warning baseline.
+- Older plans and session notes remain evidence only where their status conflicts with the
+  consolidated plan. Production, `prod`, domains, secrets and destructive cleanup remain separately
+  approval-gated.
 
 ## Main staging release — 19 August 2026
 

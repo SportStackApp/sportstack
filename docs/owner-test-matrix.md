@@ -1,5 +1,8 @@
 # SportStack Owner-Test Matrix
 
+> This is the detailed evidence and test checklist. Current priority and sequencing come from
+> `docs/consolidated-open-items-plan.md`.
+
 Last updated: 11 August 2026
 
 This is the single checklist matching the 31 July to 2 August owner review against the Dev

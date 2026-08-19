@@ -1,6 +1,10 @@
 # Project Consolidation Notes
 _Migrated from old Lovable/Hockey Hub project — reviewed 25 April 2026_
 
+> Historical idea list only. Current open work is tracked in
+> `docs/consolidated-open-items-plan.md`. Some items below have since been implemented, replaced or
+> deliberately parked; do not treat this note as a current to-do list.
+
 ## Umpire Slot Management
 - At fixture import, each umpire slot is assigned to a **club** (not an individual)
 - That club can optionally assign a **specific person** to the slot later

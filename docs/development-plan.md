@@ -1,6 +1,10 @@
 # SportStack Development Plan
 
-Status: locked development order, active from 1 August 2026.
+Status: historical implementation order from 1 August 2026.
+
+> Current priorities and remaining work are consolidated in
+> `docs/consolidated-open-items-plan.md`. Keep this file as implementation history and detailed
+> evidence; do not use its older pending-status wording as the active priority list.
 
 The blocks below are completed in order where practical. Work starts on `dev`, is tested and
 documented, then moves to `main` for staging. Production, DNS, redirects and destructive changes
@@ -9,9 +13,9 @@ remain separately approval-gated.
 ## Owner-test remediation package — implemented on Dev, integrated verification active
 
 The owner-test findings collected from 31 July to 2 August are matched line by line in
-`docs/owner-test-matrix.md`. The package stays on `dev` until the integrated actual-role and
-workflow test is complete. `main`, `prod`, Production Supabase, domains and redirects are
-unchanged.
+`docs/owner-test-matrix.md`. The package has since reached Main staging; remaining acceptance and
+cleanup work is tracked in the consolidated plan. Production Supabase, domains and redirects remain
+separately approval-gated.
 
 1. **Permissions and data integrity:** scoped server functions, role hierarchy, Viewing-as data
    restrictions, protected higher-role accounts, membership write guards, administration audit
