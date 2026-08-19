@@ -32,8 +32,8 @@ import {
   type CoordinationAvailabilityStatus,
 } from "@/features/coordination/coordination";
 
-type PlayerAvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
-type AvailabilityStatus = PlayerAvailabilityStatus | CoordinationAvailabilityStatus;
+type AvailabilityStatus = Database["public"]["Enums"]["availability_status_enum"];
+type PlayerAvailabilityStatus = Exclude<AvailabilityStatus, CoordinationAvailabilityStatus>;
 
 const availabilityStatusLabel = (status: AvailabilityStatus) => {
   if (status === "AVAILABLE") return "available";

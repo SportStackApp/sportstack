@@ -89,7 +89,13 @@ export function useModuleAvailability(moduleKeys: SportStackModuleKey[]) {
     // not resolve or render a module until AppModeContext has confirmed that
     // mode with Supabase; otherwise the first page query can race ahead of the
     // session initialisation and fail without a useful retry.
-    if (modeLoading || (coordinationRequested && coordinationAccessLoading)) {
+    if (modeLoading) {
+      setResolvedSignature("");
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (coordinationRequested && coordinationAccessLoading) {
       setResolvedSignature("");
       return () => {
         cancelled = true;

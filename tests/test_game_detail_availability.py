@@ -11,7 +11,11 @@ class GameDetailAvailabilityTests(unittest.TestCase):
         source = SOURCE.read_text(encoding="utf-8")
 
         self.assertIn(
-            "const variants: Record<AvailabilityStatus, { selected: string; default: string }>",
+            "type PlayerAvailabilityStatus = Exclude<AvailabilityStatus, CoordinationAvailabilityStatus>",
+            source,
+        )
+        self.assertIn(
+            "const variants: Record<PlayerAvailabilityStatus, { selected: string; default: string }>",
             source,
         )
         for status in ("AVAILABLE", "UNAVAILABLE", "MAYBE", "NO_RESPONSE"):
