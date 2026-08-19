@@ -1,6 +1,6 @@
 import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = Database["public"]["Enums"]["user_role_enum"];
 
 export interface RolePermissionSummary {
   role: AppRole;
@@ -71,9 +71,17 @@ export const ROLE_PERMISSION_SUMMARIES: RolePermissionSummary[] = [
   {
     role: "UMPIRE",
     label: "Umpire",
-    scope: "Assigned umpire access.",
-    canSee: ["Umpire Match Voting and its completed-fixture context"],
-    canEdit: ["Their own authorised Umpire Match Voting ballot"],
-    cannotDo: ["Manage team line-ups", "Access club or association admin tools"],
+    scope: "Assigned association.",
+    canSee: ["Umpire Match Voting", "Their own Umpire offers and confirmed assignments"],
+    canEdit: ["Their own authorised Umpire Match Voting ballot", "Accept or decline their own game offers"],
+    cannotDo: ["Supervise Umpires without a separate capability", "Access club or association admin tools"],
+  },
+  {
+    role: "UMPIRE_ADMIN",
+    label: "Legacy Umpire Admin",
+    scope: "Legacy records only; no new assignments.",
+    canSee: ["Existing legacy Umpire administration access"],
+    canEdit: [],
+    cannotDo: ["Be newly assigned", "Automatically convert to Umpire Coordinator"],
   },
 ];

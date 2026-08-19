@@ -24,8 +24,11 @@ behaviour.
   supervision, Matrix records, roster checks and volunteer activities use audited workflows.
 - In-app notices and email delivery evidence extend the existing notification worker. Account and
   capability invitations are handled by the new `coordination-invite` Edge Function.
-- No fixture, activity, offer, assignment or historical mapping backfill was run.
-- Dev database rollback tests, both SQL workflow suites, six frontend tests, focused lint,
+- Dev migration `20260819071731_scoped_umpire_and_coordinator_access.sql` adds association-scoped
+  Umpire eligibility and protected Coordinator bundles. The approved 17-person Hockey Ballarat
+  Umpire scope backfill was run; no fixture, activity, offer, assignment, profile, team membership
+  or historical mapping backfill was run.
+- Dev database rollback tests, both SQL workflow suites, nine frontend tests, focused lint,
   TypeScript, build, browser smoke test and unauthorised-function checks pass.
 - Full repository lint remains at the pre-existing 360-error/78-warning baseline; no finding is in a
   changed Coordination file.
@@ -68,7 +71,7 @@ The live schema remains authoritative and must be checked again immediately befo
 
 Names are indicative until checked against live naming conventions.
 
-### 1. Capabilities and invitations
+### 1. Umpire role, capabilities and invitations
 
 - `coordination_capabilities`
   - person, capability type, organisation scope, active dates and state.
@@ -77,6 +80,9 @@ Names are indicative until checked against live naming conventions.
 
 Reuse existing `user_roles` only if a written source-of-truth review proves it can represent the
 confirmed capability workflow without duplicate authority.
+
+Current decision: `UMPIRE` uses one required association scope and is itself sufficient for offers.
+Technical Bench, Volunteer and Supervising Umpire remain in the capability invitation workflow.
 
 ### 2. Permission keys
 

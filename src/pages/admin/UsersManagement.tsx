@@ -79,6 +79,7 @@ interface PendingInvite {
 interface UserWithRoles extends Profile {
   roles: AppRole[];
   roleScopes: RoleWithScope[];
+  coordinationScopes: CoordinationScope[];
   memberships: Membership[];
   pendingInvites: PendingInvite[];
 }
@@ -90,7 +91,26 @@ interface RoleWithScope {
   team_id: string | null;
 }
 
-const ALL_ROLES: AppRole[] = ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "ASSOCIATION_ADMIN", "SUPER_ADMIN", "UMPIRE", "UMPIRE_ADMIN", "VOTER"];
+type CoordinationResponsibility =
+  | "UMPIRE_COORDINATOR"
+  | "TECHNICAL_BENCH_COORDINATOR"
+  | "VOLUNTEER_COORDINATOR";
+
+interface CoordinationScope {
+  id: string;
+  user_id?: string;
+  responsibility: CoordinationResponsibility;
+  scope_type: "ASSOCIATION" | "CLUB";
+  scope_id: string;
+}
+
+const ALL_ROLES: AppRole[] = ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "ASSOCIATION_ADMIN", "SUPER_ADMIN", "UMPIRE", "VOTER"];
+
+const COORDINATOR_LABELS: Record<CoordinationResponsibility, string> = {
+  UMPIRE_COORDINATOR: "Umpire Coordinator",
+  TECHNICAL_BENCH_COORDINATOR: "Technical Bench Coordinator",
+  VOLUNTEER_COORDINATOR: "Volunteer Coordinator",
+};
 
 const ROLE_LEVEL: Record<AppRole, number> = {
   SUPER_ADMIN: 6,
@@ -118,6 +138,7 @@ const ROLES_NEEDING_SCOPE: Record<string, string> = {
   CLUB_ADMIN: "club",
   TEAM_MANAGER: "team",
   COACH: "team",
+  UMPIRE: "association",
 };
 
 const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
@@ -270,6 +291,8 @@ const UsersManagement = () => {
   const [managerScopes, setManagerScopes] = useState<{ id: string, association_id: string, club_id: string, division_id: string, team_id: string }[]>([]);
   const [assocAdminScopes, setAssocAdminScopes] = useState<{ id: string, association_id: string }[]>([]);
   const [clubAdminScopes, setClubAdminScopes] = useState<{ id: string, association_id: string, club_id: string }[]>([]);
+  const [umpireScopes, setUmpireScopes] = useState<{ id: string, association_id: string }[]>([]);
+  const [coordinationScopes, setCoordinationScopes] = useState<CoordinationScope[]>([]);
   const [saving, setSaving] = useState(false);
   const [primaryRequests, setPrimaryRequests] = useState<any[]>([]);
 
@@ -533,13 +556,14 @@ const UsersManagement = () => {
       let membershipsData: MembershipRow[] = [];
       let pendingInvitesData: PendingInviteRow[] = [];
       let userRoles: ({ user_id: string } & RoleWithScope)[] = [];
+      let coordinationResponsibilities: CoordinationScope[] = [];
       if (pageUserIds.length > 0) {
         let membershipQuery = supabase
           .from("team_memberships")
           .select("id, user_id, team_id, status, membership_type")
           .in("user_id", pageUserIds);
         if (!isSuperAdmin) membershipQuery = membershipQuery.in("team_id", scopedIds);
-        const [membershipsRes, invitesRes, rolesRes] = await Promise.all([
+        const [membershipsRes, invitesRes, rolesRes, coordinationRes] = await Promise.all([
           membershipQuery,
           supabase
             .from("requests" as never)
@@ -551,13 +575,20 @@ const UsersManagement = () => {
             .from("user_roles")
             .select("user_id, role, association_id, club_id, team_id")
             .in("user_id", pageUserIds),
+          supabase.rpc("admin_list_coordination_responsibilities", {
+            p_user_ids: pageUserIds,
+            p_actor_mode: actorMode,
+          }),
         ]);
         if (membershipsRes.error) throw membershipsRes.error;
         if (invitesRes.error) throw invitesRes.error;
         if (rolesRes.error) throw rolesRes.error;
+        if (coordinationRes.error) throw coordinationRes.error;
         membershipsData = membershipsRes.data || [];
         pendingInvitesData = (invitesRes.data || []) as unknown as PendingInviteRow[];
         userRoles = (rolesRes.data || []) as ({ user_id: string } & RoleWithScope)[];
+        coordinationResponsibilities = ((coordinationRes.data || []) as unknown as Omit<CoordinationScope, "id">[])
+          .map((item) => ({ ...item, id: crypto.randomUUID() }));
       }
 
       const usersWithRoles: UserWithRoles[] = profiles.map((profile) => {
@@ -597,6 +628,7 @@ const UsersManagement = () => {
         ...profile,
         roles: Array.from(new Set(profileRoles.map((r) => r.role))),
         roleScopes: profileRoles,
+        coordinationScopes: coordinationResponsibilities.filter((item) => item.user_id === profile.id),
         // Team access roles and player memberships are separate concepts.
         // Coach and Team Manager scopes stay in roleScopes and must never be
         // presented as synthetic Primary player memberships.
@@ -754,19 +786,32 @@ const UsersManagement = () => {
 
   const renderRoleScopeAssignments = (profile: UserWithRoles) => {
     const seenLabels = new Set<string>();
-    const assignments = profile.roleScopes.flatMap((scope, index) => {
+    const roleAssignments = profile.roleScopes.flatMap((scope, index) => {
       const team = scope.team_id ? teams.find((item) => item.id === scope.team_id) : undefined;
       const clubId = scope.club_id || team?.club_id;
       const club = clubId ? clubs.find((item) => item.id === clubId) : undefined;
       const associationId = scope.association_id || club?.association_id;
       const association = associationId ? associations.find((item) => item.id === associationId) : undefined;
       const division = team?.division_id ? divisions.find((item) => item.id === team.division_id) : undefined;
-      const label = [association?.name, club?.name, division?.name, team?.name].filter(Boolean).join(" / ");
+      const scopeLabel = [association?.name, club?.name, division?.name, team?.name].filter(Boolean).join(" / ");
+      const label = scopeLabel ? `${getRoleDisplayName(scope.role)} — ${scopeLabel}` : "";
 
       if (!label || seenLabels.has(label)) return [];
       seenLabels.add(label);
       return [{ key: `${scope.role}-${scope.association_id || "all"}-${scope.club_id || "all"}-${scope.team_id || "all"}-${index}`, label }];
     });
+    const coordinatorAssignments = profile.coordinationScopes.flatMap((scope, index) => {
+      const association = scope.scope_type === "ASSOCIATION"
+        ? associations.find((item) => item.id === scope.scope_id)
+        : associations.find((item) => item.id === clubs.find((club) => club.id === scope.scope_id)?.association_id);
+      const club = scope.scope_type === "CLUB" ? clubs.find((item) => item.id === scope.scope_id) : undefined;
+      const scopeLabel = [association?.name, club?.name].filter(Boolean).join(" / ");
+      const label = `${COORDINATOR_LABELS[scope.responsibility]} — ${scopeLabel || "Unknown scope"}`;
+      if (seenLabels.has(label)) return [];
+      seenLabels.add(label);
+      return [{ key: `coordination-${scope.responsibility}-${scope.scope_type}-${scope.scope_id}-${index}`, label }];
+    });
+    const assignments = [...roleAssignments, ...coordinatorAssignments];
 
     if (assignments.length === 0) {
       return <span className="text-muted-foreground text-sm">Unassigned</span>;
@@ -902,19 +947,29 @@ const UsersManagement = () => {
     setManagerScopes([]);
     setAssocAdminScopes([]);
     setClubAdminScopes([]);
+    setUmpireScopes([]);
+    setCoordinationScopes([]);
 
-    const { data: rolesData, error: rolesError } = await supabase
-      .from("user_roles")
-      .select("role, association_id, club_id, team_id")
-      .eq("user_id", u.id);
+    const [rolesResult, coordinationResult] = await Promise.all([
+      supabase
+        .from("user_roles")
+        .select("role, association_id, club_id, team_id")
+        .eq("user_id", u.id),
+      supabase.rpc("admin_list_coordination_responsibilities", {
+        p_user_ids: [u.id],
+        p_actor_mode: actorMode,
+      }),
+    ]);
+    const { data: rolesData, error: rolesError } = rolesResult;
 
     if (requestId !== roleLoadRequestRef.current) return false;
-    if (rolesError) {
+    if (rolesError || coordinationResult.error) {
       setRolesLoading(false);
-      setRolesLoadError(rolesError.message);
+      const message = rolesError?.message || coordinationResult.error?.message || "Access details could not load.";
+      setRolesLoadError(message);
       toast({
         title: "Roles could not load",
-        description: rolesError.message,
+        description: message,
         variant: "destructive",
       });
       return false;
@@ -925,6 +980,7 @@ const UsersManagement = () => {
     const mScopes: any[] = [];
     const aScopes: any[] = [];
     const clScopes: any[] = [];
+    const uScopes: any[] = [];
 
     (rolesData || []).forEach(r => {
       roles.add(r.role as AppRole);
@@ -938,6 +994,8 @@ const UsersManagement = () => {
         aScopes.push({ id: crypto.randomUUID(), association_id: r.association_id });
       } else if (r.role === "CLUB_ADMIN" && r.club_id) {
         clScopes.push({ id: crypto.randomUUID(), association_id: r.association_id || "", club_id: r.club_id });
+      } else if (r.role === "UMPIRE" && r.association_id) {
+        uScopes.push({ id: crypto.randomUUID(), association_id: r.association_id });
       }
     });
 
@@ -946,6 +1004,9 @@ const UsersManagement = () => {
     setManagerScopes(mScopes.length > 0 ? mScopes : [{ id: crypto.randomUUID(), association_id: "", club_id: "", division_id: "", team_id: "" }]);
     setAssocAdminScopes(aScopes.length > 0 ? aScopes : [{ id: crypto.randomUUID(), association_id: "" }]);
     setClubAdminScopes(clScopes.length > 0 ? clScopes : [{ id: crypto.randomUUID(), association_id: "", club_id: "" }]);
+    setUmpireScopes(uScopes.length > 0 ? uScopes : [{ id: crypto.randomUUID(), association_id: "" }]);
+    setCoordinationScopes(((coordinationResult.data || []) as unknown as Omit<CoordinationScope, "id">[])
+      .map((item) => ({ ...item, id: crypto.randomUUID() })));
     setShowTeamAssign(false);
     setAssignAssociationId("");
     setAssignClubId("");
@@ -994,10 +1055,11 @@ const UsersManagement = () => {
   };
 
   const canAssignRole = (role: AppRole): boolean => {
+    if (role === "UMPIRE_ADMIN") return false;
     if (isSuperAdmin) return true;
     if (role === "SUPER_ADMIN") return false;
     if (scopedAssociationIds.length > 0) {
-      return ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN"].includes(role);
+      return ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "UMPIRE"].includes(role);
     }
     if (scopedClubIds.length > 0) {
       return ["PLAYER", "COACH", "TEAM_MANAGER"].includes(role);
@@ -1063,6 +1125,24 @@ const UsersManagement = () => {
         return;
       }
     }
+    if (selectedRoles.includes("UMPIRE")) {
+      if (umpireScopes.length === 0 || umpireScopes.some((scope) => !scope.association_id)) {
+        stopForInvalidScope("Select an association for every Umpire row.");
+        return;
+      }
+      if (hasDuplicates(umpireScopes.map((scope) => scope.association_id))) {
+        stopForInvalidScope("The same association cannot be assigned twice to Umpire.");
+        return;
+      }
+    }
+    if (coordinationScopes.some((scope) => !scope.scope_id)) {
+      stopForInvalidScope("Select a scope for every Coordinator responsibility.");
+      return;
+    }
+    if (hasDuplicates(coordinationScopes.map((scope) => `${scope.responsibility}:${scope.scope_type}:${scope.scope_id}`))) {
+      stopForInvalidScope("The same Coordinator responsibility and scope cannot be assigned twice.");
+      return;
+    }
 
     const p_coach_scopes = selectedRoles.includes("COACH")
       ? coachScopes
@@ -1091,14 +1171,24 @@ const UsersManagement = () => {
             club_id: s.club_id,
           }))
       : [];
+    const p_umpire_associations = selectedRoles.includes("UMPIRE")
+      ? umpireScopes.filter((scope) => scope.association_id).map((scope) => scope.association_id)
+      : [];
+    const p_coordination_responsibilities = coordinationScopes.map((scope) => ({
+      responsibility: scope.responsibility,
+      scope_type: scope.scope_type,
+      scope_id: scope.scope_id,
+    }));
 
-    const { error } = await supabase.rpc('admin_save_user_roles' as any, {
+    const { error } = await supabase.rpc("admin_save_user_access", {
       p_user_id: selectedUser.id,
       p_roles: selectedRoles,
       p_coach_scopes: p_coach_scopes.length > 0 ? p_coach_scopes : null,
       p_manager_scopes: p_manager_scopes.length > 0 ? p_manager_scopes : null,
       p_association_admin_associations: p_association_admin_associations.length > 0 ? p_association_admin_associations : null,
       p_club_admin_scopes: p_club_admin_scopes.length > 0 ? p_club_admin_scopes : null,
+      p_umpire_associations: p_umpire_associations.length > 0 ? p_umpire_associations : null,
+      p_coordination_responsibilities,
       p_actor_mode: actorMode,
     });
 
@@ -1540,6 +1630,106 @@ const UsersManagement = () => {
     </div>
   );
 
+  const canAssignCoordinator = (responsibility: CoordinationResponsibility) => {
+    if (isSuperAdmin || scopedAssociationIds.length > 0) return true;
+    return scopedClubIds.length > 0 && responsibility !== "UMPIRE_COORDINATOR";
+  };
+
+  const addCoordinatorScope = (responsibility: CoordinationResponsibility) => {
+    const associationOnly = responsibility === "UMPIRE_COORDINATOR";
+    const clubOnly = !isSuperAdmin && scopedAssociationIds.length === 0;
+    setCoordinationScopes((current) => [...current, {
+      id: crypto.randomUUID(),
+      responsibility,
+      scope_type: associationOnly || !clubOnly ? "ASSOCIATION" : "CLUB",
+      scope_id: "",
+    }]);
+  };
+
+  const renderCoordinatorScopes = () => (
+    <div className="space-y-3 mt-5 border-t pt-4">
+      <div>
+        <Label className="text-sm font-medium">Coordinator responsibilities</Label>
+        <p className="text-xs text-muted-foreground">Fixed permission bundles. They do not grant Association Admin or Club Admin access.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {(Object.keys(COORDINATOR_LABELS) as CoordinationResponsibility[]).map((responsibility) => (
+          <Button
+            key={responsibility}
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={!canAssignCoordinator(responsibility)}
+            onClick={() => addCoordinatorScope(responsibility)}
+          >
+            <Plus className="mr-1 h-3 w-3" />{COORDINATOR_LABELS[responsibility]}
+          </Button>
+        ))}
+      </div>
+      <div className="space-y-3">
+        {coordinationScopes.map((scope) => {
+          const associationOnly = scope.responsibility === "UMPIRE_COORDINATOR";
+          const clubOnly = !isSuperAdmin && scopedAssociationIds.length === 0;
+          const scopeOptions = scope.scope_type === "ASSOCIATION"
+            ? (isSuperAdmin ? associations : availableAssociations).map((association) => ({
+                id: association.id,
+                label: association.name,
+              }))
+            : clubs
+                .filter((club) => isSuperAdmin || scopedClubIds.includes(club.id) || scopedAssociationIds.includes(club.association_id))
+                .map((club) => ({
+                  id: club.id,
+                  label: `${associations.find((association) => association.id === club.association_id)?.name || "Association"} / ${club.name}`,
+                }));
+
+          return (
+            <div key={scope.id} className="grid items-end gap-2 rounded-md border p-3 sm:grid-cols-[1.5fr_130px_1.5fr_auto]">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Responsibility</Label>
+                <Badge variant="secondary">{COORDINATOR_LABELS[scope.responsibility]}</Badge>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Scope type</Label>
+                <Select
+                  value={scope.scope_type}
+                  disabled={associationOnly || clubOnly}
+                  onValueChange={(value) => setCoordinationScopes((current) => current.map((item) => item.id === scope.id
+                    ? { ...item, scope_type: value as "ASSOCIATION" | "CLUB", scope_id: "" }
+                    : item))}
+                >
+                  <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ASSOCIATION">Association</SelectItem>
+                    {!associationOnly && <SelectItem value="CLUB">Club</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Scope</Label>
+                <Select
+                  value={scope.scope_id || "__none__"}
+                  onValueChange={(value) => setCoordinationScopes((current) => current.map((item) => item.id === scope.id
+                    ? { ...item, scope_id: value === "__none__" ? "" : value }
+                    : item))}
+                >
+                  <SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue placeholder="Select scope" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Select scope</SelectItem>
+                    {scopeOptions.map((option) => <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => setCoordinationScopes((current) => current.filter((item) => item.id !== scope.id))}>
+                Remove
+              </Button>
+            </div>
+          );
+        })}
+        {coordinationScopes.length === 0 && <p className="text-sm text-muted-foreground">No Coordinator responsibilities assigned.</p>}
+      </div>
+    </div>
+  );
+
   const assignAvailableClubs = assignAssociationId
     ? clubs.filter((c) => c.association_id === assignAssociationId)
     : clubs;
@@ -1603,6 +1793,10 @@ const UsersManagement = () => {
     return scopeText || "All allowed scope";
   };
 
+  const rolePills = selectedRoles.includes("UMPIRE_ADMIN")
+    ? [...ALL_ROLES, "UMPIRE_ADMIN" as AppRole]
+    : ALL_ROLES;
+
   const rolesTabContent = rolesLoading ? (
     <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
       <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1636,7 +1830,7 @@ const UsersManagement = () => {
       <div className="space-y-2">
         <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Roles</h4>
         <div className="flex flex-wrap gap-2">
-          {ALL_ROLES.map((role) => {
+          {rolePills.map((role) => {
             const disabled = !canAssignRole(role);
             const isChecked = selectedRoles.includes(role);
 
@@ -1665,6 +1859,8 @@ const UsersManagement = () => {
       {selectedRoles.includes("CLUB_ADMIN") && renderClubScopeList("Club Admin", clubAdminScopes, setClubAdminScopes)}
       {selectedRoles.includes("COACH") && renderTeamScopeList("Coach", coachScopes, setCoachScopes)}
       {selectedRoles.includes("TEAM_MANAGER") && renderTeamScopeList("Team Manager", managerScopes, setManagerScopes)}
+      {selectedRoles.includes("UMPIRE") && renderAssociationScopeList("Umpire", umpireScopes, setUmpireScopes)}
+      {renderCoordinatorScopes()}
     </div>
   );
 
@@ -2171,6 +2367,7 @@ const UsersManagement = () => {
                                 </>
                               );
                             })()}
+                            {(u.roleScopes.length > 0 || u.coordinationScopes.length > 0) && renderRoleScopeAssignments(u)}
                           </div>
                         )}
                       </TableCell>
@@ -2200,14 +2397,21 @@ const UsersManagement = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {u.roles.length === 0 ? (
+                          {u.roles.length === 0 && u.coordinationScopes.length === 0 ? (
                             <span className="text-muted-foreground text-sm">No roles</span>
                           ) : (
-                            u.roles.map((role) => (
+                            <>
+                            {u.roles.map((role) => (
                               <Badge key={role} className={getRoleBadgeColor(role)} variant="secondary">
                                 {getRoleDisplayName(role)}
                               </Badge>
-                            ))
+                            ))}
+                            {Array.from(new Set(u.coordinationScopes.map((scope) => scope.responsibility))).map((responsibility) => (
+                              <Badge key={responsibility} variant="outline">
+                                {COORDINATOR_LABELS[responsibility]}
+                              </Badge>
+                            ))}
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -2552,7 +2756,7 @@ const UsersManagement = () => {
               <div className="space-y-2">
                 <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Roles</h4>
                 <div className="flex flex-wrap gap-2">
-                  {ALL_ROLES.map((role) => {
+                  {rolePills.map((role) => {
                     const disabled = !canAssignRole(role);
                     const isChecked = selectedRoles.includes(role);
 
@@ -2587,6 +2791,8 @@ const UsersManagement = () => {
               {selectedRoles.includes("CLUB_ADMIN") && renderClubScopeList("Club Admin", clubAdminScopes, setClubAdminScopes)}
               {selectedRoles.includes("COACH") && renderTeamScopeList("Coach", coachScopes, setCoachScopes)}
               {selectedRoles.includes("TEAM_MANAGER") && renderTeamScopeList("Team Manager", managerScopes, setManagerScopes)}
+              {selectedRoles.includes("UMPIRE") && renderAssociationScopeList("Umpire", umpireScopes, setUmpireScopes)}
+              {renderCoordinatorScopes()}
               </TabsContent>
 
               <TabsContent value="teams" className="mt-4">

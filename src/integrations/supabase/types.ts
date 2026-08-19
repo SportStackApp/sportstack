@@ -10263,6 +10263,7 @@ export type Database = {
           name: string
           owner_scope_id: string
           owner_scope_type: string
+          system_key: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -10275,6 +10276,7 @@ export type Database = {
           name: string
           owner_scope_id: string
           owner_scope_type: string
+          system_key?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -10287,6 +10289,7 @@ export type Database = {
           name?: string
           owner_scope_id?: string
           owner_scope_type?: string
+          system_key?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -15119,6 +15122,10 @@ export type Database = {
         }
         Returns: string
       }
+      admin_list_coordination_responsibilities: {
+        Args: { p_actor_mode?: string; p_user_ids: string[] }
+        Returns: Json
+      }
       admin_manage_team_membership: {
         Args: {
           p_action: string
@@ -15144,6 +15151,20 @@ export type Database = {
           p_field_choices: Json
           p_keep_id: string
           p_merge_id: string
+        }
+        Returns: undefined
+      }
+      admin_save_user_access: {
+        Args: {
+          p_actor_mode?: string
+          p_association_admin_associations?: string[]
+          p_club_admin_scopes?: Json
+          p_coach_scopes?: Json
+          p_coordination_responsibilities?: Json
+          p_manager_scopes?: Json
+          p_roles: string[]
+          p_umpire_associations?: string[]
+          p_user_id: string
         }
         Returns: undefined
       }
@@ -15370,6 +15391,14 @@ export type Database = {
         }
         Returns: string
       }
+      coordination_confirm_offer_scoped_impl: {
+        Args: {
+          p_actor_mode?: string
+          p_recipient_id: string
+          p_warning_override_note?: string
+        }
+        Returns: string
+      }
       coordination_create_activity: {
         Args: {
           p_activity_type: string
@@ -15400,7 +15429,20 @@ export type Database = {
         Args: { p_assignment_id: string; p_reason: string }
         Returns: undefined
       }
+      coordination_get_current_access: {
+        Args: {
+          p_actor_mode?: string
+          p_association_id?: string
+          p_club_id?: string
+          p_team_id?: string
+        }
+        Returns: Json
+      }
       coordination_get_fixture_positions: {
+        Args: { p_actor_mode?: string; p_fixture_id: string }
+        Returns: Json
+      }
+      coordination_get_fixture_positions_scoped_impl: {
         Args: { p_actor_mode?: string; p_fixture_id: string }
         Returns: Json
       }
@@ -15430,11 +15472,29 @@ export type Database = {
         }
         Returns: string
       }
+      coordination_late_assign_scoped_impl: {
+        Args: {
+          p_actor_mode?: string
+          p_note?: string
+          p_position_id: string
+          p_user_id: string
+          p_warning_override_note?: string
+        }
+        Returns: string
+      }
       coordination_list_eligible_people: {
         Args: { p_actor_mode?: string; p_position_id: string }
         Returns: Json
       }
+      coordination_list_eligible_people_scoped_impl: {
+        Args: { p_actor_mode?: string; p_position_id: string }
+        Returns: Json
+      }
       coordination_prepare_fixture: {
+        Args: { p_actor_mode?: string; p_fixture_id: string }
+        Returns: number
+      }
+      coordination_prepare_fixture_scoped_impl: {
         Args: { p_actor_mode?: string; p_fixture_id: string }
         Returns: number
       }
@@ -15485,6 +15545,15 @@ export type Database = {
         }
         Returns: number
       }
+      coordination_revise_offer_note_scoped_impl: {
+        Args: {
+          p_actor_mode?: string
+          p_material: boolean
+          p_note: string
+          p_offer_batch_id: string
+        }
+        Returns: number
+      }
       coordination_send_offer: {
         Args: {
           p_actor_mode?: string
@@ -15496,7 +15565,26 @@ export type Database = {
         }
         Returns: string
       }
+      coordination_send_offer_scoped_impl: {
+        Args: {
+          p_actor_mode?: string
+          p_note?: string
+          p_override_note?: string
+          p_position_id: string
+          p_recipient_ids: string[]
+          p_response_deadline?: string
+        }
+        Returns: string
+      }
       coordination_take_over_offer: {
+        Args: {
+          p_actor_mode?: string
+          p_offer_batch_id: string
+          p_reason: string
+        }
+        Returns: undefined
+      }
+      coordination_take_over_offer_scoped_impl: {
         Args: {
           p_actor_mode?: string
           p_offer_batch_id: string

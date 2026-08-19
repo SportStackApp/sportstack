@@ -89,3 +89,21 @@ export const isUrgentOffer = (deadline: string, now = new Date()) =>
 
 export const formatCoordinationStatus = (status: string) =>
   status.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase());
+
+export type CoordinationTab = "fixtures" | "mine" | "matrix" | "activities" | "roster-checks";
+
+export const coordinationTabsForAccess = (access: {
+  can_manage_umpires: boolean;
+  can_manage_technical_bench: boolean;
+  can_manage_volunteers: boolean;
+  can_manage_matrix: boolean;
+  can_review_roster_mismatches: boolean;
+}): CoordinationTab[] => {
+  const tabs: CoordinationTab[] = [];
+  if (access.can_manage_umpires || access.can_manage_technical_bench) tabs.push("fixtures");
+  tabs.push("mine");
+  if (access.can_manage_matrix) tabs.push("matrix");
+  if (access.can_manage_volunteers) tabs.push("activities");
+  if (access.can_review_roster_mismatches) tabs.push("roster-checks");
+  return tabs;
+};

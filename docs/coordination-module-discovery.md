@@ -47,7 +47,7 @@ the offer and assignment system.
 
 Supervision is optional. A Supervising Umpire can be added to either Umpire or both at any time.
 
-## Roles, capabilities and scope
+## Roles, responsibilities and scope
 
 ### Separate coordinator responsibilities
 
@@ -64,25 +64,29 @@ Umpire coordination is association-scoped by default. Association Umpire Coordin
 the association Umpire Matrix, offers, confirmations, sign-offs, qualifications, supervision and
 roster mismatch reviews.
 
-Club or team users require an explicit association grant before performing Umpire Coordinator work.
+Umpire Coordinator is association-only. A direct responsibility assignment establishes only that
+association access and does not create an Association Admin role.
 
 ### Technical Bench Coordinator
 
-There is no fixed home-club or away-club responsibility. Any authorised Technical Bench Coordinator
-can fill either position with any eligible person inside the permitted association scope.
+Technical Bench Coordinator may be association- or club-scoped. A club Coordinator can fill both
+bench positions when either fixture team belongs to their club.
 
 ### Volunteer Coordinator
 
-Volunteer Coordinators work within their assigned association, club or team scope. They may create
+Volunteer Coordinators work within their assigned association or club scope. They may create
 any basic coordination activity and define custom position names and counts.
 
 Public listings, registrations, tickets, programs and full event administration remain outside this
 module.
 
-### Capabilities and invitations
+### Umpire role and other capability invitations
 
-A person must have a SportStack account and the relevant capability before receiving an assignment
-offer.
+An association-scoped `UMPIRE` role is sufficient to receive Umpire offers and use Umpire Match
+Voting in that association. The Umpire does not accept a separate capability invitation, but still
+accepts or declines every individual game offer. Umpire does not grant Supervising Umpire.
+
+Technical Bench, Volunteer and Supervising Umpire continue to use capability invitations.
 
 The module provides an **Invite** action:
 
@@ -91,7 +95,8 @@ The module provides an **Invite** action:
 - capability is assigned only after the person accepts; and
 - the invitation does not reserve a position or start an assignment-offer deadline.
 
-This grants an assignable capability, not coordinator access.
+This grants an assignable non-Umpire capability, not coordinator access. Coordinator
+responsibilities are protected fixed permission bundles assigned in User Management.
 
 ## Umpire Matrix
 

@@ -20,10 +20,13 @@ select
   (select user_id from public.user_roles where role::text='SUPER_ADMIN' order by created_at limit 1),
   f.id,
   f.fixture_date,
-  (select id from public.profiles where is_umpire order by id limit 1),
-  (select id from public.profiles where is_umpire order by id offset 1 limit 1)
+  (select user_id from public.user_roles where role::text='UMPIRE' and association_id=c.association_id order by user_id limit 1),
+  (select user_id from public.user_roles where role::text='UMPIRE' and association_id=c.association_id order by user_id offset 1 limit 1)
 from public.fixtures f
+join public.teams home_team on home_team.id=f.home_team_id
+join public.clubs c on c.id=home_team.club_id
 where f.fixture_date>now()+interval '6 hours'
+  and (select count(*) from public.user_roles role_row where role_row.role::text='UMPIRE' and role_row.association_id=c.association_id)>=2
 order by f.fixture_date
 limit 1;
 
@@ -49,6 +52,20 @@ select public.coordination_send_offer(
   'super_admin','Test override for grade and availability warnings'
 ) from coordination_test_state;
 
+do $test$
+begin
+  if exists (
+    select 1
+    from coordination_test_state state
+    join public.coordination_capabilities capability
+      on capability.user_id in (state.umpire_one, state.umpire_two)
+     and capability.capability_type='UMPIRE'
+     and capability.active
+  ) then
+    raise exception 'Workflow test requires Umpire role eligibility without a capability row.';
+  end if;
+end $test$;
+
 update coordination_test_state s set first_recipient=(
   select r.id from public.coordination_offer_recipients r
   join public.coordination_offer_batches b on b.id=r.offer_batch_id
@@ -58,6 +75,13 @@ update coordination_test_state s set first_recipient=(
 select set_config('request.jwt.claims',jsonb_build_object('sub',umpire_one,'role','authenticated')::text,true)
 from coordination_test_state;
 select public.coordination_respond_to_offer(first_recipient,'ACCEPT',null) from coordination_test_state;
+
+select set_config('request.jwt.claims',jsonb_build_object('sub',umpire_two,'role','authenticated')::text,true)
+from coordination_test_state;
+select public.coordination_respond_to_offer(recipient.id,'DECLINE','Unavailable for this test')
+from coordination_test_state state
+join public.coordination_offer_batches batch on batch.position_id=state.position_one and batch.status='ACTIVE'
+join public.coordination_offer_recipients recipient on recipient.offer_batch_id=batch.id and recipient.user_id=state.umpire_two;
 
 do $test$
 begin
@@ -76,7 +100,7 @@ update coordination_test_state s set first_assignment=public.coordination_confir
 do $test$
 begin
   if not exists(select 1 from coordination_test_state s join public.coordination_assignments a on a.id=s.first_assignment where a.assigned_user_id=s.umpire_one and a.status='CONFIRMED') then raise exception 'Coordinator confirmation did not create the official assignment.'; end if;
-  if exists(select 1 from coordination_test_state s join public.coordination_offer_recipients r on r.user_id=s.umpire_two join public.coordination_offer_batches b on b.id=r.offer_batch_id where b.position_id=s.position_one and r.status<>'NOT_SELECTED') then raise exception 'Unselected recipients were not closed.'; end if;
+  if exists(select 1 from coordination_test_state s join public.coordination_offer_recipients r on r.user_id=s.umpire_two join public.coordination_offer_batches b on b.id=r.offer_batch_id where b.position_id=s.position_one and r.status not in ('NOT_SELECTED','DECLINED')) then raise exception 'Unselected recipients were not closed.'; end if;
   if not exists(select 1 from coordination_test_state s join public.fixture_availability fa on fa.fixture_id=s.fixture_id and fa.user_id=s.umpire_one where fa.status='UMPIRING') then raise exception 'Confirmed Umpire availability state was not written.'; end if;
 end $test$;
 

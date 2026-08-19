@@ -1,10 +1,36 @@
 # SportStack Current State
 
-Last updated: 2026-08-17
+Last updated: 2026-08-19
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
+
+## Scoped Umpire and Coordinator access on Development — 19 August 2026
+
+- Additive Dev migration `20260819071731_scoped_umpire_and_coordinator_access.sql` makes Umpire an
+  association-only role and uses it directly for Umpire offers. No separate Umpire capability
+  invitation is required, and Umpire does not imply Supervising Umpire.
+- The approved dry-run and rollback check covered all 17 current Umpires. All 17 now have exactly
+  one Hockey Ballarat association-only Umpire row. Profiles, names, emails, team memberships and
+  historical game mappings were not changed. The evidence list is in
+  `docs/umpire-scope-backfill-2026-08-19.md`.
+- User Management now requires an association for Umpire and provides protected Umpire
+  Coordinator, Technical Bench Coordinator and Volunteer Coordinator pills. These are fixed direct
+  permission bundles, not new administrator roles. The three existing `UMPIRE_ADMIN` records are
+  labelled **Legacy Umpire Admin**, cannot be newly assigned and were not converted.
+- Umpire Coordinator is association-only. Technical Bench and Volunteer Coordinator may be
+  association- or club-scoped. A club Technical Bench Coordinator can manage both bench positions
+  when either fixture team belongs to their club. Coordinator access does not grant Association
+  Admin, Club Admin, sibling Coordinator or sensitive-note redaction permissions.
+- Coordinators receive full Coordination navigation but see only authorised tabs and position
+  actions. Ordinary Umpires continue to see personal offers and assignments.
+- Both transactional Coordination SQL suites pass on Dev, including role-only Umpire offer
+  eligibility, accept/decline, unrelated-association denial, exact Coordinator scopes, removal,
+  duplicate rejection, club Technical Bench fixture access, and legacy-record preservation.
+- All nine focused frontend tests, TypeScript and the production build pass. Full repository lint
+  remains at its unchanged documented baseline of 360 errors and 78 warnings.
+- Dev only. `main` and Production remain unchanged.
 
 ## Coordination Module implemented on Development — 17 August 2026
 
@@ -28,14 +54,15 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - Reminder, expiry, notification, availability, material fixture-change reconfirmation, late roster
   correction/dispute, supervision, grade sign-off, qualification and restricted-note workflows are
   database enforced and audited.
-- New users can receive an account invitation; existing users without capability receive an in-app
-  capability invitation. Umpire or Technical Bench capability is applied only after acceptance.
+- New users can receive an account invitation. Technical Bench, Volunteer and Supervising Umpire
+  capabilities still use acceptance; Umpire eligibility comes directly from the scoped Umpire role.
 - Umpire history remains association-grade based. Technical Bench warns on first duty and when an
   under-18 is not paired with an adult, using age on the fixture day without showing birth dates.
   Umpire Match Voting roster differences create a review flag only and never block or change a vote.
-- Twelve additive Dev migrations and the `coordination-invite` Edge Function are active as version
-  2. The shared notification dispatcher is active as Dev version 7. No backfill or Production
-  change was made.
+- The original twelve additive Dev migrations and the `coordination-invite` Edge Function are active
+  as version 2. The shared notification dispatcher is active as Dev version 7. No fixture,
+  assignment or historical mapping backfill was made; the later approved Umpire role-scope
+  backfill is recorded above. No Production change was made.
 - Both transactional SQL suites, the module-access regression check, six frontend tests, focused lint, TypeScript, production build,
   signed-out browser routing and unauthorised Edge checks pass. Full lint remains the known
   360-error/78-warning baseline. A signed-in Super Admin browser check now loads the module without

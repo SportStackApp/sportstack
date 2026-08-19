@@ -74,6 +74,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useModuleAvailability } from "@/hooks/useModuleAvailability";
+import { useCoordinationAccess } from "@/hooks/useCoordinationAccess";
 import { APP_ENVIRONMENT, APP_ENVIRONMENT_CLASS, APP_VERSION } from "@/lib/appVersion";
 import { filterClubsForActiveMode } from "@/lib/activeScopeOptions";
 import { isProfileReviewRequired } from "@/lib/profileCompletion";
@@ -577,6 +578,7 @@ const AppLayout = () => {
     scopedClubIds,
   } = useAdminScope();
   const { enabled: moduleEnabled } = useModuleAvailability([...NAV_MODULE_KEYS]);
+  const { access: coordinationAccess } = useCoordinationAccess();
   const { allowed: expenseHubAllowed } = useExpenseHubAccess();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -1050,12 +1052,20 @@ const AppLayout = () => {
     navigate(`/associations/${associationId}`);
   };
 
-  const baseSections = expenseHubAllowed
+  const rawBaseSections = expenseHubAllowed
     ? [
         ...NAV_SETS[activeMode],
         { heading: "Finance", items: [{ path: "/expense-hub", label: "Expense Hub", icon: ReceiptText }] },
       ]
     : NAV_SETS[activeMode];
+  const baseSections = coordinationAccess.is_coordinator
+    ? rawBaseSections.map((section) => ({
+        ...section,
+        items: section.items.map((item) => item.path === "/coordination/my-assignments"
+          ? { ...item, path: "/coordination", label: "Coordination" }
+          : item),
+      }))
+    : rawBaseSections;
   // Viewing as is an actual data/action restriction, not only a navigation skin.
   const showAssociationSelector = activeMode === "super_admin";
   const showClubSelector = activeMode === "super_admin" || activeMode === "association" || activeMode === "club";
@@ -1101,7 +1111,12 @@ const AppLayout = () => {
       return true;
     }),
   })).filter((section) => section.items.length > 0);
-  const mobileNavItems = isBrandNewUser ? MOBILE_NAV.player.filter((item) => item.path === "/dashboard") : MOBILE_NAV[activeMode];
+  const rawMobileNavItems = isBrandNewUser ? MOBILE_NAV.player.filter((item) => item.path === "/dashboard") : MOBILE_NAV[activeMode];
+  const mobileNavItems = coordinationAccess.is_coordinator
+    ? rawMobileNavItems.map((item) => item.path === "/coordination/my-assignments"
+      ? { ...item, path: "/coordination", label: "Coordination" }
+      : item)
+    : rawMobileNavItems;
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleNotificationClick = async (notification: Notification) => {

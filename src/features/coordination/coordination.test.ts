@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   capOfferDeadline,
   coordinationAvailabilityLabel,
+  coordinationTabsForAccess,
   defaultOfferDeadline,
   formatCoordinationStatus,
   isCoordinationAvailability,
@@ -36,5 +37,35 @@ describe("Coordination offer rules", () => {
 
   it("labels confirmed fixture duties clearly", () => {
     expect(coordinationAvailabilityLabel("TECHNICAL_BENCH")).toBe("Technical Bench");
+  });
+
+  it("keeps an ordinary Umpire on personal Coordination work", () => {
+    expect(coordinationTabsForAccess({
+      can_manage_umpires: false,
+      can_manage_technical_bench: false,
+      can_manage_volunteers: false,
+      can_manage_matrix: false,
+      can_review_roster_mismatches: false,
+    })).toEqual(["mine"]);
+  });
+
+  it("shows only the Umpire Coordinator tabs", () => {
+    expect(coordinationTabsForAccess({
+      can_manage_umpires: true,
+      can_manage_technical_bench: false,
+      can_manage_volunteers: false,
+      can_manage_matrix: true,
+      can_review_roster_mismatches: true,
+    })).toEqual(["fixtures", "mine", "matrix", "roster-checks"]);
+  });
+
+  it("keeps Volunteer Coordinator access separate", () => {
+    expect(coordinationTabsForAccess({
+      can_manage_umpires: false,
+      can_manage_technical_bench: false,
+      can_manage_volunteers: true,
+      can_manage_matrix: false,
+      can_review_roster_mismatches: false,
+    })).toEqual(["mine", "activities"]);
   });
 });

@@ -6,6 +6,7 @@ import { useAppMode } from "@/contexts/AppModeContext";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useCoordinationAccess } from "@/hooks/useCoordinationAccess";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   defaultOfferDeadline,
+  coordinationTabsForAccess,
   formatCoordinationStatus,
   type EligiblePerson,
   type FixturePositionSummary,
@@ -105,6 +107,7 @@ export default function CoordinationModule() {
   const { activeMode, contextConfirmed } = useAppMode();
   const { selectedAssociationId, selectedClubId, selectedTeamId } = useTeamContext();
   const { toast } = useToast();
+  const { access: coordinationAccess, loading: accessLoading } = useCoordinationAccess();
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [fixtures, setFixtures] = useState<FixtureRow[]>([]);
@@ -133,7 +136,7 @@ export default function CoordinationModule() {
   const [activity, setActivity] = useState({ name: "", type: "Working bee", starts: "", ends: "", location: "", position: "Volunteer", count: "1" });
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteCapability, setInviteCapability] = useState<"UMPIRE" | "TECHNICAL_BENCH" | "VOLUNTEER" | "SUPERVISING_UMPIRE">("UMPIRE");
+  const [inviteCapability, setInviteCapability] = useState<"TECHNICAL_BENCH" | "VOLUNTEER" | "SUPERVISING_UMPIRE">("SUPERVISING_UMPIRE");
   const [matrixAction, setMatrixAction] = useState<{ kind: "GRADE" | "QUALIFICATION" | "NOTE" | "LOG"; userId: string; name: string } | null>(null);
   const [matrixActionValue, setMatrixActionValue] = useState("");
   const [matrixActionExtra, setMatrixActionExtra] = useState("");
@@ -443,8 +446,12 @@ export default function CoordinationModule() {
   };
 
   const createActivity = async () => {
-    const scopeType = selectedTeamId ? "TEAM" : selectedClubId ? "CLUB" : "ASSOCIATION";
-    const scopeId = selectedTeamId || selectedClubId || selectedAssociationId || matrixAssociationId;
+    const assignedScope = coordinationAccess.responsibilities.find((item) =>
+      item.responsibility === "VOLUNTEER_COORDINATOR");
+    const scopeType = assignedScope?.scope_type
+      || (selectedTeamId ? "TEAM" : selectedClubId ? "CLUB" : "ASSOCIATION");
+    const scopeId = assignedScope?.scope_id
+      || selectedTeamId || selectedClubId || selectedAssociationId || matrixAssociationId;
     if (!scopeId) return showError("Select an association, club or team first.");
     setWorking(true);
     try {
@@ -471,12 +478,19 @@ export default function CoordinationModule() {
   };
 
   const sendCapabilityInvite = async () => {
-    const scopeType = inviteCapability === "UMPIRE" || inviteCapability === "SUPERVISING_UMPIRE"
+    const responsibility = inviteCapability === "SUPERVISING_UMPIRE"
+      ? "UMPIRE_COORDINATOR"
+      : inviteCapability === "TECHNICAL_BENCH"
+        ? "TECHNICAL_BENCH_COORDINATOR"
+        : "VOLUNTEER_COORDINATOR";
+    const assignedScope = coordinationAccess.responsibilities.find((item) =>
+      item.responsibility === responsibility);
+    const scopeType = assignedScope?.scope_type || (inviteCapability === "SUPERVISING_UMPIRE"
       ? "ASSOCIATION"
-      : selectedTeamId ? "TEAM" : selectedClubId ? "CLUB" : "ASSOCIATION";
-    const scopeId = scopeType === "TEAM" ? selectedTeamId
+      : selectedTeamId ? "TEAM" : selectedClubId ? "CLUB" : "ASSOCIATION");
+    const scopeId = assignedScope?.scope_id || (scopeType === "TEAM" ? selectedTeamId
       : scopeType === "CLUB" ? selectedClubId
-      : matrixAssociationId || selectedAssociationId;
+      : matrixAssociationId || selectedAssociationId);
     if (!scopeId) return showError("Select an association scope first.");
     setWorking(true);
     try {
@@ -503,8 +517,24 @@ export default function CoordinationModule() {
   };
 
   const pendingCount = useMemo(() => myOffers.filter((offer) => ["PENDING", "ACCEPTED_AWAITING_CONFIRMATION"].includes(offer.status)).length, [myOffers]);
+  const canManageFixtures = coordinationAccess.can_manage_umpires || coordinationAccess.can_manage_technical_bench;
+  const canManageMatrix = coordinationAccess.can_manage_matrix;
+  const canManageActivities = coordinationAccess.can_manage_volunteers;
+  const canReviewRoster = coordinationAccess.can_review_roster_mismatches;
+  const visibleTabs = coordinationTabsForAccess(coordinationAccess);
+  const defaultTab = pendingCount
+    ? "mine"
+    : canManageFixtures
+      ? "fixtures"
+      : canManageMatrix
+        ? "matrix"
+        : canManageActivities
+          ? "activities"
+          : canReviewRoster
+            ? "roster-checks"
+            : "mine";
 
-  if (loading || !contextConfirmed) {
+  if (loading || accessLoading || !contextConfirmed) {
     return <div className="flex min-h-[50vh] items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>;
   }
 
@@ -517,16 +547,16 @@ export default function CoordinationModule() {
 
       <Alert><AlertTriangle className="h-4 w-4" /><AlertTitle>No until yes</AlertTitle><AlertDescription>An accepted offer means the person is willing. The position is still unfilled until the offerer confirms them.</AlertDescription></Alert>
 
-      <Tabs defaultValue={pendingCount ? "mine" : "fixtures"}>
+      <Tabs defaultValue={defaultTab}>
         <TabsList className="h-auto flex-wrap justify-start">
-          <TabsTrigger value="fixtures">Fixtures</TabsTrigger>
+          {visibleTabs.includes("fixtures") && <TabsTrigger value="fixtures">Fixtures</TabsTrigger>}
           <TabsTrigger value="mine">My work {pendingCount > 0 && <Badge className="ml-2">{pendingCount}</Badge>}</TabsTrigger>
-          <TabsTrigger value="matrix">Umpire Matrix</TabsTrigger>
-          <TabsTrigger value="activities">Volunteer activities</TabsTrigger>
-          <TabsTrigger value="roster-checks">Roster flags</TabsTrigger>
+          {visibleTabs.includes("matrix") && <TabsTrigger value="matrix">Umpire Matrix</TabsTrigger>}
+          {visibleTabs.includes("activities") && <TabsTrigger value="activities">Volunteer activities</TabsTrigger>}
+          {visibleTabs.includes("roster-checks") && <TabsTrigger value="roster-checks">Roster flags</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="fixtures" className="space-y-4">
+        {canManageFixtures && <TabsContent value="fixtures" className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
             <Card><CardHeader><CardTitle className="text-lg">Upcoming fixtures</CardTitle><CardDescription>Select a fixture to create or view its four standard positions.</CardDescription></CardHeader>
               <CardContent className="max-h-[65vh] space-y-2 overflow-y-auto">
@@ -551,7 +581,7 @@ export default function CoordinationModule() {
                 {!selectedFixture && <p className="text-sm text-muted-foreground">Nothing selected yet.</p>}
               </CardContent></Card>
           </div>
-        </TabsContent>
+        </TabsContent>}
 
         <TabsContent value="mine" className="space-y-4">
           {capabilityInvites.map((invite) => <Card key={invite.id}><CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6"><div><div className="font-medium">{formatCoordinationStatus(invite.capability_type)} capability invitation</div><div className="text-sm text-muted-foreground">Expires {displayDateTime(invite.expires_at)}</div></div><div className="flex gap-2"><Button variant="outline" onClick={() => void respondCapabilityInvite(invite.id, false)}>Decline</Button><Button onClick={() => void respondCapabilityInvite(invite.id, true)}>Accept</Button></div></CardContent></Card>)}
@@ -574,26 +604,26 @@ export default function CoordinationModule() {
           </div>
         </TabsContent>
 
-        <TabsContent value="matrix" className="space-y-4">
+        {canManageMatrix && <TabsContent value="matrix" className="space-y-4">
           <Card><CardHeader><CardTitle className="text-lg">Association Umpire Matrix</CardTitle><CardDescription>Counts include completed confirmed duties only. Restricted coordinator notes are not shown here.</CardDescription></CardHeader><CardContent>
             <div className="mb-4 flex flex-wrap gap-2"><Select value={matrixAssociationId || "__none__"} onValueChange={(value) => setMatrixAssociationId(value === "__none__" ? "" : value)}><SelectTrigger className="w-full max-w-sm"><SelectValue placeholder="Select association" /></SelectTrigger><SelectContent><SelectItem value="__none__">Select association</SelectItem>{associations.map((association) => <SelectItem key={association.id} value={association.id}>{association.name}</SelectItem>)}</SelectContent></Select><Button onClick={() => void loadMatrix()} disabled={!matrixAssociationId || working}>Load Matrix</Button><Button variant="outline" onClick={() => setInviteOpen(true)}><MailPlus className="mr-2 h-4 w-4" />Invite</Button></div>
             <div className="space-y-3">{matrix.map((row) => <div key={row.user_id} className="rounded-lg border p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><div className="font-medium">{row.name}</div><div className="text-sm text-muted-foreground">{row.completed_games} completed · {row.upcoming_games} upcoming · {row.replacement_requests} replacement requests</div></div><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => void openMatrixAction("GRADE", row)}>Add grade</Button><Button size="sm" variant="outline" onClick={() => void openMatrixAction("QUALIFICATION", row)}>Qualification</Button><Button size="sm" variant="outline" onClick={() => void openMatrixAction("NOTE", row)}>Add note</Button><Button size="sm" variant="outline" onClick={() => void openMatrixAction("LOG", row)}>View log</Button></div></div>
               <div className="mt-3 grid gap-2 md:grid-cols-2"><div><div className="text-xs font-medium uppercase text-muted-foreground">Grades</div>{row.grades.slice(0, 4).map((grade, index) => <div key={`${grade.division}-${index}`} className="mt-1 text-sm">{grade.division}: {formatCoordinationStatus(grade.status)} · {grade.signed_by}</div>)}</div><div><div className="text-xs font-medium uppercase text-muted-foreground">Qualifications</div>{row.qualifications.slice(0, 4).map((qualification) => <div key={qualification.id} className="mt-1 text-sm">{qualification.name}{qualification.expires_on ? ` · expires ${format(new Date(qualification.expires_on), "dd/MM/yyyy")}` : ""}</div>)}</div></div>
             </div>)}{matrix.length === 0 && <p className="text-sm text-muted-foreground">Select an association and load its Matrix.</p>}</div>
           </CardContent></Card>
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="roster-checks" className="space-y-4">
+        {canReviewRoster && <TabsContent value="roster-checks" className="space-y-4">
           <div className="flex justify-end"><Button onClick={() => void loadRosterChecks()} disabled={working}>Load roster flags</Button></div>
           <Alert><AlertTriangle className="h-4 w-4" /><AlertTitle>Flag only</AlertTitle><AlertDescription>A mismatch never blocks, deletes or changes an Umpire Match Voting submission.</AlertDescription></Alert>
           {rosterChecks.map((check) => <Card key={check.id}><CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6"><div><div className="font-medium">{check.fixture}</div><div className="text-sm text-muted-foreground">{displayDateTime(check.fixture_date)} · {formatCoordinationStatus(check.result)}</div><p className="mt-1 text-sm">{check.detail}</p></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => void reviewRosterCheck(check.id, "DISMISSED")}>Dismiss</Button><Button size="sm" onClick={() => void reviewRosterCheck(check.id, "CONFIRMED")}>Confirm flag</Button></div></CardContent></Card>)}
           {rosterChecks.length === 0 && <p className="text-sm text-muted-foreground">No pending roster flags loaded.</p>}
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="activities" className="space-y-4">
+        {canManageActivities && <TabsContent value="activities" className="space-y-4">
           <div className="flex justify-end"><Button onClick={() => { const start = addHours(new Date(), 24); setActivity((current) => ({ ...current, starts: toLocalInput(start), ends: toLocalInput(addHours(start, 2)) })); setActivityOpen(true); }}><CalendarClock className="mr-2 h-4 w-4" />Create activity</Button></div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{activities.map((row) => <Card key={row.id}><CardHeader><CardTitle className="text-base">{row.name}</CardTitle><CardDescription>{row.activity_type}</CardDescription></CardHeader><CardContent className="text-sm"><div>{displayDateTime(row.starts_at)}</div><div className="text-muted-foreground">{row.location || "Location not set"}</div><Badge className="mt-3" variant="outline">{formatCoordinationStatus(row.status)}</Badge></CardContent></Card>)}{activities.length === 0 && <p className="text-sm text-muted-foreground">No upcoming volunteer activities in this scope.</p>}</div>
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
 
       <Dialog open={Boolean(offerPosition)} onOpenChange={(open) => !open && setOfferPosition(null)}><DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto"><DialogHeader><DialogTitle>{new Date(offerPosition?.starts_at || 0) <= new Date() ? "Add actual person" : `Offer ${offerPosition?.label || "position"}`}</DialogTitle><DialogDescription>Select one or more eligible people. Each recipient sees only their own offer.</DialogDescription></DialogHeader>
@@ -610,7 +640,7 @@ export default function CoordinationModule() {
 
       <Dialog open={activityOpen} onOpenChange={setActivityOpen}><DialogContent><DialogHeader><DialogTitle>Create volunteer activity</DialogTitle><DialogDescription>This is a basic coordination activity, not a public event listing.</DialogDescription></DialogHeader><div className="grid gap-3"><div><Label htmlFor="activity-name">Activity name</Label><Input id="activity-name" value={activity.name} onChange={(event) => setActivity({ ...activity, name: event.target.value })} /></div><div><Label htmlFor="activity-type">Activity type</Label><Input id="activity-type" value={activity.type} onChange={(event) => setActivity({ ...activity, type: event.target.value })} /></div><div className="grid grid-cols-2 gap-3"><div><Label htmlFor="activity-start">Start</Label><Input id="activity-start" type="datetime-local" value={activity.starts} onChange={(event) => setActivity({ ...activity, starts: event.target.value })} /></div><div><Label htmlFor="activity-end">End</Label><Input id="activity-end" type="datetime-local" value={activity.ends} onChange={(event) => setActivity({ ...activity, ends: event.target.value })} /></div></div><div><Label htmlFor="activity-location">Location</Label><Input id="activity-location" value={activity.location} onChange={(event) => setActivity({ ...activity, location: event.target.value })} /></div><div className="grid grid-cols-[1fr_100px] gap-3"><div><Label htmlFor="activity-position">Position name</Label><Input id="activity-position" value={activity.position} onChange={(event) => setActivity({ ...activity, position: event.target.value })} /></div><div><Label htmlFor="activity-count">Needed</Label><Input id="activity-count" type="number" min="1" max="50" value={activity.count} onChange={(event) => setActivity({ ...activity, count: event.target.value })} /></div></div></div><DialogFooter><Button variant="outline" onClick={() => setActivityOpen(false)}>Cancel</Button><Button onClick={() => void createActivity()} disabled={!activity.name.trim() || !activity.starts || !activity.ends}>Create</Button></DialogFooter></DialogContent></Dialog>
 
-      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}><DialogContent><DialogHeader><DialogTitle>Invite to Coordination</DialogTitle><DialogDescription>Existing users receive a capability invitation. New users also receive a SportStack account invitation. No fixture position is reserved.</DialogDescription></DialogHeader><div className="grid gap-3"><div><Label htmlFor="invite-email">Email</Label><Input id="invite-email" type="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="person@example.com" /></div><div><Label>Capability</Label><Select value={inviteCapability} onValueChange={(value) => setInviteCapability(value as typeof inviteCapability)}><SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="UMPIRE">Umpire</SelectItem><SelectItem value="SUPERVISING_UMPIRE">Supervising Umpire</SelectItem><SelectItem value="TECHNICAL_BENCH">Technical Bench</SelectItem><SelectItem value="VOLUNTEER">Volunteer</SelectItem></SelectContent></Select></div></div><DialogFooter><Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button><Button onClick={() => void sendCapabilityInvite()} disabled={working || !inviteEmail.includes("@")}>Send invite</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}><DialogContent><DialogHeader><DialogTitle>Invite to Coordination</DialogTitle><DialogDescription>Umpires are assigned an association-scoped role in User Management. These invitations are only for other Coordination capabilities and do not reserve a fixture position.</DialogDescription></DialogHeader><div className="grid gap-3"><div><Label htmlFor="invite-email">Email</Label><Input id="invite-email" type="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="person@example.com" /></div><div><Label>Capability</Label><Select value={inviteCapability} onValueChange={(value) => setInviteCapability(value as typeof inviteCapability)}><SelectTrigger className="w-full min-w-0 overflow-hidden"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="SUPERVISING_UMPIRE">Supervising Umpire</SelectItem><SelectItem value="TECHNICAL_BENCH">Technical Bench</SelectItem><SelectItem value="VOLUNTEER">Volunteer</SelectItem></SelectContent></Select></div></div><DialogFooter><Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button><Button onClick={() => void sendCapabilityInvite()} disabled={working || !inviteEmail.includes("@")}>Send invite</Button></DialogFooter></DialogContent></Dialog>
 
       <Dialog open={Boolean(matrixAction)} onOpenChange={(open) => !open && setMatrixAction(null)}><DialogContent><DialogHeader><DialogTitle>{matrixAction?.kind === "LOG" ? "Coordinator log" : `${formatCoordinationStatus(matrixAction?.kind || "")} — ${matrixAction?.name || "Umpire"}`}</DialogTitle><DialogDescription>{matrixAction?.kind === "LOG" ? "This restricted history is visible only to authorised Umpire coordinators." : "This change is added to the permanent audit history."}</DialogDescription></DialogHeader>
         {matrixAction?.kind === "LOG" ? <div className="max-h-80 space-y-2 overflow-y-auto">{matrixNotes.map((note) => <div key={note.id} className="rounded border p-3"><div className="text-sm">{note.content}</div><div className="mt-1 text-xs text-muted-foreground">{formatCoordinationStatus(note.kind)} · {note.created_by} · {displayDateTime(note.created_at)}</div></div>)}{matrixNotes.length === 0 && <p className="text-sm text-muted-foreground">No restricted notes.</p>}</div> : <div className="grid gap-3">

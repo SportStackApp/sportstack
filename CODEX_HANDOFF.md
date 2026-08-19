@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-17
+Last updated: 2026-08-19
 
 Future agents should start by reading these files in order:
 
@@ -9,6 +9,28 @@ Future agents should start by reading these files in order:
 3. `docs/project-brief.md` — concise product and architecture context.
 4. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 5. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 19 August 2026 scoped Umpire and Coordinator access
+
+- Dev migration `20260819071731_scoped_umpire_and_coordinator_access.sql` is active. It makes
+  `UMPIRE` association-only, treats that role as offer eligibility without a capability record,
+  and keeps `SUPERVISING_UMPIRE` separate.
+- The dry-run, rollback and post-apply checks confirm 17 Umpire rows for 17 people, all exactly
+  Hockey Ballarat association scope. The four portal-origin decisions and all other evidence are in
+  `docs/umpire-scope-backfill-2026-08-19.md`. No team membership or profile data changed.
+- User Management atomically saves roles, Umpire association scopes and protected Coordinator
+  responsibilities. Umpire Coordinator is association-only; Technical Bench and Volunteer
+  Coordinator support association or club scope. The fixed bundles cannot be edited through the
+  generic permission controls.
+- Direct Coordinator permission resolution is exact and does not depend on gaining an admin role.
+  Club Technical Bench access covers both positions when either fixture team is from the assigned
+  club. The database filters returned position data to the Coordinator's authorised type.
+- The three `UMPIRE_ADMIN` rows remain unchanged and display as **Legacy Umpire Admin**. New legacy
+  assignments and automatic conversions are rejected.
+- Both Coordination SQL suites and all nine focused frontend tests pass after the migration.
+  TypeScript and the production build pass. Full lint remains at the documented baseline of 360
+  errors and 78 warnings; signed-in Dev role smoke checks remain the completion gate for this task.
+- `main` and Production were not changed.
 
 ## 17 August 2026 Coordination Module implementation
 

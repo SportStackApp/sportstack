@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAppMode } from "@/contexts/AppModeContext";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useCoordinationAccess } from "@/hooks/useCoordinationAccess";
 
 export type SportStackModuleKey =
   | "player_mvp"
@@ -50,6 +51,8 @@ export function useModuleAvailability(moduleKeys: SportStackModuleKey[]) {
     selectedTeamId,
   } = useTeamContext();
   const moduleKeySignature = moduleKeys.join(",");
+  const coordinationRequested = moduleKeys.includes("coordination");
+  const { access: coordinationAccess, loading: coordinationAccessLoading } = useCoordinationAccess(coordinationRequested);
   const requestSignature = [
     moduleKeySignature,
     activeMode,
@@ -86,7 +89,7 @@ export function useModuleAvailability(moduleKeys: SportStackModuleKey[]) {
     // not resolve or render a module until AppModeContext has confirmed that
     // mode with Supabase; otherwise the first page query can race ahead of the
     // session initialisation and fail without a useful retry.
-    if (modeLoading) {
+    if (modeLoading || (coordinationRequested && coordinationAccessLoading)) {
       setResolvedSignature("");
       return () => {
         cancelled = true;
@@ -110,6 +113,9 @@ export function useModuleAvailability(moduleKeys: SportStackModuleKey[]) {
     }
 
     void Promise.all(requestedKeys.map(async (moduleKey) => {
+      if (moduleKey === "coordination" && coordinationAccess.is_coordinator) {
+        return [moduleKey, true] as const;
+      }
       const { data, error: resolveError } = await permissionClient.rpc("resolve_effective_permission_for_mode", {
         p_permission_key: `module.${moduleKey}.access`,
         p_actor_mode: activeMode,
@@ -149,6 +155,9 @@ export function useModuleAvailability(moduleKeys: SportStackModuleKey[]) {
     };
   }, [
     activeMode,
+    coordinationAccess.is_coordinator,
+    coordinationAccessLoading,
+    coordinationRequested,
     contextConfirmed,
     modeLoading,
     modeSyncError,

@@ -4,7 +4,7 @@ import { useTestRole } from "@/contexts/TestRoleContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = Database["public"]["Enums"]["user_role_enum"];
 
 // Role hierarchy from highest to lowest
 const ROLE_HIERARCHY: AppRole[] = [
@@ -13,6 +13,7 @@ const ROLE_HIERARCHY: AppRole[] = [
   "CLUB_ADMIN",
   "TEAM_MANAGER",
   "COACH",
+  "UMPIRE_ADMIN",
   "PLAYER",
   "UMPIRE",
   "VOTER",
@@ -122,6 +123,7 @@ export const getRoleDisplayName = (role: AppRole): string => {
     ASSOCIATION_ADMIN: "Association Admin",
     SUPER_ADMIN: "Super Admin",
     UMPIRE: "Umpire",
+    UMPIRE_ADMIN: "Legacy Umpire Admin",
     VOTER: "Voter",
   };
   return names[role];
@@ -136,6 +138,7 @@ export const getRoleEmoji = (role: AppRole): string => {
     ASSOCIATION_ADMIN: "🏛️",
     SUPER_ADMIN: "👑",
     UMPIRE: "🏳️",
+    UMPIRE_ADMIN: "🏳️",
     VOTER: "🗳️",
   };
   return emojis[role];
@@ -150,6 +153,7 @@ export const getRoleBadgeColor = (role: AppRole): string => {
     ASSOCIATION_ADMIN: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
     SUPER_ADMIN: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
     UMPIRE: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300",
+    UMPIRE_ADMIN: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300",
     VOTER: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300",
   };
   return colors[role];

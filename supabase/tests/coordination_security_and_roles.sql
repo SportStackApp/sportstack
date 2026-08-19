@@ -136,6 +136,231 @@ begin
   if (select is_approved from public.player_vote_submissions where id=v_submission) is distinct from v_before then raise exception 'Roster check changed the voting submission.'; end if;
 end $test$;
 
+-- The 17 migrated Umpires are association-only and the old administrator
+-- records remain legacy records rather than Coordinator conversions.
+do $test$
+declare v_hockey_ballarat uuid;
+begin
+  select id into v_hockey_ballarat from public.associations where lower(btrim(name))='hockey ballarat';
+  if (select count(*) from public.user_roles where role::text='UMPIRE') <> 17 then
+    raise exception 'Expected exactly 17 Umpire role rows.';
+  end if;
+  if (select count(*) from public.user_roles where role::text='UMPIRE' and association_id=v_hockey_ballarat and club_id is null and team_id is null) <> 17 then
+    raise exception 'Every Umpire must have exactly the Hockey Ballarat association scope.';
+  end if;
+  if (select count(*) from public.user_roles where role::text='UMPIRE_ADMIN') <> 3 then
+    raise exception 'Legacy Umpire Admin records were converted or removed.';
+  end if;
+end $test$;
+
+-- Umpire role membership replaces a capability invitation, remains scoped to
+-- one association and never implies Supervising Umpire.
+do $test$
+declare v_user uuid; v_association uuid; v_other_association uuid;
+begin
+  select user_id, association_id into v_user, v_association
+  from public.user_roles where role::text='UMPIRE' order by user_id limit 1;
+  select id into v_other_association from public.associations where id<>v_association order by id limit 1;
+  if not private.coordination_user_has_capability(v_user,'UMPIRE',v_association) then
+    raise exception 'Association-scoped Umpire role was not eligible for offers.';
+  end if;
+  if v_other_association is not null and private.coordination_user_has_capability(v_user,'UMPIRE',v_other_association) then
+    raise exception 'Umpire role leaked into another association.';
+  end if;
+  if not exists (
+    select 1 from public.coordination_capabilities capability
+    where capability.user_id=v_user and capability.capability_type='SUPERVISING_UMPIRE' and capability.active
+  ) and private.coordination_user_has_capability(v_user,'SUPERVISING_UMPIRE',v_association) then
+    raise exception 'Umpire role incorrectly granted Supervising Umpire.';
+  end if;
+end $test$;
+
+-- A protected Umpire Coordinator bundle grants only its exact responsibility.
+-- It does not create an administrator role or sensitive-note redaction access.
+do $test$
+declare
+  v_user uuid;
+  v_association uuid;
+  v_other_association uuid;
+  v_set uuid;
+  v_assignment uuid;
+begin
+  select association_id into v_association from coordination_role_test;
+  select id into v_other_association from public.associations where id<>v_association order by id limit 1;
+  select profile.id into v_user
+  from public.profiles profile
+  where not exists (
+    select 1 from public.user_roles role_row
+    where role_row.user_id=profile.id and role_row.role::text in ('SUPER_ADMIN','ASSOCIATION_ADMIN','CLUB_ADMIN')
+  )
+  and not exists (
+    select 1 from public.permission_assignments assignment
+    join public.permission_sets set_row on set_row.id=assignment.permission_set_id
+    where assignment.subject_key=profile.id::text and set_row.system_key is not null and assignment.active
+  )
+  order by profile.id limit 1;
+
+  perform set_config('sportstack.coordinator_bundle_write','on',true);
+  select id into v_set from public.permission_sets
+  where system_key='UMPIRE_COORDINATOR' and owner_scope_type='ASSOCIATION' and owner_scope_id=v_association;
+  if v_set is null then
+    insert into public.permission_sets(name,description,owner_scope_type,owner_scope_id,system_key,created_by,updated_by)
+    select 'System: Umpire Coordinator','Transactional test bundle','ASSOCIATION',v_association,'UMPIRE_COORDINATOR',coordinator_id,coordinator_id
+    from coordination_role_test returning id into v_set;
+  end if;
+  insert into public.permission_set_permissions(permission_set_id,permission_key,allowed)
+  values
+    (v_set,'module.coordination.access',true),
+    (v_set,'coordination.umpires.manage',true),
+    (v_set,'coordination.umpire_matrix.manage',true),
+    (v_set,'coordination.roster_mismatches.review',true)
+  on conflict(permission_set_id,permission_key) do update set allowed=excluded.allowed;
+  insert into public.permission_assignments(permission_set_id,subject_type,subject_key,scope_type,scope_id,created_by,updated_by)
+  select v_set,'USER',v_user::text,'ASSOCIATION',v_association,coordinator_id,coordinator_id
+  from coordination_role_test returning id into v_assignment;
+
+  begin
+    insert into public.permission_assignments(permission_set_id,subject_type,subject_key,scope_type,scope_id,created_by,updated_by)
+    select v_set,'USER',v_user::text,'ASSOCIATION',v_association,coordinator_id,coordinator_id
+    from coordination_role_test;
+    raise exception 'Expected duplicate Coordinator rejection did not occur.';
+  exception when unique_violation then null;
+  end;
+  perform set_config('sportstack.coordinator_bundle_write','off',true);
+
+  perform set_config('request.jwt.claims',jsonb_build_object('sub',v_user,'role','authenticated')::text,true);
+  if not private.coordination_direct_bundle_allowed('coordination.umpires.manage',v_association) then
+    raise exception 'Umpire Coordinator permission was not resolved.';
+  end if;
+  if private.coordination_direct_bundle_allowed('coordination.sensitive_notes.redact',v_association) then
+    raise exception 'Umpire Coordinator received sensitive-note redaction access.';
+  end if;
+  if v_other_association is not null and private.coordination_direct_bundle_allowed('coordination.umpires.manage',v_other_association) then
+    raise exception 'Umpire Coordinator leaked into another association.';
+  end if;
+  if exists (
+    select 1 from public.user_roles role_row
+    where role_row.user_id=v_user and role_row.role::text in ('SUPER_ADMIN','ASSOCIATION_ADMIN','CLUB_ADMIN')
+  ) then
+    raise exception 'Coordinator bundle created a broad administrator role.';
+  end if;
+
+  perform set_config('sportstack.coordinator_bundle_write','on',true);
+  delete from public.permission_assignments where id=v_assignment;
+  perform set_config('sportstack.coordinator_bundle_write','off',true);
+  if private.coordination_direct_bundle_allowed('coordination.umpires.manage',v_association) then
+    raise exception 'Removed Coordinator permission remained active.';
+  end if;
+end $test$;
+
+-- A club Technical Bench Coordinator can manage both bench positions when
+-- either fixture team is from that club, but sees no Umpire positions.
+do $test$
+declare
+  v_user uuid;
+  v_fixture uuid;
+  v_association uuid;
+  v_club uuid;
+  v_set uuid;
+  v_assignment uuid;
+  v_positions jsonb;
+begin
+  select state.fixture_id, state.association_id, home_team.club_id
+  into v_fixture, v_association, v_club
+  from coordination_role_test state
+  join public.fixtures fixture on fixture.id=state.fixture_id
+  join public.teams home_team on home_team.id=fixture.home_team_id;
+  select profile.id into v_user
+  from public.profiles profile
+  where not exists (
+    select 1 from public.user_roles role_row
+    where role_row.user_id=profile.id and role_row.role::text in ('SUPER_ADMIN','ASSOCIATION_ADMIN','CLUB_ADMIN')
+  ) order by profile.id desc limit 1;
+
+  perform set_config('sportstack.coordinator_bundle_write','on',true);
+  select id into v_set from public.permission_sets
+  where system_key='TECHNICAL_BENCH_COORDINATOR' and owner_scope_type='CLUB' and owner_scope_id=v_club;
+  if v_set is null then
+    insert into public.permission_sets(name,description,owner_scope_type,owner_scope_id,system_key,created_by,updated_by)
+    select 'System: Technical Bench Coordinator','Transactional test bundle','CLUB',v_club,'TECHNICAL_BENCH_COORDINATOR',coordinator_id,coordinator_id
+    from coordination_role_test returning id into v_set;
+  end if;
+  insert into public.permission_set_permissions(permission_set_id,permission_key,allowed)
+  values (v_set,'module.coordination.access',true),(v_set,'coordination.technical_bench.manage',true)
+  on conflict(permission_set_id,permission_key) do update set allowed=excluded.allowed;
+  insert into public.permission_assignments(permission_set_id,subject_type,subject_key,scope_type,scope_id,created_by,updated_by)
+  select v_set,'USER',v_user::text,'CLUB',v_club,coordinator_id,coordinator_id
+  from coordination_role_test returning id into v_assignment;
+  perform set_config('sportstack.coordinator_bundle_write','off',true);
+
+  perform set_config('request.jwt.claims',jsonb_build_object('sub',v_user,'role','authenticated')::text,true);
+  v_positions := public.coordination_get_fixture_positions(v_fixture,'player');
+  if (select count(*) from jsonb_array_elements(v_positions) item where item->>'type'='TECHNICAL_BENCH') <> 2 then
+    raise exception 'Club Technical Bench Coordinator did not receive both bench positions.';
+  end if;
+  if exists (select 1 from jsonb_array_elements(v_positions) item where item->>'type' in ('UMPIRE','SUPERVISING_UMPIRE')) then
+    raise exception 'Club Technical Bench Coordinator received Umpire positions.';
+  end if;
+
+  perform set_config('sportstack.coordinator_bundle_write','on',true);
+  delete from public.permission_assignments where id=v_assignment;
+  perform set_config('sportstack.coordinator_bundle_write','off',true);
+end $test$;
+
+-- Volunteer Coordinator permissions are exact to their association or club
+-- scope and do not grant Umpire or Technical Bench management.
+do $test$
+declare
+  v_user uuid;
+  v_association uuid;
+  v_other_association uuid;
+  v_set uuid;
+  v_assignment uuid;
+begin
+  select association_id into v_association from coordination_role_test;
+  select id into v_other_association from public.associations where id<>v_association order by id limit 1;
+  select profile.id into v_user from public.profiles profile
+  where not exists (
+    select 1 from public.user_roles role_row
+    where role_row.user_id=profile.id and role_row.role::text in ('SUPER_ADMIN','ASSOCIATION_ADMIN','CLUB_ADMIN')
+  ) order by profile.id desc limit 1;
+
+  perform set_config('sportstack.coordinator_bundle_write','on',true);
+  select id into v_set from public.permission_sets
+  where system_key='VOLUNTEER_COORDINATOR' and owner_scope_type='ASSOCIATION' and owner_scope_id=v_association;
+  if v_set is null then
+    insert into public.permission_sets(name,description,owner_scope_type,owner_scope_id,system_key,created_by,updated_by)
+    select 'System: Volunteer Coordinator','Transactional test bundle','ASSOCIATION',v_association,'VOLUNTEER_COORDINATOR',coordinator_id,coordinator_id
+    from coordination_role_test returning id into v_set;
+  end if;
+  insert into public.permission_set_permissions(permission_set_id,permission_key,allowed)
+  values
+    (v_set,'module.coordination.access',true),
+    (v_set,'coordination.volunteers.manage',true),
+    (v_set,'coordination.activities.create',true)
+  on conflict(permission_set_id,permission_key) do update set allowed=excluded.allowed;
+  insert into public.permission_assignments(permission_set_id,subject_type,subject_key,scope_type,scope_id,created_by,updated_by)
+  select v_set,'USER',v_user::text,'ASSOCIATION',v_association,coordinator_id,coordinator_id
+  from coordination_role_test returning id into v_assignment;
+  perform set_config('sportstack.coordinator_bundle_write','off',true);
+
+  perform set_config('request.jwt.claims',jsonb_build_object('sub',v_user,'role','authenticated')::text,true);
+  if not private.coordination_direct_bundle_allowed('coordination.activities.create',v_association) then
+    raise exception 'Volunteer Coordinator could not create activities in its scope.';
+  end if;
+  if private.coordination_direct_bundle_allowed('coordination.umpires.manage',v_association)
+     or private.coordination_direct_bundle_allowed('coordination.technical_bench.manage',v_association) then
+    raise exception 'Volunteer Coordinator received a sibling Coordinator permission.';
+  end if;
+  if v_other_association is not null and private.coordination_direct_bundle_allowed('coordination.volunteers.manage',v_other_association) then
+    raise exception 'Volunteer Coordinator leaked into another association.';
+  end if;
+
+  perform set_config('sportstack.coordinator_bundle_write','on',true);
+  delete from public.permission_assignments where id=v_assignment;
+  perform set_config('sportstack.coordinator_bundle_write','off',true);
+end $test$;
+
 -- Exercise the two offer policies as an authenticated Data API role. This
 -- catches circular policy expansion that a migration-owner query would bypass.
 select set_config('request.jwt.claims',jsonb_build_object('sub',coordinator_id,'role','authenticated')::text,true) from coordination_role_test;

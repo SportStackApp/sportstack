@@ -52,7 +52,6 @@ const ROLE_OPTIONS: Array<{ value: AppRole; label: string }> = [
   { value: "PLAYER", label: "Player" },
   { value: "UMPIRE", label: "Umpire" },
   { value: "VOTER", label: "Voter" },
-  { value: "UMPIRE_ADMIN", label: "Umpire Admin" },
 ];
 
 const messageFor = (error: unknown) => error instanceof Error
