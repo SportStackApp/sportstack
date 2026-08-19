@@ -6,6 +6,22 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## Main staging release — 19 August 2026
+
+- Aaron explicitly approved the full Dev-to-Main promotion, including the Production scraper
+  workflow change already present on both branches.
+- The two independently copied scraper recovery commits were confirmed patch-identical. Current
+  Main was merged into Dev without rewriting history, preserving the approved Production workflow
+  and all newer Dev application work.
+- The Production workflow adds a read-only Friday fixture-mapping readiness check using the
+  Production Supabase secrets. A push to Main does not itself start that scheduled job, run a
+  Production scraper or deploy the Production app.
+- Development-plan lint, TypeScript, the production build, 81 JavaScript tests and 152 Python tests
+  passed on the aligned release. Full repository lint remains at its known baseline of 359 errors
+  and 78 warnings.
+- This promotion changes Main/staging and the Main-owned workflow schedule only. The `prod` branch,
+  Production application and Production database remain unchanged.
+
 ## Player Explorer permission repair on Development — 19 August 2026
 
 - Player Explorer failed after the 17 August Coordination migration broadly revoked authenticated
