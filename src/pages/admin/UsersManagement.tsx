@@ -980,7 +980,7 @@ const UsersManagement = () => {
     const mScopes: any[] = [];
     const aScopes: any[] = [];
     const clScopes: any[] = [];
-    const uScopes: any[] = [];
+    const uScopes: Array<{ id: string; association_id: string }> = [];
 
     (rolesData || []).forEach(r => {
       roles.add(r.role as AppRole);
