@@ -76,9 +76,9 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
 - [ ] Retest Super Admin, Association Admin, Club Admin, Team Manager, Coach, Player, Umpire and
   Coordinator using separate Dev accounts rather than only **Viewing as**.
 - [ ] Complete Player Explorer acceptance after the 19 August repair:
-  - [x] Super Admin menu access, page loading, conditions, search and result sorting passed owner
-    testing on 20 August 2026.
-  - [ ] Retest export, saved filters, loading a saved filter and recurring-search ownership.
+  - [x] Super Admin menu access, page loading, conditions, search, result sorting and CSV export
+    passed owner testing on 20 August 2026.
+  - [ ] Retest saved filters, loading a saved filter and recurring-search ownership.
 - [ ] Retest multi-club Team Manager switching and the contextual role display in scoped user lists.
 - [ ] Retest dashboard, team cascade, fixtures, byes, availability and the complete
   availability-to-line-up workflow.
