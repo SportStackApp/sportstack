@@ -155,6 +155,33 @@ const formatStatusLabel = (status: string) =>
     .join(" ");
 const toDbStatus = (status: string) => status.toUpperCase();
 
+const FIXTURE_DIALOG_STORAGE_KEY = "sportstack:fixtures:active-dialog";
+type FixtureDialogState = {
+  type: "add" | "edit" | "details" | "delete";
+  fixtureId?: string;
+};
+
+const rememberFixtureDialog = (dialog: FixtureDialogState) => {
+  window.sessionStorage.setItem(FIXTURE_DIALOG_STORAGE_KEY, JSON.stringify(dialog));
+};
+
+const forgetFixtureDialog = () => {
+  window.sessionStorage.removeItem(FIXTURE_DIALOG_STORAGE_KEY);
+};
+
+const readRememberedFixtureDialog = (): FixtureDialogState | null => {
+  try {
+    const rawDialog = window.sessionStorage.getItem(FIXTURE_DIALOG_STORAGE_KEY);
+    if (!rawDialog) return null;
+    const dialog = JSON.parse(rawDialog) as Partial<FixtureDialogState>;
+    if (!dialog.type || !["add", "edit", "details", "delete"].includes(dialog.type)) return null;
+    return dialog as FixtureDialogState;
+  } catch {
+    forgetFixtureDialog();
+    return null;
+  }
+};
+
 const FixturesManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -426,7 +453,7 @@ const FixturesManagement = () => {
     toast({ title: "Exported", description: `${displayFixtures.length} fixtures exported.` });
   };
 
-  const openEdit = (fixture: FixtureRow) => {
+  const openEdit = useCallback((fixture: FixtureRow) => {
     const homeTeam = allAssocTeams.find(t => t.id === fixture.home_team_id);
     const awayTeam = fixture.away_team_id ? allAssocTeams.find(t => t.id === fixture.away_team_id) : undefined;
     const scopeTeam = homeTeam ?? awayTeam;
@@ -457,13 +484,15 @@ const FixturesManagement = () => {
     });
     setSelectedFixture(fixture);
     setIsEditModalOpen(true);
-  };
+    rememberFixtureDialog({ type: "edit", fixtureId: fixture.id });
+  }, [allAssocTeams, allAssociations, clubById]);
 
-  const openDetails = async (fixture: FixtureRow) => {
+  const openDetails = useCallback(async (fixture: FixtureRow) => {
     setDetailsFixture(fixture);
     setIsDetailsOpen(true);
     setDetailsLoading(true);
     setRosterPlayers([]);
+    rememberFixtureDialog({ type: "details", fixtureId: fixture.id });
 
     try {
       const { data, error } = await supabase
@@ -482,7 +511,42 @@ const FixturesManagement = () => {
     } finally {
       setDetailsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    const restoreRememberedDialog = () => {
+      const rememberedDialog = readRememberedFixtureDialog();
+      if (!rememberedDialog) return;
+
+      if (rememberedDialog.type === "add") {
+        setAddDialogOpen(true);
+        return;
+      }
+
+      const fixture = fixtures.find((candidate) => candidate.id === rememberedDialog.fixtureId);
+      if (!fixture) return;
+
+      if (rememberedDialog.type === "edit" && !isEditModalOpen) {
+        openEdit(fixture);
+      } else if (rememberedDialog.type === "details" && !isDetailsOpen) {
+        void openDetails(fixture);
+      } else if (rememberedDialog.type === "delete" && !deleteDialogOpen) {
+        setDeleteTarget(fixture.id);
+        setDeleteDialogOpen(true);
+      }
+    };
+    const restoreWhenVisible = () => {
+      if (document.visibilityState === "visible") restoreRememberedDialog();
+    };
+
+    window.addEventListener("focus", restoreRememberedDialog);
+    document.addEventListener("visibilitychange", restoreWhenVisible);
+    restoreRememberedDialog();
+    return () => {
+      window.removeEventListener("focus", restoreRememberedDialog);
+      document.removeEventListener("visibilitychange", restoreWhenVisible);
+    };
+  }, [deleteDialogOpen, fixtures, isDetailsOpen, isEditModalOpen, openDetails, openEdit]);
 
   const handleUpdateFixture = async () => {
     if (!selectedFixture) return;
@@ -547,6 +611,7 @@ const FixturesManagement = () => {
     }
 
     toast({ title: "Updated", description: "Fixture updated successfully." });
+    forgetFixtureDialog();
     setIsEditModalOpen(false);
     setSelectedFixture(null);
     fetchFixtures();
@@ -561,6 +626,7 @@ const FixturesManagement = () => {
       toast({ title: "Deleted", description: "Fixture deleted." });
       fetchFixtures();
     }
+    forgetFixtureDialog();
     setDeleteDialogOpen(false);
     setDeleteTarget(null);
   };
@@ -617,6 +683,7 @@ const FixturesManagement = () => {
     }
 
     toast({ title: "Created", description: "Fixture added." });
+    forgetFixtureDialog();
     setAddDialogOpen(false);
     setAddForm(emptyForm);
     fetchFixtures();
@@ -774,6 +841,7 @@ const FixturesManagement = () => {
               setAddTeamScope(emptyFixtureTeamScope);
               setAddForm(emptyForm);
               setAddDialogOpen(true);
+              rememberFixtureDialog({ type: "add" });
             }}
             className="gap-2"
           >
@@ -917,7 +985,7 @@ const FixturesManagement = () => {
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(fixture)}><Pencil className="h-3 w-3" /></Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setDeleteTarget(fixture.id); setDeleteDialogOpen(true); }}><Trash2 className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setDeleteTarget(fixture.id); setDeleteDialogOpen(true); rememberFixtureDialog({ type: "delete", fixtureId: fixture.id }); }}><Trash2 className="h-3 w-3" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -937,7 +1005,7 @@ const FixturesManagement = () => {
             <DialogDescription>Are you sure? This action cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { forgetFixtureDialog(); setDeleteDialogOpen(false); }}>Cancel</Button>
             <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
           </DialogFooter>
         </DialogContent>
@@ -1041,7 +1109,7 @@ const FixturesManagement = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { forgetFixtureDialog(); setAddDialogOpen(false); }}>Cancel</Button>
             <Button onClick={handleAddFixture}>Create</Button>
           </DialogFooter>
         </DialogContent>
@@ -1224,7 +1292,7 @@ const FixturesManagement = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { forgetFixtureDialog(); setIsEditModalOpen(false); }}>Cancel</Button>
             <Button onClick={handleUpdateFixture}>Update</Button>
           </DialogFooter>
         </DialogContent>
@@ -1425,7 +1493,7 @@ const FixturesManagement = () => {
           )}
 
           <DialogFooter>
-            <Button onClick={() => setIsDetailsOpen(false)}>Close</Button>
+            <Button onClick={() => { forgetFixtureDialog(); setIsDetailsOpen(false); }}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
