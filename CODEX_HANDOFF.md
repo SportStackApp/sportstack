@@ -11,6 +11,22 @@ Future agents should start by reading these files in order:
 5. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 6. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
+## 20 August 2026 Umpire Match Voting owner feedback
+
+- Umpire Match Voting administration data and correction passed owner testing.
+- The consolidated plan now requires one Excel export with separate Seniors and Juniors sheets,
+  using distinct vote-scheme columns instead of one combined Votes cell. `xlsx` is already present.
+- The unfiltered leaderboard should show the association top 10. Division filtering should render
+  a separate full leaderboard per selected division, allowing one player to appear independently
+  in multiple division lists with division-only totals.
+- Submission-table headings should toggle ascending/descending sorting. Round keeps its displayed
+  label but sorts by linked fixture date; legacy unlinked rows fall back to numeric round and then
+  submitted date.
+- Existing vote-scheme and scheme-line fields should support the export without a migration.
+  Legacy junior rows without line keys must use neutral A/B slots rather than guessed gender.
+- Ballot candidate eligibility remains separately open. No code, schema or live data changed in
+  this planning pass.
+
 ## 20 August 2026 Player MVP emails default off on Dev
 
 - Team Manager owner testing passed the Player MVP Voting enable switch and found that the separate

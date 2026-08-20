@@ -138,8 +138,25 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
 - [x] An email-disabled Player MVP round opened successfully for Blue, appeared as **Open** with
   0/14 completed, and kept reminder/resend email actions disabled. Aaron accepted the remaining
   ballot and result behaviour without extending this disposable test on 20 August 2026.
-- [ ] Test one disposable Umpire Match Voting ballot and correction flow. Confirm suggestions are
-  limited to the fixture teams, selected fill-ins, line-up assignments and recorded appearances.
+- [x] Umpire Match Voting administration data and submission correction passed owner testing on
+  20 August 2026.
+- [ ] Confirm Umpire Match Ballot suggestions are limited to the fixture teams, selected fill-ins,
+  line-up assignments and recorded appearances. This remains separate from the passed correction
+  workflow.
+- [ ] Replace the single combined Umpire Match Voting CSV with one Excel workbook containing
+  separate **Seniors** and **Juniors** sheets. Seniors use separate 3-point, 2-point and 1-point
+  columns. Juniors use four separate scheme columns for the two 2-point and two 1-point choices.
+  Read the existing `vote_scheme_key` and `scheme_line_key` fields; for legacy junior rows without
+  line keys, use clearly labelled A/B vote slots rather than guessing gender. Reuse the existing
+  `xlsx` dependency; no database migration is expected.
+- [ ] Make the Umpire Match Results leaderboard award-ready by division. With no division selected,
+  show the combined association top 10. With one or more divisions selected, show a separate full
+  leaderboard for each division and group each player by division as well as identity, so a player
+  who competes in two divisions can appear in both lists with only that division's votes.
+- [ ] Make Umpire Match Submissions headers clickable and toggle ascending/descending sorting for
+  Round, Division, Fixture, Submitted for, Submitted by, Source, Votes, Status and Submitted. Show
+  the current sort direction. Keep the displayed round label, but sort Round chronologically using
+  the linked fixture date; for legacy unlinked rows, fall back to numeric round then submitted date.
 - [ ] Test one complete Coordination workflow: staffing need, offer, acceptance, coordinator
   confirmation, replacement and notification.
 - [ ] Test Committee creation, one subcommittee, private upload, meeting, minutes, action, poll and

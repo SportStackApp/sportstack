@@ -6,6 +6,20 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## Umpire Match Voting owner feedback — 20 August 2026
+
+- Umpire Match Voting administration data and submission correction passed owner testing.
+- Three follow-ups are now in the consolidated plan: an Excel export with separate Seniors and
+  Juniors sheets and scheme-specific vote columns; association top-10 versus separate full
+  division leaderboards; and clickable ascending/descending submission-table headers.
+- Round should continue displaying its familiar label but sort by the linked fixture date behind
+  the scenes. Legacy unlinked rows fall back to numeric round and then submitted date.
+- Current inspection confirms `xlsx` is already installed and the Umpire Match Voting schema
+  already has vote-scheme and scheme-line keys. This is expected to be frontend-only, but legacy
+  junior lines without a scheme-line key must use neutral A/B slots rather than guessed gender.
+- Ballot candidate eligibility remains a separate open verification item. No application code,
+  database object or data row changed in this planning pass.
+
 ## Player MVP emails default off on Development — 20 August 2026
 
 - Team Manager owner testing confirmed Player MVP Voting can be enabled, but exposed that the
