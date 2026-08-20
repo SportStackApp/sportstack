@@ -92,7 +92,11 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
     restriction check in owner testing on 20 August 2026.
   - [x] A separate Coach Dev account passed the same Player Explorer access and saved-search
     restriction check in owner testing on 20 August 2026.
-- [ ] Retest multi-club Team Manager switching and the contextual role display in scoped user lists.
+- [ ] **PARKED — owner deferred 20 August 2026:** retest multi-club Team Manager switching with a
+  real multi-club Dev account.
+- [ ] **FIX REQUIRED:** scoped user lists currently show all stored roles instead of only roles
+  applicable to the selected organisation or team. Repair and then owner-test the contextual role
+  display.
 - [ ] Retest dashboard, team cascade, fixtures, byes, availability and the complete
   availability-to-line-up workflow.
 - [ ] Retest Team Chat history, pagination and drafts, plus Club and Association broadcast author
