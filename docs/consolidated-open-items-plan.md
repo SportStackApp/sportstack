@@ -80,7 +80,9 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
     passed owner testing on 20 August 2026.
   - [x] Saving a filter and retaining it after a browser refresh passed owner testing on
     20 August 2026.
-  - [ ] Retest loading a saved filter and recurring-search ownership.
+  - [x] Loading a saved filter restored its original filters and results in owner testing on
+    20 August 2026.
+  - [ ] Retest recurring-search ownership and scheduling.
 - [ ] Retest multi-club Team Manager switching and the contextual role display in scoped user lists.
 - [ ] Retest dashboard, team cascade, fixtures, byes, availability and the complete
   availability-to-line-up workflow.
