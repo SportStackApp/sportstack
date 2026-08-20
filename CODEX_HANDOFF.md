@@ -24,8 +24,11 @@ Future agents should start by reading these files in order:
   submitted date.
 - Existing vote-scheme and scheme-line fields should support the export without a migration.
   Legacy junior rows without line keys must use neutral A/B slots rather than guessed gender.
-- Ballot candidate eligibility remains separately open. No code, schema or live data changed in
-  this planning pass.
+- Ballot default suggestions passed owner testing with linked fixture players only. The required
+  follow-up is a deliberate two-level picker: type-ahead stays fixture-linked, while the magnifying
+  glass opens a searchable association-wide player list scoped to the selected fixture/voting
+  record, with team/division context and no cross-association results. Retain manual unlisted entry.
+- No code, schema or live data changed in this planning pass.
 
 ## 20 August 2026 Player MVP emails default off on Dev
 
@@ -621,7 +624,7 @@ communications were not changed.
 | Communications | **Partial** | Existing chat, navigation retention and notification deep-link/read state passed. A full reload clears an unsent draft; the legacy edited message opens an empty revision history; only seven messages meant earlier-page loading could not be exercised. Nothing was published. |
 | Multi-club Team Manager | **Fail — parked** | Adding a temporary Lucas HC Team Manager assignment did not provide a club-switch control; the account stayed on Grampians/Pumas. The exact temporary role was removed and verified absent. |
 | Player MVP Voting | **Partial** | The real Player route is correctly restricted but shows no rounds because the disposable player has no attended or selected fill-in match. No ballot or analytics write was made; eligible-player end-to-end testing remains. |
-| Umpire Match Voting | **Known fail — parked** | Actual Umpire account reached the ballot. Source/live logic still builds suggestions from association-wide profiles, then leaves unrelated people without a fixture team. Required scope is the two fixture teams plus recorded participants/fill-ins. No ballot was submitted. |
+| Umpire Match Voting | **Historical fail — superseded 20 August** | The earlier account reached the ballot but candidate presentation was unsuitable. Current owner testing confirms default suggestions are fixture-linked. The approved follow-up keeps those suggestions and adds a deliberate magnifying-glass search across the selected association only. |
 | Safety Hub | **Pass, read-only** | Dashboard, Risk Register, Actions, QI Register, Bright Ideas, Matrix/Guidance, Audit History and the guided add-risk form loaded without a write. |
 | Committee Management | **Pass with display note** | Calendar, Polls, Chat, Minutes and all administration tabs loaded. Calendar shows a past `Test meeting`, while Meetings says no meetings are scheduled; discuss whether that wording is intentional. Nothing was posted or changed. |
 

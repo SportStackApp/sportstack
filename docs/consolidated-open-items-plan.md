@@ -140,9 +140,13 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
   ballot and result behaviour without extending this disposable test on 20 August 2026.
 - [x] Umpire Match Voting administration data and submission correction passed owner testing on
   20 August 2026.
-- [ ] Confirm Umpire Match Ballot suggestions are limited to the fixture teams, selected fill-ins,
-  line-up assignments and recorded appearances. This remains separate from the passed correction
-  workflow.
+- [x] Umpire Match Ballot default suggestions showed only linked fixture players in owner testing
+  on 20 August 2026.
+- [ ] Keep linked fixture players as the default type-ahead suggestions, but make the magnifying-
+  glass action open a searchable association-wide player list. Scope the expanded search to the
+  selected fixture/voting record's association, show useful team and division context, and never
+  expose players from another association. Selecting an association player should populate the
+  existing vote line normally; retain manual unlisted entry for genuine exceptions.
 - [ ] Replace the single combined Umpire Match Voting CSV with one Excel workbook containing
   separate **Seniors** and **Juniors** sheets. Seniors use separate 3-point, 2-point and 1-point
   columns. Juniors use four separate scheme columns for the two 2-point and two 1-point choices.

@@ -17,8 +17,11 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - Current inspection confirms `xlsx` is already installed and the Umpire Match Voting schema
   already has vote-scheme and scheme-line keys. This is expected to be frontend-only, but legacy
   junior lines without a scheme-line key must use neutral A/B slots rather than guessed gender.
-- Ballot candidate eligibility remains a separate open verification item. No application code,
-  database object or data row changed in this planning pass.
+- Owner testing confirmed the ballot's default suggestions show only linked fixture players. Aaron
+  wants the magnifying-glass action to deliberately expand into a searchable list of all players
+  in the selected fixture/voting record's association, with team/division context and no cross-
+  association results. Manual unlisted entry remains available for genuine exceptions.
+- No application code, database object or data row changed in this planning pass.
 
 ## Player MVP emails default off on Development — 20 August 2026
 
