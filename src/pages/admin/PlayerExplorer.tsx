@@ -260,6 +260,50 @@ const fetchAppearancesForMatches = async (matchIds: string[]) => {
   return pages.flat();
 };
 
+const fetchExternalIdentityDataForAppearances = async (appearances: AppearanceRow[]) => {
+  const externalIds = Array.from(new Set(
+    appearances.flatMap((appearance) => [
+      appearance.revsports_player_id,
+      appearance.revsports_team_id,
+    ]).filter((id): id is string => Boolean(id)),
+  ));
+
+  if (externalIds.length === 0) {
+    return { externalEntities: [] as ExternalEntityRow[], externalLinks: [] as ExternalLinkRow[] };
+  }
+
+  // Scoped RLS checks are intentionally expensive. Limiting the identity
+  // queries to source IDs already visible in the active scope avoids scanning
+  // every association player and timing out for team-level users.
+  const entityPages = await Promise.all(chunkValues(externalIds, 100).map((externalIdChunk) =>
+    fetchAllPages<ExternalEntityRow>((from, to) => supabase
+      .from("external_entities")
+      .select("id, entity_type, external_id, source")
+      .eq("source", SOURCE_NAME)
+      .in("entity_type", ["player", "team"])
+      .in("external_id", externalIdChunk)
+      .order("id")
+      .range(from, to)),
+  ));
+  const externalEntities = entityPages.flat();
+  const entityIds = externalEntities.map((entity) => entity.id);
+  if (entityIds.length === 0) {
+    return { externalEntities, externalLinks: [] as ExternalLinkRow[] };
+  }
+
+  const linkPages = await Promise.all(chunkValues(entityIds, 100).map((entityIdChunk) =>
+    fetchAllPages<ExternalLinkRow>((from, to) => supabase
+      .from("external_entity_links")
+      .select("external_entity_id, target_table, target_id, status")
+      .in("external_entity_id", entityIdChunk)
+      .in("target_table", ["profiles", "teams"])
+      .order("external_entity_id")
+      .range(from, to)),
+  ));
+
+  return { externalEntities, externalLinks: linkPages.flat() };
+};
+
 const buildRecords = (
   appearances: AppearanceRow[],
   contexts: MatchContext[],
@@ -359,7 +403,7 @@ const buildRecords = (
   return records;
 };
 
-const loadCatalogue = async (): Promise<PlayerExplorerCatalogue> => {
+const loadCatalogue = async (includeGlobalIdentityData: boolean): Promise<PlayerExplorerCatalogue> => {
   const [
     associations,
     clubs,
@@ -382,19 +426,23 @@ const loadCatalogue = async (): Promise<PlayerExplorerCatalogue> => {
     fetchAllPages<FixtureRow>((from, to) => supabase.from("fixtures").select("id, revsports_match_url, home_team_id, away_team_id, division_id, season_id").order("id").range(from, to)),
     fetchAllPages<SourceMatchRow>((from, to) => supabase.from("source_revsports_matches").select("id, match_url, game_date, game_time, round_number, last_seen_at").order("id").range(from, to)),
     fetchAllPages<ProfileRow>((from, to) => supabase.from("profiles").select("id, first_name, last_name, is_placeholder, revsports_player_id").order("id").range(from, to)),
-    fetchAllPages<ExternalEntityRow>((from, to) => supabase
-      .from("external_entities")
-      .select("id, entity_type, external_id, source")
-      .eq("source", SOURCE_NAME)
-      .in("entity_type", ["player", "team"])
-      .order("id")
-      .range(from, to)),
-    fetchAllPages<ExternalLinkRow>((from, to) => supabase
-      .from("external_entity_links")
-      .select("external_entity_id, target_table, target_id, status")
-      .in("target_table", ["profiles", "teams"])
-      .order("id")
-      .range(from, to)),
+    includeGlobalIdentityData
+      ? fetchAllPages<ExternalEntityRow>((from, to) => supabase
+          .from("external_entities")
+          .select("id, entity_type, external_id, source")
+          .eq("source", SOURCE_NAME)
+          .in("entity_type", ["player", "team"])
+          .order("id")
+          .range(from, to))
+      : Promise.resolve([] as ExternalEntityRow[]),
+    includeGlobalIdentityData
+      ? fetchAllPages<ExternalLinkRow>((from, to) => supabase
+          .from("external_entity_links")
+          .select("external_entity_id, target_table, target_id, status")
+          .in("target_table", ["profiles", "teams"])
+          .order("id")
+          .range(from, to))
+      : Promise.resolve([] as ExternalLinkRow[]),
   ]);
 
   // Match freshness is already available in the catalogue. Reusing it avoids
@@ -470,13 +518,13 @@ export default function PlayerExplorer() {
     setCatalogueError(null);
     recordsCacheRef.current = null;
     try {
-      setCatalogue(await loadCatalogue());
+      setCatalogue(await loadCatalogue(isSuperAdmin));
     } catch (error) {
       setCatalogueError(getErrorMessage(error));
     } finally {
       setCatalogueLoading(false);
     }
-  }, [accessScopeKey, canUsePlayerExplorer]);
+  }, [accessScopeKey, canUsePlayerExplorer, isSuperAdmin]);
 
   useEffect(() => {
     if (!scopeLoading && canUsePlayerExplorer) void fetchCatalogue();
@@ -684,7 +732,10 @@ export default function PlayerExplorer() {
       if (!records) {
         const contexts = buildMatchContexts(catalogue);
         const appearances = await fetchAppearancesForMatches(contexts.map((context) => context.sourceMatchId));
-        records = buildRecords(appearances, contexts, catalogue);
+        const identityData = isSuperAdmin
+          ? { externalEntities: catalogue.externalEntities, externalLinks: catalogue.externalLinks }
+          : await fetchExternalIdentityDataForAppearances(appearances);
+        records = buildRecords(appearances, contexts, { ...catalogue, ...identityData });
         recordsCacheRef.current = records;
       }
       const filteredRecords = filterPlayerExplorerRecords(records, filterExpression);

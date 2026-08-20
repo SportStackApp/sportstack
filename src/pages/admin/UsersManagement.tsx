@@ -784,9 +784,80 @@ const UsersManagement = () => {
     );
   }, [clubFilter, divisionFilter, scopedAvailableTeams]);
 
+  const membershipIsInActiveContext = (profile: UserWithRoles) => profile.memberships.some((membership) => {
+    const team = teams.find((item) => item.id === membership.team_id);
+    const club = team ? clubs.find((item) => item.id === team.club_id) : undefined;
+    if (actorMode === "team_manager" || actorMode === "coach") {
+      return scopedTeamIds.includes(membership.team_id);
+    }
+    if (actorMode === "club") return Boolean(team && scopedClubIds.includes(team.club_id));
+    if (actorMode === "association") {
+      return Boolean(club && scopedAssociationIds.includes(club.association_id));
+    }
+    return false;
+  });
+
+  const roleScopeIsInActiveContext = (profile: UserWithRoles, scope: RoleWithScope) => {
+    if (isSuperAdmin) return true;
+    const team = scope.team_id ? teams.find((item) => item.id === scope.team_id) : undefined;
+    const clubId = scope.club_id || team?.club_id || null;
+    const club = clubId ? clubs.find((item) => item.id === clubId) : undefined;
+    const associationId = scope.association_id || club?.association_id || null;
+    const activeClubIds = actorMode === "club"
+      ? scopedClubIds
+      : teams.filter((item) => scopedTeamIds.includes(item.id)).map((item) => item.club_id);
+    const activeAssociationIds = actorMode === "association"
+      ? scopedAssociationIds
+      : clubs.filter((item) => activeClubIds.includes(item.id)).map((item) => item.association_id);
+
+    if (actorMode === "team_manager" || actorMode === "coach") {
+      if (scope.team_id) return scopedTeamIds.includes(scope.team_id);
+      if (clubId) return activeClubIds.includes(clubId);
+      return Boolean(associationId && activeAssociationIds.includes(associationId));
+    }
+    if (actorMode === "club") {
+      if (clubId) return scopedClubIds.includes(clubId);
+      return Boolean(associationId && activeAssociationIds.includes(associationId));
+    }
+    if (actorMode === "association") {
+      return Boolean(associationId && scopedAssociationIds.includes(associationId));
+    }
+
+    // Older generic Player/Voter rows have no stored organisation IDs. They
+    // are contextual only when the person's visible membership is in scope.
+    return !scope.association_id && !scope.club_id && !scope.team_id
+      ? membershipIsInActiveContext(profile)
+      : false;
+  };
+
+  const coordinationScopeIsInActiveContext = (scope: CoordinationScope) => {
+    if (isSuperAdmin) return true;
+    const club = scope.scope_type === "CLUB"
+      ? clubs.find((item) => item.id === scope.scope_id)
+      : undefined;
+    const associationId = scope.scope_type === "ASSOCIATION"
+      ? scope.scope_id
+      : club?.association_id || null;
+
+    if (actorMode === "team_manager" || actorMode === "coach") return false;
+    if (actorMode === "club") {
+      return scope.scope_type === "CLUB" && scopedClubIds.includes(scope.scope_id);
+    }
+    if (actorMode === "association") {
+      return Boolean(associationId && scopedAssociationIds.includes(associationId));
+    }
+    return false;
+  };
+
+  const getContextualRoleScopes = (profile: UserWithRoles) =>
+    profile.roleScopes.filter((scope) => roleScopeIsInActiveContext(profile, scope));
+
+  const getContextualCoordinationScopes = (profile: UserWithRoles) =>
+    profile.coordinationScopes.filter(coordinationScopeIsInActiveContext);
+
   const renderRoleScopeAssignments = (profile: UserWithRoles) => {
     const seenLabels = new Set<string>();
-    const roleAssignments = profile.roleScopes.flatMap((scope, index) => {
+    const roleAssignments = getContextualRoleScopes(profile).flatMap((scope, index) => {
       const team = scope.team_id ? teams.find((item) => item.id === scope.team_id) : undefined;
       const clubId = scope.club_id || team?.club_id;
       const club = clubId ? clubs.find((item) => item.id === clubId) : undefined;
@@ -800,7 +871,7 @@ const UsersManagement = () => {
       seenLabels.add(label);
       return [{ key: `${scope.role}-${scope.association_id || "all"}-${scope.club_id || "all"}-${scope.team_id || "all"}-${index}`, label }];
     });
-    const coordinatorAssignments = profile.coordinationScopes.flatMap((scope, index) => {
+    const coordinatorAssignments = getContextualCoordinationScopes(profile).flatMap((scope, index) => {
       const association = scope.scope_type === "ASSOCIATION"
         ? associations.find((item) => item.id === scope.scope_id)
         : associations.find((item) => item.id === clubs.find((club) => club.id === scope.scope_id)?.association_id);
@@ -2367,7 +2438,8 @@ const UsersManagement = () => {
                                 </>
                               );
                             })()}
-                            {(u.roleScopes.length > 0 || u.coordinationScopes.length > 0) && renderRoleScopeAssignments(u)}
+                            {(getContextualRoleScopes(u).length > 0 || getContextualCoordinationScopes(u).length > 0)
+                              && renderRoleScopeAssignments(u)}
                           </div>
                         )}
                       </TableCell>
@@ -2397,16 +2469,16 @@ const UsersManagement = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {u.roles.length === 0 && u.coordinationScopes.length === 0 ? (
+                          {getContextualRoleScopes(u).length === 0 && getContextualCoordinationScopes(u).length === 0 ? (
                             <span className="text-muted-foreground text-sm">No roles</span>
                           ) : (
                             <>
-                            {u.roles.map((role) => (
+                            {Array.from(new Set(getContextualRoleScopes(u).map((scope) => scope.role))).map((role) => (
                               <Badge key={role} className={getRoleBadgeColor(role)} variant="secondary">
                                 {getRoleDisplayName(role)}
                               </Badge>
                             ))}
-                            {Array.from(new Set(u.coordinationScopes.map((scope) => scope.responsibility))).map((responsibility) => (
+                            {Array.from(new Set(getContextualCoordinationScopes(u).map((scope) => scope.responsibility))).map((responsibility) => (
                               <Badge key={responsibility} variant="outline">
                                 {COORDINATOR_LABELS[responsibility]}
                               </Badge>

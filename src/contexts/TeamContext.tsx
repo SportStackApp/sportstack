@@ -144,6 +144,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   }, [user?.id]);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchData = async () => {
       setLoading(true);
       const [assocRes, clubRes, teamRes, tdRes] = await Promise.all([
@@ -159,6 +160,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       const allTeamDivisions = (tdRes.data as any) || [];
       const allDivs: Division[] = [];
 
+      if (cancelled) return;
       setAssociations(assocs);
       setClubs(allClubs);
       setTeams(allTeams);
@@ -170,7 +172,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     };
 
-    fetchData();
+    void fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   useEffect(() => {
@@ -180,24 +185,26 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let cancelled = false;
     const fetchDivisions = async () => {
-      setLoading(true);
       const { data, error } = (await supabase
         .from("divisions" as any)
         .select("*")
         .eq("association_id", associationId)) as any;
 
+      if (cancelled) return;
       if (error) {
         console.error("Error fetching divisions:", error);
         setDivisions([]);
       } else {
         setDivisions(data || []);
       }
-
-      setLoading(false);
     };
 
-    fetchDivisions();
+    void fetchDivisions();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedAssociationId, selectedClubId, clubs]);
 
   const filteredClubs = clubs.filter(c => c.association_id === selectedAssociationId);
