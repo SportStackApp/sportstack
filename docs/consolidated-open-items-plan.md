@@ -161,6 +161,13 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
   Round, Division, Fixture, Submitted for, Submitted by, Source, Votes, Status and Submitted. Show
   the current sort direction. Keep the displayed round label, but sort Round chronologically using
   the linked fixture date; for legacy unlinked rows, fall back to numeric round then submitted date.
+- [x] A separate Association Admin Dev account opened Coordination and correctly showed only
+  **My work** because that account was not assigned a Coordinator responsibility.
+- [ ] **OWNER RETEST — repair applied:** creating the reserved Dev Umpire account correctly reported
+  that it already existed, while Reset failed against the newer Association-only Umpire role rule.
+  Dev migration `20260820213845_fix_dev_umpire_account_scope.sql` now saves one Association-only
+  Umpire role plus the selected active Primary team membership. Dry-run and live transactional SQL
+  tests pass; click **Reset account** again to confirm the browser-to-Edge-Function path.
 - [ ] Test one complete Coordination workflow: staffing need, offer, acceptance, coordinator
   confirmation, replacement and notification.
 - [ ] Test Committee creation, one subcommittee, private upload, meeting, minutes, action, poll and

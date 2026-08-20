@@ -11,6 +11,22 @@ Future agents should start by reading these files in order:
 5. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 6. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
+## 20 August 2026 Dev Umpire test-account reset repair
+
+- The reserved Dev Umpire account already existed, so Create correctly returned a conflict. Reset
+  failed with `user_roles_umpire_association_scope_check` because the older provisioning function
+  still wrote an Association + Club + Team Umpire role after Umpire became Association-only.
+- Additive Dev migration `20260820213845_fix_dev_umpire_account_scope.sql` preserves the wrapper
+  called by the deployed Edge Function and routes Umpire through a corrected service-role-only
+  helper. Other reserved test roles continue through the established legacy path.
+- The corrected path writes exactly one Association-only Umpire role and keeps the selected team as
+  an active Primary membership. Reserved-identity, actor and scope-chain validation remain enforced;
+  anonymous and authenticated browser execution remains denied.
+- Dry-run rollback and live transactional SQL regression checks passed. The migration is active on
+  SportStack Dev only and required no Edge Function deployment. Validation rolled back its data.
+- Next owner action: click **Reset account** for the reserved Umpire account. A success toast and
+  working sign-in are the remaining browser acceptance evidence. Production is untouched.
+
 ## 20 August 2026 Umpire Match Voting owner feedback
 
 - Umpire Match Voting administration data and correction passed owner testing.

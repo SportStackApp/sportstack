@@ -6,6 +6,26 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## Dev Umpire test-account reset repair — 20 August 2026
+
+- Owner testing found that the reserved Dev Umpire account could neither be created nor reset. Create
+  correctly reported that the account already existed, but Reset failed while saving its actual role.
+- PostgreSQL logs identified the exact regression: the older provisioning function still tried to
+  save Umpire as an Association + Club + Team role after the newer access model made Umpire an
+  Association-only role.
+- Additive Dev migration `20260820213845_fix_dev_umpire_account_scope.sql` keeps the public wrapper
+  signature used by the existing Edge Function, routes only Umpire resets through a corrected
+  service-only helper and leaves every other reserved role on the established provisioning path.
+- The corrected reset stores one Association-only Umpire role and a separate active Primary team
+  membership for the selected team. The helper validates the reserved identity and selected scope,
+  and remains unavailable to anonymous or signed-in browser calls.
+- The migration and `supabase/tests/dev_umpire_test_account_scope.sql` passed a Dev transaction
+  rollback test before application and the same regression test passed live afterwards. Validation
+  was rolled back and did not retain a test-data change. The owner should now click **Reset account**
+  once more; the authenticated browser-to-Edge-Function result remains the final acceptance check.
+- Dev database only. The Edge Function, Production, `prod`, secrets and ordinary user accounts were
+  not changed.
+
 ## Umpire Match Voting owner feedback — 20 August 2026
 
 - Umpire Match Voting administration data and submission correction passed owner testing.

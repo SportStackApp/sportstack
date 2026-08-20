@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "20260802231405_reserved_dev_test_account_lookup.sql"
 SCOPED_MIGRATION = ROOT / "supabase" / "migrations" / "20260803090000_scope_reserved_umpire_voter_accounts.sql"
+UMPIRE_SCOPE_FIX = ROOT / "supabase" / "migrations" / "20260820213845_fix_dev_umpire_account_scope.sql"
 EDGE_FUNCTION = ROOT / "supabase" / "functions" / "provision-dev-test-account" / "index.ts"
 PROVISIONER = ROOT / "src" / "components" / "admin" / "DevTestAccountProvisioner.tsx"
 
@@ -62,6 +63,17 @@ class DevTestAccountResetTests(unittest.TestCase):
         self.assertIn("delete from public.user_roles", sql)
         self.assertIn("role_row.role::text = 'player'", sql)
         self.assertIn('"team_manager", "coach", "player", "umpire", "voter"', source)
+
+    def test_umpire_reset_keeps_association_role_scope(self) -> None:
+        sql = normalised(UMPIRE_SCOPE_FIX)
+
+        self.assertIn("create or replace function public.provision_dev_umpire_test_account_data", sql)
+        self.assertIn("'umpire'::public.user_role_enum", sql)
+        self.assertIn("p_association_id, null, null", sql)
+        self.assertIn("role_row.role::text = 'player'", sql)
+        self.assertIn("provision_dev_test_account_data_scoped_legacy", sql)
+        self.assertIn("to service_role", sql)
+        self.assertIn("from public, anon, authenticated", sql)
 
     def test_frontend_requires_an_explicit_confirmed_reset(self) -> None:
         source = normalised(PROVISIONER)
