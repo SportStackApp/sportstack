@@ -121,6 +121,8 @@ Exit condition: a concise acceptance report lists passed, failed, blocked and ow
     all filtered results, not only the current page.
   - [ ] Replace the generic **Use example** action with **Save filter** beside the filter controls.
   - [ ] Retain **Use 7 then 1 example** as the built-in sequence preset.
+  - [ ] Preserve the active filter setup and search results when the user navigates away from
+    Player Explorer and returns. Keep that working state until the user clears it or signs out.
 - [ ] Repair the confirmed top-right Admin menu overflow. Limit it to the available screen height
   and let the menu scroll internally so its bottom items remain reachable without shrinking text.
 - [ ] Group failures from Phase 2 by root cause so one repair can cover all affected screens.
