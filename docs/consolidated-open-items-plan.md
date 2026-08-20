@@ -135,8 +135,9 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
   remains enabled independently.
 - [x] Refresh persistence passed owner testing on 20 August 2026: Blue retained **Player MVP Voting
   is on** while **Email notifications are off**.
-- [ ] Create one email-disabled disposable Player MVP round and test the ballot, draft, analytics
-  and result flow end to end.
+- [x] An email-disabled Player MVP round opened successfully for Blue, appeared as **Open** with
+  0/14 completed, and kept reminder/resend email actions disabled. Aaron accepted the remaining
+  ballot and result behaviour without extending this disposable test on 20 August 2026.
 - [ ] Test one disposable Umpire Match Voting ballot and correction flow. Confirm suggestions are
   limited to the fixture teams, selected fill-ins, line-up assignments and recorded appearances.
 - [ ] Test one complete Coordination workflow: staffing need, offer, acceptance, coordinator

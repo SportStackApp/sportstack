@@ -23,7 +23,9 @@ Future agents should start by reading these files in order:
 - The UI fallback now also treats the setting as off, and
   `supabase/tests/player_mvp_notification_defaults.sql` protects the default and backfill rule.
 - Owner refresh testing passed: Blue retained **Player MVP Voting is on** and **Email notifications
-  are off**. Production and `prod` remain unchanged.
+  are off**. An email-disabled Blue round opened successfully, appeared as Open with 0/14
+  completed, and kept reminder/resend actions disabled. Aaron accepted the remaining ballot and
+  result behaviour without extending the disposable test. Production and `prod` remain unchanged.
 
 ## 20 August 2026 Dev private-helper permission repair
 

@@ -19,7 +19,10 @@ Update this file after every meaningful Codex task, pull request, schema change,
   active-Team-Manager test confirmed email opt-in and opt-out work without changing Player MVP
   Voting. The UI compatibility fallback also defaults email notifications to off.
 - Owner refresh testing passed: Blue retained Player MVP Voting on and email notifications off.
-  Production and `prod` are unchanged.
+- An email-disabled Blue round then opened successfully, appeared in Team Voting Sessions as Open
+  with 0/14 completed, and kept reminder/resend email actions disabled. Aaron accepted the
+  remaining ballot and result behaviour without extending the disposable test. Production and
+  `prod` are unchanged.
 
 ## Dev private-helper permission repair — 20 August 2026
 
