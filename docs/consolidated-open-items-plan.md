@@ -103,8 +103,14 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
   Division or Team label visible while the next scope loads; avoid replacing the full dashboard
   with loading blocks after every selection; prevent overlapping changes from making it unclear
   which choice won; and ensure the latest choice always settles once.
-- [ ] Retest dashboard, fixtures, byes, availability and the complete availability-to-line-up
-  workflow after the scope-switch transition repair.
+- [x] Fixtures Management showed the correct selected Club and Team records in owner testing on
+  20 August 2026.
+- [ ] **FIX REQUIRED:** keep Fixture view, add and edit pop-ups open when the browser loses focus or
+  the user switches to another window and returns. Preserve unsaved fields; close only after an
+  explicit save, cancel, close or intentional navigation.
+- [ ] Show **Bye** in the Fixtures Management Score column for bye rows instead of `-`.
+- [ ] Retest fixture pop-ups and bye presentation after those repairs, then continue availability
+  and the complete availability-to-line-up workflow.
 - [ ] Retest Team Chat history, pagination and drafts, plus Club and Association broadcast author
   exclusion and notification deep links.
 - [ ] Complete tablet and mobile checks; desktop checks already have useful evidence.
