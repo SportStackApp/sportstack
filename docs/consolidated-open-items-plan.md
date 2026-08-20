@@ -82,7 +82,9 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
     20 August 2026.
   - [x] Loading a saved filter restored its original filters and results in owner testing on
     20 August 2026.
-  - [ ] Retest recurring-search ownership and scheduling.
+  - [x] Enabling a daily recurring schedule, showing its next run and returning it to **Manual
+    only** passed Super Admin owner testing on 20 August 2026.
+  - [ ] Retest recurring-search visibility and ownership using separate non-Super-Admin accounts.
 - [ ] Retest multi-club Team Manager switching and the contextual role display in scoped user lists.
 - [ ] Retest dashboard, team cascade, fixtures, byes, availability and the complete
   availability-to-line-up workflow.
