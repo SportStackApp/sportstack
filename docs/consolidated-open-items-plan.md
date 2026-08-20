@@ -92,6 +92,10 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
     restriction check in owner testing on 20 August 2026.
   - [x] A separate Coach Dev account passed the same Player Explorer access and saved-search
     restriction check in owner testing on 20 August 2026.
+  - [ ] **FAIL — Team Manager:** the Blaze-scoped Player Explorer catalogue failed with
+    `canceling statement due to statement timeout` in owner testing on 20 August 2026. Identify the
+    exact slow catalogue query and its RLS path from query timing and logs, then constrain or index
+    that path based on evidence. Do not hide the problem by increasing the statement timeout.
 - [ ] **PARKED — owner deferred 20 August 2026:** retest multi-club Team Manager switching with a
   real multi-club Dev account.
 - [ ] **FIX REQUIRED:** scoped user lists currently show all stored roles instead of only roles
@@ -111,14 +115,20 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
 - [ ] Show **Bye** in the Fixtures Management Score column for bye rows instead of `-`.
 - [ ] Retest fixture pop-ups and bye presentation after those repairs, then continue availability
   and the complete availability-to-line-up workflow.
+- [x] A Team Manager could open a scheduled Blaze fixture and see their own availability controls
+  plus the Team Availability list in owner testing on 20 August 2026.
 - [ ] Retest Team Chat history, pagination and drafts, plus Club and Association broadcast author
   exclusion and notification deep links.
 - [ ] Complete tablet and mobile checks; desktop checks already have useful evidence.
 
 #### Batch B — voting, coordination and governance
 
-- [ ] Create one email-disabled disposable Player MVP round and test the ballot, draft, analytics
-  and result flow end to end.
+- [ ] **BLOCKED — Dev permission regression:** Team Manager Player MVP session loading failed with
+  `permission denied for function player_mvp_session_allowed_for_current_session` in owner testing
+  on 20 August 2026. Repair the systemic private-helper grant regression in Phase 3 before creating
+  a disposable round or continuing role-based module acceptance.
+- [ ] After the permission repair, create one email-disabled disposable Player MVP round and test
+  the ballot, draft, analytics and result flow end to end.
 - [ ] Test one disposable Umpire Match Voting ballot and correction flow. Confirm suggestions are
   limited to the fixture teams, selected fill-ins, line-up assignments and recorded appearances.
 - [ ] Test one complete Coordination workflow: staffing need, offer, acceptance, coordinator
@@ -142,6 +152,21 @@ Exit condition: a concise acceptance report lists passed, failed, blocked and ow
 
 ### Phase 3 — Repair only confirmed failures
 
+- [ ] **HIGH PRIORITY — repair the systemic Dev private-helper permission regression.** Live Dev
+  inspection on 20 August 2026 confirmed that the broad private-schema revoke in
+  `20260817100200_create_coordination_module.sql` removed authenticated execution from helpers used
+  by RLS and session checks. The later Player Explorer repair restored only its five helpers.
+  Player MVP helpers remain ungranted, and current PostgreSQL/API logs also show active permission
+  failures for Communications, fixture management and Discipline helpers. The live grant inventory
+  identifies further affected Risk Governance, Umpire Match Voting and MVP audit helpers.
+  - [ ] Inventory every private helper referenced by an authenticated RPC wrapper or RLS policy and
+    document its intended callers before changing grants.
+  - [ ] Add one reviewed, additive Dev migration granting `EXECUTE` only to the roles that require
+    each function. Keep `public` and `anon` denied unless a separately reviewed public flow proves
+    otherwise; do not blanket-grant the private schema.
+  - [ ] Complete a rollback test and verify both allowed and denied RLS outcomes before applying the
+    Dev migration, then rerun focused checks and affected owner tests across Player MVP,
+    Communications, Fixtures, Discipline, Risk Governance and Umpire Match Voting.
 - [ ] Resolve the `nanoid` security advisory through a reviewed dependency/lockfile update, then
   rerun `npm audit --omit=dev`, TypeScript and the production build. Do not use an unreviewed broad
   `npm audit fix`.
