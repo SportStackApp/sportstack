@@ -141,7 +141,7 @@ export async function loadOfficialEntityUpdates(scope: {
       supabase
         .from("communication_channels")
         .select("id, association_id, club_id")
-        .eq("channel_type", "ASSOCIATION_BROADCAST")
+        .eq("scope_type", "ASSOCIATION")
         .eq("association_id", scope.associationId)
         .maybeSingle(),
     );
@@ -151,7 +151,7 @@ export async function loadOfficialEntityUpdates(scope: {
       supabase
         .from("communication_channels")
         .select("id, association_id, club_id")
-        .eq("channel_type", "CLUB_BROADCAST")
+        .eq("scope_type", "CLUB")
         .eq("club_id", scope.clubId)
         .maybeSingle(),
     );
