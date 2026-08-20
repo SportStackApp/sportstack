@@ -75,8 +75,10 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
 
 - [ ] Retest Super Admin, Association Admin, Club Admin, Team Manager, Coach, Player, Umpire and
   Coordinator using separate Dev accounts rather than only **Viewing as**.
-- [ ] Confirm Player Explorer permissions, filtering, sorting, export, saved searches and schedule
-  ownership after the 19 August repair.
+- [ ] Complete Player Explorer acceptance after the 19 August repair:
+  - [x] Super Admin menu access, page loading, conditions and search passed owner testing on
+    20 August 2026.
+  - [ ] Retest sorting, export, saved filters, loading a saved filter and recurring-search ownership.
 - [ ] Retest multi-club Team Manager switching and the contextual role display in scoped user lists.
 - [ ] Retest dashboard, team cascade, fixtures, byes, availability and the complete
   availability-to-line-up workflow.
@@ -114,6 +116,13 @@ Exit condition: a concise acceptance report lists passed, failed, blocked and ow
 - [ ] Resolve the `nanoid` security advisory through a reviewed dependency/lockfile update, then
   rerun `npm audit --omit=dev`, TypeScript and the production build. Do not use an unreviewed broad
   `npm audit fix`.
+- [ ] Complete the confirmed Player Explorer feedback package:
+  - [ ] Add a totals row below the results for Games, Goals, Green, Yellow and Red. Totals must use
+    all filtered results, not only the current page.
+  - [ ] Replace the generic **Use example** action with **Save filter** beside the filter controls.
+  - [ ] Retain **Use 7 then 1 example** as the built-in sequence preset.
+- [ ] Repair the confirmed top-right Admin menu overflow. Limit it to the available screen height
+  and let the menu scroll internally so its bottom items remain reachable without shrinking text.
 - [ ] Group failures from Phase 2 by root cause so one repair can cover all affected screens.
 - [ ] Fix access-control and data-integrity failures before visual polish.
 - [ ] Run focused lint, `npm run lint:dev-plan`, `npx tsc --noEmit`, `npm run build`, relevant
