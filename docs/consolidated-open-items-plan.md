@@ -128,6 +128,13 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
   additive Dev migration `20260820182455_restore_private_helper_permissions.sql`, owner testing on
   20 August 2026 confirmed the page loads without the error at the correct Hockey Ballarat → EGC →
   Division 2 Open → Blue scope. Player MVP Voting and email notifications were both visibly off.
+- [x] Enabling Player MVP Voting for Blue worked in owner testing. The test exposed that the separate
+  email setting inherited the old on-by-default value. Dev migration
+  `20260820203326_default_player_mvp_notifications_off.sql` now defaults new teams to off and moved
+  all 95 inherited Dev values to off while preserving deliberate audited opt-ins. Player MVP Voting
+  remains enabled independently.
+- [ ] Refresh the Blue Team Manager page and confirm **Player MVP Voting is on** while **Email
+  notifications are off** before opening a disposable round.
 - [ ] Create one email-disabled disposable Player MVP round and test the ballot, draft, analytics
   and result flow end to end.
 - [ ] Test one disposable Umpire Match Voting ballot and correction flow. Confirm suggestions are

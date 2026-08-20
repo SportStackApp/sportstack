@@ -11,6 +11,20 @@ Future agents should start by reading these files in order:
 5. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 6. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
+## 20 August 2026 Player MVP emails default off on Dev
+
+- Team Manager owner testing passed the Player MVP Voting enable switch and found that the separate
+  email switch still inherited its old default-on value.
+- Live Dev had 95 inherited on values, one explicit off value and no audited explicit email opt-in.
+  Additive migration `20260820203326_default_player_mvp_notifications_off.sql` sets the future
+  default to off and moves inherited values off while preserving any audited opt-in.
+- All 96 Dev teams now have Player MVP emails off. The Blue team retains Player MVP Voting on. The
+  two switches remain independent and a transactional active-Team-Manager toggle test passed.
+- The UI fallback now also treats the setting as off, and
+  `supabase/tests/player_mvp_notification_defaults.sql` protects the default and backfill rule.
+- Owner should refresh Blue and confirm **Player MVP Voting is on** and **Email notifications are
+  off**. Production and `prod` remain unchanged.
+
 ## 20 August 2026 Dev private-helper permission repair
 
 - Owner testing found Player MVP Voting failing for a real Team Manager with `permission denied for

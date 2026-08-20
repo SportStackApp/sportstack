@@ -6,6 +6,20 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## Player MVP emails default off on Development — 20 August 2026
+
+- Team Manager owner testing confirmed Player MVP Voting can be enabled, but exposed that the
+  separate email-notification setting still inherited its original on-by-default value.
+- Live Dev contained 96 teams: 95 were on only through the original column default, no team had an
+  audited explicit enable action, and Blue had just been explicitly switched off.
+- Additive Dev migration `20260820203326_default_player_mvp_notifications_off.sql` changes the
+  future default to off and moves inherited values to off while preserving any audited opt-in. All
+  96 Dev teams are now off; Blue's Player MVP Voting setting remains on independently.
+- The rollback check and `supabase/tests/player_mvp_notification_defaults.sql` pass. A transactional
+  active-Team-Manager test confirmed email opt-in and opt-out work without changing Player MVP
+  Voting. The UI compatibility fallback also defaults email notifications to off.
+- Owner refresh confirmation remains required. Production and `prod` are unchanged.
+
 ## Dev private-helper permission repair — 20 August 2026
 
 - The 17 August Coordination foundation migration broadly revoked private-function execution and

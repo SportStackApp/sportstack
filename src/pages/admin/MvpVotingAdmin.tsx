@@ -484,7 +484,7 @@ export default function MvpVotingAdmin() {
         if (fallback.error) throw fallback.error;
         teamData = ((fallback.data || []) as Omit<TeamOption, "mvp_notifications_enabled">[]).map((team) => ({
           ...team,
-          mvp_notifications_enabled: true,
+          mvp_notifications_enabled: false,
         }));
       } else if (teamResult.error) {
         throw teamResult.error;
