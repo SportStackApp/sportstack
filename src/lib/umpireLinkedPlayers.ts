@@ -30,6 +30,7 @@ interface TeamOptionRow {
   id: string;
   name: string;
   club_id: string;
+  division_id?: string | null;
 }
 
 interface CandidateAccumulator extends UmpireLinkedPlayerOption {
@@ -237,4 +238,76 @@ export async function loadUmpireLinkedPlayers(
         a.name.localeCompare(b.name) ||
         a.teamLabel.localeCompare(b.teamLabel),
     );
+}
+
+export async function loadUmpireAssociationPlayers(
+  associationId: string,
+): Promise<UmpireLinkedPlayerOption[]> {
+  const { data: clubs, error: clubsError } = await supabase
+    .from("clubs")
+    .select("id, name")
+    .eq("association_id", associationId);
+  if (clubsError) throw clubsError;
+  const clubIds = (clubs || []).map((club) => club.id);
+  if (clubIds.length === 0) return [];
+
+  const { data: teams, error: teamsError } = await supabase
+    .from("teams")
+    .select("id, name, club_id, division_id")
+    .in("club_id", clubIds);
+  if (teamsError) throw teamsError;
+  const teamRows = (teams || []) as TeamOptionRow[];
+  const teamIds = teamRows.map((team) => team.id);
+  if (teamIds.length === 0) return [];
+
+  const divisionIds = Array.from(new Set(
+    teamRows.map((team) => team.division_id).filter((id): id is string => Boolean(id)),
+  ));
+  const divisions = divisionIds.length > 0
+    ? await supabase.from("divisions").select("id, name").in("id", divisionIds)
+    : { data: [], error: null };
+  if (divisions.error) throw divisions.error;
+
+  const memberships = await supabase
+    .from("team_memberships")
+    .select("user_id, team_id, jersey_number")
+    .in("team_id", teamIds)
+    .eq("status", "ACTIVE");
+  if (memberships.error) throw memberships.error;
+
+  const profileIds = Array.from(new Set((memberships.data || []).map((row) => row.user_id)));
+  if (profileIds.length === 0) return [];
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, first_name, last_name, revsports_player_id")
+    .in("id", profileIds);
+  if (profilesError) throw profilesError;
+
+  const profileById = new Map(
+    ((profiles || []) as ProfileOptionRow[]).map((profile) => [profile.id, profile]),
+  );
+  const teamById = new Map(teamRows.map((team) => [team.id, team]));
+  const clubNameById = new Map((clubs || []).map((club) => [club.id, club.name]));
+  const divisionNameById = new Map((divisions.data || []).map((division) => [division.id, division.name]));
+
+  return (memberships.data || [])
+    .map((membership): UmpireLinkedPlayerOption | null => {
+      const profile = profileById.get(membership.user_id);
+      const team = teamById.get(membership.team_id);
+      if (!profile || !team) return null;
+      return {
+        optionId: `association:${profile.id}:${team.id}`,
+        profileId: profile.id,
+        name: profileName(profile),
+        number: normaliseNumber(membership.jersey_number),
+        teamId: team.id,
+        teamLabel: team.name,
+        contextLabel: [clubNameById.get(team.club_id), team.division_id ? divisionNameById.get(team.division_id) : null]
+          .filter(Boolean)
+          .join(" — "),
+        source: "association",
+      };
+    })
+    .filter((option): option is UmpireLinkedPlayerOption => Boolean(option))
+    .sort((a, b) => a.name.localeCompare(b.name) || a.teamLabel.localeCompare(b.teamLabel));
 }

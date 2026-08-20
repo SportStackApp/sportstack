@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   CalendarDays,
   CalendarX2,
   CheckCircle2,
@@ -22,6 +25,7 @@ import {
   Vote,
   XCircle,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,9 +57,12 @@ import {
 } from "@/components/admin/AdminMultiSelectFilter";
 import { UmpireLinkedPlayerPicker } from "@/components/umpire/UmpireLinkedPlayerPicker";
 import {
+  loadUmpireAssociationPlayers,
   loadUmpireLinkedPlayers,
   type UmpireLinkedPlayerOption,
 } from "@/lib/umpireLinkedPlayers";
+import { getUmpireDivisionType } from "@/lib/umpireVoteSchemes";
+import { buildUmpireVoteExportSheets } from "@/lib/umpireVotingExport";
 
 interface LooseQuery extends PromiseLike<{ data: unknown[] | null; error: { message: string } | null }> {
   select: (columns?: string, options?: unknown) => LooseQuery;
@@ -104,6 +111,7 @@ interface SubmissionRow {
   public_submitter_email?: string | null;
   public_identity_status?: "UNVERIFIED" | "LINKED" | null;
   public_submission_reference?: string | null;
+  vote_scheme_key?: string | null;
   submitted_at: string;
 }
 
@@ -115,6 +123,7 @@ interface VoteLineRow {
   player_name: string;
   player_number: number | null;
   team_id: string | null;
+  scheme_line_key: string | null;
 }
 
 interface ReviewLineDraft {
@@ -255,6 +264,18 @@ interface LeaderboardRow {
   ones: number;
   divisionTotals: Record<string, number>;
 }
+
+type SubmissionSortKey =
+  | "round"
+  | "division"
+  | "fixture"
+  | "submittedFor"
+  | "submittedBy"
+  | "source"
+  | "votes"
+  | "status"
+  | "submitted";
+type SubmissionSortDirection = "asc" | "desc";
 
 const readQueryList = (value: string | null) =>
   value ? value.split(",").map((item) => item.trim()).filter(Boolean) : [];
@@ -416,6 +437,8 @@ export default function UmpireVotingModule() {
     return value === "APPROVED" || value === "DELETED" || value === "ALL" ? value : "PENDING";
   });
   const [showDeleted, setShowDeleted] = useState(() => searchParams.get("showDeleted") === "true");
+  const [submissionSortKey, setSubmissionSortKey] = useState<SubmissionSortKey>("submitted");
+  const [submissionSortDirection, setSubmissionSortDirection] = useState<SubmissionSortDirection>("desc");
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionRow | null>(null);
   const [updatingSubmissionId, setUpdatingSubmissionId] = useState<string | null>(null);
   const [reviewAction, setReviewAction] = useState<"SAVE" | "APPROVE" | "REOPEN" | null>(null);
@@ -424,6 +447,9 @@ export default function UmpireVotingModule() {
   const [reviewPlayers, setReviewPlayers] = useState<UmpireLinkedPlayerOption[]>([]);
   const [reviewPlayersLoading, setReviewPlayersLoading] = useState(false);
   const [reviewPlayersError, setReviewPlayersError] = useState<string | null>(null);
+  const [reviewAssociationPlayers, setReviewAssociationPlayers] = useState<UmpireLinkedPlayerOption[]>([]);
+  const [reviewAssociationPlayersLoading, setReviewAssociationPlayersLoading] = useState(false);
+  const [loadedReviewAssociationId, setLoadedReviewAssociationId] = useState<string | null>(null);
   const [fixtureListFilter, setFixtureListFilter] = useState<FixtureListFilter | null>(null);
 
   const hasAccess = isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN" || highestScopedRole === "CLUB_ADMIN";
@@ -445,10 +471,10 @@ export default function UmpireVotingModule() {
       ] = await Promise.all([
         moduleSupabase
           .from("player_vote_submissions")
-          .select("id, fixture_id, association_id, division_id, round_number, home_team_id, away_team_id, is_approved, is_locked, is_deleted, proxy_umpire_name, proxy_reason, submitted_by_admin_id, submitted_by_admin_name, proxy_submitter_id, proxy_submitter_name, umpire_user_id, is_public_submission, public_submitter_name, public_submitter_email, public_identity_status, public_submission_reference, submitted_at")
+          .select("id, fixture_id, association_id, division_id, round_number, home_team_id, away_team_id, is_approved, is_locked, is_deleted, proxy_umpire_name, proxy_reason, submitted_by_admin_id, submitted_by_admin_name, proxy_submitter_id, proxy_submitter_name, umpire_user_id, is_public_submission, public_submitter_name, public_submitter_email, public_identity_status, public_submission_reference, vote_scheme_key, submitted_at")
           .order("submitted_at", { ascending: false })
           .limit(250),
-        moduleSupabase.from("player_vote_lines").select("id, submission_id, votes, profile_id, player_name, player_number, team_id").limit(1000),
+        moduleSupabase.from("player_vote_lines").select("id, submission_id, votes, profile_id, player_name, player_number, team_id, scheme_line_key").limit(1000),
         moduleSupabase.from("associations").select("id, name").order("name"),
         moduleSupabase.from("clubs").select("id, name, association_id").order("name"),
         moduleSupabase.from("divisions").select("id, name, association_id, age_group").order("name"),
@@ -975,7 +1001,7 @@ export default function UmpireVotingModule() {
     [profileNameMap],
   );
 
-  const visibleSubmissions = useMemo(() => {
+  const filteredSubmissions = useMemo(() => {
     const normalisedSearch = searchTerm.trim().toLowerCase();
     return scopedSubmissions.filter((submission) => {
       if (!showDeleted && submission.is_deleted) return false;
@@ -1032,6 +1058,77 @@ export default function UmpireVotingModule() {
     [voteLines],
   );
 
+  const updateSubmissionSort = (key: SubmissionSortKey) => {
+    if (key === submissionSortKey) {
+      setSubmissionSortDirection((current) => current === "asc" ? "desc" : "asc");
+    } else {
+      setSubmissionSortKey(key);
+      setSubmissionSortDirection(key === "submitted" || key === "votes" ? "desc" : "asc");
+    }
+  };
+
+  const visibleSubmissions = useMemo(() => {
+    const direction = submissionSortDirection === "asc" ? 1 : -1;
+    const statusLabel = (submission: SubmissionRow) =>
+      submission.is_deleted ? "Deleted" : submission.is_approved ? "Approved" : "Pending";
+    const fixtureLabel = (submission: SubmissionRow) => {
+      const fixture = submission.fixture_id ? fixtureById.get(submission.fixture_id) : undefined;
+      const homeId = submission.home_team_id || fixture?.home_team_id || null;
+      const awayId = submission.away_team_id || fixture?.away_team_id || null;
+      return `${homeId ? teamNameMap.get(homeId) || "" : ""} vs ${awayId ? teamNameMap.get(awayId) || "" : ""}`;
+    };
+    const textValue = (submission: SubmissionRow) => {
+      const context = submissionContextMap.get(submission.id);
+      if (submissionSortKey === "division") return context?.divisionId ? divisionNameMap.get(context.divisionId) || "" : "";
+      if (submissionSortKey === "fixture") return fixtureLabel(submission);
+      if (submissionSortKey === "submittedFor") return getSubmittedForName(submission);
+      if (submissionSortKey === "submittedBy") return getSubmittedByName(submission);
+      if (submissionSortKey === "source") return getSubmissionSourceLabel(getSubmissionSource(submission));
+      if (submissionSortKey === "status") return statusLabel(submission);
+      return "";
+    };
+
+    return [...filteredSubmissions].sort((left, right) => {
+      if (submissionSortKey === "round") {
+        const leftFixture = left.fixture_id ? fixtureById.get(left.fixture_id) : undefined;
+        const rightFixture = right.fixture_id ? fixtureById.get(right.fixture_id) : undefined;
+        const leftFixtureTime = leftFixture?.fixture_date ? new Date(leftFixture.fixture_date).getTime() : Number.NaN;
+        const rightFixtureTime = rightFixture?.fixture_date ? new Date(rightFixture.fixture_date).getTime() : Number.NaN;
+        if (Number.isFinite(leftFixtureTime) && Number.isFinite(rightFixtureTime) && leftFixtureTime !== rightFixtureTime) {
+          return (leftFixtureTime - rightFixtureTime) * direction;
+        }
+        if (!Number.isFinite(leftFixtureTime) && !Number.isFinite(rightFixtureTime)) {
+          const leftRound = submissionContextMap.get(left.id)?.roundNumber ?? Number.MAX_SAFE_INTEGER;
+          const rightRound = submissionContextMap.get(right.id)?.roundNumber ?? Number.MAX_SAFE_INTEGER;
+          if (leftRound !== rightRound) return (leftRound - rightRound) * direction;
+        }
+        const leftFallback = Number.isFinite(leftFixtureTime) ? leftFixtureTime : new Date(left.submitted_at).getTime();
+        const rightFallback = Number.isFinite(rightFixtureTime) ? rightFixtureTime : new Date(right.submitted_at).getTime();
+        return (leftFallback - rightFallback) * direction;
+      }
+      if (submissionSortKey === "votes") {
+        const leftVotes = getSubmissionLines(left.id).reduce((total, line) => total + line.votes, 0);
+        const rightVotes = getSubmissionLines(right.id).reduce((total, line) => total + line.votes, 0);
+        return (leftVotes - rightVotes) * direction;
+      }
+      if (submissionSortKey === "submitted") {
+        return (new Date(left.submitted_at).getTime() - new Date(right.submitted_at).getTime()) * direction;
+      }
+      return textValue(left).localeCompare(textValue(right), "en-AU", { sensitivity: "base" }) * direction;
+    });
+  }, [
+    divisionNameMap,
+    filteredSubmissions,
+    fixtureById,
+    getSubmissionLines,
+    getSubmittedByName,
+    getSubmittedForName,
+    submissionContextMap,
+    submissionSortDirection,
+    submissionSortKey,
+    teamNameMap,
+  ]);
+
   const getSubmissionEdits = useCallback(
     (submissionId: string) =>
       editHistory
@@ -1044,38 +1141,55 @@ export default function UmpireVotingModule() {
     [editHistory],
   );
 
-  const leaderboard = useMemo(() => {
-    const rows = new Map<string, LeaderboardRow>();
-    voteLines
-      .filter((line) => approvedScopedSubmissionIds.has(line.submission_id))
-      .forEach((line) => {
-        const playerKey = line.profile_id
-          ? `profile-${line.profile_id}`
-          : `legacy-${line.player_name.toLowerCase()}-${line.team_id || "none"}-${line.player_number || ""}`;
-        const existing = rows.get(playerKey) || {
-          playerKey,
-          playerName: line.player_name || "Unknown player",
-          teamName: line.team_id ? teamNameMap.get(line.team_id) || "Unknown team" : "No team recorded",
-          total: 0,
-          threes: 0,
-          twos: 0,
-          ones: 0,
-          divisionTotals: {},
-        };
-        existing.total += line.votes;
-        if (line.votes === 3) existing.threes += 1;
-        if (line.votes === 2) existing.twos += 1;
-        if (line.votes === 1) existing.ones += 1;
-        const context = submissionContextMap.get(line.submission_id);
-        const divisionName = context?.divisionId
-          ? divisionNameMap.get(context.divisionId) || "Unknown division"
-          : "Unassigned division";
-        existing.divisionTotals[divisionName] = (existing.divisionTotals[divisionName] || 0) + line.votes;
-        rows.set(playerKey, existing);
-      });
+  const leaderboards = useMemo(() => {
+    const requestedDivisions = divisionFilters.length > 0 ? divisionFilters : [null];
+    return requestedDivisions.map((divisionId) => {
+      const rows = new Map<string, LeaderboardRow>();
+      voteLines
+        .filter((line) => {
+          if (!approvedScopedSubmissionIds.has(line.submission_id)) return false;
+          return !divisionId || submissionContextMap.get(line.submission_id)?.divisionId === divisionId;
+        })
+        .forEach((line) => {
+          const playerKey = line.profile_id
+            ? `profile-${line.profile_id}`
+            : `legacy-${line.player_name.toLowerCase()}-${line.team_id || "none"}-${line.player_number || ""}`;
+          const existing = rows.get(playerKey) || {
+            playerKey,
+            playerName: line.player_name || "Unknown player",
+            teamName: line.team_id ? teamNameMap.get(line.team_id) || "Unknown team" : "No team recorded",
+            total: 0,
+            threes: 0,
+            twos: 0,
+            ones: 0,
+            divisionTotals: {},
+          };
+          existing.total += line.votes;
+          if (line.votes === 3) existing.threes += 1;
+          if (line.votes === 2) existing.twos += 1;
+          if (line.votes === 1) existing.ones += 1;
+          const context = submissionContextMap.get(line.submission_id);
+          const divisionName = context?.divisionId
+            ? divisionNameMap.get(context.divisionId) || "Unknown division"
+            : "Unassigned division";
+          existing.divisionTotals[divisionName] = (existing.divisionTotals[divisionName] || 0) + line.votes;
+          rows.set(playerKey, existing);
+        });
 
-    return Array.from(rows.values()).sort((a, b) => b.total - a.total || b.threes - a.threes || a.playerName.localeCompare(b.playerName));
-  }, [voteLines, approvedScopedSubmissionIds, teamNameMap, submissionContextMap, divisionNameMap]);
+      return {
+        divisionId,
+        title: divisionId ? divisionNameMap.get(divisionId) || "Unknown division" : "Association top 10",
+        rows: Array.from(rows.values()).sort((a, b) => b.total - a.total || b.threes - a.threes || a.playerName.localeCompare(b.playerName)),
+      };
+    });
+  }, [
+    approvedScopedSubmissionIds,
+    divisionFilters,
+    divisionNameMap,
+    submissionContextMap,
+    teamNameMap,
+    voteLines,
+  ]);
 
   const dashboard = useMemo(() => {
     const eligibleFixtures = scopedFixtures.filter((fixture) => {
@@ -1194,43 +1308,58 @@ export default function UmpireVotingModule() {
       }${fixtureListRoundLabel ? ` - ${fixtureListRoundLabel}` : ""}`
     : "Fixture voting status";
 
-  const exportCsv = () => {
-    const rows = visibleSubmissions.map((submission) => {
+  const exportWorkbook = () => {
+    const exportSubmissions = visibleSubmissions.map((submission) => {
       const context = submissionContextMap.get(submission.id);
-      const lines = getSubmissionLines(submission.id)
-        .map((line) => `${line.votes} ${line.player_name || "Unknown"}${line.player_number ? ` #${line.player_number}` : ""}`)
-        .join("; ");
-      return [
-        submission.submitted_at,
-        context?.roundNumber ? `Round ${context.roundNumber}` : "",
-        context?.divisionId ? divisionNameMap.get(context.divisionId) || "" : "",
-        `${submission.home_team_id ? teamNameMap.get(submission.home_team_id) || "" : ""} vs ${submission.away_team_id ? teamNameMap.get(submission.away_team_id) || "" : ""}`,
-        getSubmittedForName(submission),
-        getSubmittedByName(submission),
-        submission.public_submitter_email || "",
-        getSubmissionSourceLabel(getSubmissionSource(submission)),
-        submission.public_submission_reference || "",
-        submission.proxy_reason || "",
-        submission.is_deleted ? "Deleted" : submission.is_approved ? "Approved" : "Pending",
-        lines,
-      ];
+      const fixture = submission.fixture_id ? fixtureById.get(submission.fixture_id) : undefined;
+      const homeTeamId = submission.home_team_id || fixture?.home_team_id || null;
+      const awayTeamId = submission.away_team_id || fixture?.away_team_id || null;
+      const divisionName = context?.divisionId ? divisionNameMap.get(context.divisionId) || "" : "";
+      return {
+        id: submission.id,
+        submittedAt: new Date(submission.submitted_at).toLocaleString("en-AU"),
+        roundLabel: context?.roundNumber ? `Round ${context.roundNumber}` : "",
+        divisionName,
+        fixtureLabel: `${homeTeamId ? teamNameMap.get(homeTeamId) || "" : ""} vs ${awayTeamId ? teamNameMap.get(awayTeamId) || "" : ""}`,
+        submittedFor: getSubmittedForName(submission),
+        submittedBy: getSubmittedByName(submission),
+        submitterEmail: submission.public_submitter_email || "",
+        source: getSubmissionSourceLabel(getSubmissionSource(submission)),
+        reference: submission.public_submission_reference || "",
+        proxyReason: submission.proxy_reason || "",
+        status: submission.is_deleted ? "Deleted" : submission.is_approved ? "Approved" : "Pending",
+        voteSchemeKey: submission.vote_scheme_key || null,
+        isJuniorDivision: getUmpireDivisionType(divisionName) === "junior",
+      };
     });
-    const csv = [
-      ["Submitted", "Round", "Division", "Match", "Submitted for", "Submitted by", "Submitter email", "Source", "Reference", "Proxy reason", "Status", "Votes"],
-      ...rows,
-    ]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
+    const visibleSubmissionIds = new Set(visibleSubmissions.map((submission) => submission.id));
+    const exportLines = voteLines
+      .filter((line) => visibleSubmissionIds.has(line.submission_id))
+      .map((line) => ({
+        submissionId: line.submission_id,
+        votes: line.votes,
+        playerName: line.player_name,
+        playerNumber: line.player_number,
+        teamName: line.team_id ? teamNameMap.get(line.team_id) || "Unknown team" : "",
+        schemeLineKey: line.scheme_line_key,
+      }));
+    const sheets = buildUmpireVoteExportSheets(exportSubmissions, exportLines);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(sheets.seniors), "Seniors");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(sheets.juniors), "Juniors");
+    XLSX.writeFile(workbook, `umpire-vote-submissions-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `umpire-vote-submissions-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  const submissionSortIcon = (key: SubmissionSortKey) => {
+    if (submissionSortKey !== key) return <ArrowUpDown className="ml-1 h-3.5 w-3.5" />;
+    return submissionSortDirection === "asc"
+      ? <ArrowUp className="ml-1 h-3.5 w-3.5" />
+      : <ArrowDown className="ml-1 h-3.5 w-3.5" />;
+  };
+
+  const submissionAriaSort = (key: SubmissionSortKey) => {
+    if (submissionSortKey !== key) return "none" as const;
+    return submissionSortDirection === "asc" ? "ascending" as const : "descending" as const;
   };
 
   const selectedSubmissionContext = selectedSubmission ? submissionContextMap.get(selectedSubmission.id) : undefined;
@@ -1240,6 +1369,26 @@ export default function UmpireVotingModule() {
   const selectedSubmissionEdits = selectedSubmission ? getSubmissionEdits(selectedSubmission.id) : [];
   const isUpdatingSelectedSubmission = selectedSubmission?.id === updatingSubmissionId;
 
+  const loadReviewAssociationPlayers = useCallback(async () => {
+    const associationId = selectedSubmissionContext?.associationId || null;
+    if (!associationId || loadedReviewAssociationId === associationId || reviewAssociationPlayersLoading) return;
+    setReviewAssociationPlayersLoading(true);
+    try {
+      const players = await loadUmpireAssociationPlayers(associationId);
+      setReviewAssociationPlayers(players);
+      setLoadedReviewAssociationId(associationId);
+    } catch (error) {
+      console.error("Failed to load association umpire vote players:", error);
+      setReviewPlayersError("Association players could not be loaded. Fixture players and manual entry remain available.");
+    } finally {
+      setReviewAssociationPlayersLoading(false);
+    }
+  }, [
+    loadedReviewAssociationId,
+    reviewAssociationPlayersLoading,
+    selectedSubmissionContext?.associationId,
+  ]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -1247,6 +1396,9 @@ export default function UmpireVotingModule() {
       setReviewDrafts([]);
       setReviewBaseline([]);
       setReviewPlayers([]);
+      setReviewAssociationPlayers([]);
+      setLoadedReviewAssociationId(null);
+      setReviewAssociationPlayersLoading(false);
       setReviewPlayersLoading(false);
       setReviewPlayersError(null);
       return;
@@ -1266,6 +1418,8 @@ export default function UmpireVotingModule() {
     setReviewDrafts(nextDrafts);
     setReviewBaseline(nextDrafts);
     setReviewPlayers([]);
+    setReviewAssociationPlayers([]);
+    setLoadedReviewAssociationId(null);
     setReviewPlayersError(null);
 
     const fixture = selectedSubmission.fixture_id
@@ -1681,9 +1835,9 @@ export default function UmpireVotingModule() {
                 </label>
               </div>
               <div className="flex items-end justify-end md:col-span-2 xl:col-span-1">
-                <Button variant="outline" onClick={exportCsv} disabled={visibleSubmissions.length === 0}>
+                <Button variant="outline" onClick={exportWorkbook} disabled={visibleSubmissions.length === 0}>
                   <Download className="mr-2 h-4 w-4" />
-                  Export CSV
+                  Export Excel
                 </Button>
               </div>
             </CardContent>
@@ -1691,15 +1845,15 @@ export default function UmpireVotingModule() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Round</TableHead>
-                    <TableHead>Division</TableHead>
-                    <TableHead>Fixture</TableHead>
-                    <TableHead>Submitted for</TableHead>
-                    <TableHead>Submitted by</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Votes</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Submitted</TableHead>
+                    <TableHead aria-sort={submissionAriaSort("round")}><Button type="button" variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => updateSubmissionSort("round")}>Round{submissionSortIcon("round")}</Button></TableHead>
+                    <TableHead aria-sort={submissionAriaSort("division")}><Button type="button" variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => updateSubmissionSort("division")}>Division{submissionSortIcon("division")}</Button></TableHead>
+                    <TableHead aria-sort={submissionAriaSort("fixture")}><Button type="button" variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => updateSubmissionSort("fixture")}>Fixture{submissionSortIcon("fixture")}</Button></TableHead>
+                    <TableHead aria-sort={submissionAriaSort("submittedFor")}><Button type="button" variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => updateSubmissionSort("submittedFor")}>Submitted for{submissionSortIcon("submittedFor")}</Button></TableHead>
+                    <TableHead aria-sort={submissionAriaSort("submittedBy")}><Button type="button" variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => updateSubmissionSort("submittedBy")}>Submitted by{submissionSortIcon("submittedBy")}</Button></TableHead>
+                    <TableHead aria-sort={submissionAriaSort("source")}><Button type="button" variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => updateSubmissionSort("source")}>Source{submissionSortIcon("source")}</Button></TableHead>
+                    <TableHead aria-sort={submissionAriaSort("votes")}><Button type="button" variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => updateSubmissionSort("votes")}>Votes{submissionSortIcon("votes")}</Button></TableHead>
+                    <TableHead aria-sort={submissionAriaSort("status")}><Button type="button" variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => updateSubmissionSort("status")}>Status{submissionSortIcon("status")}</Button></TableHead>
+                    <TableHead aria-sort={submissionAriaSort("submitted")}><Button type="button" variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => updateSubmissionSort("submitted")}>Submitted{submissionSortIcon("submitted")}</Button></TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1786,54 +1940,63 @@ export default function UmpireVotingModule() {
         </TabsContent>
 
         <TabsContent value="leaderboard">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Leaderboard</CardTitle>
-              <CardDescription>Aggregated from approved submissions only in the selected scope.</CardDescription>
-            </CardHeader>
-            <div className="overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Rank</TableHead>
-                    <TableHead>Player</TableHead>
-                    <TableHead>Team</TableHead>
-                    <TableHead className="text-center">3s</TableHead>
-                    <TableHead className="text-center">2s</TableHead>
-                    <TableHead className="text-center">1s</TableHead>
-                    <TableHead className="text-center">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leaderboard.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No approved vote lines were found in this scope.</TableCell></TableRow>
-                  ) : (
-                    leaderboard.slice(0, 100).map((row, index) => (
-                      <TableRow key={row.playerKey}>
-                        <TableCell className="font-semibold">{index + 1}</TableCell>
-                        <TableCell>{row.playerName}</TableCell>
-                        <TableCell>
-                          <p>{row.teamName}</p>
-                          {Object.keys(row.divisionTotals).length > 1 && (
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {Object.entries(row.divisionTotals)
-                                .sort(([a], [b]) => a.localeCompare(b))
-                                .map(([division, total]) => `${division}: ${total}`)
-                                .join(" · ")}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">{row.threes}</TableCell>
-                        <TableCell className="text-center">{row.twos}</TableCell>
-                        <TableCell className="text-center">{row.ones}</TableCell>
-                        <TableCell className="text-center text-lg font-semibold">{row.total}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
+          <div className="space-y-4">
+            {leaderboards.map((board) => {
+              const displayedRows = board.divisionId ? board.rows : board.rows.slice(0, 10);
+              return (
+                <Card key={board.divisionId || "combined"}>
+                  <CardHeader>
+                    <CardTitle className="text-base">{board.title}</CardTitle>
+                    <CardDescription>
+                      {board.divisionId
+                        ? "Full division leaderboard from approved submissions in the selected scope."
+                        : "Combined top 10 from approved submissions in the selected scope."}
+                    </CardDescription>
+                  </CardHeader>
+                  <div className="overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Rank</TableHead>
+                          <TableHead>Player</TableHead>
+                          <TableHead>Team</TableHead>
+                          <TableHead className="text-center">3s</TableHead>
+                          <TableHead className="text-center">2s</TableHead>
+                          <TableHead className="text-center">1s</TableHead>
+                          <TableHead className="text-center">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {displayedRows.length === 0 ? (
+                          <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No approved vote lines were found in this division.</TableCell></TableRow>
+                        ) : displayedRows.map((row, index) => (
+                          <TableRow key={row.playerKey}>
+                            <TableCell className="font-semibold">{index + 1}</TableCell>
+                            <TableCell>{row.playerName}</TableCell>
+                            <TableCell>
+                              <p>{row.teamName}</p>
+                              {!board.divisionId && Object.keys(row.divisionTotals).length > 1 && (
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {Object.entries(row.divisionTotals)
+                                    .sort(([a], [b]) => a.localeCompare(b))
+                                    .map(([division, total]) => `${division}: ${total}`)
+                                    .join(" · ")}
+                                </p>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">{row.threes}</TableCell>
+                            <TableCell className="text-center">{row.twos}</TableCell>
+                            <TableCell className="text-center">{row.ones}</TableCell>
+                            <TableCell className="text-center text-lg font-semibold">{row.total}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -1999,7 +2162,10 @@ export default function UmpireVotingModule() {
                             value={line.playerName}
                             profileId={line.profileId}
                             options={reviewPlayers}
+                            expandedOptions={reviewAssociationPlayers}
                             loading={reviewPlayersLoading}
+                            expandedLoading={reviewAssociationPlayersLoading}
+                            onExpand={() => void loadReviewAssociationPlayers()}
                             disabled={
                               selectedSubmission.is_approved ||
                               selectedSubmission.is_deleted ||
@@ -2023,7 +2189,10 @@ export default function UmpireVotingModule() {
                                         profileId: player.profileId,
                                         playerName: player.name,
                                         playerNumber: player.number,
-                                        teamId: player.teamId,
+                                        teamId:
+                                          player.teamId === selectedHomeTeamId || player.teamId === selectedAwayTeamId
+                                            ? player.teamId
+                                            : draft.teamId,
                                       }
                                     : draft,
                                 ),

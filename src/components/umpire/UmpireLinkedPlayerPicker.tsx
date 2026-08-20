@@ -10,12 +10,15 @@ interface UmpireLinkedPlayerPickerProps {
   profileId: string | null;
   selectedOptionId?: string | null;
   options: UmpireLinkedPlayerOption[];
+  expandedOptions?: UmpireLinkedPlayerOption[];
   loading?: boolean;
+  expandedLoading?: boolean;
   disabled?: boolean;
   simplifiedSuggestions?: boolean;
   placeholder?: string;
   onNameChange: (value: string) => void;
   onSelect: (option: UmpireLinkedPlayerOption) => void;
+  onExpand?: () => void;
 }
 
 const normaliseSearch = (value: string) => value.trim().toLocaleLowerCase("en-AU");
@@ -25,12 +28,15 @@ export function UmpireLinkedPlayerPicker({
   profileId,
   selectedOptionId = null,
   options,
+  expandedOptions = [],
   loading = false,
+  expandedLoading = false,
   disabled = false,
   simplifiedSuggestions = false,
   placeholder,
   onNameChange,
   onSelect,
+  onExpand,
 }: UmpireLinkedPlayerPickerProps) {
   const [open, setOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -39,18 +45,27 @@ export function UmpireLinkedPlayerPicker({
   const inputPlaceholder = placeholder || (
     simplifiedSuggestions ? "Start typing a name" : "Type at least two letters"
   );
+  const availableOptions = showAll ? expandedOptions : options;
+  const isLoading = loading || (showAll && expandedLoading);
 
   const matches = useMemo(() => {
-    if (showAll) return options;
-
     const search = normaliseSearch(value);
+    if (showAll) {
+      if (!search) return availableOptions;
+      return availableOptions.filter((option) =>
+        [option.name, option.number, option.teamLabel, option.contextLabel]
+          .join(" ")
+          .toLocaleLowerCase("en-AU")
+          .includes(search),
+      );
+    }
     if (search.length < minimumSearchLength) return [];
 
     if (simplifiedSuggestions) {
-      return options.filter((option) => normaliseSearch(option.name).includes(search));
+      return availableOptions.filter((option) => normaliseSearch(option.name).includes(search));
     }
 
-    return options.filter((option) =>
+    return availableOptions.filter((option) =>
       [
         option.name,
         option.number,
@@ -61,18 +76,18 @@ export function UmpireLinkedPlayerPicker({
         .toLocaleLowerCase("en-AU")
         .includes(search),
     );
-  }, [minimumSearchLength, options, showAll, simplifiedSuggestions, value]);
+  }, [availableOptions, minimumSearchLength, showAll, simplifiedSuggestions, value]);
 
   const selectedOption = useMemo(
     () =>
-      options.find((option) =>
+      [...options, ...expandedOptions].find((option) =>
         selectedOptionId
           ? option.optionId === selectedOptionId
           : profileId
           ? option.profileId === profileId
           : false,
       ),
-    [options, profileId, selectedOptionId],
+    [expandedOptions, options, profileId, selectedOptionId],
   );
 
   const handleBlur = () => {
@@ -96,13 +111,12 @@ export function UmpireLinkedPlayerPicker({
             if (event.key === "Escape") setOpen(false);
           }}
           onFocus={() => {
-            if (value.trim().length >= minimumSearchLength) setOpen(true);
+            if (showAll || value.trim().length >= minimumSearchLength) setOpen(true);
           }}
           onBlur={handleBlur}
           onChange={(event) => {
             const nextValue = event.target.value;
-            setShowAll(false);
-            setOpen(nextValue.trim().length >= minimumSearchLength);
+            setOpen(showAll || nextValue.trim().length >= minimumSearchLength);
             onNameChange(nextValue);
           }}
         />
@@ -113,15 +127,16 @@ export function UmpireLinkedPlayerPicker({
             size="icon"
             className="h-10 w-10 shrink-0"
             disabled={disabled}
-            aria-label="Search all linked players"
-            title="Search all linked players"
+            aria-label="Search all association players"
+            title="Search all association players"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => {
               setShowAll(true);
               setOpen(true);
+              onExpand?.();
             }}
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           </Button>
         )}
       </div>
@@ -161,17 +176,17 @@ export function UmpireLinkedPlayerPicker({
             simplifiedSuggestions ? "" : "min-w-[20rem]"
           }`}
         >
-          {loading ? (
+          {isLoading ? (
             <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading linked players...
+              Loading players...
             </div>
           ) : matches.length === 0 ? (
             <p className="px-3 py-3 text-sm text-muted-foreground">
               {simplifiedSuggestions
                 ? "No matching player."
                 : showAll || value.trim().length >= minimumSearchLength
-                ? "No linked player was found."
+                ? "No association player was found."
                 : "Type at least two letters to search."}
             </p>
           ) : (
@@ -219,6 +234,8 @@ export function UmpireLinkedPlayerPicker({
                         ? "Club"
                         : option.source === "unresolved"
                         ? "Pending"
+                        : option.source === "association"
+                        ? "Association"
                         : "SportStack"}
                     </Badge>
                   </>
