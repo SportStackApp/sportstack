@@ -97,8 +97,14 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
 - [ ] **FIX REQUIRED:** scoped user lists currently show all stored roles instead of only roles
   applicable to the selected organisation or team. Repair and then owner-test the contextual role
   display.
-- [ ] Retest dashboard, team cascade, fixtures, byes, availability and the complete
-  availability-to-line-up workflow.
+- [x] Scope cascade reset integrity passed owner recording review on 20 August 2026: changing or
+  clearing a parent Club removed the previous Division and Team selections.
+- [ ] **FIX REQUIRED:** make scope switching visually stable. Keep the selected Association, Club,
+  Division or Team label visible while the next scope loads; avoid replacing the full dashboard
+  with loading blocks after every selection; prevent overlapping changes from making it unclear
+  which choice won; and ensure the latest choice always settles once.
+- [ ] Retest dashboard, fixtures, byes, availability and the complete availability-to-line-up
+  workflow after the scope-switch transition repair.
 - [ ] Retest Team Chat history, pagination and drafts, plus Club and Association broadcast author
   exclusion and notification deep links.
 - [ ] Complete tablet and mobile checks; desktop checks already have useful evidence.
