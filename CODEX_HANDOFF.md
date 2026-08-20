@@ -22,8 +22,8 @@ Future agents should start by reading these files in order:
   two switches remain independent and a transactional active-Team-Manager toggle test passed.
 - The UI fallback now also treats the setting as off, and
   `supabase/tests/player_mvp_notification_defaults.sql` protects the default and backfill rule.
-- Owner should refresh Blue and confirm **Player MVP Voting is on** and **Email notifications are
-  off**. Production and `prod` remain unchanged.
+- Owner refresh testing passed: Blue retained **Player MVP Voting is on** and **Email notifications
+  are off**. Production and `prod` remain unchanged.
 
 ## 20 August 2026 Dev private-helper permission repair
 

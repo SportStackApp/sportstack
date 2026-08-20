@@ -18,7 +18,8 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - The rollback check and `supabase/tests/player_mvp_notification_defaults.sql` pass. A transactional
   active-Team-Manager test confirmed email opt-in and opt-out work without changing Player MVP
   Voting. The UI compatibility fallback also defaults email notifications to off.
-- Owner refresh confirmation remains required. Production and `prod` are unchanged.
+- Owner refresh testing passed: Blue retained Player MVP Voting on and email notifications off.
+  Production and `prod` are unchanged.
 
 ## Dev private-helper permission repair — 20 August 2026
 

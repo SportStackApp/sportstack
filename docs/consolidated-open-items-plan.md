@@ -133,8 +133,8 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
   `20260820203326_default_player_mvp_notifications_off.sql` now defaults new teams to off and moved
   all 95 inherited Dev values to off while preserving deliberate audited opt-ins. Player MVP Voting
   remains enabled independently.
-- [ ] Refresh the Blue Team Manager page and confirm **Player MVP Voting is on** while **Email
-  notifications are off** before opening a disposable round.
+- [x] Refresh persistence passed owner testing on 20 August 2026: Blue retained **Player MVP Voting
+  is on** while **Email notifications are off**.
 - [ ] Create one email-disabled disposable Player MVP round and test the ballot, draft, analytics
   and result flow end to end.
 - [ ] Test one disposable Umpire Match Voting ballot and correction flow. Confirm suggestions are
