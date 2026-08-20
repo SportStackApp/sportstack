@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BellRing, BookmarkPlus, CalendarClock, Loader2 } from "lucide-react";
+import { BellRing, CalendarClock, Loader2, Trash2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -10,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,6 +48,8 @@ interface PlayerExplorerSavedSearchesProps {
   expression: PlayerExplorerFilterExpression;
   disabled?: boolean;
   onLoad: (expression: PlayerExplorerFilterExpression) => void;
+  saveDialogOpen: boolean;
+  onSaveDialogOpenChange: (open: boolean) => void;
 }
 
 interface ResultSummary {
@@ -74,6 +85,8 @@ export function PlayerExplorerSavedSearches({
   expression,
   disabled = false,
   onLoad,
+  saveDialogOpen,
+  onSaveDialogOpenChange,
 }: PlayerExplorerSavedSearchesProps) {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -83,7 +96,8 @@ export function PlayerExplorerSavedSearches({
   const [latestRun, setLatestRun] = useState<SearchRun | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [name, setName] = useState("");
   const [newFrequency, setNewFrequency] = useState<ScheduleFrequency>("MANUAL");
   const [selectedFrequency, setSelectedFrequency] = useState<ScheduleFrequency>("MANUAL");
@@ -189,7 +203,7 @@ export function PlayerExplorerSavedSearches({
         .select("*")
         .single();
       if (error) throw error;
-      setDialogOpen(false);
+      onSaveDialogOpenChange(false);
       setName("");
       setNewFrequency("MANUAL");
       setSavedSearches((current) => [data, ...current]);
@@ -204,6 +218,34 @@ export function PlayerExplorerSavedSearches({
       toast({ title: "Search not saved", description: getMessage(error), variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const deleteSelected = async () => {
+    if (!selectedSearch) return;
+    setDeleting(true);
+    try {
+      const deletedId = selectedSearch.id;
+      const { error } = await supabase
+        .from("player_explorer_saved_searches")
+        .delete()
+        .eq("id", deletedId);
+      if (error) throw error;
+
+      const remaining = savedSearches.filter((search) => search.id !== deletedId);
+      setSavedSearches(remaining);
+      setSelectedId(remaining[0]?.id || "");
+      setLatestRun(null);
+      setDeleteOpen(false);
+
+      const next = new URLSearchParams(searchParams);
+      next.delete("savedSearch");
+      setSearchParams(next, { replace: true });
+      toast({ title: "Saved filter deleted", description: selectedSearch.name });
+    } catch (error) {
+      toast({ title: "Saved filter not deleted", description: getMessage(error), variant: "destructive" });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -256,10 +298,11 @@ export function PlayerExplorerSavedSearches({
             </SelectContent>
           </Select>
           <Button type="button" variant="outline" onClick={loadSelected} disabled={disabled || !selectedSearch}>Load filters</Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button type="button" disabled={disabled}><BookmarkPlus className="mr-2 h-4 w-4" />Save current</Button>
-            </DialogTrigger>
+          <Button type="button" variant="outline" onClick={() => setDeleteOpen(true)} disabled={disabled || !selectedSearch || deleting}>
+            {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+            Delete
+          </Button>
+          <Dialog open={saveDialogOpen} onOpenChange={onSaveDialogOpenChange}>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Save Player Explorer search</DialogTitle>
@@ -284,7 +327,7 @@ export function PlayerExplorerSavedSearches({
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => onSaveDialogOpenChange(false)} disabled={saving}>Cancel</Button>
                 <Button type="button" onClick={() => void saveCurrent()} disabled={saving}>
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Save search
                 </Button>
@@ -292,6 +335,31 @@ export function PlayerExplorerSavedSearches({
             </DialogContent>
           </Dialog>
         </div>
+
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {selectedSearch?.name || "this saved filter"}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                The saved filter and its recurring result history will be removed. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Keep filter</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={(event) => {
+                  event.preventDefault();
+                  void deleteSelected();
+                }}
+                disabled={deleting}
+              >
+                {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                Delete filter
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {selectedSearch ? (
           <div className="grid gap-4 rounded-md border p-4 lg:grid-cols-[minmax(180px,1fr)_auto] lg:items-end">

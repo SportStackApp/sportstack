@@ -12,6 +12,14 @@ export type PlayerExplorerSortKey =
 
 export type PlayerExplorerSortDirection = "asc" | "desc";
 
+export interface PlayerExplorerTotals {
+  gamesPlayed: number;
+  goals: number;
+  greenCards: number;
+  yellowCards: number;
+  redCards: number;
+}
+
 const identityLabels: Record<PlayerExplorerResult["identityStatus"], string> = {
   linked: "Linked",
   placeholder: "Placeholder",
@@ -39,6 +47,22 @@ export const sortPlayerExplorerResults = (
   if (comparison !== 0) return direction === "asc" ? comparison : -comparison;
   return left.displayName.localeCompare(right.displayName, "en-AU", { sensitivity: "base" })
     || left.revsportsPlayerId.localeCompare(right.revsportsPlayerId);
+});
+
+export const totalPlayerExplorerResults = (
+  results: PlayerExplorerResult[],
+): PlayerExplorerTotals => results.reduce<PlayerExplorerTotals>((totals, result) => ({
+  gamesPlayed: totals.gamesPlayed + result.gamesPlayed,
+  goals: totals.goals + result.goals,
+  greenCards: totals.greenCards + result.greenCards,
+  yellowCards: totals.yellowCards + result.yellowCards,
+  redCards: totals.redCards + result.redCards,
+}), {
+  gamesPlayed: 0,
+  goals: 0,
+  greenCards: 0,
+  yellowCards: 0,
+  redCards: 0,
 });
 
 const formatExportDate = (value: string | null) => {

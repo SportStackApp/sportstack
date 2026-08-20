@@ -5,6 +5,7 @@ import { applyPendingSignup } from "@/lib/applyPendingSignup";
 import { useToast } from "@/hooks/use-toast";
 import { logError } from "@/lib/logError";
 import { getSafeAppPath } from "@/lib/authRedirect";
+import { clearPlayerExplorerSessionState } from "@/lib/playerExplorerSession";
 
 interface AuthContextType {
   user: User | null;
@@ -78,6 +79,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (event === "SIGNED_OUT") clearPlayerExplorerSessionState();
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -140,6 +142,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signOut = async () => {
+    clearPlayerExplorerSessionState();
     await supabase.auth.signOut();
   };
 

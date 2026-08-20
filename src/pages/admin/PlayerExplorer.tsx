@@ -11,6 +11,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  BookmarkPlus,
   ChevronLeft,
   ChevronRight,
   ClipboardCopy,
@@ -36,7 +37,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useToast } from "@/hooks/use-toast";
 import { useTeamContext } from "@/contexts/TeamContext";
@@ -45,7 +47,6 @@ import type { Database as SupabaseDatabase } from "@/integrations/supabase/types
 import {
   aggregatePlayerExplorerRecords,
   createEmptyPlayerExplorerExpression,
-  createPlayerExplorerExample,
   createPlayerExplorerMovementExample,
   filterPlayerExplorerRecords,
   resolvePlayerExplorerIdentity,
@@ -61,9 +62,15 @@ import {
   buildPlayerExplorerCsv,
   buildPlayerExplorerTsv,
   sortPlayerExplorerResults,
+  totalPlayerExplorerResults,
   type PlayerExplorerSortDirection,
   type PlayerExplorerSortKey,
 } from "@/lib/playerExplorerResults";
+import {
+  getPlayerExplorerSessionStorageKey,
+  readPlayerExplorerSessionState,
+  writePlayerExplorerSessionState,
+} from "@/lib/playerExplorerSession";
 import {
   getPlayerExplorerAccessScopeKey,
   getPlayerExplorerLockedFilters,
@@ -414,6 +421,7 @@ const loadCatalogue = async (): Promise<PlayerExplorerCatalogue> => {
 };
 
 export default function PlayerExplorer() {
+  const { user } = useAuth();
   const { scopeLoading, isSuperAdmin, actorMode } = useAdminScope();
   const {
     selectedAssociationId,
@@ -441,6 +449,8 @@ export default function PlayerExplorer() {
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<PlayerExplorerSortKey>("gamesPlayed");
   const [sortDirection, setSortDirection] = useState<PlayerExplorerSortDirection>("desc");
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [restoredSessionKey, setRestoredSessionKey] = useState<string | null>(null);
 
   const accessScopeKey = getPlayerExplorerAccessScopeKey({
     actorMode,
@@ -450,6 +460,9 @@ export default function PlayerExplorer() {
     selectedTeamId,
   });
   const canUsePlayerExplorer = accessScopeKey !== null;
+  const sessionStorageKey = user?.id && accessScopeKey
+    ? getPlayerExplorerSessionStorageKey(user.id, accessScopeKey)
+    : null;
 
   const fetchCatalogue = useCallback(async () => {
     if (!canUsePlayerExplorer || !accessScopeKey) return;
@@ -471,15 +484,54 @@ export default function PlayerExplorer() {
   }, [canUsePlayerExplorer, fetchCatalogue, scopeLoading]);
 
   useEffect(() => {
-    setFilterExpression(createEmptyPlayerExplorerExpression());
+    setRestoredSessionKey(null);
+    const stored = sessionStorageKey
+      ? readPlayerExplorerSessionState(window.sessionStorage, sessionStorageKey)
+      : null;
+
+    setFilterExpression(stored?.expression || createEmptyPlayerExplorerExpression());
     setSearchError(null);
-    setHasRun(false);
-    setResults([]);
-    setMatchedAppearanceCount(0);
-    setMatchedMatchCount(0);
-    setPage(1);
+    setHasRun(stored?.hasRun || false);
+    setResults(stored?.results || []);
+    setMatchedAppearanceCount(stored?.matchedAppearanceCount || 0);
+    setMatchedMatchCount(stored?.matchedMatchCount || 0);
+    setResultSearch(stored?.resultSearch || "");
+    setPageSize(stored?.pageSize || 25);
+    setPage(stored?.page || 1);
+    setSortKey(stored?.sortKey || "gamesPlayed");
+    setSortDirection(stored?.sortDirection || "desc");
     recordsCacheRef.current = null;
-  }, [accessScopeKey]);
+    setRestoredSessionKey(sessionStorageKey);
+  }, [sessionStorageKey]);
+
+  useEffect(() => {
+    if (!sessionStorageKey || restoredSessionKey !== sessionStorageKey) return;
+    writePlayerExplorerSessionState(window.sessionStorage, sessionStorageKey, {
+      expression: filterExpression,
+      hasRun,
+      results,
+      matchedAppearanceCount,
+      matchedMatchCount,
+      resultSearch,
+      pageSize,
+      page,
+      sortKey,
+      sortDirection,
+    });
+  }, [
+    filterExpression,
+    hasRun,
+    matchedAppearanceCount,
+    matchedMatchCount,
+    page,
+    pageSize,
+    restoredSessionKey,
+    resultSearch,
+    results,
+    sessionStorageKey,
+    sortDirection,
+    sortKey,
+  ]);
 
   const scopeDetails = useMemo(() => {
     if (!catalogue || isSuperAdmin) {
@@ -609,6 +661,12 @@ export default function PlayerExplorer() {
   const resetFilters = () => {
     setFilterExpression(createEmptyPlayerExplorerExpression());
     setSearchError(null);
+    setHasRun(false);
+    setResults([]);
+    setMatchedAppearanceCount(0);
+    setMatchedMatchCount(0);
+    setResultSearch("");
+    setPage(1);
   };
 
   const runSearch = async () => {
@@ -652,6 +710,10 @@ export default function PlayerExplorer() {
 
     return sortPlayerExplorerResults(searchedResults, sortKey, sortDirection);
   }, [deferredResultSearch, results, sortDirection, sortKey]);
+  const resultTotals = useMemo(
+    () => totalPlayerExplorerResults(filteredResults),
+    [filteredResults],
+  );
 
   useEffect(() => setPage(1), [deferredResultSearch, pageSize]);
 
@@ -772,10 +834,17 @@ export default function PlayerExplorer() {
         <PlayerExplorerSavedSearches
           expression={filterExpression}
           disabled={catalogueLoading || searching}
+          saveDialogOpen={saveDialogOpen}
+          onSaveDialogOpenChange={setSaveDialogOpen}
           onLoad={(expression) => {
             setFilterExpression(expression);
             setSearchError(null);
             setHasRun(false);
+            setResults([]);
+            setMatchedAppearanceCount(0);
+            setMatchedMatchCount(0);
+            setResultSearch("");
+            setPage(1);
           }}
         />
       ) : (
@@ -825,13 +894,14 @@ export default function PlayerExplorer() {
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button type="button" variant="ghost" onClick={resetFilters} disabled={searching}>Reset filters</Button>
                 <Button type="button" variant="outline" onClick={() => {
-                  setFilterExpression(createPlayerExplorerExample());
-                  setSearchError(null);
-                }} disabled={searching}>Use example</Button>
-                <Button type="button" variant="outline" onClick={() => {
                   setFilterExpression(createPlayerExplorerMovementExample());
                   setSearchError(null);
                 }} disabled={searching}>Use 7 then 1 example</Button>
+                {isSuperAdmin ? (
+                  <Button type="button" variant="outline" onClick={() => setSaveDialogOpen(true)} disabled={searching || catalogueLoading}>
+                    <BookmarkPlus className="mr-2 h-4 w-4" />Save filter
+                  </Button>
+                ) : null}
                 <Button type="button" onClick={() => void runSearch()} disabled={searching || catalogueLoading}>
                   {searching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                   {searching ? "Searching…" : "Run search"}
@@ -927,6 +997,18 @@ export default function PlayerExplorer() {
                       );
                     })}
                   </TableBody>
+                  {filteredResults.length > 0 ? (
+                    <TableFooter>
+                      <TableRow>
+                        <TableCell colSpan={3} className="font-semibold">Totals for {filteredResults.length} players</TableCell>
+                        <TableCell className="text-right font-semibold">{resultTotals.gamesPlayed}</TableCell>
+                        <TableCell className="text-right font-semibold">{resultTotals.goals}</TableCell>
+                        <TableCell className="text-right font-semibold">{resultTotals.greenCards}</TableCell>
+                        <TableCell className="text-right font-semibold">{resultTotals.yellowCards}</TableCell>
+                        <TableCell className="text-right font-semibold">{resultTotals.redCards}</TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  ) : null}
                 </Table>
               </div>
 

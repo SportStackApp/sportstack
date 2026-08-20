@@ -78,6 +78,7 @@ import { useCoordinationAccess } from "@/hooks/useCoordinationAccess";
 import { APP_ENVIRONMENT, APP_ENVIRONMENT_CLASS, APP_VERSION } from "@/lib/appVersion";
 import { filterClubsForActiveMode } from "@/lib/activeScopeOptions";
 import { isProfileReviewRequired } from "@/lib/profileCompletion";
+import { clearPlayerExplorerSessionState } from "@/lib/playerExplorerSession";
 import { useExpenseHubAccess } from "@/features/expense-hub/useExpenseHubAccess";
 
 interface NavItem {
@@ -1296,6 +1297,7 @@ const AppLayout = () => {
   ]);
 
   const handleLogout = async () => {
+    clearPlayerExplorerSessionState();
     if (user?.id) {
       sessionStorage.removeItem(`player-primary-context:${user.id}`);
       sessionStorage.removeItem(`team_manager-primary-context:${user.id}`);
@@ -2069,7 +2071,7 @@ const AppLayout = () => {
                     <ChevronDown className="ml-1 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuContent align="end" className="max-h-[calc(100vh-5rem)] w-64 overflow-y-auto">
                   {visibleAdminDropdownSections.map((section, sectionIndex) => (
                     <div key={section.heading}>
                       {sectionIndex > 0 && <DropdownMenuSeparator />}

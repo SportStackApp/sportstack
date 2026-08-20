@@ -4,6 +4,7 @@ import {
   buildPlayerExplorerCsv,
   buildPlayerExplorerTsv,
   sortPlayerExplorerResults,
+  totalPlayerExplorerResults,
 } from "@/lib/playerExplorerResults";
 
 const result = (
@@ -44,6 +45,23 @@ describe("Player Explorer result sorting", () => {
 
     expect(sortPlayerExplorerResults(original, "displayName", "asc").map((item) => item.displayName))
       .toEqual(["Aaron", "zoe"]);
+  });
+});
+
+describe("Player Explorer result totals", () => {
+  it("totals every filtered result rather than only the visible page", () => {
+    const totals = totalPlayerExplorerResults([
+      result({ revsportsPlayerId: "1", displayName: "Alex", gamesPlayed: 3, goals: 2, greenCards: 1 }),
+      result({ revsportsPlayerId: "2", displayName: "Blair", gamesPlayed: 5, goals: 4, yellowCards: 2, redCards: 1 }),
+    ]);
+
+    expect(totals).toEqual({
+      gamesPlayed: 8,
+      goals: 6,
+      greenCards: 1,
+      yellowCards: 2,
+      redCards: 1,
+    });
   });
 });
 
