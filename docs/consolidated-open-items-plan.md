@@ -78,7 +78,9 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
 - [ ] Complete Player Explorer acceptance after the 19 August repair:
   - [x] Super Admin menu access, page loading, conditions, search, result sorting and CSV export
     passed owner testing on 20 August 2026.
-  - [ ] Retest saved filters, loading a saved filter and recurring-search ownership.
+  - [x] Saving a filter and retaining it after a browser refresh passed owner testing on
+    20 August 2026.
+  - [ ] Retest loading a saved filter and recurring-search ownership.
 - [ ] Retest multi-club Team Manager switching and the contextual role display in scoped user lists.
 - [ ] Retest dashboard, team cascade, fixtures, byes, availability and the complete
   availability-to-line-up workflow.
@@ -123,6 +125,8 @@ Exit condition: a concise acceptance report lists passed, failed, blocked and ow
   - [ ] Retain **Use 7 then 1 example** as the built-in sequence preset.
   - [ ] Preserve the active filter setup and search results when the user navigates away from
     Player Explorer and returns. Keep that working state until the user clears it or signs out.
+  - [ ] Add a clear **Delete saved filter** action with confirmation. Remove the deleted filter
+    from the dropdown and clear its `savedSearch` address parameter if it was active.
 - [ ] Repair the confirmed top-right Admin menu overflow. Limit it to the available screen height
   and let the menu scroll internally so its bottom items remain reachable without shrinking text.
 - [ ] Group failures from Phase 2 by root cause so one repair can cover all affected screens.
