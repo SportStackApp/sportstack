@@ -86,8 +86,9 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
     only** passed Super Admin owner testing on 20 August 2026.
   - [x] A separate Association Admin Dev account could open Player Explorer, saw the manual scoped
     search notice and did not see saved or recurring controls in owner testing on 20 August 2026.
-  - [ ] Confirm the same saved-search restriction with separate Club Admin, Team Manager and Coach
-    Dev accounts.
+  - [x] A separate Club Admin Dev account passed the same Player Explorer access and saved-search
+    restriction check in owner testing on 20 August 2026.
+  - [ ] Confirm the same saved-search restriction with separate Team Manager and Coach Dev accounts.
 - [ ] Retest multi-club Team Manager switching and the contextual role display in scoped user lists.
 - [ ] Retest dashboard, team cascade, fixtures, byes, availability and the complete
   availability-to-line-up workflow.
