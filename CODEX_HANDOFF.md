@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-20
+Last updated: 2026-08-21
 
 Future agents should start by reading these files in order:
 
@@ -10,6 +10,38 @@ Future agents should start by reading these files in order:
 4. `docs/project-brief.md` — concise product and architecture context.
 5. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 6. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 21 August 2026 Dev catch-up run
+
+- Dev is pushed and deployed through `08b30f9`. Main and Production were intentionally left
+  unchanged for a later staging/release decision.
+- `a6f2354` resolves the transitive `nanoid` advisory. `7cbf2c1` completes Player Explorer totals,
+  saved-filter lifecycle, persistence, Team Manager query scope and Admin-menu overflow.
+- `ba76f5c`, `3c1c203`, `54b3ea9` and `bd04a9c` label Fixture byes and make Fixture dialogs explicit-
+  close with per-tab focus restoration. `cd9da2f` stabilises scoped workflows and contextual Users
+  roles. `7068c94` implements the requested Umpire Match Voting export, leaderboard, sorting and
+  association player-picker package.
+- `08b30f9` fixes live dashboard communication counts by querying
+  `communication_channels.scope_type` instead of the non-existent `channel_type`. A post-deploy
+  club-dashboard load produced no later instance of that error in PostgreSQL logs.
+- Deployed Player Explorer Team Manager search, Club Admin contextual Users, scope transitions,
+  Fixture bye/dialog behaviour and the principal Umpire Match Voting views passed. Communications,
+  Coordination, Committee Management, Safety Hub, Expense Hub and Incident and Discipline passed
+  read-only route smokes.
+- Separate actual-role browser sessions and the final reserved Umpire Reset/password action are
+  **Blocked** by browser credential policy. Do not convert the completed Viewing-as and SQL/RLS
+  evidence into an actual-role Pass. Tablet/mobile testing is also blocked by the fixed authenticated
+  viewport.
+- Final gates: Vitest 23 files/87 tests, Python 153 tests, seven root scripts by exit status,
+  development-plan lint, TypeScript, build and zero-vulnerability npm audit passed. Full lint is
+  unchanged at 359 errors/78 warnings. The build keeps its existing Browserslist, SheetJS import
+  and large-chunk warnings. `test_teams_data.js` still prints a missing `teams.team_type` response
+  without failing, so retain the root investigation-script cleanup item.
+- Remaining acceptance work: actual-role sessions when an owner can confirm the credential action;
+  full disposable Coordination, Committee, Safety and Discipline write workflows; Team Chat
+  broadcast-author/deep-link regression; and tablet/mobile coverage in a controllable browser.
+- No migration is included in the 21 August code batch. No Production system, domain, secret or
+  historical membership row was touched.
 
 ## 20 August 2026 Dev Umpire test-account reset repair
 

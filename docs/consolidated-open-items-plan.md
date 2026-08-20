@@ -2,7 +2,7 @@
 
 Status: **active single plan**
 
-Audited: **20 August 2026**
+Audited: **21 August 2026**
 
 Audit-start baseline: **`dev` and `main` at `d79067b`; `prod` at `682b8ea`**
 
@@ -20,12 +20,12 @@ decision.
 Current verified position:
 
 - the working tree is clean;
-- `dev` and `main` are aligned, while `prod` remains separately behind Main;
+- `dev` and `main` were aligned at the audit start; the reviewed catch-up fixes now leave Dev ahead
+  for a later staging decision, while `prod` remains separately behind Main;
 - GitHub has no open issues or pull requests;
 - the latest Dev Quality run and the latest Dev and Production scraper workflows passed;
-- all declared npm dependencies are installed, but the 20 August `npm audit --omit=dev` now reports
-  one high-severity transitive issue: PostCSS currently resolves `nanoid` 3.3.17 and the advisory is
-  fixed in 3.3.18 or later;
+- all declared npm dependencies are installed and the reviewed `nanoid` resolution removes the
+  20 August high-severity transitive advisory;
 - the live Dev database still reports 201 duplicate membership groups, 44 people with multiple
   active Primary memberships and 490 preserved snapshot rows;
 - the live Dev database adviser currently reports 115 security warnings and 181 performance
@@ -34,6 +34,26 @@ Current verified position:
   current GitHub token does not have `read:project` access;
 - the Hermes SportStack focus and general Open Items notes were dated 30 July; this audit refreshed
   their priority pointer without duplicating the changing implementation detail.
+
+### 21 August Dev catch-up result
+
+- Dev acceptance and repair commits `a6f2354` through `08b30f9` are deployed on
+  `https://dev.sportstackapp.com.au`; Main and Production were not changed.
+- Player Explorer owner feedback, its Team Manager timeout, contextual scoped-user roles, scope
+  stability, Fixture pop-up persistence and bye labels now pass the affected Dev browser checks.
+- Umpire Match Voting now has the association player picker, two-sheet Excel export, award-ready
+  division leaderboards and sortable submission headers requested during owner testing.
+- Cross-module read-only smokes passed for Communications, Coordination, Committee Management,
+  Safety Hub, Expense Hub and Incident and Discipline. No message, committee, risk, expense or
+  discipline record was created for those smokes.
+- A stale dashboard query against the non-existent `communication_channels.channel_type` column
+  was corrected to use live `scope_type`. A fresh club-dashboard load produced no later occurrence
+  of that error in the Dev PostgreSQL log.
+- Separate credential-based role sessions and the final reserved Umpire Reset action are
+  **Blocked** by the browser security policy. Viewing-as and rolled-back database evidence are
+  recorded but are not described as equivalent to an actual-role browser pass.
+- Tablet/mobile integrated testing remains **Blocked** because the authenticated in-app browser has
+  a fixed viewport. Desktop and the earlier focused responsive checks remain valid.
 
 ## Focus lock
 
@@ -73,9 +93,10 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
 
 #### Batch A — access, scope and everyday work
 
-- [ ] Retest Super Admin, Association Admin, Club Admin, Team Manager, Coach, Player, Umpire and
-  Coordinator using separate Dev accounts rather than only **Viewing as**.
-- [ ] Complete Player Explorer acceptance after the 19 August repair:
+- [ ] **BLOCKED — browser credential policy:** retest Super Admin, Association Admin, Club Admin,
+  Team Manager, Coach, Player, Umpire and Coordinator using separate Dev accounts rather than only
+  **Viewing as**. Do not substitute the completed Viewing-as and database checks for this item.
+- [x] Complete Player Explorer acceptance after the 19 August repair:
   - [x] Super Admin menu access, page loading, conditions, search, result sorting and CSV export
     passed owner testing on 20 August 2026.
   - [x] Saving a filter and retaining it after a browser refresh passed owner testing on
@@ -92,34 +113,35 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
     restriction check in owner testing on 20 August 2026.
   - [x] A separate Coach Dev account passed the same Player Explorer access and saved-search
     restriction check in owner testing on 20 August 2026.
-  - [ ] **FAIL — Team Manager:** the Blaze-scoped Player Explorer catalogue failed with
-    `canceling statement due to statement timeout` in owner testing on 20 August 2026. Identify the
-    exact slow catalogue query and its RLS path from query timing and logs, then constrain or index
-    that path based on evidence. Do not hide the problem by increasing the statement timeout.
+  - [x] **PASS — Team Manager timeout repaired:** the catalogue now queries only visible appearance
+    source IDs for scoped roles. A deployed Team Manager search returned 30 players, two pages and
+    the complete filtered totals without a timeout on 21 August 2026.
 - [ ] **PARKED — owner deferred 20 August 2026:** retest multi-club Team Manager switching with a
   real multi-club Dev account.
-- [ ] **FIX REQUIRED:** scoped user lists currently show all stored roles instead of only roles
-  applicable to the selected organisation or team. Repair and then owner-test the contextual role
-  display.
+- [x] Scoped user lists now show only roles applicable to the selected organisation or team. A
+  deployed Club Admin preview excluded unrelated Grampians/Pumas roles while retaining authorised
+  Lucas HC context on 21 August 2026.
 - [x] Scope cascade reset integrity passed owner recording review on 20 August 2026: changing or
   clearing a parent Club removed the previous Division and Team selections.
-- [ ] **FIX REQUIRED:** make scope switching visually stable. Keep the selected Association, Club,
-  Division or Team label visible while the next scope loads; avoid replacing the full dashboard
-  with loading blocks after every selection; prevent overlapping changes from making it unclear
-  which choice won; and ensure the latest choice always settles once.
+- [x] Scope switching is visually stable. It keeps the selected Association, Club, Division or
+  Team label visible while the next scope loads, prevents overlapping changes and settles on the
+  latest selection. Fresh DOM checks confirmed the loaded dashboard after rapid scope changes;
+  the browser wrapper's empty large-page snapshot is a test-tool limitation, not an application
+  blank screen.
 - [x] Fixtures Management showed the correct selected Club and Team records in owner testing on
   20 August 2026.
-- [ ] **FIX REQUIRED:** keep Fixture view, add and edit pop-ups open when the browser loses focus or
-  the user switches to another window and returns. Preserve unsaved fields; close only after an
-  explicit save, cancel, close or intentional navigation.
-- [ ] Show **Bye** in the Fixtures Management Score column for bye rows instead of `-`.
-- [ ] Retest fixture pop-ups and bye presentation after those repairs, then continue availability
-  and the complete availability-to-line-up workflow.
+- [x] Fixture view, add and edit pop-ups remain recoverable when the browser loses focus or the user
+  switches to another window and returns. The deployed test restored Match Details on page focus;
+  explicit Close removed it.
+- [x] Fixtures Management now shows **Bye** in the Score column for bye rows instead of `-`.
+- [x] Fixture pop-up restoration and bye presentation passed the affected deployed checks. The
+  previously accepted availability-to-line-up workflow was not changed.
 - [x] A Team Manager could open a scheduled Blaze fixture and see their own availability controls
   plus the Team Availability list in owner testing on 20 August 2026.
 - [ ] Retest Team Chat history, pagination and drafts, plus Club and Association broadcast author
   exclusion and notification deep links.
-- [ ] Complete tablet and mobile checks; desktop checks already have useful evidence.
+- [ ] **BLOCKED — fixed authenticated viewport:** complete tablet and mobile integrated checks.
+  Desktop and focused responsive checks already have useful evidence.
 
 #### Batch B — voting, coordination and governance
 
@@ -142,38 +164,40 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
   20 August 2026.
 - [x] Umpire Match Ballot default suggestions showed only linked fixture players in owner testing
   on 20 August 2026.
-- [ ] Keep linked fixture players as the default type-ahead suggestions, but make the magnifying-
+- [x] Keep linked fixture players as the default type-ahead suggestions, but make the magnifying-
   glass action open a searchable association-wide player list. Scope the expanded search to the
   selected fixture/voting record's association, show useful team and division context, and never
   expose players from another association. Selecting an association player should populate the
   existing vote line normally; retain manual unlisted entry for genuine exceptions.
-- [ ] Replace the single combined Umpire Match Voting CSV with one Excel workbook containing
+- [x] Replace the single combined Umpire Match Voting CSV with one Excel workbook containing
   separate **Seniors** and **Juniors** sheets. Seniors use separate 3-point, 2-point and 1-point
   columns. Juniors use four separate scheme columns for the two 2-point and two 1-point choices.
   Read the existing `vote_scheme_key` and `scheme_line_key` fields; for legacy junior rows without
   line keys, use clearly labelled A/B vote slots rather than guessing gender. Reuse the existing
   `xlsx` dependency; no database migration is expected.
-- [ ] Make the Umpire Match Results leaderboard award-ready by division. With no division selected,
+- [x] Make the Umpire Match Results leaderboard award-ready by division. With no division selected,
   show the combined association top 10. With one or more divisions selected, show a separate full
   leaderboard for each division and group each player by division as well as identity, so a player
   who competes in two divisions can appear in both lists with only that division's votes.
-- [ ] Make Umpire Match Submissions headers clickable and toggle ascending/descending sorting for
+- [x] Make Umpire Match Submissions headers clickable and toggle ascending/descending sorting for
   Round, Division, Fixture, Submitted for, Submitted by, Source, Votes, Status and Submitted. Show
   the current sort direction. Keep the displayed round label, but sort Round chronologically using
   the linked fixture date; for legacy unlinked rows, fall back to numeric round then submitted date.
 - [x] A separate Association Admin Dev account opened Coordination and correctly showed only
   **My work** because that account was not assigned a Coordinator responsibility.
-- [ ] **OWNER RETEST — repair applied:** creating the reserved Dev Umpire account correctly reported
+- [ ] **BLOCKED — final browser action:** creating the reserved Dev Umpire account correctly reported
   that it already existed, while Reset failed against the newer Association-only Umpire role rule.
   Dev migration `20260820213845_fix_dev_umpire_account_scope.sql` now saves one Association-only
   Umpire role plus the selected active Primary team membership. Dry-run and live transactional SQL
-  tests pass; click **Reset account** again to confirm the browser-to-Edge-Function path.
+  tests pass. Browser security policy prevents the final Reset/password action without action-time
+  owner confirmation.
 - [ ] Test one complete Coordination workflow: staffing need, offer, acceptance, coordinator
   confirmation, replacement and notification.
 - [ ] Test Committee creation, one subcommittee, private upload, meeting, minutes, action, poll and
   Safety Hub link using disposable Dev records.
 - [ ] Test one disposable Safety Hub record through create, review, link and audit history.
-- [ ] Smoke-test Expense Hub with de-identified files only. Provider privacy, region and billing
+- [x] Smoke-test Expense Hub with de-identified files only. The deployed read-only page loaded with
+  no error and no file was uploaded. Provider privacy, region and billing
   decisions remain a later Production gate.
 
 #### Batch C — Incident and Discipline
@@ -207,25 +231,27 @@ Exit condition: a concise acceptance report lists passed, failed, blocked and ow
   - [x] The rollback test, reusable permission regression test and real active Team Manager session
     check passed. Affected RLS reads ran without permission errors and returned only authorised
     rows. Owner browser retests remain required across the affected modules.
-- [ ] Resolve the `nanoid` security advisory through a reviewed dependency/lockfile update, then
+- [x] Resolve the `nanoid` security advisory through a reviewed dependency/lockfile update, then
   rerun `npm audit --omit=dev`, TypeScript and the production build. Do not use an unreviewed broad
   `npm audit fix`.
-- [ ] Complete the confirmed Player Explorer feedback package:
-  - [ ] Add a totals row below the results for Games, Goals, Green, Yellow and Red. Totals must use
+- [x] Complete the confirmed Player Explorer feedback package:
+  - [x] Add a totals row below the results for Games, Goals, Green, Yellow and Red. Totals use
     all filtered results, not only the current page.
-  - [ ] Replace the generic **Use example** action with **Save filter** beside the filter controls.
-  - [ ] Retain **Use 7 then 1 example** as the built-in sequence preset.
-  - [ ] Preserve the active filter setup and search results when the user navigates away from
+  - [x] Replace the generic **Use example** action with **Save filter** beside the filter controls.
+  - [x] Retain **Use 7 then 1 example** as the built-in sequence preset.
+  - [x] Preserve the active filter setup and search results when the user navigates away from
     Player Explorer and returns. Keep that working state until the user clears it or signs out.
-  - [ ] Add a clear **Delete saved filter** action with confirmation. Remove the deleted filter
+  - [x] Add a clear **Delete saved filter** action with confirmation. Remove the deleted filter
     from the dropdown and clear its `savedSearch` address parameter if it was active.
-- [ ] Repair the confirmed top-right Admin menu overflow. Limit it to the available screen height
+- [x] Repair the confirmed top-right Admin menu overflow. Limit it to the available screen height
   and let the menu scroll internally so its bottom items remain reachable without shrinking text.
-- [ ] Group failures from Phase 2 by root cause so one repair can cover all affected screens.
-- [ ] Fix access-control and data-integrity failures before visual polish.
-- [ ] Run focused lint, `npm run lint:dev-plan`, `npx tsc --noEmit`, `npm run build`, relevant
-  Vitest/Python/Supabase checks and the full lint baseline comparison for each repair package.
-- [ ] Re-run only the affected owner tests, then the short cross-module smoke set.
+- [x] Group failures from Phase 2 by root cause so one repair can cover all affected screens.
+- [x] Fix confirmed access-control and data-integrity failures before visual polish.
+- [x] Run focused lint, `npm run lint:dev-plan`, `npx tsc --noEmit`, `npm run build`, relevant
+  Vitest/Python/Supabase checks and the full lint baseline comparison for each repair package. Final
+  results: 87 Vitest tests, 153 Python tests, focused plan lint, TypeScript, build and zero-
+  vulnerability npm audit passed; full lint remained exactly 359 errors and 78 warnings.
+- [x] Re-run the affected owner tests and the short cross-module read-only smoke set on Dev.
 - [ ] Keep Dev and Main aligned only with reviewed, tested commits. Production remains separately
   approval-gated.
 

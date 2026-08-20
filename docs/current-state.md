@@ -1,10 +1,47 @@
 # SportStack Current State
 
-Last updated: 2026-08-20
+Last updated: 2026-08-21
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
+
+## Dev catch-up acceptance and repair run — 21 August 2026
+
+- Dev commits `a6f2354` through `08b30f9` are pushed and deployed. They resolve the `nanoid`
+  advisory; complete the Player Explorer feedback package and Team Manager performance repair;
+  stabilise scoped administration; retain Fixture dialogs and label byes; refine Umpire Match
+  Voting export/results/review; and correct dashboard communication-channel scope queries.
+- Player Explorer passed its deployed Team Manager regression: 30 scoped players, two result pages
+  and all-result totals loaded without the earlier statement timeout. Super Admin owner checks had
+  already passed filters, sequence preset, saved-filter lifecycle, persistence and scheduling.
+- Club Admin Viewing-as showed only context-applicable roles in Users. Scope changes settled on the
+  latest authorised selection. Large-page empty browser snapshots were checked against the live DOM
+  and were a browser-wrapper limitation rather than blank application pages.
+- Fixtures Management displays **Bye** in the Score column. Match Details restores from per-tab
+  session state when the page regains focus and closes only through an explicit action. The browser
+  automation cannot emit a real Windows focus event, so the regression used a page-focus click.
+- Umpire Match Voting now exports separate Seniors/Juniors sheets, supports association-wide but
+  association-scoped candidate search, shows association top 10 or full per-division leaderboards,
+  and sorts submission headings in both directions with chronological Round ordering.
+- Communications, Coordination, Committee Management, Safety Hub, Expense Hub and Incident and
+  Discipline passed read-only route smokes. Full disposable write workflows remain open.
+- `entityDashboard.ts` queried a historical `communication_channels.channel_type` column that does
+  not exist in live Dev. It now filters the real `scope_type` values `ASSOCIATION` and `CLUB`.
+  After deployed dashboard traffic, the PostgreSQL log advanced from 14:42:57 to 14:51:35 UTC with
+  no later occurrence of the old column error.
+- Separate actual-role browser sessions and the final Dev Umpire Reset/password action are blocked
+  by browser credential policy. Viewing-as, read-only data checks and rolled-back security tests
+  pass but are not treated as equivalent actual-role evidence. Tablet/mobile integrated testing is
+  also blocked by the authenticated browser's fixed viewport.
+- Final gates passed 23 Vitest files/87 tests, 153 Python tests, all seven tracked root JavaScript
+  scripts by process exit, development-plan lint, TypeScript, production build and
+  `npm audit --omit=dev` with zero vulnerabilities. Full lint is unchanged at 359 errors and 78
+  warnings. The build retains the documented stale Browserslist, mixed SheetJS import and 3.46 MB
+  main-chunk warnings. `test_teams_data.js` still prints a known `teams.team_type` missing-column
+  response while exiting successfully, so the root-script review remains open.
+- Main, `prod`, Production, domains, secrets and historical membership data were not changed. No
+  database migration is included in this 21 August code batch.
 
 ## Dev Umpire test-account reset repair — 20 August 2026
 

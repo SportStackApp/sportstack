@@ -3,12 +3,34 @@
 > This is the detailed evidence and test checklist. Current priority and sequencing come from
 > `docs/consolidated-open-items-plan.md`.
 
-Last updated: 11 August 2026
+Last updated: 21 August 2026
 
 This is the single checklist matching the 31 July to 2 August owner review against the Dev
 implementation. It separates what is present from what has actually been tested.
 
 ## Current test checkpoint
+
+### Dev catch-up audit — 21 August 2026
+
+The deployed checks below used build `08b30f9`, the existing signed-in Super Admin session,
+Viewing-as previews, read-only Dev queries and rolled-back SQL tests. Viewing-as and SQL evidence do
+not replace a separate actual-role browser session.
+
+| Check | Evidence | Status |
+|---|---|---|
+| Actual-role access matrix | Browser security policy prevents entering or using disposable credentials without action-time owner confirmation. The same policy blocks the final reserved Umpire Reset/password action. Viewing-as and fail-closed SQL/RLS checks were completed. | **Blocked — actual-role browser coverage remains** |
+| Player Explorer | Super Admin owner flows pass for filters, Use 7 then 1, totals, save/load/delete, persistence and scheduling. A deployed Team Manager search returned 30 scoped players, two pages and all-result totals without the former timeout. | **Owner plus deployed regression pass** |
+| Scoped Users and switching | Club Admin preview excluded unrelated organisation/team roles. Rapid scope changes settled on the latest authorised selection and the full dashboard remained present in the DOM. | **Deployed preview pass; actual-role session still blocked** |
+| Fixtures Management | Bye rows show **Bye** in Score. Match Details was restored from per-tab state after the page regained focus and explicit Close removed it. The browser tool does not emit a real Windows focus event, so the test used a page-focus click after switching tools. | **Deployed regression pass with tool limitation noted** |
+| Umpire Match Voting | Two-sheet Excel export is covered by focused tests. Deployed UI shows association top 10, full per-division lists and two-way sortable submission headers; Round ordering uses fixture chronology. Association-wide candidate search remains association-scoped in code/tests. | **Deployed and automated pass** |
+| Cross-module smoke | Communications, Coordination, Committee Management, Safety Hub, Expense Hub and Incident and Discipline loaded without a visible permission/timeout error. No record, message or upload was created. | **Read-only smoke pass; full write workflows remain** |
+| Dashboard communications count | Live schema uses `communication_channels.scope_type`; the stale `channel_type` query was repaired. After a fresh deployed club-dashboard load, the latest PostgreSQL log had advanced with no later occurrence of the old error. | **Deployed regression pass** |
+| Responsive layout | Desktop evidence remains valid, but the authenticated in-app browser viewport is fixed. | **Tablet/mobile blocked** |
+| Final quality | 23 Vitest files/87 tests, 153 Python tests, focused plan lint, TypeScript, production build and zero-vulnerability dependency audit passed. Full lint remained 359 errors/78 warnings. | **Pass; baseline debt unchanged** |
+
+The Dev account provisioner SQL, private-helper grants, Coordination workflow/security suites and
+Player MVP notification defaults passed rolled-back database tests. No Production system or
+historical membership data was changed.
 
 ### Guided Committee and subcommittee workflow — 11 August 2026
 

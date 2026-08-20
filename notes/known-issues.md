@@ -3,6 +3,35 @@
 > This is the supporting defect and parked-item register. Current priority and sequencing come from
 > `docs/consolidated-open-items-plan.md`.
 
+## 21 August 2026 Dev Catch-up Results
+
+**Status:** Confirmed repair batch deployed; controlled write and actual-role checks remain
+
+Resolved on Dev:
+
+- Player Explorer all-result totals, saved-filter lifecycle, page-return persistence, Use 7 then 1
+  preset and Team Manager timeout.
+- Contextual scoped-user role display and stable scope transitions.
+- Fixture-dialog focus restoration and **Bye** score labels.
+- Umpire Match Voting association player picker, Seniors/Juniors Excel sheets, division award lists
+  and sortable submission headers.
+- Top-right Admin menu internal scrolling, the transitive `nanoid` advisory and the dashboard's
+  invalid `communication_channels.channel_type` query.
+
+Still open or blocked:
+
+- Separate actual-role browser regression sessions and the final Dev Umpire account Reset are
+  blocked by browser credential policy. Viewing-as and rolled-back SQL/RLS evidence do not replace
+  them.
+- Tablet/mobile integrated testing is blocked by the authenticated in-app browser's fixed viewport.
+- Full disposable write workflows remain for Coordination, Committee Management, Safety Hub and
+  Incident and Discipline. Expense Hub has only a read-only smoke pass.
+- Team Chat broadcast-author exclusion and notification deep links still need the targeted
+  regression check. Historical membership cleanup remains separately approval-gated.
+- The complete Roles and modules UX review remains parked by owner decision.
+
+No Production system or historical record changed in this repair batch.
+
 ## Duplicate Team Names in Fixture Import
 **Logged:** 14 April 2026  
 **Status:** Resolved on Dev — 1 August 2026; owner smoke test pending
