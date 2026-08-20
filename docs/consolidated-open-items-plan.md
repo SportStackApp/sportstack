@@ -123,11 +123,11 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
 
 #### Batch B — voting, coordination and governance
 
-- [ ] **RETEST REQUIRED — Dev permission repaired:** Team Manager Player MVP session loading failed
-  with `permission denied for function player_mvp_session_allowed_for_current_session` in owner
-  testing on 20 August 2026. Additive Dev migration
-  `20260820182455_restore_private_helper_permissions.sql` now restores the exact helper grants and
-  a real active Team Manager session passes the Player MVP scope check without a permission error.
+- [x] **PASS — Dev permission repaired:** Team Manager Player MVP session loading originally failed
+  with `permission denied for function player_mvp_session_allowed_for_current_session`. After
+  additive Dev migration `20260820182455_restore_private_helper_permissions.sql`, owner testing on
+  20 August 2026 confirmed the page loads without the error at the correct Hockey Ballarat → EGC →
+  Division 2 Open → Blue scope. Player MVP Voting and email notifications were both visibly off.
 - [ ] Create one email-disabled disposable Player MVP round and test the ballot, draft, analytics
   and result flow end to end.
 - [ ] Test one disposable Umpire Match Voting ballot and correction flow. Confirm suggestions are
