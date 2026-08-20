@@ -11,6 +11,27 @@ Future agents should start by reading these files in order:
 5. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 6. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
+## 20 August 2026 Dev private-helper permission repair
+
+- Owner testing found Player MVP Voting failing for a real Team Manager with `permission denied for
+  function player_mvp_session_allowed_for_current_session`. Live logs showed the same root cause in
+  Communications, fixture management and Incident and Discipline.
+- The broad private-schema revoke in `20260817100200_create_coordination_module.sql` had removed
+  earlier explicit authenticated grants. Live policy, wrapper and migration inspection identified
+  36 exact helpers required by Player MVP Voting, Umpire Match Voting, Communications, Fixtures,
+  Safety Hub, Incident and Discipline, session-bound module checks and Player MVP audit paths.
+- Additive Dev migration `20260820182455_restore_private_helper_permissions.sql` restores only those
+  signed-in grants. It also removes inherited anonymous execution from six later SECURITY DEFINER
+  Coordination helpers; the directly policy-used helper keeps authenticated execution and the
+  other five remain internal.
+- The rollback test and `supabase/tests/private_helper_permissions.sql` pass. A real active Team
+  Manager session now passes its Player MVP scope check, affected RLS reads execute without function
+  permission errors, and unauthenticated context returns no protected rows. No table, policy,
+  function body or data row changed.
+- Retest Player MVP Voting, Communications, Fixtures, Safety Hub, Incident and Discipline and
+  Umpire Match Voting in the browser. The Player Explorer timeout is separate and remains open.
+- Dev only. Production, `prod`, domains, secrets and historical records were not changed.
+
 ## 20 August 2026 consolidated open-items audit
 
 - The single active priority list is now `docs/consolidated-open-items-plan.md`.

@@ -123,12 +123,13 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
 
 #### Batch B — voting, coordination and governance
 
-- [ ] **BLOCKED — Dev permission regression:** Team Manager Player MVP session loading failed with
-  `permission denied for function player_mvp_session_allowed_for_current_session` in owner testing
-  on 20 August 2026. Repair the systemic private-helper grant regression in Phase 3 before creating
-  a disposable round or continuing role-based module acceptance.
-- [ ] After the permission repair, create one email-disabled disposable Player MVP round and test
-  the ballot, draft, analytics and result flow end to end.
+- [ ] **RETEST REQUIRED — Dev permission repaired:** Team Manager Player MVP session loading failed
+  with `permission denied for function player_mvp_session_allowed_for_current_session` in owner
+  testing on 20 August 2026. Additive Dev migration
+  `20260820182455_restore_private_helper_permissions.sql` now restores the exact helper grants and
+  a real active Team Manager session passes the Player MVP scope check without a permission error.
+- [ ] Create one email-disabled disposable Player MVP round and test the ballot, draft, analytics
+  and result flow end to end.
 - [ ] Test one disposable Umpire Match Voting ballot and correction flow. Confirm suggestions are
   limited to the fixture teams, selected fill-ins, line-up assignments and recorded appearances.
 - [ ] Test one complete Coordination workflow: staffing need, offer, acceptance, coordinator
@@ -152,21 +153,24 @@ Exit condition: a concise acceptance report lists passed, failed, blocked and ow
 
 ### Phase 3 — Repair only confirmed failures
 
-- [ ] **HIGH PRIORITY — repair the systemic Dev private-helper permission regression.** Live Dev
+- [x] **HIGH PRIORITY — repaired the systemic Dev private-helper permission regression.** Live Dev
   inspection on 20 August 2026 confirmed that the broad private-schema revoke in
   `20260817100200_create_coordination_module.sql` removed authenticated execution from helpers used
   by RLS and session checks. The later Player Explorer repair restored only its five helpers.
-  Player MVP helpers remain ungranted, and current PostgreSQL/API logs also show active permission
-  failures for Communications, fixture management and Discipline helpers. The live grant inventory
-  identifies further affected Risk Governance, Umpire Match Voting and MVP audit helpers.
-  - [ ] Inventory every private helper referenced by an authenticated RPC wrapper or RLS policy and
-    document its intended callers before changing grants.
-  - [ ] Add one reviewed, additive Dev migration granting `EXECUTE` only to the roles that require
-    each function. Keep `public` and `anon` denied unless a separately reviewed public flow proves
-    otherwise; do not blanket-grant the private schema.
-  - [ ] Complete a rollback test and verify both allowed and denied RLS outcomes before applying the
-    Dev migration, then rerun focused checks and affected owner tests across Player MVP,
-    Communications, Fixtures, Discipline, Risk Governance and Umpire Match Voting.
+  PostgreSQL/API logs also showed active permission failures for Communications, fixture management
+  and Discipline helpers, with the same grant loss affecting Risk Governance, Umpire Match Voting
+  and MVP audit helpers.
+  - [x] Inventoried the private helpers referenced by authenticated RLS policies, signed-in RPC
+    wrappers and the original explicit grant migrations.
+  - [x] Applied additive Dev migration
+    `20260820182455_restore_private_helper_permissions.sql`, granting `EXECUTE` only to
+    `authenticated` for the 36 required helpers. No table, policy, function body or data row changed.
+  - [x] Kept anonymous execution denied for every private function and removed the inherited
+    anonymous grants from six later Coordination helpers. Only the Coordination helper directly
+    required by authenticated RLS remains browser-executable.
+  - [x] The rollback test, reusable permission regression test and real active Team Manager session
+    check passed. Affected RLS reads ran without permission errors and returned only authorised
+    rows. Owner browser retests remain required across the affected modules.
 - [ ] Resolve the `nanoid` security advisory through a reviewed dependency/lockfile update, then
   rerun `npm audit --omit=dev`, TypeScript and the production build. Do not use an unreviewed broad
   `npm audit fix`.

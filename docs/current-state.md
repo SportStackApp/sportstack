@@ -6,6 +6,30 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## Dev private-helper permission repair — 20 August 2026
+
+- The 17 August Coordination foundation migration broadly revoked private-function execution and
+  unintentionally broke existing signed-in RLS and RPC helper calls. Owner testing exposed Player
+  MVP Voting, while current logs confirmed the same cause in Communications, fixture management and
+  Incident and Discipline. Live inspection also found affected Safety Hub, Umpire Match Voting and
+  Player MVP audit helpers.
+- Additive Dev migration `20260820182455_restore_private_helper_permissions.sql` restores
+  authenticated execution for the exact 36 helpers previously intended for signed-in policy or RPC
+  use. It does not change a function body, RLS policy, table or application data row.
+- Six SECURITY DEFINER Coordination helpers created after the broad revoke had inherited PostgreSQL's
+  default anonymous execution. Anonymous access is now removed from all private functions. The one
+  helper called directly by authenticated Coordination RLS retains signed-in execution; the other
+  five remain internal to protected wrappers or triggers.
+- The migration passed a full transaction rollback test before application. The reusable
+  `supabase/tests/private_helper_permissions.sql` check passes live. A real active Team Manager
+  session now passes the Player MVP team/module check, and affected authenticated RLS reads execute
+  without permission errors while unauthenticated context sees no protected records.
+- The current security-adviser baseline remains 115 warnings plus 16 informational notices; this
+  migration introduced no new adviser warning. The Team Manager Player Explorer statement timeout
+  is a separate performance defect and remains open.
+- Dev database only at application time. Production, `prod`, secrets, domains and historical data
+  remain unchanged.
+
 ## Consolidated open-items audit — 20 August 2026
 
 - `docs/consolidated-open-items-plan.md` is now the single active implementation and cleanup plan.
