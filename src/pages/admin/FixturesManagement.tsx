@@ -905,7 +905,11 @@ const FixturesManagement = () => {
                           <Badge variant="secondary" className="text-xs capitalize">{statusLabel}</Badge>
                         </TableCell>
                         <TableCell>
-                          {fixture.home_score !== null && fixture.away_score !== null ? `${fixture.home_score}-${fixture.away_score}` : "-"}
+                          {isBye
+                            ? "Bye"
+                            : fixture.home_score !== null && fixture.away_score !== null
+                              ? `${fixture.home_score}-${fixture.away_score}`
+                              : "-"}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center gap-1 justify-end">
@@ -940,7 +944,10 @@ const FixturesManagement = () => {
       </Dialog>
 
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent>
+        <DialogContent
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onInteractOutside={(event) => event.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Add Fixture</DialogTitle>
             <DialogDescription>Manually create a single fixture.</DialogDescription>
@@ -1039,7 +1046,11 @@ const FixturesManagement = () => {
       </Dialog>
 
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogContent
+          className="max-h-[90vh] max-w-3xl overflow-y-auto"
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onInteractOutside={(event) => event.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Edit Fixture</DialogTitle>
             <DialogDescription>Update fixture details.</DialogDescription>
@@ -1218,7 +1229,11 @@ const FixturesManagement = () => {
 
       {/* Match Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-3xl max-h-[90vh] overflow-y-auto"
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onInteractOutside={(event) => event.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Match Details</DialogTitle>
             <DialogDescription>
