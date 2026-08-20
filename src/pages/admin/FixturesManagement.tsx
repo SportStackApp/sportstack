@@ -943,10 +943,10 @@ const FixturesManagement = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={addDialogOpen} onOpenChange={(open) => open && setAddDialogOpen(true)}>
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent
-          className="[&>button.absolute]:hidden"
           onEscapeKeyDown={(event) => event.preventDefault()}
+          onFocusOutside={(event) => event.preventDefault()}
           onInteractOutside={(event) => event.preventDefault()}
         >
           <DialogHeader>
@@ -1046,10 +1046,11 @@ const FixturesManagement = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isEditModalOpen} onOpenChange={(open) => open && setIsEditModalOpen(true)}>
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent
-          className="max-h-[90vh] max-w-3xl overflow-y-auto [&>button.absolute]:hidden"
+          className="max-h-[90vh] max-w-3xl overflow-y-auto"
           onEscapeKeyDown={(event) => event.preventDefault()}
+          onFocusOutside={(event) => event.preventDefault()}
           onInteractOutside={(event) => event.preventDefault()}
         >
           <DialogHeader>
@@ -1229,10 +1230,11 @@ const FixturesManagement = () => {
       </Dialog>
 
       {/* Match Details Dialog */}
-      <Dialog open={isDetailsOpen} onOpenChange={(open) => open && setIsDetailsOpen(true)}>
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent
-          className="max-w-3xl max-h-[90vh] overflow-y-auto [&>button.absolute]:hidden"
+          className="max-w-3xl max-h-[90vh] overflow-y-auto"
           onEscapeKeyDown={(event) => event.preventDefault()}
+          onFocusOutside={(event) => event.preventDefault()}
           onInteractOutside={(event) => event.preventDefault()}
         >
           <DialogHeader>
