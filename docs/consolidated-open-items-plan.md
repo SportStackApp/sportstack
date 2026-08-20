@@ -84,7 +84,10 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
     20 August 2026.
   - [x] Enabling a daily recurring schedule, showing its next run and returning it to **Manual
     only** passed Super Admin owner testing on 20 August 2026.
-  - [ ] Retest recurring-search visibility and ownership using separate non-Super-Admin accounts.
+  - [x] A separate Association Admin Dev account could open Player Explorer, saw the manual scoped
+    search notice and did not see saved or recurring controls in owner testing on 20 August 2026.
+  - [ ] Confirm the same saved-search restriction with separate Club Admin, Team Manager and Coach
+    Dev accounts.
 - [ ] Retest multi-club Team Manager switching and the contextual role display in scoped user lists.
 - [ ] Retest dashboard, team cascade, fixtures, byes, availability and the complete
   availability-to-line-up workflow.
