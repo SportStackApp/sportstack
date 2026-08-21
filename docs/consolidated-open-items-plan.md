@@ -55,6 +55,17 @@ Current verified position:
 - Tablet/mobile integrated testing remains **Blocked** because the authenticated in-app browser has
   a fixed viewport. Desktop and the earlier focused responsive checks remain valid.
 
+### 21 August feedback-register reconciliation
+
+- The Dev feedback register was reconciled from **79 Open / 9 Closed** to **53 Open / 35 Closed**.
+  No row was deleted and Production was untouched.
+- Twenty-six stale, completed or test-only items were closed with evidence notes. One duplicate was
+  retained and cross-referenced to its canonical Open item.
+- The duplicate Player navigation entry for **My coordination** was the only confirmed small code
+  defect found in the closure group. It now appears once and has a regression check.
+- Remaining work is grouped below rather than copied into another backlog. The item-by-item audit is
+  in `docs/feedback-register-reconciliation-2026-08-21.md`.
+
 ## Focus lock
 
 Until the first three phases below are closed:
@@ -213,6 +224,16 @@ Exit condition: a concise acceptance report lists passed, failed, blocked and ow
 
 ### Phase 3 — Repair only confirmed failures
 
+- [x] Remove the duplicated **My coordination** entry from Player navigation and protect the Player
+  navigation set with a regression check.
+- [ ] **HIGH PRIORITY ACCESS CHECK:** prove with a disposable Dev account that a Pending team
+  application exposes only its approval workflow and grants no team data, Player permission or
+  team-scoped navigation before approval.
+- [ ] Repair the iPhone/mobile Association -> Club -> Division -> Team cascade tap target and
+  horizontal overflow after an integrated responsive reproduction is available.
+- [ ] Triage the remaining focused UI defects in Requests, RevSports review, roster readability,
+  profile photo changes and Safety Hub presentation as one small-fix batch.
+
 - [x] **HIGH PRIORITY — repaired the systemic Dev private-helper permission regression.** Live Dev
   inspection on 20 August 2026 confirmed that the broad private-schema revoke in
   `20260817100200_create_coordination_module.sql` removed authenticated execution from helpers used
@@ -258,6 +279,18 @@ Exit condition: a concise acceptance report lists passed, failed, blocked and ow
 Exit condition: no known blocker remains for the accepted staging scope.
 
 ## Next cleanup work
+
+### Feedback-derived product clean-up
+
+- [ ] Add configurable Division match segments and breaks with a calculated total duration.
+- [ ] Add Committee position hierarchy and appointment history, plus stronger safeguards before
+  closing a committee.
+- [ ] Add Expense statement upload progress and reusable partial/exact exclusion rules.
+- [ ] Apply one documented team-ordering rule across club, division and association lists.
+- [ ] Link Coaching Squad player detail to profile position preferences and relevant match history.
+- [ ] Keep the broader dashboard/KPI redesign, environment navigation redesign, Formation Library
+  deletion/asset improvements and full Roles & modules redesign in **Parked for later** until the
+  acceptance and access-control batches are complete.
 
 ### Phase 4 — Database and data-quality cleanup
 

@@ -366,7 +366,6 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Umpiring",
       items: [
         { path: "/umpire/vote", label: "Umpire Match Ballot", icon: ClipboardList },
-        { path: "/coordination/my-assignments", label: "My coordination", icon: UserCheck },
       ],
     },
     {

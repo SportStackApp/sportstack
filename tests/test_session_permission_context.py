@@ -298,6 +298,7 @@ class SessionPermissionContextFrontendTests(unittest.TestCase):
         player_section = layout.split("player: [", 1)[1].split("], };", 1)[0]
 
         self.assertIn('path: "/umpire/vote"', player_section)
+        self.assertEqual(player_section.count('path: "/coordination/my-assignments"'), 1)
         self.assertNotIn('path: "/admin/umpire-voting"', player_section)
         self.assertIn('requiredroleforplayermode="umpire"', app)
         self.assertIn(

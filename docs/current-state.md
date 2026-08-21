@@ -4076,3 +4076,15 @@ When Codex finishes a task, add a dated entry with:
 - What Aaron should test next
 - Risk level
 - Any unknowns that still need confirmation
+## 21 August 2026 — Dev feedback register reconciled
+
+- The Development feedback register was audited against current source, deployed owner checks and
+  the single consolidated plan. It now contains 53 Open and 35 Closed items; no row was deleted.
+- Twenty-six completed, stale, duplicate or test-only items have auditable closure notes. The exact
+  IDs and grouped remaining themes are recorded in
+  `docs/feedback-register-reconciliation-2026-08-21.md`.
+- Player mode no longer shows **My coordination** in both Core and Umpiring. A source regression
+  check requires exactly one Player navigation entry.
+- The main immediate access-control question remains explicit: a Pending team application must not
+  grant team data, Player permissions or team navigation before approval.
+- No database schema or Production system changed.

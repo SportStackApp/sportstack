@@ -1148,3 +1148,25 @@ with the 8 August snapshot above, the newer snapshot and current Git evidence wi
 
 Keep Player MVP Voting and Umpire Match Voting separate. Hockey Trace remains experimental and
 disabled by default.
+## 21 August 2026 — Feedback register clean-up
+
+What changed:
+
+- Reconciled all 88 Development feedback rows against current code, deployed owner evidence and the
+  consolidated plan.
+- Closed 26 completed, stale, duplicate or test-only items with an evidence note. The register is
+  now 53 Open / 35 Closed; no row was deleted.
+- Fixed the duplicated **My coordination** Player navigation item and added a regression check.
+- Merged genuine Open themes into `docs/consolidated-open-items-plan.md`; detailed decisions are in
+  `docs/feedback-register-reconciliation-2026-08-21.md`.
+
+What Aaron should test next:
+
+1. In Dev Player mode, confirm **My coordination** appears once in the left navigation.
+2. Use a disposable account with only a Pending team application and confirm it sees only the
+   approval workflow, with no team data or Player access.
+
+Risk level:
+
+- Low. One navigation entry and feedback administration fields changed. No schema migration or
+  Production change is included.
