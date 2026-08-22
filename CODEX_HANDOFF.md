@@ -1053,8 +1053,9 @@ with the 8 August snapshot above, the newer snapshot and current Git evidence wi
 
 ## Obsidian note continuity
 
-- Committed repository Markdown is authoritative. Its generated, read-only Hermes mirror is
+- Committed repository Markdown is authoritative. Its generated, read-only Big Brain mirror is
   `Projects/SportStack Repository`, with `_Index.md` as the entry point.
+- The active vault is `C:\Users\mulla\OneDrive\Documents\Big Brain`.
 - The curated Vault notes own only the project boundary, priorities, action register and operating
   procedure. They link back to the generated mirror for changing implementation and release detail.
 - `AGENTS.md` requires a refresh/read at the start of meaningful work and a sync plus `-Check` after

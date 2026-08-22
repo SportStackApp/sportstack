@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Publishes the committed SportStack Markdown notes into Aaron's Hermes Obsidian Vault.
+Publishes the committed SportStack Markdown notes into Aaron's Big Brain Obsidian vault.
 
 .DESCRIPTION
 The repository remains the source of truth. The script exports an exact, verified mirror from a
@@ -44,7 +44,7 @@ if ([string]::IsNullOrWhiteSpace($VaultPath)) {
     }
     else {
         $documentsDirectory = [Environment]::GetFolderPath([Environment+SpecialFolder]::MyDocuments)
-        $VaultPath = Join-Path $documentsDirectory 'Hermes Vault'
+        $VaultPath = Join-Path $documentsDirectory 'Big Brain'
     }
 }
 

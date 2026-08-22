@@ -32,7 +32,7 @@ Current verified position:
   warnings. These are a review queue, not proof that every item is a defect;
 - the GitHub Projects board, if one is in use, is **UNKNOWN — needs confirmation** because the
   current GitHub token does not have `read:project` access;
-- the Hermes SportStack focus and general Open Items notes were dated 30 July; this audit refreshed
+- the Big Brain SportStack focus and general Open Items notes were dated 30 July; this audit refreshed
   their priority pointer without duplicating the changing implementation detail.
 
 ### 21 August Dev catch-up result
@@ -82,11 +82,11 @@ Until the first three phases below are closed:
 Owner: Codex, with Aaron only for judgement or access that cannot be safely automated.
 
 - [x] Audit the active repository, branches, GitHub issues and pull requests, workflows, current
-  notes, historical plans, dependency installation, Hermes project notes and live Dev database.
+  notes, historical plans, dependency installation, Big Brain project notes and live Dev database.
 - [x] Make this file the single active plan.
-- [x] Update the stale Hermes SportStack focus and Open Items notes from the repository
+- [x] Update the stale Big Brain SportStack focus and Open Items notes from the repository
   plan. Keep workstation tasks separate from SportStack application work.
-- [x] Correct the repository's curated Vault paths after the approved Hermes folder restructure.
+- [x] Correct the repository's curated vault paths after the approved Big Brain folder restructure.
 - [ ] Decide whether a GitHub Projects board is actually used. If it is, Aaron can grant the active
   `SportStackApp` GitHub token the `read:project` scope so its items can be reconciled here.
 - [ ] Review the seven tracked root `test_*.js` investigation scripts. Move still-useful checks into
@@ -342,8 +342,8 @@ approval where data could be changed or removed.
 - [ ] Reduce `CODEX_HANDOFF.md` to the latest handoff plus links to archived implementation history.
 - [ ] Reconcile outdated statuses in `notes/known-issues.md` and close items already owner-confirmed.
 - [ ] Archive old session handovers after confirming they add no unique active requirement.
-- [ ] Refresh the Hermes SportStack notes after the canonical repository cleanup is committed.
-- [ ] Keep the generated Hermes repository mirror read-only and verify the sync check.
+- [ ] Refresh the Big Brain SportStack notes after the canonical repository cleanup is committed.
+- [ ] Keep the generated Big Brain repository mirror read-only and verify the sync check.
 
 Exit condition: this plan, the current-state summary, the test matrix and the known-issues register
 each have one clear purpose and no conflicting current status.
@@ -390,7 +390,7 @@ this plan:
 - `notes/project-consolidation-notes.md` — April idea list, much of it now implemented or obsolete;
 - `CODEX_HANDOFF.md` and older session notes — dated implementation history;
 - module-specific discovery and implementation plans — accepted scope and technical detail;
-- Hermes SportStack Focus and Open Items — strategy and operations summaries that now point back to
+- Big Brain SportStack Focus and Open Items — strategy and operations summaries that now point back to
   this repository plan.
 
 ## Definition of back on track

@@ -59,7 +59,7 @@ $principal = New-ScheduledTaskPrincipal `
 
 Register-ScheduledTask `
     -TaskName $TaskName `
-    -Description 'Publishes committed SportStack notes to the Hermes Obsidian Vault.' `
+    -Description 'Publishes committed SportStack notes to the Big Brain Obsidian vault.' `
     -Action $action `
     -Trigger $trigger `
     -Settings $settings `

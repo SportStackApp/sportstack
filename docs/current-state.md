@@ -4066,6 +4066,53 @@ Unknowns still needing confirmation:
 - Permanent storage of sensitive replacement notes requires a documented privacy and redaction
   review before Production.
 
+## 22 August 2026 - Big Brain Obsidian vault cutover
+
+What changed:
+
+- Changed SportStack's default Obsidian target to
+  `C:\Users\mulla\OneDrive\Documents\Big Brain`.
+- Updated the four required curated-note paths to Big Brain's current Projects and Areas layout.
+- Kept the generated, read-only repository mirror at `Projects/SportStack Repository` so the
+  cutover did not create a duplicate mirror or remove existing notes.
+- Set the current-user `SPORTSTACK_OBSIDIAN_VAULT` override to the Big Brain path and refreshed the
+  daily `SportStack Obsidian Note Sync` task description.
+- Updated the active repository instructions, plan, handoff and notes guide to use Big Brain.
+
+Files changed:
+
+- `AGENTS.md`
+- `CODEX_HANDOFF.md`
+- `config/obsidian-note-sync.json`
+- `docs/consolidated-open-items-plan.md`
+- `docs/current-state.md`
+- `notes/README.md`
+- `scripts/register-obsidian-note-sync-task.ps1`
+- `scripts/sync-sportstack-notes-to-obsidian.ps1`
+
+Checks run:
+
+- Both PowerShell scripts passed parser validation and the note-sync JSON parsed successfully.
+- The current-user vault override resolves to Big Brain.
+- The daily Windows task re-registered successfully and reports `Ready`.
+- A live `origin/dev` refresh published 55 notes to Big Brain.
+- The independent note-sync `-Check` passed against Big Brain and all four curated notes exist at
+  their configured locations.
+- `npx tsc --noEmit` and `npm run build` passed. The existing large-chunk warning remains.
+- The focused Development-plan lint check and `git diff --check` passed.
+- Full `npm run lint` retained the existing unrelated baseline of 359 errors and 78 warnings. This
+  documentation and PowerShell-only change adds no linted application source.
+
+What Aaron should test next:
+
+1. Open Big Brain in Obsidian, open `Projects/SportStack Repository/_Index`, then follow one link to
+   a repository note.
+
+Risk level:
+
+- Low. This is a reversible documentation and local note-sync configuration change. It includes no
+  database migration and does not change the SportStack app, Dev database or Production.
+
 ## How to update this file
 
 When Codex finishes a task, add a dated entry with:

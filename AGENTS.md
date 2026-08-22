@@ -165,22 +165,23 @@ There is no automated test suite yet. Do the relevant manual smoke test and say 
   checks without explicit owner approval.
 - Branches: `fix/…`, `feat/…`, `chore/…`. Commits: `type(scope): summary`.
 
-## Obsidian / Hermes Vault notes
+## Obsidian / Big Brain vault notes
 
-- The committed repository notes remain the source of truth. The Hermes Vault contains a generated,
+- The active Obsidian vault is `C:\Users\mulla\OneDrive\Documents\Big Brain`. The committed
+  repository notes remain the source of truth. Big Brain contains a generated,
   read-only mirror plus four curated SportStack notes.
 - At the start of meaningful work, run
   `pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Fetch`, then read:
-  - `Projects/SportStack/Project Index.md`
-  - `Projects/SportStack/Status and Planning/SportStack Focus.md`
-  - `Technology and Accounts/Status and Planning/Open Items.md`
+  - `10 Projects/Professional/SportStack/Project.md`
+  - `10 Projects/Professional/SportStack/Status and Planning/SportStack Focus.md`
+  - `20 Areas/Shared Systems/Technology and Accounts/Status and Planning/Open Items.md`
   - the mirrored `Projects/SportStack Repository/_Index.md`
 - During meaningful work, update the appropriate repository source: `docs/current-state.md`,
   `CODEX_HANDOFF.md`, `docs/scraper-operations.md`, `notes/known-issues.md`, or another scoped note.
 - After the canonical change is committed and pushed to `dev`, run the sync again followed by
   `pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check`. Do not report the
   documentation as complete unless both commands pass.
-- Update a curated Hermes note directly only when its owned boundary, priority or action status
+- Update a curated Big Brain note directly only when its owned boundary, priority or action status
   changes. Do not duplicate changing release detail there; link to the generated repository mirror.
 - If the Vault or OneDrive is unavailable, report `OBSIDIAN SYNC PENDING` in the handoff instead of
   silently treating the notes as current.
