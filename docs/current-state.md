@@ -4113,6 +4113,58 @@ Risk level:
 - Low. This is a reversible documentation and local note-sync configuration change. It includes no
   database migration and does not change the SportStack app, Dev database or Production.
 
+## 26 August 2026 - Historical Umpire Match Voting import to Dev
+
+What changed:
+
+- Imported 50 owner-reviewed historical Umpire Match Voting submissions and 159 vote lines into
+  SportStack Dev only for Rounds 9 and 11-15.
+- Stored the reconciled full player name on each vote line and linked every line to its reviewed
+  SportStack profile ID. Existing profile names were not rewritten.
+- Matched every imported submission to exactly one Hockey Ballarat fixture and every player team
+  to one of that fixture's two teams.
+- Left all imported submissions pending, unlocked and not deleted so they can be reviewed in the
+  normal admin workflow.
+- Held back Rounds 2 and 5 because their unresolved player identities affect the round review.
+- Held back Round 10 after validation found submission `P098` attached to `Blaze Black v EGC`
+  even though all four voted players were recorded for `Lucas` or `Blaze Orange`. Existing Dev
+  records in Rounds 2, 5 and 10 were not changed.
+- Used deterministic import IDs and retained the source submission reference in the proxy reason
+  so the imported set can be identified and checked again without guessing.
+- The existing coordination trigger created 50 pending `NO_ROSTER` review checks for these
+  historical proxy submissions. It did not change or reject the vote records.
+
+Files changed:
+
+- `docs/current-state.md`
+
+Checks run:
+
+- Pre-import validation found exactly one fixture for each included submission, no missing profile
+  links, no existing deterministic IDs and no matching existing fixture/umpire submissions.
+- Post-import counts are 50 imported submissions and 159 imported vote lines: Round 9 `7/21`,
+  Round 11 `9/28`, Round 12 `5/17`, Round 13 `11/36`, Round 14 `9/29`, and Round 15 `9/28`.
+- Post-import validation found zero incorrect fixture-side teams, missing profiles, invalid vote
+  patterns, invalid scheme-line keys or imported records in Rounds 2, 5 and 10.
+- Dev now contains 134 Umpire Match Voting submissions and 433 vote lines in total.
+- No application code or schema changed, so application lint, TypeScript and build checks were not
+  required for this data-only import.
+
+What Aaron should test next:
+
+1. Open the Dev Umpire Match Voting admin page and spot-check the pending submissions in Rounds 9
+   and 11-15, including the corrected Round 13 and Round 14 fixtures.
+
+Risk level:
+
+- Medium. This is an additive Dev database import with no migration. Production was not changed.
+
+Unknowns still needing confirmation:
+
+- Round 10 submission `P098` needs its correct fixture confirmed before any Round 10 historical
+  records are imported.
+- Rounds 2 and 5 remain held until their unresolved player identities are confirmed.
+
 ## How to update this file
 
 When Codex finishes a task, add a dated entry with:
