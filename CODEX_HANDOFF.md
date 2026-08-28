@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-21
+Last updated: 2026-08-28
 
 Future agents should start by reading these files in order:
 
@@ -10,6 +10,21 @@ Future agents should start by reading these files in order:
 4. `docs/project-brief.md` — concise product and architecture context.
 5. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 6. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 28 August 2026 approved target access-control design
+
+- `docs/access-control-model.md` now records Aaron's approved target design for scopes,
+  responsibilities, permission sets, capabilities, paid-module entitlements, independent
+  **Working as** contexts and temporary workflow assignments.
+- The document includes the 15 agreed permission matrices and the approved membership, Primary and
+  Secondary Team, Fill-in, exemption, Umpire rostering, voting, Committee, Incident and Discipline,
+  Safety, communication, personal-information, audit, handover and account-closure rules.
+- The existing Working as selector is retained as the initial UI; its visual redesign remains
+  parked. Competition Coordinator and Safety Coordinator are deliberately excluded for now.
+- This is a documentation-only target model. Current implementation differences remain and must be
+  verified against the live Dev schema and app before a compatibility or migration plan is written.
+- No code, schema, live data, module entitlement, deployment, Main, Production or domain was
+  changed.
 
 ## 21 August 2026 Dev catch-up run
 

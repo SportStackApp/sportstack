@@ -1,10 +1,24 @@
 # SportStack Current State
 
-Last updated: 2026-08-21
+Last updated: 2026-08-28
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
+
+## Approved target access-control design - 28 August 2026
+
+- The future scope, responsibility, permission, capability, module-entitlement and temporary-
+  assignment model is documented in `docs/access-control-model.md`.
+- Aaron approved the model through staged reviews covering 15 permission matrices, independent
+  **Working as** contexts, membership and player participation, Committee authority, operational
+  coordination, both voting modules, exemptions, Incident and Discipline, Safety Hub, unified
+  communications, personal information, audit, handover and account closure.
+- This is design documentation only. It does not claim that the current app or live database already
+  follows the target model. No application code, database object, live data, module entitlement or
+  deployment was changed.
+- Implementation remains parked until a separate compatibility review maps current roles,
+  permissions, routes and live Dev schema to the approved target model.
 
 ## Dev catch-up acceptance and repair run — 21 August 2026
 

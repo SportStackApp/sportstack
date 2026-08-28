@@ -367,7 +367,8 @@ separate approval-gated release after the normal application release is stable.
 
 These are valid ideas but are not current blockers:
 
-- full Roles and modules UX redesign and action-level permission matrix;
+- full Roles and modules UX redesign and implementation of the approved target access-control model
+  in `docs/access-control-model.md`;
 - advanced whole-site focus/persistence coverage;
 - email template and broader visual polish;
 - structured profile addresses;
