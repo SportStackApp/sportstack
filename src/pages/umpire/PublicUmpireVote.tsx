@@ -533,7 +533,7 @@ export default function PublicUmpireVote() {
                     }}
                     disabled={loadingFixtures}
                   >
-                    <SelectTrigger className="w-full min-w-0 overflow-hidden">
+                    <SelectTrigger className="w-full min-w-0 overflow-hidden" aria-label="Round">
                       <SelectValue placeholder={loadingFixtures ? "Loading rounds..." : "Select round"} />
                     </SelectTrigger>
                     <SelectContent>
@@ -556,7 +556,7 @@ export default function PublicUmpireVote() {
                     }}
                     disabled={!selectedRound}
                   >
-                    <SelectTrigger className="w-full min-w-0 overflow-hidden">
+                    <SelectTrigger className="w-full min-w-0 overflow-hidden" aria-label="Division">
                       <SelectValue placeholder="Select division" />
                     </SelectTrigger>
                     <SelectContent>
@@ -574,7 +574,7 @@ export default function PublicUmpireVote() {
                     onValueChange={setSelectedFixtureId}
                     disabled={!selectedDivisionId}
                   >
-                    <SelectTrigger className="w-full min-w-0 overflow-hidden">
+                    <SelectTrigger className="w-full min-w-0 overflow-hidden" aria-label="Fixture">
                       <SelectValue placeholder="Select fixture" />
                     </SelectTrigger>
                     <SelectContent>
@@ -670,7 +670,7 @@ export default function PublicUmpireVote() {
                     <div className="space-y-1.5">
                       <Label>Team</Label>
                       <Select value={card.teamId} onValueChange={(teamId) => updateVoteCard(index, { teamId })}>
-                        <SelectTrigger className="w-full min-w-0 overflow-hidden">
+                        <SelectTrigger className="w-full min-w-0 overflow-hidden" aria-label={`${card.label} team`}>
                           <SelectValue placeholder="Select team" />
                         </SelectTrigger>
                         <SelectContent>
