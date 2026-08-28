@@ -1,10 +1,31 @@
 # SportStack Current State
 
-Last updated: 2026-08-28
+Last updated: 2026-08-29
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
+
+## Desktop persistence and accessibility review — 29 August 2026
+
+- The reviewed 14-commit Dev catch-up, followed by two small accessibility commits, is now aligned
+  on Dev and Main staging. Production and `prod` were not changed.
+- Login, Sign-up, Reset Password, signed-in and public Umpire Match Voting selectors, and Fixture
+  Management edit/delete icon buttons now expose clear names to assistive technology.
+- Live desktop checks confirmed the new names on Dev and Main. The public Umpire Match Voting form
+  retained entered name and email text after switching browser tabs and returning; nothing was
+  submitted or deleted.
+- Signed-out protected routes preserved their intended return path. Fresh public Dev and Main
+  browser sessions had no console errors on the tested routes.
+- Authenticated role pages and a true Windows application-to-application focus switch remain
+  **Blocked** because the isolated test browser had no signed-in account. Do not treat the public
+  tab-switch check as proof that every authenticated form and search page retains work.
+- Authentication pages still need a later landmark, heading and colour-contrast review. The Dev
+  landing page still shows Grampians Hockey and a 2024 footer; whether that branding is intentional
+  is **UNKNOWN — needs confirmation**.
+- Focused lint, development-plan lint, TypeScript, production build, 23 Vitest files/87 tests,
+  153 Python tests and both Dev Quality runs passed. Full lint reproduced the existing 359-error/
+  78-warning baseline. No database migration or retained test data is included.
 
 ## Approved target access-control design - 28 August 2026
 

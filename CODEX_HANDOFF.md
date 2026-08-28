@@ -1,6 +1,6 @@
 # Codex Handoff
 
-Last updated: 2026-08-28
+Last updated: 2026-08-29
 
 Future agents should start by reading these files in order:
 
@@ -10,6 +10,25 @@ Future agents should start by reading these files in order:
 4. `docs/project-brief.md` — concise product and architecture context.
 5. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 6. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
+
+## 29 August 2026 desktop UI/UX walk-away review
+
+- Dev and Main staging are aligned after reviewing the former 14-commit gap. No workflow or
+  migration file was part of the promotion, and Production was not touched.
+- Commits `72a3504` and `f5d3066` add accessible names to password visibility buttons, scoped
+  Sign-up selectors, signed-in and public Umpire Match Voting selectors, and Fixture Management
+  edit/delete icon buttons.
+- Live Dev and Main browser snapshots expose the repaired names. The public no-login Umpire Match
+  Voting form retained its entered name and email after a tab switch; no ballot was submitted.
+- Authenticated focus persistence, including Roles & Permissions and other unsaved forms/searches,
+  remains a priority check but is **Blocked** without a signed-in isolated-browser session. A true
+  Windows focus event also could not be produced by the browser tool.
+- Remaining public findings are authentication-page landmarks/headings, colour contrast and
+  possibly stale Grampians Hockey/2024 landing branding. These were recorded rather than expanded
+  into a larger visual redesign.
+- Local verification passed focused and development-plan lint, TypeScript, build, all 87 Vitest
+  tests and 153 Python tests. Dev Quality runs `33204772148` and `33205037798` passed. Full lint
+  remains the known 359-error/78-warning baseline. No migration or retained test data.
 
 ## 28 August 2026 approved target access-control design
 

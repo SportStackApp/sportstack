@@ -3,6 +3,30 @@
 > This is the supporting defect and parked-item register. Current priority and sequencing come from
 > `docs/consolidated-open-items-plan.md`.
 
+## 29 August 2026 desktop UI/UX review
+
+**Status:** Small accessibility repair deployed to Dev and Main; authenticated persistence remains open
+
+Resolved:
+
+- Password visibility buttons on Login, Sign-up and Reset Password now have meaningful accessible
+  names and expose their pressed state.
+- Sign-up, Umpire Match Voting and public proxy-ballot selectors now have meaningful accessible
+  names. Fixture Management edit/delete icon buttons are also named.
+- The public proxy ballot retained unsent name and email values after a browser-tab switch on Dev.
+
+Still open or blocked:
+
+- Aaron's requirement is that unfinished forms and search state must not disappear when switching
+  to another Windows application and back. Authenticated pages, especially Roles & Permissions,
+  still need a real signed-in Windows-focus matrix. This run had no isolated-browser credentials,
+  so it is **Blocked**, not passed.
+- Login, Sign-up and Forgot Password need a deliberate landmark, heading and colour-contrast pass.
+- The public landing page still shows **GRAMPIANS HOCKEY** and `© 2024 Grampians Hockey`. Confirm
+  intended branding before changing it.
+
+No form was submitted, no record was deleted and no database migration was included.
+
 ## 21 August 2026 Dev Catch-up Results
 
 **Status:** Confirmed repair batch deployed; controlled write and actual-role checks remain

@@ -2,7 +2,7 @@
 
 Status: **active single plan**
 
-Audited: **21 August 2026**
+Audited: **29 August 2026**
 
 Audit-start baseline: **`dev` and `main` at `d79067b`; `prod` at `682b8ea`**
 
@@ -147,6 +147,11 @@ Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owne
 - [x] Fixtures Management now shows **Bye** in the Score column for bye rows instead of `-`.
 - [x] Fixture pop-up restoration and bye presentation passed the affected deployed checks. The
   previously accepted availability-to-line-up workflow was not changed.
+- [ ] **PRIORITY — authenticated evidence needed:** verify that unfinished forms, dialogs and
+  search state remain intact after switching to another Windows application and returning. The
+  public Umpire Match Voting form passed a browser-tab switch on 29 August, but authenticated
+  pages such as Roles & Permissions remain blocked without a signed-in isolated-browser session.
+  Treat any unexplained clearing or disappearing window as a defect, not expected refresh behaviour.
 - [x] A Team Manager could open a scheduled Blaze fixture and see their own availability controls
   plus the Team Availability list in owner testing on 20 August 2026.
 - [ ] Retest Team Chat history, pagination and drafts, plus Club and Association broadcast author
@@ -369,7 +374,6 @@ These are valid ideas but are not current blockers:
 
 - full Roles and modules UX redesign and implementation of the approved target access-control model
   in `docs/access-control-model.md`;
-- advanced whole-site focus/persistence coverage;
 - email template and broader visual polish;
 - structured profile addresses;
 - mobile formation/pitch rotation improvements;
