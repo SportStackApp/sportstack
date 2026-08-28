@@ -1077,7 +1077,7 @@ export default function UmpireVoteSubmit() {
                         }}
                         disabled={associationsLoading}
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full" aria-label="Association">
                           <SelectValue placeholder={associationsLoading ? "Loading associations..." : "Select Association"} />
                         </SelectTrigger>
                         <SelectContent>
@@ -1107,7 +1107,7 @@ export default function UmpireVoteSubmit() {
                         }}
                         disabled={roundsLoading}
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full" aria-label="Round">
                           <SelectValue placeholder={roundsLoading ? "Loading rounds..." : "Select Round"} />
                         </SelectTrigger>
                         <SelectContent>
@@ -1139,7 +1139,7 @@ export default function UmpireVoteSubmit() {
                         }}
                         disabled={divisionsLoading}
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full" aria-label="Division">
                           <SelectValue placeholder={divisionsLoading ? "Loading divisions..." : "Select Division"} />
                         </SelectTrigger>
                         <SelectContent>
@@ -1174,7 +1174,7 @@ export default function UmpireVoteSubmit() {
                         }}
                         disabled={fixturesLoading}
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full" aria-label="Completed fixture">
                           <SelectValue placeholder={fixturesLoading ? "Loading completed fixtures..." : "Select completed fixture"} />
                         </SelectTrigger>
                         <SelectContent>

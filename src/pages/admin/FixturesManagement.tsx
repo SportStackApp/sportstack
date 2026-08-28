@@ -984,8 +984,8 @@ const FixturesManagement = () => {
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetails(fixture)} aria-label="View match details" title="View match details">
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(fixture)}><Pencil className="h-3 w-3" /></Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setDeleteTarget(fixture.id); setDeleteDialogOpen(true); rememberFixtureDialog({ type: "delete", fixtureId: fixture.id }); }}><Trash2 className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(fixture)} aria-label="Edit fixture" title="Edit fixture"><Pencil className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setDeleteTarget(fixture.id); setDeleteDialogOpen(true); rememberFixtureDialog({ type: "delete", fixtureId: fixture.id }); }} aria-label="Delete fixture" title="Delete fixture"><Trash2 className="h-3 w-3" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>

@@ -381,6 +381,8 @@ const Signup = () => {
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        aria-label={showPassword ? "Hide passwords" : "Show passwords"}
+                        aria-pressed={showPassword}
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4" />
@@ -428,7 +430,7 @@ const Signup = () => {
                           })
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger aria-label="Association">
                           <SelectValue placeholder="Select association" />
                         </SelectTrigger>
                         <SelectContent>
@@ -454,7 +456,7 @@ const Signup = () => {
                         }
                         disabled={!formData.associationId}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger aria-label="Club">
                           <SelectValue placeholder="Select club" />
                         </SelectTrigger>
                         <SelectContent>
@@ -476,7 +478,7 @@ const Signup = () => {
                         }
                         disabled={!formData.clubId}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger aria-label="Team">
                           <SelectValue placeholder="Select team" />
                         </SelectTrigger>
                         <SelectContent>
