@@ -252,7 +252,7 @@ const friendlyMvpError = (error: unknown) => {
     LEGACY_SESSION_READ_ONLY: "Legacy voting sessions are read-only and cannot be reopened.",
     SESSION_NOT_FOUND: "This voting session could not be found.",
     SESSION_NOT_OPEN: "This voting session is not open.",
-    SESSION_EXPIRED: "This voting session has already expired.",
+    SESSION_EXPIRED: "The voting deadline has passed and this round is closed.",
     SESSION_DISPUTED: "This voting session is paused while the match result is reviewed.",
     RESULT_CONCERN_UNRESOLVED: "Review the unresolved match-result concern before closing this session.",
     FIXTURE_NOT_COMPLETED: "The fixture must be marked as completed before voting can open.",

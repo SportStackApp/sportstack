@@ -1015,22 +1015,6 @@ export default function MvpVoteCast() {
         </Card>
       )}
 
-      {sessionDisplayState === "expired" && (
-        <Card className="mx-auto max-w-xl text-center py-8">
-          <CardHeader>
-            <div className="mx-auto w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mb-2">
-              <Clock className="h-6 w-6 text-amber-700" />
-            </div>
-            <CardTitle className="text-xl font-semibold">Voting time expired</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              The deadline has passed. You can request a reopen from the MVP Votes page.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       {sessionDisplayState === "closed" && (
         <Card className="mx-auto max-w-xl text-center py-8">
           <CardHeader>
