@@ -21,6 +21,7 @@ import {
 } from "@/lib/hockeyPositions";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { cardHistoryRows, toggledAssessmentValue } from "@/lib/coachingProfile";
 
 interface Profile {
   first_name: string;
@@ -30,7 +31,7 @@ interface Profile {
 }
 
 interface Assessment {
-  assessment: number;
+  assessment: number | null;
   notes: string;
 }
 
@@ -70,6 +71,7 @@ export default function CoachingPlayerProfile() {
   const [seasonFilter, setSeasonFilter] = useState<"This Season" | "All Time">("This Season");
   const [activeSeason, setActiveSeason] = useState<{ startDate: string | null; endDate: string | null; year: number | null } | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<PlayerHistoryRecord | null>(null);
+  const [cardsDialogOpen, setCardsDialogOpen] = useState(false);
   const [matchNotes, setMatchNotes] = useState<CoachNote[]>([]);
   const [draftNote, setDraftNote] = useState("");
   const [notesLoading, setNotesLoading] = useState(false);
@@ -198,9 +200,11 @@ export default function CoachingPlayerProfile() {
 
   const handleAssessmentChange = async (position: string, val: number) => {
     if (!user || !playerId || !teamId) return;
-    
+    const previous = assessments[position];
+    const nextValue = toggledAssessmentValue(previous?.assessment, val);
+
     // Optimistic update
-    setAssessments(prev => ({ ...prev, [position]: { ...prev[position], assessment: val } }));
+    setAssessments(prev => ({ ...prev, [position]: { notes: prev[position]?.notes || "", assessment: nextValue } }));
     
     try {
       const { error } = await supabase.from("coach_position_assessments").upsert({
@@ -208,12 +212,18 @@ export default function CoachingPlayerProfile() {
         player_id: playerId,
         team_id: teamId,
         position_code: position,
-        assessment: val
+        assessment: nextValue,
       }, { onConflict: "coach_id,player_id,team_id,position_code" });
       if (error) throw error;
-      toast.success("Assessment saved");
+      toast.success(nextValue === null ? "Assessment cleared" : "Assessment saved");
     } catch (err) {
       console.error(err);
+      setAssessments((current) => {
+        const restored = { ...current };
+        if (previous) restored[position] = previous;
+        else delete restored[position];
+        return restored;
+      });
       toast.error("Failed to save assessment");
     }
   };
@@ -228,7 +238,7 @@ export default function CoachingPlayerProfile() {
         team_id: teamId,
         position_code: position,
         notes: notes,
-        assessment: assessments[position]?.assessment || 2,
+        assessment: assessments[position]?.assessment ?? null,
       }, { onConflict: "coach_id,player_id,team_id,position_code" });
       if (error) throw error;
       toast.success("Notes saved");
@@ -350,6 +360,7 @@ export default function CoachingPlayerProfile() {
     (sum, match) => sum + match.greenCards + match.yellowCards + match.redCards,
     0,
   );
+  const matchesWithCards = cardHistoryRows(filteredMatches);
 
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-6">
@@ -404,10 +415,10 @@ export default function CoachingPlayerProfile() {
                         <td className="px-4 py-3">{getPrefLabel(preferences[pos])}</td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1">
-                            <button onClick={() => handleAssessmentChange(pos, 1)} className={cn("w-6 h-6 rounded border flex items-center justify-center text-xs font-bold transition-colors", currentAss === 1 ? "bg-green-500 border-green-600 text-white" : "bg-white hover:bg-green-50")}>1</button>
-                            <button onClick={() => handleAssessmentChange(pos, 2)} className={cn("w-6 h-6 rounded border flex items-center justify-center text-xs font-bold transition-colors", currentAss === 2 ? "bg-blue-500 border-blue-600 text-white" : "bg-white hover:bg-blue-50")}>2</button>
-                            <button onClick={() => handleAssessmentChange(pos, 3)} className={cn("w-6 h-6 rounded border flex items-center justify-center text-xs font-bold transition-colors", currentAss === 3 ? "bg-yellow-400 border-yellow-500 text-white" : "bg-white hover:bg-yellow-50")}>3</button>
-                            <button onClick={() => handleAssessmentChange(pos, 4)} className={cn("w-6 h-6 rounded border flex items-center justify-center text-xs font-bold transition-colors", currentAss === 4 ? "bg-red-500 border-red-600 text-white" : "bg-white hover:bg-red-50")}>4</button>
+                            <button type="button" aria-label={`Rate ${position.label} 1`} aria-pressed={currentAss === 1} onClick={() => handleAssessmentChange(pos, 1)} className={cn("w-6 h-6 rounded border flex items-center justify-center text-xs font-bold transition-colors", currentAss === 1 ? "bg-green-500 border-green-600 text-white" : "bg-white hover:bg-green-50")}>1</button>
+                            <button type="button" aria-label={`Rate ${position.label} 2`} aria-pressed={currentAss === 2} onClick={() => handleAssessmentChange(pos, 2)} className={cn("w-6 h-6 rounded border flex items-center justify-center text-xs font-bold transition-colors", currentAss === 2 ? "bg-blue-500 border-blue-600 text-white" : "bg-white hover:bg-blue-50")}>2</button>
+                            <button type="button" aria-label={`Rate ${position.label} 3`} aria-pressed={currentAss === 3} onClick={() => handleAssessmentChange(pos, 3)} className={cn("w-6 h-6 rounded border flex items-center justify-center text-xs font-bold transition-colors", currentAss === 3 ? "bg-yellow-400 border-yellow-500 text-white" : "bg-white hover:bg-yellow-50")}>3</button>
+                            <button type="button" aria-label={`Rate ${position.label} 4`} aria-pressed={currentAss === 4} onClick={() => handleAssessmentChange(pos, 4)} className={cn("w-6 h-6 rounded border flex items-center justify-center text-xs font-bold transition-colors", currentAss === 4 ? "bg-red-500 border-red-600 text-white" : "bg-white hover:bg-red-50")}>4</button>
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -461,12 +472,14 @@ export default function CoachingPlayerProfile() {
                 <span className="text-xs text-muted-foreground text-center">Goals</span>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold font-display leading-tight flex-1 flex items-center">{cardsRecorded}</span>
-                <span className="text-xs text-muted-foreground text-center w-full">Cards</span>
-              </CardContent>
-            </Card>
+            <button type="button" className="rounded-xl text-left disabled:cursor-default" onClick={() => setCardsDialogOpen(true)} disabled={cardsRecorded === 0} aria-label={`Show ${cardsRecorded} recorded card${cardsRecorded === 1 ? "" : "s"}`}>
+              <Card className={cn(cardsRecorded > 0 && "h-full transition-colors hover:border-primary/60 hover:bg-muted/20")}>
+                <CardContent className="p-4 flex h-full flex-col items-center justify-center">
+                  <span className="text-3xl font-bold font-display leading-tight flex-1 flex items-center">{cardsRecorded}</span>
+                  <span className="text-xs text-muted-foreground text-center w-full">Cards</span>
+                </CardContent>
+              </Card>
+            </button>
           </div>
 
           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
@@ -549,6 +562,32 @@ export default function CoachingPlayerProfile() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cardsDialogOpen} onOpenChange={setCardsDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Recorded cards</DialogTitle>
+            <DialogDescription>Games and card types in the selected history period.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {matchesWithCards.map((match) => (
+              <div key={match.id} className="rounded-lg border p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium">{new Date(match.date).toLocaleDateString("en-AU")} vs {match.opponent}</p>
+                    <p className="text-xs text-muted-foreground">{match.result}</p>
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-1">
+                    {match.greenCards > 0 && <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{match.greenCards} green</Badge>}
+                    {match.yellowCards > 0 && <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{match.yellowCards} yellow</Badge>}
+                    {match.redCards > 0 && <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{match.redCards} red</Badge>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

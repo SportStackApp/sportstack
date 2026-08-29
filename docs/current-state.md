@@ -6,6 +6,19 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## READY-005/006 coaching rating and card details — 30 August 2026
+
+- Clicking an already-selected 1–4 coaching assessment now clears it; selecting a different number
+  replaces it. An optimistic save failure restores the previous screen value.
+- The Dev `coach_position_assessments.assessment` field now permits null as the explicit cleared
+  state and has a database check allowing only null or 1–4. All eight existing values were valid.
+  A temporary null update followed by rollback left all existing rows unchanged.
+- The Cards summary is now an accessible button. It opens a compact list of affected games with the
+  date, opponent, result and exact green/yellow/red card counts for the selected history period.
+- The focused lint, TypeScript, Production build and 30 Vitest files/117 tests pass. Full lint remains
+  at the existing 350-error/78-warning baseline. Production is unchanged; deployment and signed-in
+  owner acceptance remain open.
+
 ## READY-002/003/007 pitch interaction repair — 30 August 2026
 
 - Pitch players now open the same on-screen history as bench and reserve players. The list contains

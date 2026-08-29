@@ -50,6 +50,10 @@ Current verified position:
   same complete fixture-year history, the whole marker drags without snapping, the dotted handle is
   gone and the selected marker has a clear amber ring. Automated, deployment and signed-out route
   checks pass; owner click/drag/save/refresh acceptance remains open.
+- READY-005 and READY-006 have a tested Dev repair: an active coaching rating can be cleared without
+  losing its note, and the Cards summary opens exact game/card details. The nullable-rating Dev
+  schema change passed preflight and rollback verification; deployment and owner acceptance remain
+  open.
 - After that acceptance, the first read-only night cycle audits Admin, Fixtures and RevSports
   sorting, filtering, persistence and diagnostics.
 - The default walk-away boundary is Dev-only, read-only and report-only. Disposable Dev writes need

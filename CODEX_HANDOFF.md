@@ -2,6 +2,19 @@
 
 Last updated: 2026-08-30
 
+## 30 August 2026 — READY-005/006 coaching rating and card details
+
+- Clicking an active coaching rating now clears it, while a different 1–4 value replaces it. Save
+  failure restores the prior screen state and existing coaching notes are retained.
+- Dev migration `20260830122500_allow_cleared_coach_position_assessments.sql` makes assessment null
+  an explicit cleared state and enforces null or 1–4. All eight existing rows passed preflight. A
+  temporary null update and rollback left zero null rows afterwards.
+- The Cards summary is now a labelled button that opens the affected games and exact green, yellow
+  and red card counts for the selected period.
+- Automated checks pass: 30 Vitest files/117 tests, TypeScript, Production build and focused lint.
+  Full lint remains at the existing 350-error/78-warning baseline. Dev deployment and signed-in
+  owner acceptance remain open; `main`, `prod` and Production are unchanged.
+
 ## 30 August 2026 — READY-002/003/007 pitch interaction repair
 
 - Pitch players now open the same on-screen history as bench/reserve players. All games from the

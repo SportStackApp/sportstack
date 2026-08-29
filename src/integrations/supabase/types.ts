@@ -610,7 +610,7 @@ export type Database = {
       }
       coach_position_assessments: {
         Row: {
-          assessment: number
+          assessment: number | null
           coach_id: string
           created_at: string
           id: string
@@ -621,7 +621,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          assessment: number
+          assessment?: number | null
           coach_id: string
           created_at?: string
           id?: string
@@ -632,7 +632,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          assessment?: number
+          assessment?: number | null
           coach_id?: string
           created_at?: string
           id?: string

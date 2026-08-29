@@ -21,11 +21,13 @@ interface Player {
   avatar_url: string | null;
   jersey_number: number | null;
   membership_type: string;
-  assessments: { position_code: string; assessment: number }[];
+  assessments: { position_code: string; assessment: number | null }[];
 }
 
 function assessmentSummary(assessments: Player["assessments"]): string {
-  const strongest = [...assessments].sort((left, right) => left.assessment - right.assessment);
+  const strongest = assessments
+    .filter((assessment): assessment is { position_code: string; assessment: number } => assessment.assessment !== null)
+    .sort((left, right) => left.assessment - right.assessment);
   const area = HOCKEY_POSITION_AREAS.find((option) =>
     strongest.some((assessment) => assessment.position_code === areaPositionCode(option.value)),
   )?.label;
