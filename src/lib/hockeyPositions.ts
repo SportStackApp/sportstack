@@ -16,12 +16,69 @@ export const HOCKEY_POSITION_SIDES: ReadonlyArray<{ value: HockeyPositionSide; l
 
 export const areaPositionCode = (area: HockeyPositionArea) => `AREA_${area}`;
 export const sidePositionCode = (side: HockeyPositionSide) => `SIDE_${side}`;
+export const combinedPositionCode = (area: Exclude<HockeyPositionArea, "GOALKEEPER">, side: HockeyPositionSide) => `POSITION_${area}_${side}`;
+
+export type HockeyPositionChoice = {
+  code: string;
+  label: string;
+  area: HockeyPositionArea | null;
+  side: HockeyPositionSide | null;
+  canonicalGroup: "GOALKEEPER" | "DEFENCE" | "MIDFIELD" | "FORWARD" | null;
+};
+
+const canonicalGroupByArea: Record<HockeyPositionArea, HockeyPositionChoice["canonicalGroup"]> = {
+  DEFENDER: "DEFENCE",
+  MIDFIELDER: "MIDFIELD",
+  ATTACKER: "FORWARD",
+  GOALKEEPER: "GOALKEEPER",
+};
+
+const outfieldAreas = HOCKEY_POSITION_AREAS.filter(
+  (position): position is { value: Exclude<HockeyPositionArea, "GOALKEEPER">; label: string } => position.value !== "GOALKEEPER",
+);
+
+export const HOCKEY_POSITION_CHOICES: ReadonlyArray<HockeyPositionChoice> = [
+  ...outfieldAreas.flatMap((area) => [
+    {
+      code: areaPositionCode(area.value),
+      label: area.label,
+      area: area.value,
+      side: null,
+      canonicalGroup: canonicalGroupByArea[area.value],
+    },
+    ...HOCKEY_POSITION_SIDES.map((side) => ({
+      code: combinedPositionCode(area.value, side.value),
+      label: `${area.label} - ${side.label}`,
+      area: area.value,
+      side: side.value,
+      canonicalGroup: canonicalGroupByArea[area.value],
+    })),
+  ]),
+  {
+    code: areaPositionCode("GOALKEEPER"),
+    label: "Goalkeeper",
+    area: "GOALKEEPER",
+    side: null,
+    canonicalGroup: "GOALKEEPER",
+  },
+  ...HOCKEY_POSITION_SIDES.map((side) => ({
+    code: sidePositionCode(side.value),
+    label: `${side.label} side - any area`,
+    area: null,
+    side: side.value,
+    canonicalGroup: null,
+  })),
+];
+
+export const hockeyPositionChoiceFromCode = (code: string): HockeyPositionChoice | undefined =>
+  HOCKEY_POSITION_CHOICES.find((choice) => choice.code === code);
 
 export function describeHockeyPosition(area?: HockeyPositionArea | null, side?: HockeyPositionSide | null): string {
   if (area === "GOALKEEPER") return "Goalkeeper";
   const areaLabel = HOCKEY_POSITION_AREAS.find((option) => option.value === area)?.label;
   const sideLabel = HOCKEY_POSITION_SIDES.find((option) => option.value === side)?.label;
-  return [sideLabel, areaLabel].filter(Boolean).join(" ") || "No position set";
+  if (areaLabel && sideLabel) return `${areaLabel} - ${sideLabel}`;
+  return areaLabel || sideLabel || "No position set";
 }
 
 export function inferHockeyPosition(label: string, code = ""): {

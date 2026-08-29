@@ -14,10 +14,7 @@ import { toast } from "sonner";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { loadPlayerHistory, type PlayerHistoryRecord } from "@/lib/playerHistory";
 import {
-  HOCKEY_POSITION_AREAS,
-  HOCKEY_POSITION_SIDES,
-  areaPositionCode,
-  sidePositionCode,
+  HOCKEY_POSITION_CHOICES,
 } from "@/lib/hockeyPositions";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,18 +39,7 @@ interface CoachNote {
   created_at: string;
 }
 
-const POSITION_TRAITS = [
-  ...HOCKEY_POSITION_AREAS.map((position) => ({
-    code: areaPositionCode(position.value),
-    label: position.label,
-    section: "Playing area",
-  })),
-  ...HOCKEY_POSITION_SIDES.map((position) => ({
-    code: sidePositionCode(position.value),
-    label: position.label,
-    section: "Preferred side",
-  })),
-];
+const POSITION_TRAITS = HOCKEY_POSITION_CHOICES;
 
 export default function CoachingPlayerProfile() {
   const { playerId } = useParams<{ playerId: string }>();
@@ -410,7 +396,7 @@ export default function CoachingPlayerProfile() {
                       <tr key={pos} className="hover:bg-muted/30">
                         <td className="px-4 py-3">
                           <div className="font-medium">{position.label}</div>
-                          <div className="text-xs text-muted-foreground">{position.section}</div>
+                          <div className="text-xs text-muted-foreground">Playing position</div>
                         </td>
                         <td className="px-4 py-3">{getPrefLabel(preferences[pos])}</td>
                         <td className="px-4 py-3">

@@ -6,6 +6,20 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## READY-004 combined playing-position display — 30 August 2026
+
+- Profile Team Player Details and Coaching Position Ratings now use one **Playing position** list.
+  Paired choices are presented as **Defender - Left**, **Midfielder - Centre**, **Attacker - Right**
+  and the other matching combinations.
+- Deliberate area-only, side-only and Goalkeeper choices remain available for cases where one part
+  does not matter. New paired selections use a single stable position code, avoiding the ambiguity
+  of separately selecting multiple areas and sides.
+- Existing separate preferences and assessments are retained and remain visible; the app does not
+  guess which old area belongs with which old side. No data backfill or migration is included.
+- Focused lint, TypeScript, Production build and 30 Vitest files/118 tests pass. Full lint remains at
+  the existing 350-error/78-warning baseline. Deployment and signed-in owner save/reload acceptance
+  remain open.
+
 ## READY-005/006 coaching rating and card details — 30 August 2026
 
 - Clicking an already-selected 1–4 coaching assessment now clears it; selecting a different number

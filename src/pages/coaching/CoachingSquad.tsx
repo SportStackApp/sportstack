@@ -11,7 +11,7 @@ import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
 import { membershipPriority } from "@/lib/playerPositions";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HOCKEY_POSITION_AREAS, HOCKEY_POSITION_SIDES, areaPositionCode, sidePositionCode } from "@/lib/hockeyPositions";
+import { describeHockeyPosition, hockeyPositionChoiceFromCode } from "@/lib/hockeyPositions";
 
 interface TeamOption { id: string; name: string }
 interface Player {
@@ -28,13 +28,16 @@ function assessmentSummary(assessments: Player["assessments"]): string {
   const strongest = assessments
     .filter((assessment): assessment is { position_code: string; assessment: number } => assessment.assessment !== null)
     .sort((left, right) => left.assessment - right.assessment);
-  const area = HOCKEY_POSITION_AREAS.find((option) =>
-    strongest.some((assessment) => assessment.position_code === areaPositionCode(option.value)),
-  )?.label;
-  const side = HOCKEY_POSITION_SIDES.find((option) =>
-    strongest.some((assessment) => assessment.position_code === sidePositionCode(option.value)),
-  )?.label;
-  return [side, area].filter(Boolean).join(" ") || "No position assessed";
+  const combined = strongest
+    .map((assessment) => hockeyPositionChoiceFromCode(assessment.position_code))
+    .find((choice) => choice?.area && choice.side);
+  if (combined) return combined.label;
+
+  const choices = strongest.map((assessment) => hockeyPositionChoiceFromCode(assessment.position_code));
+  const area = choices.find((choice) => choice?.area)?.area;
+  const side = choices.find((choice) => choice?.side)?.side;
+  const summary = describeHockeyPosition(area, side);
+  return summary === "No position set" ? "No position assessed" : summary;
 }
 
 export default function CoachingSquad() {

@@ -6,12 +6,7 @@ import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import {
-  HOCKEY_POSITION_AREAS,
-  HOCKEY_POSITION_SIDES,
-  areaPositionCode,
-  sidePositionCode,
-} from "@/lib/hockeyPositions";
+import { HOCKEY_POSITION_CHOICES, hockeyPositionChoiceFromCode } from "@/lib/hockeyPositions";
 
 interface PositionTeam {
   membershipId: string;
@@ -111,6 +106,7 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
           player_id: user.id,
           team_id: teamId,
           position_code: positionCode,
+          canonical_group: hockeyPositionChoiceFromCode(positionCode)?.canonicalGroup || null,
           preference: 1,
         });
 
@@ -149,7 +145,7 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
     <Card>
       <CardHeader className="space-y-1 p-4 pb-2">
         <CardTitle className="text-base">Team Player Details</CardTitle>
-        <CardDescription className="text-xs">Set your player number, playing area and preferred side separately for each team.</CardDescription>
+        <CardDescription className="text-xs">Set your player number and complete playing-position preferences for each team.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2 px-4 pb-4 pt-0">
         {teams.map((team) => (
@@ -186,52 +182,26 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
             {loadingOptions ? (
               <span className="text-xs text-muted-foreground">Loading position preferences…</span>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium">Playing area</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {HOCKEY_POSITION_AREAS.map((position) => {
-                      const code = areaPositionCode(position.value);
-                      const selected = selectedByTeam[team.teamId]?.includes(code) || false;
-                      return (
-                        <Button
-                          type="button"
-                          key={code}
-                          variant={selected ? "default" : "outline"}
-                          size="sm"
-                          className="h-7 rounded-full px-2.5 text-xs"
-                          disabled={savingKey === `${team.teamId}:${code}`}
-                          aria-pressed={selected}
-                          onClick={() => void togglePosition(team.teamId, code)}
-                        >
-                          {position.label}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium">Preferred side</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {HOCKEY_POSITION_SIDES.map((position) => {
-                      const code = sidePositionCode(position.value);
-                      const selected = selectedByTeam[team.teamId]?.includes(code) || false;
-                      return (
-                        <Button
-                          type="button"
-                          key={code}
-                          variant={selected ? "default" : "outline"}
-                          size="sm"
-                          className="h-7 rounded-full px-2.5 text-xs"
-                          disabled={savingKey === `${team.teamId}:${code}`}
-                          aria-pressed={selected}
-                          onClick={() => void togglePosition(team.teamId, code)}
-                        >
-                          {position.label}
-                        </Button>
-                      );
-                    })}
-                  </div>
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium">Playing position</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {HOCKEY_POSITION_CHOICES.map((position) => {
+                    const selected = selectedByTeam[team.teamId]?.includes(position.code) || false;
+                    return (
+                      <Button
+                        type="button"
+                        key={position.code}
+                        variant={selected ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 rounded-full px-2.5 text-xs"
+                        disabled={savingKey === `${team.teamId}:${position.code}`}
+                        aria-pressed={selected}
+                        onClick={() => void togglePosition(team.teamId, position.code)}
+                      >
+                        {position.label}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             )}

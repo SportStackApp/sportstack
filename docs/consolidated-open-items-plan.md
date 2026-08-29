@@ -54,6 +54,10 @@ Current verified position:
   losing its note, and the Cards summary opens exact game/card details. The nullable-rating Dev
   schema change passed preflight and rollback verification. Deployment checks pass; signed-in owner
   acceptance remains open.
+- READY-004 has a tested local Dev repair: Profile and Coaching use single combined choices such as
+  **Defender - Left**, while still allowing deliberate area-only, side-only and Goalkeeper choices.
+  Existing ambiguous rows are preserved rather than guessed into pairs. Deployment and signed-in
+  save/reload acceptance remain open.
 - After that acceptance, the first read-only night cycle audits Admin, Fixtures and RevSports
   sorting, filtering, persistence and diagnostics.
 - The default walk-away boundary is Dev-only, read-only and report-only. Disposable Dev writes need

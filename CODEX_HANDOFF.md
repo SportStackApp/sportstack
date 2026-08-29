@@ -2,6 +2,18 @@
 
 Last updated: 2026-08-30
 
+## 30 August 2026 — READY-004 combined playing-position display
+
+- Profile Team Player Details and Coaching Position Ratings now show one Playing position catalogue
+  with combined choices such as Defender - Left, Midfielder - Centre and Attacker - Right.
+- Area-only, side-only and Goalkeeper choices remain available. New paired choices use one stable
+  `POSITION_<AREA>_<SIDE>` code and the appropriate canonical group.
+- Existing separate preferences/assessments remain visible and were not guessed into pairs or
+  rewritten. No data migration or backfill is included.
+- Automated checks pass: 30 Vitest files/118 tests, TypeScript, Production build and focused lint.
+  Full lint remains at the existing 350-error/78-warning baseline. Dev deployment and signed-in
+  save/reload acceptance remain open; `main`, `prod` and Production are unchanged.
+
 ## 30 August 2026 — READY-005/006 coaching rating and card details
 
 - Clicking an active coaching rating now clears it, while a different 1–4 value replaces it. Save
