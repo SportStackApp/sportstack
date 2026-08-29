@@ -190,6 +190,7 @@ const Lineup = () => {
 
       <LineupView
         gameId={game.id}
+        fixtureDate={game.fixture_date}
         teamId={activeLineupTeamId}
         teamName={teamName}
         opponentName={opponentName}

@@ -2,6 +2,19 @@
 
 Last updated: 2026-08-30
 
+## 30 August 2026 — READY-002/003/007 pitch interaction repair
+
+- Pitch players now open the same on-screen history as bench/reserve players. All games from the
+  fixture's calendar year are shown newest first instead of only five.
+- The dotted drag handle is removed. The entire marker is draggable, retaining the original grab
+  offset so its centre does not jump to the cursor. A small movement threshold prevents a drag from
+  also acting as a click.
+- Selected pitch markers use a prominent amber ring. A normal marker click selects the position and
+  opens that player's history.
+- Automated checks pass: 29 Vitest files/115 tests, TypeScript, Production build and focused lint.
+  Full lint remains at the existing 350-error/78-warning baseline. No migration or live-data write
+  is included. Dev deployment and Aaron's signed-in click/drag/save/refresh acceptance remain open.
+
 ## 30 August 2026 — READY-001 roster selection safeguard
 
 - The saved Pumas vs Blaze line-up contains 13 roster rows and 13 assignments. The old roster

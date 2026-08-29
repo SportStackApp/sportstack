@@ -6,6 +6,19 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## READY-002/003/007 pitch interaction repair — 30 August 2026
+
+- Pitch players now open the same on-screen history as bench and reserve players. The list contains
+  every game from the line-up fixture's calendar year, in the existing newest-first order, rather
+  than stopping after five games.
+- The small dotted drag handle is removed. Coaches drag the whole player/position marker, and the
+  code preserves the original grab point so the marker no longer jumps its centre to the cursor.
+- A three-pixel movement threshold separates a click from a drag. Clicking selects the position and
+  player history; dragging only moves the marker. The selected marker has a prominent amber ring.
+- The focused lint, TypeScript, Production build and 29 Vitest files/115 tests pass. Full lint remains
+  at the existing 350-error/78-warning baseline. No database migration or live-data write is
+  included. Dev deployment and signed-in owner acceptance are still required.
+
 ## READY-001 roster selection safeguard — 30 August 2026
 
 - A read-only Dev query confirmed the reported line-up has 13 saved roster players and 13 saved

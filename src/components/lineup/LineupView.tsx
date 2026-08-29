@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Grip, RotateCcw, Save, Search, UserMinus, UserPlus, Users } from "lucide-react";
+import { RotateCcw, Save, Search, UserMinus, UserPlus, Users } from "lucide-react";
 import { supabase as typedSupabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
@@ -12,9 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { HockeyPitch } from "./HockeyPitch";
 import { RosterSelectorDialog, type RosterCandidate } from "./FillInFinderDialog";
 import { type FormationIconRow, type FormationPositionRow, type FormationRow, formatOwnerScope, getFormationFieldSource } from "@/lib/formationPlanner";
-import { clampPitchCoordinate, displayedFormationPosition, pitchPlayerLabel, type PitchPositionOverride } from "@/lib/lineupPlanner";
+import { displayedFormationPosition, pitchPlayerLabel, pitchPositionFromPointer, type PitchPositionOverride, type PointerOffset } from "@/lib/lineupPlanner";
 import { formatStandardName } from "@/lib/profileNames";
 import { loadPlayerHistory, type PlayerHistoryRecord } from "@/lib/playerHistory";
+import { playerHistoryForCalendarYear } from "@/lib/playerHistoryFilters";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -25,6 +26,7 @@ type FixtureLineupAssignment = { player_id: string; formation_position_id: strin
 
 interface LineupViewProps {
   gameId: string;
+  fixtureDate: string;
   teamId: string;
   teamName: string;
   opponentName: string;
@@ -37,9 +39,20 @@ const AVAILABILITY_LABELS: Record<string, string> = {
 };
 const fullName = (player: LineupPlayer) => formatStandardName({ firstName: player.firstName, lastName: player.lastName });
 
-export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = false }: LineupViewProps) => {
+type MarkerDrag = {
+  positionId: string;
+  pointerId: number;
+  offset: PointerOffset;
+  startX: number;
+  startY: number;
+  moved: boolean;
+};
+
+export const LineupView = ({ gameId, fixtureDate, teamId, teamName, opponentName, isCoach = false }: LineupViewProps) => {
   const { user } = useAuth();
   const pitchRef = useRef<HTMLDivElement>(null);
+  const markerDragRef = useRef<MarkerDrag | null>(null);
+  const suppressMarkerClickRef = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formations, setFormations] = useState<FormationRow[]>([]);
@@ -128,8 +141,9 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
   useEffect(() => {
     if (!historyPlayerId) { setHistory([]); return; }
     setHistoryLoading(true);
-    void loadPlayerHistory(historyPlayerId).then((rows) => setHistory(rows.slice(0, 5))).catch((error) => { toast.error(`Player history could not be loaded: ${error.message}`); setHistory([]); }).finally(() => setHistoryLoading(false));
-  }, [historyPlayerId]);
+    const fixtureYear = new Date(fixtureDate).getFullYear();
+    void loadPlayerHistory(historyPlayerId).then((rows) => setHistory(playerHistoryForCalendarYear(rows, fixtureYear))).catch((error) => { toast.error(`Player history could not be loaded: ${error.message}`); setHistory([]); }).finally(() => setHistoryLoading(false));
+  }, [fixtureDate, historyPlayerId]);
 
   const assignPlayerToPosition = (playerId: string, positionId: string) => {
     setAssignments((current) => ({ ...Object.fromEntries(Object.entries(current).filter(([, assignedId]) => assignedId !== playerId)), [positionId]: playerId }));
@@ -156,10 +170,10 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
     setAssignments({}); setBenchIds(placedIds); setPositionOverrides({}); setSelectedPositionId(null); setSelectedFormationId(formationId);
     if (placedIds.length) toast.info("Placed players moved to the bench for the new formation.");
   };
-  const moveMarker = (positionId: string, clientX: number, clientY: number) => {
+  const moveMarker = (positionId: string, clientX: number, clientY: number, offset: PointerOffset) => {
     const bounds = pitchRef.current?.getBoundingClientRect();
     if (!bounds) return;
-    setPositionOverrides((current) => ({ ...current, [positionId]: { xPercent: clampPitchCoordinate(((clientX - bounds.left) / bounds.width) * 100), yPercent: clampPitchCoordinate(((clientY - bounds.top) / bounds.height) * 100) } }));
+    setPositionOverrides((current) => ({ ...current, [positionId]: pitchPositionFromPointer(clientX, clientY, bounds, offset) }));
   };
 
   const mirrorLegacyLineups = async () => {
@@ -237,6 +251,7 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
 
   if (loading) return <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading line-up...</CardContent></Card>;
   const fieldSource = getFormationFieldSource(selectedFormation);
+  const historyPlayer = historyPlayerId ? roster.find((player) => player.id === historyPlayerId) : null;
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -256,11 +271,10 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
                 const position = displayedFormationPosition(originalPosition, positionOverrides[originalPosition.id]);
                 const player = roster.find((item) => item.id === assignments[originalPosition.id]);
                 const icon = icons.find((item) => item.id === originalPosition.icon_id);
-                const selected = selectedPositionId === originalPosition.id;
-                return <button key={originalPosition.id} type="button" aria-label={`${originalPosition.name}: ${player ? fullName(player) : "unassigned"}`} className={cn("absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg", selected ? "scale-110 bg-accent" : player ? "bg-primary text-primary-foreground" : "bg-background/80", isCoach && "hover:scale-105")} style={{ left: `${position.x_percent}%`, top: `${position.y_percent}%` }} onClick={() => isCoach && setSelectedPositionId(selected ? null : originalPosition.id)} onDragOver={(event) => isCoach && event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (isCoach && draggingPlayerId) assignPlayerToPosition(draggingPlayerId, originalPosition.id); setDraggingPlayerId(null); }}>
+                const selected = selectedPositionId === originalPosition.id || Boolean(player && historyPlayerId === player.id);
+                return <button key={originalPosition.id} type="button" aria-label={`${originalPosition.name}: ${player ? fullName(player) : "unassigned"}`} className={cn("absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg", selected ? "scale-110 bg-accent ring-4 ring-amber-400 ring-offset-2 ring-offset-[#2d8a4e]" : player ? "bg-primary text-primary-foreground" : "bg-background/80", isCoach && "touch-none cursor-grab hover:scale-105 active:cursor-grabbing")} style={{ left: `${position.x_percent}%`, top: `${position.y_percent}%` }} onClick={() => { if (suppressMarkerClickRef.current === originalPosition.id) { suppressMarkerClickRef.current = null; return; } const nextSelected = !selected; if (isCoach) setSelectedPositionId(nextSelected ? originalPosition.id : null); if (player) setHistoryPlayerId(nextSelected ? player.id : null); }} onPointerDown={(event) => { if (!isCoach) return; const bounds = pitchRef.current?.getBoundingClientRect(); if (!bounds) return; markerDragRef.current = { positionId: originalPosition.id, pointerId: event.pointerId, offset: { x: event.clientX - (bounds.left + (position.x_percent / 100) * bounds.width), y: event.clientY - (bounds.top + (position.y_percent / 100) * bounds.height) }, startX: event.clientX, startY: event.clientY, moved: false }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { const drag = markerDragRef.current; if (!isCoach || !drag || drag.positionId !== originalPosition.id || drag.pointerId !== event.pointerId) return; if (!drag.moved && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 3) return; drag.moved = true; event.preventDefault(); moveMarker(originalPosition.id, event.clientX, event.clientY, drag.offset); }} onPointerUp={(event) => { const drag = markerDragRef.current; if (drag?.pointerId === event.pointerId && drag.moved) suppressMarkerClickRef.current = drag.positionId; if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); if (drag?.pointerId === event.pointerId) markerDragRef.current = null; }} onPointerCancel={(event) => { if (markerDragRef.current?.pointerId === event.pointerId) markerDragRef.current = null; }} onDragOver={(event) => isCoach && event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (isCoach && draggingPlayerId) assignPlayerToPosition(draggingPlayerId, originalPosition.id); setDraggingPlayerId(null); }}>
                   {icon?.image_url ? <img src={icon.image_url} alt="" className="h-12 w-12 rounded-full object-cover" /> : <span className="flex h-12 w-12 items-center justify-center text-xs font-bold">{player?.jerseyNumber || originalPosition.code}</span>}
                   <span className="absolute left-1/2 top-full mt-1 whitespace-nowrap -translate-x-1/2 rounded bg-background/90 px-1 text-[10px] font-semibold text-foreground">{player ? pitchPlayerLabel({ firstName: player.firstName, lastName: player.lastName, nickname: player.nickname }, player.displayNickname) : originalPosition.code}</span>
-                  {isCoach && <span role="button" tabIndex={0} aria-label={`Move ${originalPosition.name}`} className="absolute -right-3 -top-3 flex h-6 w-6 cursor-move items-center justify-center rounded-full border bg-background text-foreground" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); moveMarker(originalPosition.id, event.clientX, event.clientY); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) moveMarker(originalPosition.id, event.clientX, event.clientY); }} onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}><Grip className="h-3 w-3" /></span>}
                 </button>;
               })}
             </HockeyPitch>
@@ -271,7 +285,7 @@ export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = f
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-base">{selectedPositionId ? "Choose a player" : "Line-up"}</CardTitle></CardHeader>
         <CardContent className="space-y-3"><p className="text-xs text-muted-foreground">Selected roster players not yet placed on the pitch or bench.</p><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search selected players..." className="pl-9" /></div><div className="max-h-[420px] space-y-2 overflow-auto pr-1">{availablePlayers.length ? availablePlayers.map((player) => playerCard(player, "add")) : <p className="py-5 text-center text-sm text-muted-foreground">No unplaced players.</p>}</div>
-          {historyPlayerId && <div className="space-y-2 border-t pt-3"><p className="text-sm font-semibold">Recent games</p>{historyLoading ? <p className="text-xs text-muted-foreground">Loading history...</p> : history.length ? history.map((row) => <div key={row.id} className="rounded-md bg-muted/50 p-2 text-xs"><p className="font-medium">{new Date(row.date).toLocaleDateString("en-AU")} vs {row.opponent} · {row.result}</p><p className="text-muted-foreground">{row.positionName || "Position not recorded"} · {row.goals} goals · cards {row.greenCards}/{row.yellowCards}/{row.redCards}</p></div>) : <p className="text-xs text-muted-foreground">No game history found.</p>}</div>}
+          {historyPlayerId && <div className="space-y-2 border-t pt-3"><p className="text-sm font-semibold">Season games{historyPlayer ? ` — ${fullName(historyPlayer)}` : ""}</p>{historyLoading ? <p className="text-xs text-muted-foreground">Loading history...</p> : history.length ? history.map((row) => <div key={row.id} className="rounded-md bg-muted/50 p-2 text-xs"><p className="font-medium">{new Date(row.date).toLocaleDateString("en-AU")} vs {row.opponent} · {row.result}</p><p className="text-muted-foreground">{row.positionName || "Position not recorded"} · {row.goals} goals · cards {row.greenCards}/{row.yellowCards}/{row.redCards}</p></div>) : <p className="text-xs text-muted-foreground">No game history found for this season.</p>}</div>}
         </CardContent>
       </Card>
       <RosterSelectorDialog open={rosterDialogOpen} onOpenChange={setRosterDialogOpen} fixtureId={gameId} teamId={teamId} selectedPlayerIds={selectedRosterIds} onApply={applyRoster} />

@@ -46,6 +46,10 @@ Current verified position:
 - READY-001 now loads already-selected placeholder-linked players as explicit roster candidates and
   blocks Apply when any saved selection cannot be resolved. Automated checks and the live read-only
   13-player/13-assignment preflight pass; deployed owner save/reopen acceptance remains open.
+- READY-002, READY-003 and READY-007 now have a local Dev repair: pitch and bench players use the
+  same complete fixture-year history, the whole marker drags without snapping, the dotted handle is
+  gone and the selected marker has a clear amber ring. Deployment and owner click/drag/save/refresh
+  acceptance remain open.
 - After that acceptance, the first read-only night cycle audits Admin, Fixtures and RevSports
   sorting, filtering, persistence and diagnostics.
 - The default walk-away boundary is Dev-only, read-only and report-only. Disposable Dev writes need

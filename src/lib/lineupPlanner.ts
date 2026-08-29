@@ -2,6 +2,8 @@ import type { FormationPositionRow } from "./formationPlanner";
 import { formatPitchPlayerName, type PersonNameParts } from "./profileNames";
 
 export type PitchPositionOverride = { xPercent: number; yPercent: number };
+export type PitchBounds = { left: number; top: number; width: number; height: number };
+export type PointerOffset = { x: number; y: number };
 
 export function clampPitchCoordinate(value: number): number {
   return Math.min(100, Math.max(0, Number(value.toFixed(3))));
@@ -14,6 +16,18 @@ export function displayedFormationPosition(
   return override
     ? { ...position, x_percent: clampPitchCoordinate(override.xPercent), y_percent: clampPitchCoordinate(override.yPercent) }
     : position;
+}
+
+export function pitchPositionFromPointer(
+  clientX: number,
+  clientY: number,
+  bounds: PitchBounds,
+  offset: PointerOffset = { x: 0, y: 0 },
+): PitchPositionOverride {
+  return {
+    xPercent: clampPitchCoordinate((((clientX - offset.x) - bounds.left) / bounds.width) * 100),
+    yPercent: clampPitchCoordinate((((clientY - offset.y) - bounds.top) / bounds.height) * 100),
+  };
 }
 
 export function pitchPlayerLabel(

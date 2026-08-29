@@ -1,8 +1,8 @@
 # SportStack Production Readiness Programme
 
-Status: **planned — execution not yet started**
+Status: **active — known-defect repair underway**
 
-Last updated: **29 August 2026**
+Last updated: **30 August 2026**
 
 This document is the detailed execution plan beneath `docs/consolidated-open-items-plan.md`. The
 consolidated plan remains the single priority list. This programme defines how SportStack will move
@@ -28,7 +28,8 @@ This is a release programme, not a promise that Production is ready today.
 
 The snapshot must be refreshed at the start of each work cycle.
 
-- Dev is `74f6d93`; Main is `d48239d` and is two commits behind Dev.
+- Dev is `dc77c0e`; Main is `d48239d` and is four commits behind Dev. An additional reviewed
+  READY-002/003/007 repair is being prepared on Dev.
 - Production is `682b8ea` and is 195 commits behind Main.
 - Dev Quality passed for `74f6d93`.
 - The latest Production Supabase Scrapers run failed because three manually targeted games were
@@ -113,6 +114,13 @@ READY-001 implementation status on 30 August 2026: the Dev repair and regression
 A read-only live preflight confirmed 13 saved roster rows, three placeholder-linked profiles and 13
 assignments. The finding remains open until the deployed Apply, Save, reopen and refresh owner test
 passes without changing the selected players or their assignments.
+
+READY-002, READY-003 and READY-007 implementation status on 30 August 2026: the local Dev repair is
+complete and automated checks pass. A pitch player now opens the same fixture-year history as a
+bench player, with every matching game shown newest first. The dotted handle is removed; the whole
+marker drags while keeping its original pointer offset. A selected marker has a prominent amber
+ring, and movement is kept separate from a normal click. These findings remain open until the Dev
+deployment and Aaron's signed-in click, drag, save and refresh checks pass.
 
 ## C. Screen consistency review
 
