@@ -216,12 +216,21 @@ export function MvpTallyPresentation({
             <div className={`w-full ${reducedMotion ? "" : "animate-in fade-in zoom-in duration-700"}`}>
               <Trophy className="mx-auto h-14 w-14" style={{ color: theme.accentColour }} />
               <p className="mt-4 text-sm font-bold uppercase tracking-[0.3em] text-white/55">Final podium</p>
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="mt-5 max-h-[430px] space-y-3 overflow-y-auto pr-1">
                 {podium.map((result) => (
-                  <div key={result.playerKey} className="rounded-xl border border-white/15 bg-white/10 p-4">
-                    <span className="text-3xl font-black" style={{ color: theme.accentColour }}>#{result.rank}</span>
-                    <p className="mt-2 truncate font-black">{result.playerName}</p>
-                    <p className="text-sm text-white/60">{result.points} points</p>
+                  <div key={result.playerKey} className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-3 text-left">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-black/20 text-2xl font-black" style={{ color: theme.accentColour }}>#{result.rank}</span>
+                    <PlayerAvatar name={result.playerName} url={result.avatarUrl} />
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-lg font-black leading-tight">{result.playerName}</p>
+                      <p className="mt-1 text-sm text-white/60">
+                        {result.rank === 1 ? "Winner" : result.rank === 2 ? "Second place" : "Third place"}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-2xl font-black" style={{ color: theme.accentColour }}>{result.points}</p>
+                      <p className="text-xs text-white/55">points</p>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -8,6 +8,7 @@ import type {
   MvpTallySpeed,
   MvpTallyTheme,
 } from "./types";
+import { deduplicateAudience } from "./logic";
 
 // RPC snapshots are JSON, so this small boundary narrows them into the shared tally interfaces below.
 const client = supabase as unknown as SupabaseClient;
@@ -22,7 +23,8 @@ export async function getMvpTallyBuilderData(teamId: string, sessionIds?: string
     p_team_id: teamId,
     p_session_ids: sessionIds?.length ? sessionIds : null,
   });
-  return unwrap<MvpTallyBuilderData>(data, error);
+  const builderData = unwrap<MvpTallyBuilderData>(data, error);
+  return { ...builderData, audience: deduplicateAudience(builderData.audience) };
 }
 
 export async function listMvpTallyPresentations(teamId?: string) {
@@ -61,6 +63,9 @@ export async function saveMvpTallyDraft(input: {
   audience: MvpTallyAudienceMember[];
   replacesPresentationId: string | null;
 }) {
+  const recipients = deduplicateAudience(input.audience)
+    .filter((person) => person.selected)
+    .map((person) => ({ profileId: person.profileId, group: person.group }));
   const { data, error } = await client.rpc("save_mvp_tally_draft", {
     p_presentation_id: input.id,
     p_team_id: input.teamId,
@@ -69,9 +74,7 @@ export async function saveMvpTallyDraft(input: {
     p_theme: input.theme,
     p_playback_speed: input.speed,
     p_session_ids: input.sessionIds,
-    p_recipients: input.audience
-      .filter((person) => person.selected)
-      .map((person) => ({ profileId: person.profileId, group: person.group })),
+    p_recipients: recipients,
     p_replaces_presentation_id: input.replacesPresentationId,
   });
   return unwrap<string>(data, error);

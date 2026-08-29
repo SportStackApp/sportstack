@@ -3,6 +3,7 @@ import {
   buildPlaybackFrames,
   buildRuleCommentary,
   calculateLeaderboard,
+  deduplicateAudience,
   frameDelayMs,
   limitLeaderboard,
   mergeInheritedTheme,
@@ -115,5 +116,18 @@ describe("Player MVP tally playback", () => {
       backgroundStyle: "SPOTLIGHT",
       leaderboardLimit: 10,
     });
+  });
+
+  it("shows each audience member once and prefers their Primary group", () => {
+    const audience = deduplicateAudience([
+      { profileId: "reuben", name: "Reuben Pougnault", avatarUrl: null, group: "SECONDARY", selected: false },
+      { profileId: "reuben", name: "Reuben Pougnault", avatarUrl: null, group: "SECONDARY", selected: true },
+      { profileId: "alex", name: "Alex Test", avatarUrl: null, group: "SECONDARY", selected: true },
+      { profileId: "alex", name: "Alex Test", avatarUrl: null, group: "PRIMARY", selected: true },
+    ]);
+
+    expect(audience).toHaveLength(2);
+    expect(audience.find((person) => person.profileId === "reuben")).toMatchObject({ group: "SECONDARY", selected: true });
+    expect(audience.find((person) => person.profileId === "alex")?.group).toBe("PRIMARY");
   });
 });

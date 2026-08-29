@@ -1,4 +1,5 @@
 import type {
+  MvpTallyAudienceMember,
   MvpTallyCardSnapshot,
   MvpTallyCommentarySnapshot,
   MvpTallyFrame,
@@ -19,6 +20,30 @@ export const DEFAULT_TALLY_THEME: MvpTallyTheme = {
 };
 
 export const TALLY_SPEEDS: MvpTallySpeed[] = [0.5, 1, 1.5, 2, 3, 4, 5, 7.5, 10];
+
+const AUDIENCE_GROUP_PRIORITY = { PRIMARY: 0, SECONDARY: 1, FILL_IN: 2 } as const;
+
+export const deduplicateAudience = (audience: MvpTallyAudienceMember[]) => {
+  const people = new Map<string, MvpTallyAudienceMember>();
+
+  audience.forEach((person) => {
+    const existing = people.get(person.profileId);
+    if (!existing) {
+      people.set(person.profileId, person);
+      return;
+    }
+
+    const preferred = AUDIENCE_GROUP_PRIORITY[person.group] < AUDIENCE_GROUP_PRIORITY[existing.group]
+      ? person
+      : existing;
+    people.set(person.profileId, {
+      ...preferred,
+      selected: existing.selected || person.selected,
+    });
+  });
+
+  return [...people.values()];
+};
 
 export const buildPlaybackFrames = (snapshot: MvpTallyCardSnapshot): MvpTallyFrame[] => {
   const frames: MvpTallyFrame[] = [{ kind: "INTRO", revealedCards: 0, roundIndex: 0 }];

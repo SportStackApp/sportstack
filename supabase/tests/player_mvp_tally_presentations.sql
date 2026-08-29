@@ -2,6 +2,9 @@
 -- All synthetic records roll back.
 begin;
 
+-- The duplicate-recipient regression represents legacy rows that pre-date this current guard.
+alter table public.team_memberships disable trigger team_membership_integrity_guard;
+
 do $test$
 declare
   v_manager constant uuid := 'f1000000-0000-0000-0000-000000000001';
@@ -42,6 +45,8 @@ begin
     values (v_manager, 'TEAM_MANAGER', v_team);
   insert into public.team_memberships(user_id, team_id, membership_type, status)
     values (v_recipient, v_team, 'PRIMARY', 'ACTIVE');
+  insert into public.team_memberships(user_id, team_id, membership_type, status)
+    values (v_recipient, v_team, 'SECONDARY', 'ACTIVE');
 
   insert into public.mvp_voting_sessions(id, team_id, grade, round, game_date, home_team, away_team, status, closes_at)
   values
@@ -119,6 +124,10 @@ begin
   if (select (item ->> 'selectable')::boolean from jsonb_array_elements(v_builder -> 'sessions') item where item ->> 'id' = v_due_zero_session::text) is not false
      or (select item ->> 'unselectableReason' from jsonb_array_elements(v_builder -> 'sessions') item where item ->> 'id' = v_due_zero_session::text) <> 'No ballots were received.' then
     raise exception 'Zero-ballot closed round is not visible and disabled with a reason';
+  end if;
+  if (select count(*) from jsonb_array_elements(v_builder -> 'audience') item where item ->> 'profileId' = v_recipient::text) <> 1
+     or (select item ->> 'group' from jsonb_array_elements(v_builder -> 'audience') item where item ->> 'profileId' = v_recipient::text) <> 'PRIMARY' then
+    raise exception 'Overlapping active memberships produced a duplicate or wrongly grouped tally recipient';
   end if;
   if not private.mvp_tally_asset_can_manage(v_team::text || '/test.png')
      or private.mvp_tally_asset_can_manage('f4000000-0000-0000-0000-000000000099/test.png') then
@@ -245,6 +254,8 @@ begin
   if not v_failed then raise exception 'Ineligible audience was accepted'; end if;
 end
 $test$;
+
+alter table public.team_memberships enable trigger team_membership_integrity_guard;
 
 -- Recipient can read the published row before withdrawal is tested in the block above.
 -- Recreate one fixed published row to exercise recipient-only RLS without calling lifecycle RPCs.

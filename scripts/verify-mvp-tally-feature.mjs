@@ -8,6 +8,7 @@ const migrationPaths = [
   "supabase/migrations/20260829130253_index_player_mvp_tally_foreign_keys.sql",
   "supabase/migrations/20260829131126_harden_player_mvp_tally_audience.sql",
   "supabase/migrations/20260829150000_refine_player_mvp_tally_presentations.sql",
+  "supabase/migrations/20260829170000_dedupe_mvp_tally_audience.sql",
 ];
 
 const fail = (message) => {
@@ -46,6 +47,7 @@ const verifyMigration = () => {
     "commentary_snapshot",
     "save_mvp_tally_commentary",
     "close-due-player-mvp-voting",
+    "bool_or(membership.membership_type",
   ];
   for (const marker of required) {
     if (!sql.toLowerCase().includes(marker.toLowerCase())) fail(`Missing migration security marker: ${marker}`);
