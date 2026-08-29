@@ -130,12 +130,12 @@ valid saved ratings from 1 to 4. All eight existing rows were valid and a transa
 left them unchanged. Dev Quality, Vercel, deployed-bundle and signed-out route checks pass. These
 findings remain open until signed-in owner acceptance.
 
-READY-004 implementation status on 30 August 2026: the local Dev repair and automated checks are
-complete. Profile and Coaching now use one **Playing position** catalogue with paired choices such
+READY-004 implementation status on 30 August 2026: the repair is deployed to Dev and automated
+checks pass. Profile and Coaching now use one **Playing position** catalogue with paired choices such
 as **Defender - Left**, **Midfielder - Centre** and **Attacker - Right**. Area-only, side-only and
 Goalkeeper choices remain available for flexible selections. Existing separate preference rows are
-still displayed and were not guessed into pairs or rewritten. The finding remains open until Dev
-deployment and signed-in owner save/reload acceptance.
+still displayed and were not guessed into pairs or rewritten. Dev Quality, Vercel and the deployed
+bundle checks pass. The finding remains open until signed-in owner save/reload acceptance.
 
 ## C. Screen consistency review
 

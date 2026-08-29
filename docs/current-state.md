@@ -17,8 +17,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - Existing separate preferences and assessments are retained and remain visible; the app does not
   guess which old area belongs with which old side. No data backfill or migration is included.
 - Focused lint, TypeScript, Production build and 30 Vitest files/118 tests pass. Full lint remains at
-  the existing 350-error/78-warning baseline. Deployment and signed-in owner save/reload acceptance
-  remain open.
+  the existing 350-error/78-warning baseline. Commit `6c3d87c` is deployed on Dev; Dev Quality,
+  Vercel and deployed-bundle checks pass.
+- Signed-in owner save/reload acceptance remains open. Main, `prod` and Production are unchanged.
 
 ## READY-005/006 coaching rating and card details — 30 August 2026
 

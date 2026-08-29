@@ -11,8 +11,9 @@ Last updated: 2026-08-30
 - Existing separate preferences/assessments remain visible and were not guessed into pairs or
   rewritten. No data migration or backfill is included.
 - Automated checks pass: 30 Vitest files/118 tests, TypeScript, Production build and focused lint.
-  Full lint remains at the existing 350-error/78-warning baseline. Dev deployment and signed-in
-  save/reload acceptance remain open; `main`, `prod` and Production are unchanged.
+  Full lint remains at the existing 350-error/78-warning baseline. Commit `6c3d87c` is deployed on
+  Dev; Dev Quality, Vercel and deployed-bundle checks pass.
+- Signed-in save/reload acceptance remains open; `main`, `prod` and Production are unchanged.
 
 ## 30 August 2026 — READY-005/006 coaching rating and card details
 
