@@ -16,8 +16,10 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - A three-pixel movement threshold separates a click from a drag. Clicking selects the position and
   player history; dragging only moves the marker. The selected marker has a prominent amber ring.
 - The focused lint, TypeScript, Production build and 29 Vitest files/115 tests pass. Full lint remains
-  at the existing 350-error/78-warning baseline. No database migration or live-data write is
-  included. Dev deployment and signed-in owner acceptance are still required.
+  at the existing 350-error/78-warning baseline. Dev Quality, Vercel deployment, deployed-bundle
+  checks and the signed-out route/return-path smoke pass for `a08fad1`.
+- No database migration or live-data write is included. Signed-in owner acceptance is still
+  required before these findings close.
 
 ## READY-001 roster selection safeguard — 30 August 2026
 

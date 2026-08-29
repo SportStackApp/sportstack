@@ -28,8 +28,7 @@ This is a release programme, not a promise that Production is ready today.
 
 The snapshot must be refreshed at the start of each work cycle.
 
-- Dev is `dc77c0e`; Main is `d48239d` and is four commits behind Dev. An additional reviewed
-  READY-002/003/007 repair is being prepared on Dev.
+- Dev is `a08fad1`; Main is `d48239d` and is five commits behind Dev.
 - Production is `682b8ea` and is 195 commits behind Main.
 - Dev Quality passed for `74f6d93`.
 - The latest Production Supabase Scrapers run failed because three manually targeted games were
@@ -115,12 +114,13 @@ A read-only live preflight confirmed 13 saved roster rows, three placeholder-lin
 assignments. The finding remains open until the deployed Apply, Save, reopen and refresh owner test
 passes without changing the selected players or their assignments.
 
-READY-002, READY-003 and READY-007 implementation status on 30 August 2026: the local Dev repair is
-complete and automated checks pass. A pitch player now opens the same fixture-year history as a
+READY-002, READY-003 and READY-007 implementation status on 30 August 2026: the repair is deployed
+to Dev and automated checks pass. A pitch player now opens the same fixture-year history as a
 bench player, with every matching game shown newest first. The dotted handle is removed; the whole
 marker drags while keeping its original pointer offset. A selected marker has a prominent amber
-ring, and movement is kept separate from a normal click. These findings remain open until the Dev
-deployment and Aaron's signed-in click, drag, save and refresh checks pass.
+ring, and movement is kept separate from a normal click. Dev Quality, Vercel deployment, deployed
+bundle and signed-out route checks pass. These findings remain open until Aaron's signed-in click,
+drag, save and refresh checks pass.
 
 ## C. Screen consistency review
 

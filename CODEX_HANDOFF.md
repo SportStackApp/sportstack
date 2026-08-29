@@ -12,8 +12,10 @@ Last updated: 2026-08-30
 - Selected pitch markers use a prominent amber ring. A normal marker click selects the position and
   opens that player's history.
 - Automated checks pass: 29 Vitest files/115 tests, TypeScript, Production build and focused lint.
-  Full lint remains at the existing 350-error/78-warning baseline. No migration or live-data write
-  is included. Dev deployment and Aaron's signed-in click/drag/save/refresh acceptance remain open.
+  Full lint remains at the existing 350-error/78-warning baseline. Commit `a08fad1` is deployed on
+  Dev; Dev Quality, Vercel, deployed-bundle and signed-out return-path checks pass.
+- No migration or live-data write is included. Aaron's signed-in click/drag/save/refresh acceptance
+  remains open. Main, `prod` and Production are unchanged.
 
 ## 30 August 2026 — READY-001 roster selection safeguard
 
