@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type {
   MvpTallyAudienceMember,
   MvpTallyBuilderData,
+  MvpTallyCommentarySnapshot,
   MvpTallyPresentationRecord,
   MvpTallySpeed,
   MvpTallyTheme,
@@ -78,7 +79,56 @@ export async function saveMvpTallyDraft(input: {
 
 export async function previewMvpTally(id: string) {
   const { data, error } = await client.rpc("preview_mvp_tally", { p_presentation_id: id });
-  return unwrap<{ cards: MvpTallyPresentationRecord["card_snapshot"]; results: MvpTallyPresentationRecord["result_snapshot"] }>(data, error);
+  return unwrap<{
+    cards: MvpTallyPresentationRecord["card_snapshot"];
+    results: MvpTallyPresentationRecord["result_snapshot"];
+    sourceFingerprint: string;
+  }>(data, error);
+}
+
+export async function saveMvpTallyCommentary(
+  id: string,
+  sourceFingerprint: string,
+  commentary: MvpTallyCommentarySnapshot,
+) {
+  const { error } = await client.rpc("save_mvp_tally_commentary", {
+    p_presentation_id: id,
+    p_source_fingerprint: sourceFingerprint,
+    p_commentary: commentary,
+  });
+  if (error) throw error;
+}
+
+export async function generateMvpTallyCommentary(id: string, sourceFingerprint: string) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 5000);
+  try {
+    const { data, error } = await client.functions.invoke("mvp-tally-commentary", {
+      body: { presentationId: id, sourceFingerprint },
+      signal: controller.signal,
+    });
+    return unwrap<MvpTallyCommentarySnapshot>(data?.commentary, error);
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+export async function uploadMvpTallyLogo(teamId: string, file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase() || "png";
+  const path = `${teamId}/${crypto.randomUUID()}.${extension}`;
+  const { error } = await client.storage.from("mvp-tally-assets").upload(path, file, {
+    cacheControl: "3600",
+    contentType: file.type,
+    upsert: false,
+  });
+  if (error) throw error;
+  const { data } = client.storage.from("mvp-tally-assets").getPublicUrl(path);
+  return { path, publicUrl: data.publicUrl };
+}
+
+export async function removeMvpTallyLogo(path: string) {
+  const { error } = await client.storage.from("mvp-tally-assets").remove([path]);
+  if (error) throw error;
 }
 
 export async function publishMvpTally(id: string, scheduledFor: string | null) {

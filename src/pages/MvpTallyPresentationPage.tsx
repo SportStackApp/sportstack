@@ -55,6 +55,7 @@ export default function MvpTallyPresentationPage() {
       theme={presentation.theme}
       snapshot={presentation.card_snapshot}
       finalResults={presentation.result_snapshot}
+      commentary={presentation.commentary_snapshot}
       initialSpeed={presentation.playback_speed}
       storageKey={`sportstack:mvp-tally:${presentation.id}:frame`}
     />

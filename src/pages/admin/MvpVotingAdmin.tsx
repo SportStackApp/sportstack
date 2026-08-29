@@ -1436,9 +1436,9 @@ export default function MvpVotingAdmin() {
     allTeams.find((team) => team.id === teamId)?.name || "Legacy fixture-wide session";
   const getVenueName = (venueId: string | null | undefined) =>
     allVenues.find((venue) => venue.id === venueId)?.name || "Venue not recorded";
-  const isExpired = (session: MvpSession) =>
-    getMvpSessionDisplayState(session.status, session.closes_at) === "expired";
-  const isReminderAvailable = (session: MvpSession) => session.status === "OPEN" && !isExpired(session);
+  const isPastDeadline = (session: MvpSession) =>
+    session.status === "OPEN" && getMvpSessionDisplayState(session.status, session.closes_at) === "closed";
+  const isReminderAvailable = (session: MvpSession) => session.status === "OPEN" && !isPastDeadline(session);
   const isWithdrawalAvailable = (session: MvpSession) =>
     Boolean(session.team_id) && (session.status === "OPEN" || session.status === "RESULT_DISPUTED");
   const selectedTeamForDetail = sessionDetails?.team_id
@@ -1447,7 +1447,7 @@ export default function MvpVotingAdmin() {
   const aggregatesEligible = sessionDetails?.status === "CLOSED" && resultConcerns.length === 0;
 
   const getStatusBadge = (session: MvpSession) => {
-    if (isExpired(session)) return <Badge variant="outline">EXPIRED</Badge>;
+    if (isPastDeadline(session)) return <Badge variant="secondary">CLOSED</Badge>;
     if (session.status === "PENDING") return <Badge className="bg-amber-100 text-amber-800">PENDING</Badge>;
     if (session.status === "OPEN") return <Badge className="bg-green-100 text-green-800">OPEN</Badge>;
     if (session.status === "RESULT_DISPUTED") {
@@ -1917,7 +1917,7 @@ export default function MvpVotingAdmin() {
                           <Play className="h-4 w-4" /> Open
                         </Button>
                       )}
-                      {sessionDetails.status === "OPEN" && (
+                      {sessionDetails.status === "OPEN" && !isPastDeadline(sessionDetails) && (
                         <>
                           <Button
                             variant="outline"
@@ -1932,8 +1932,7 @@ export default function MvpVotingAdmin() {
                           >
                             <Square className="h-4 w-4" /> Close
                           </Button>
-                          {!isExpired(sessionDetails) && (
-                            <Button
+                          <Button
                               variant="outline"
                               className="gap-2"
                               onClick={handleResendToNonVoters}
@@ -1949,12 +1948,10 @@ export default function MvpVotingAdmin() {
                               }
                             >
                               <Mail className="h-4 w-4" /> Remind non-voters
-                            </Button>
-                          )}
+                          </Button>
                         </>
                       )}
-                      {(sessionDetails.status === "CLOSED" ||
-                        (sessionDetails.status === "OPEN" && isExpired(sessionDetails))) &&
+                      {(sessionDetails.status === "CLOSED" || isPastDeadline(sessionDetails)) &&
                         resultConcerns.length === 0 && (
                         <Button
                           variant="outline"

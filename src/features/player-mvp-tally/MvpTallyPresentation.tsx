@@ -3,9 +3,18 @@ import { Gauge, Pause, Play, RefreshCw, SkipForward, Trophy } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { buildPlaybackFrames, calculateLeaderboard, playbackDelayMs, podiumResults } from "./logic";
+import {
+  buildPlaybackFrames,
+  buildRuleCommentary,
+  calculateLeaderboard,
+  frameDelayMs,
+  limitLeaderboard,
+  podiumResults,
+  TALLY_SPEEDS,
+} from "./logic";
 import type {
   MvpTallyCardSnapshot,
+  MvpTallyCommentarySnapshot,
   MvpTallyResult,
   MvpTallySpeed,
   MvpTallyTheme,
@@ -18,6 +27,7 @@ interface MvpTallyPresentationProps {
   theme: MvpTallyTheme;
   snapshot: MvpTallyCardSnapshot;
   finalResults: MvpTallyResult[];
+  commentary?: MvpTallyCommentarySnapshot | null;
   initialSpeed: MvpTallySpeed;
   storageKey?: string;
   preview?: boolean;
@@ -42,6 +52,7 @@ export function MvpTallyPresentation({
   theme,
   snapshot,
   finalResults,
+  commentary,
   initialSpeed,
   storageKey,
   preview = false,
@@ -58,6 +69,10 @@ export function MvpTallyPresentation({
     () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || false,
   );
   const frame = frames[Math.min(frameIndex, Math.max(frames.length - 1, 0))];
+  const effectiveCommentary = useMemo(
+    () => commentary || buildRuleCommentary(snapshot),
+    [commentary, snapshot],
+  );
 
   useEffect(() => {
     if (storageKey) window.localStorage.setItem(storageKey, String(frameIndex));
@@ -67,7 +82,7 @@ export function MvpTallyPresentation({
     if (!playing || !frame || frame.kind === "FINAL") return;
     const timer = window.setTimeout(() => {
       setFrameIndex((current) => Math.min(current + 1, frames.length - 1));
-    }, playbackDelayMs(speed, reducedMotion));
+    }, frameDelayMs(frame, speed, reducedMotion));
     return () => window.clearTimeout(timer);
   }, [frame, frames.length, playing, reducedMotion, speed]);
 
@@ -80,9 +95,10 @@ export function MvpTallyPresentation({
   }
 
   const currentRound = snapshot.rounds[frame.roundIndex] || snapshot.rounds[0];
-  const liveResults = frame.kind === "FINAL"
+  const completeLiveResults = frame.kind === "FINAL"
     ? finalResults
     : calculateLeaderboard(snapshot, frame.revealedCards);
+  const liveResults = limitLeaderboard(completeLiveResults, theme.leaderboardLimit);
   const maxPoints = Math.max(...liveResults.map((result) => result.points), 1);
   const background = theme.backgroundStyle === "SOLID"
     ? theme.secondaryColour
@@ -127,14 +143,16 @@ export function MvpTallyPresentation({
           <div className="mb-5 flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-white/55">Live leaderboard</p>
-              <h2 className="mt-1 text-2xl font-black">Complete tally</h2>
+              <h2 className="mt-1 text-2xl font-black">
+                {theme.leaderboardLimit == null ? "Complete tally" : `Top ${theme.leaderboardLimit}`}
+              </h2>
             </div>
             <p className="text-sm text-white/60">{frame.revealedCards} cards revealed</p>
           </div>
           <div className="space-y-3">
             {liveResults.length === 0 ? (
               <div className="flex min-h-72 items-center justify-center rounded-xl border border-dashed border-white/20 text-center text-white/55">
-                The first anonymous ballot is about to be revealed.
+                The first result is about to be revealed.
               </div>
             ) : liveResults.map((result) => (
               <div key={result.playerKey} className="grid grid-cols-[2rem_2.5rem_minmax(0,1fr)_3rem] items-center gap-3 rounded-xl bg-white/[0.07] p-2.5">
@@ -175,7 +193,6 @@ export function MvpTallyPresentation({
           )}
           {frame.kind === "CARD" && (
             <div className={`w-full ${reducedMotion ? "" : "animate-in zoom-in-75 fade-in duration-500"}`} key={frame.card.cardId}>
-              <p className="text-sm font-bold uppercase tracking-[0.3em] text-white/55">Anonymous 3–2–1 card</p>
               <div className="mx-auto mt-5 flex h-24 w-24 items-center justify-center rounded-3xl border border-white/20 bg-white/10 text-6xl font-black shadow-2xl" style={{ color: theme.accentColour }}>
                 {frame.card.points}
               </div>
@@ -190,7 +207,9 @@ export function MvpTallyPresentation({
             <div className={reducedMotion ? "" : "animate-in fade-in slide-in-from-bottom-6 duration-500"}>
               <p className="text-sm font-bold uppercase tracking-[0.3em]" style={{ color: theme.accentColour }}>Round complete</p>
               <h2 className="mt-3 text-4xl font-black">{currentRound.roundLabel}</h2>
-              <p className="mt-3 text-lg text-white/65">The full tally stays visible as we move on.</p>
+              <p className="mt-3 max-w-xl text-lg text-white/70">
+                {effectiveCommentary.rounds.find((item) => item.sessionId === currentRound.sessionId)?.text}
+              </p>
             </div>
           )}
           {frame.kind === "FINAL" && (
@@ -217,7 +236,17 @@ export function MvpTallyPresentation({
             {snapshot.rounds.map((round, index) => (
               <div key={round.sessionId} className="flex shrink-0 items-center gap-2">
                 <span className={`h-2.5 w-2.5 rounded-full ${index <= frame.roundIndex ? "bg-white" : "bg-white/25"}`} />
-                <span className={`text-xs font-bold ${index === frame.roundIndex ? "text-white" : "text-white/45"}`}>{round.roundLabel}</span>
+                <button
+                  type="button"
+                  className={`rounded px-1 py-0.5 text-xs font-bold transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${index === frame.roundIndex ? "text-white" : "text-white/45"}`}
+                  onClick={() => {
+                    const roundIntroIndex = frames.findIndex((candidate) => candidate.kind === "ROUND_INTRO" && candidate.roundIndex === index);
+                    if (roundIntroIndex >= 0) setFrameIndex(roundIntroIndex);
+                  }}
+                  aria-label={`Jump to ${round.roundLabel}`}
+                >
+                  {round.roundLabel}
+                </button>
                 {index < snapshot.rounds.length - 1 && <span className="h-px w-6 bg-white/20" />}
               </div>
             ))}
@@ -236,7 +265,7 @@ export function MvpTallyPresentation({
             <Select value={String(speed)} onValueChange={(value) => setSpeed(Number(value) as MvpTallySpeed)}>
               <SelectTrigger className="w-24 border-white/20 bg-white/10 text-white"><Gauge className="mr-1 h-4 w-4" /><SelectValue /></SelectTrigger>
               <SelectContent>
-                {[0.5, 1, 1.5, 2].map((option) => <SelectItem key={option} value={String(option)}>{option}×</SelectItem>)}
+                {TALLY_SPEEDS.map((option) => <SelectItem key={option} value={String(option)}>{option}×</SelectItem>)}
               </SelectContent>
             </Select>
             <label className="flex items-center gap-2 text-xs font-semibold text-white/70">

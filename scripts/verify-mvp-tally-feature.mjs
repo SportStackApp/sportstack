@@ -7,6 +7,7 @@ const migrationPaths = [
   "supabase/migrations/20260829124215_published_player_mvp_tally_presentations.sql",
   "supabase/migrations/20260829130253_index_player_mvp_tally_foreign_keys.sql",
   "supabase/migrations/20260829131126_harden_player_mvp_tally_audience.sql",
+  "supabase/migrations/20260829150000_refine_player_mvp_tally_presentations.sql",
 ];
 
 const fail = (message) => {
@@ -19,7 +20,7 @@ const run = (command, args) => {
   if (result.status !== 0) process.exit(result.status ?? 1);
 };
 
-if (mode === "migration") {
+const verifyMigration = () => {
   const sql = migrationPaths.map((path) => readFileSync(path, "utf8")).join("\n");
   const required = [
     "create table public.mvp_tally_presentations",
@@ -35,6 +36,16 @@ if (mode === "migration") {
     "MVP_TALLY_AUDIENCE_CHANGED",
     "validate_mvp_tally_replacement",
     "mvp_tally_presentations_created_by_idx",
+    "private.close_due_mvp_voting_sessions",
+    "CLOSED_AT_DEADLINE",
+    "enforce_mvp_voting_deadline_on_votes",
+    "mvp-tally-assets",
+    "ballotsReceived",
+    "eligibleVoterCount",
+    "leaderboardLimit",
+    "commentary_snapshot",
+    "save_mvp_tally_commentary",
+    "close-due-player-mvp-voting",
   ];
   for (const marker of required) {
     if (!sql.toLowerCase().includes(marker.toLowerCase())) fail(`Missing migration security marker: ${marker}`);
@@ -42,6 +53,10 @@ if (mode === "migration") {
   if (/grant\s+(insert|update|delete|all)[^;]*mvp_tally_(presentations|sessions|recipients)[^;]*authenticated/i.test(sql)) {
     fail("Authenticated browser role has a direct tally lifecycle write grant.");
   }
+};
+
+if (mode === "migration") {
+  verifyMigration();
   console.log("MVP_TALLY_MIGRATION_OK");
 } else if (mode === "tests") {
   run("npx", ["vitest", "run", "src/features/player-mvp-tally/logic.test.ts"]);
@@ -57,6 +72,7 @@ if (mode === "migration") {
     "src/components/profile/NotificationPreferencesSection.tsx",
     "src/App.tsx",
     "supabase/functions/sportstack-notification-dispatch/index.ts",
+    "supabase/functions/mvp-tally-commentary/index.ts",
     "scripts/verify-mvp-tally-feature.mjs",
   ]);
   console.log("MVP_TALLY_LINT_OK");
@@ -66,6 +82,17 @@ if (mode === "migration") {
 } else if (mode === "build") {
   run("npm", ["run", "build"]);
   console.log("MVP_TALLY_BUILD_OK");
+} else if (!mode) {
+  verifyMigration();
+  const presentation = readFileSync("src/features/player-mvp-tally/MvpTallyPresentation.tsx", "utf8");
+  const admin = readFileSync("src/pages/admin/MvpTallyAdmin.tsx", "utf8");
+  const logic = readFileSync("src/features/player-mvp-tally/logic.ts", "utf8");
+  const edge = readFileSync("supabase/functions/mvp-tally-commentary/index.ts", "utf8");
+  for (const marker of ["TALLY_SPEEDS", "frameDelayMs", "limitLeaderboard", "buildRuleCommentary", "Jump to", "Players shown", "Upload logo", "ballotsReceived", "store: false", "Aggregate data"]) {
+    if (![presentation, admin, logic, edge].some((source) => source.includes(marker))) fail(`Missing feature marker: ${marker}`);
+  }
+  if (edge.includes("voter_profile_id") || edge.includes("token_id")) fail("AI commentary function contains voter identity fields.");
+  console.log("Player MVP tally feature verification passed");
 } else {
   fail("Usage: node scripts/verify-mvp-tally-feature.mjs migration|tests|lint|typecheck|build");
 }

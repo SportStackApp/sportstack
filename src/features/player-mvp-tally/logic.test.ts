@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildPlaybackFrames, calculateLeaderboard, mergeInheritedTheme, playbackDelayMs, podiumResults } from "./logic";
+import {
+  buildPlaybackFrames,
+  buildRuleCommentary,
+  calculateLeaderboard,
+  frameDelayMs,
+  limitLeaderboard,
+  mergeInheritedTheme,
+  playbackDelayMs,
+  podiumResults,
+} from "./logic";
 import type { MvpTallyCardSnapshot } from "./types";
 
 const snapshot: MvpTallyCardSnapshot = {
@@ -57,6 +66,46 @@ describe("Player MVP tally playback", () => {
     expect(playbackDelayMs(2, false)).toBe(1100);
     expect(playbackDelayMs(0.5, false)).toBe(4400);
     expect(playbackDelayMs(1, true)).toBe(350);
+    expect(frameDelayMs({ kind: "ROUND_SUMMARY" }, 1, false)).toBe(6000);
+    expect(frameDelayMs({ kind: "ROUND_SUMMARY" }, 10, true)).toBe(600);
+  });
+
+  it("limits the leaderboard without splitting a tied cutoff rank", () => {
+    const results = [
+      { playerKey: "a", playerId: "a", playerName: "A", avatarUrl: null, linked: true, points: 9, rank: 1 },
+      { playerKey: "b", playerId: "b", playerName: "B", avatarUrl: null, linked: true, points: 8, rank: 2 },
+      { playerKey: "c", playerId: "c", playerName: "C", avatarUrl: null, linked: true, points: 7, rank: 3 },
+      { playerKey: "d", playerId: "d", playerName: "D", avatarUrl: null, linked: true, points: 7, rank: 3 },
+      { playerKey: "e", playerId: "e", playerName: "E", avatarUrl: null, linked: true, points: 5, rank: 4 },
+    ];
+    expect(limitLeaderboard(results, 3).map((result) => result.playerName)).toEqual(["A", "B", "C", "D"]);
+    expect(limitLeaderboard(results, null)).toHaveLength(5);
+  });
+
+  it("creates positive rule commentary for every round", () => {
+    const commentary = buildRuleCommentary(snapshot);
+    expect(commentary.source).toBe("RULES");
+    expect(commentary.rounds).toHaveLength(snapshot.rounds.length);
+    expect(commentary.rounds.every((round) => round.text.length > 0 && round.text.length <= 180)).toBe(true);
+  });
+
+  it("recognises a clear leader and a close contest", () => {
+    const clearLeadSnapshot: MvpTallyCardSnapshot = {
+      version: 1,
+      rounds: [{
+        sessionId: "clear",
+        roundLabel: "Round 1",
+        gameDate: null,
+        matchLabel: "A v B",
+        cards: [
+          { cardId: "a1", points: 3, playerKey: "a", playerId: "a", playerName: "Alex", avatarUrl: null, linked: true },
+          { cardId: "a2", points: 3, playerKey: "a", playerId: "a", playerName: "Alex", avatarUrl: null, linked: true },
+          { cardId: "b1", points: 1, playerKey: "b", playerId: "b", playerName: "Bailey", avatarUrl: null, linked: true },
+        ],
+      }],
+    };
+    expect(buildRuleCommentary(clearLeadSnapshot).rounds[0].text).toContain("Alex");
+    expect(buildRuleCommentary(snapshot).rounds[0].text).toMatch(/neck and neck|tight one|leaderboard/);
   });
 
   it("inherits branding while keeping explicit overrides", () => {
@@ -64,6 +113,7 @@ describe("Player MVP tally playback", () => {
       primaryColour: "#111111",
       accentColour: "#abcdef",
       backgroundStyle: "SPOTLIGHT",
+      leaderboardLimit: 10,
     });
   });
 });

@@ -137,8 +137,6 @@ const getStatusBadge = (session: SessionTile) => {
       return session.hasSubmitted
         ? { label: "Open - ballot submitted", className: "bg-green-100 text-green-800 border-green-200" }
         : { label: "Open - vote now", className: "bg-primary/10 text-primary border-primary/20" };
-    case "expired":
-      return { label: "Voting time expired", className: "bg-amber-100 text-amber-800 border-amber-200" };
     case "disputed":
       return { label: "Result being reviewed", className: "bg-red-100 text-red-800 border-red-200" };
     case "closed":
@@ -575,7 +573,7 @@ export default function MvpVotes() {
             const canRequestReopen =
               !session.isLegacy &&
               !session.hasSubmitted &&
-              (session.displayState === "closed" || session.displayState === "expired");
+              session.displayState === "closed";
 
             return (
               <Card key={session.id} className="flex flex-col justify-between hover:shadow-md transition-shadow">

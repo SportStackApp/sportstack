@@ -2,7 +2,7 @@ export type MvpSessionStatus = "PENDING" | "OPEN" | "RESULT_DISPUTED" | "CLOSED"
 
 export type MvpResultCheckResponse = "CORRECT" | "INCORRECT";
 
-export type MvpSessionDisplayState = "open" | "expired" | "disputed" | "closed";
+export type MvpSessionDisplayState = "open" | "disputed" | "closed";
 
 export interface MvpResultCheckState {
   response: MvpResultCheckResponse | null;
@@ -39,6 +39,7 @@ const MVP_ERROR_MESSAGES: Record<string, string> = {
   MVP_SESSION_NOT_OPEN: "This MVP voting round is not open.",
   MVP_SESSION_ALREADY_OPEN: "This MVP voting round is already open.",
   MVP_SESSION_EXPIRED: "The voting deadline has passed.",
+  MVP_SESSION_DEADLINE_PASSED: "The voting deadline has passed.",
   MVP_RESULT_DISPUTED: "Voting is paused while the match result is being reviewed.",
   MVP_RESOLVE_RESULT_FIRST: "Review the match result concern before changing this voting round.",
   MVP_UNRESOLVED_RESULT_CONCERN: "Review the match result concern before publishing the MVP results.",
@@ -63,7 +64,7 @@ const MVP_ERROR_MESSAGES: Record<string, string> = {
   MVP_REOPEN_NOT_ALLOWED: "This voting round cannot be reopened.",
   MVP_SESSION_CANNOT_REOPEN: "This voting round cannot be reopened.",
   MVP_USE_REOPEN: "This voting round is closed. Use Reopen to start a new voting cycle.",
-  MVP_SESSION_NOT_CLOSED: "A reopen request can only be made after voting has closed or expired.",
+  MVP_SESSION_NOT_CLOSED: "A reopen request can only be made after voting has closed.",
   MVP_REOPEN_ALREADY_REQUESTED: "A reopen request has already been sent for this round.",
   MVP_PERMISSION_DENIED: "You do not have permission to do that.",
   MVP_NOT_AUTHORISED: "You do not have permission to do that.",
@@ -121,7 +122,7 @@ export const getMvpSessionDisplayState = (
 
   if (status === "OPEN" && closesAt) {
     const closesAtMs = new Date(closesAt).getTime();
-    if (!Number.isNaN(closesAtMs) && closesAtMs <= Date.now()) return "expired";
+    if (!Number.isNaN(closesAtMs) && closesAtMs <= Date.now()) return "closed";
   }
 
   return status === "OPEN" ? "open" : "closed";

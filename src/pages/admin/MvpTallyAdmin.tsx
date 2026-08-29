@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CalendarClock, Check, Eye, Palette, Send, Trophy, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarClock, Check, Eye, ImageOff, Palette, Send, Trophy, Upload, Users } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,17 @@ import { MvpTallyPresentation } from "@/features/player-mvp-tally/MvpTallyPresen
 import {
   getMvpTallyBuilderData,
   getMvpTallyDraftDetails,
+  generateMvpTallyCommentary,
   listMvpTallyPresentations,
   previewMvpTally,
   publishMvpTally,
+  removeMvpTallyLogo,
+  saveMvpTallyCommentary,
   saveMvpTallyDraft,
+  uploadMvpTallyLogo,
   withdrawMvpTally,
 } from "@/features/player-mvp-tally/api";
-import { mergeInheritedTheme } from "@/features/player-mvp-tally/logic";
+import { buildRuleCommentary, mergeInheritedTheme, TALLY_SPEEDS } from "@/features/player-mvp-tally/logic";
 import type {
   MvpTallyAudienceGroup,
   MvpTallyAudienceMember,
@@ -40,12 +44,22 @@ const GROUP_LABELS: Record<MvpTallyAudienceGroup, string> = {
 };
 
 const friendlyError = (error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error
+    ? error.message
+    : error && typeof error === "object" && "message" in error
+      ? String((error as { message?: unknown }).message || "")
+      : String(error);
   if (message.includes("MVP_TALLY_PREVIEW_STALE")) return "Rounds, votes or the audience changed. Preview the tally again.";
-  if (message.includes("MVP_TALLY_ROUNDS_CHANGED")) return "A selected round is no longer closed and undisputed.";
+  if (message.includes("MVP_TALLY_ROUND_NOT_CLOSED")) return "A selected round is not closed yet.";
+  if (message.includes("MVP_TALLY_ROUND_RESULT_CONCERN")) return "Resolve the result concern before adding that round.";
+  if (message.includes("MVP_TALLY_ROUND_NO_BALLOTS")) return "A selected round has no submitted ballots.";
+  if (message.includes("MVP_TALLY_ROUND_WRONG_TEAM")) return "A selected round belongs to another team.";
+  if (message.includes("MVP_TALLY_INVALID_PLAYER_LIMIT")) return "Players shown must be All or a whole number from 3 to 50.";
+  if (message.includes("MVP_TALLY_INVALID_LOGO")) return "That logo is no longer available. Upload it again or use the inherited logo.";
+  if (message.includes("MVP_TALLY_INVALID_SPEED")) return "Choose one of the available playback speeds.";
   if (message.includes("MVP_TALLY_AUDIENCE_CHANGED")) return "One or more selected players are no longer eligible for this team and these rounds.";
   if (message.includes("permission")) return "Your current SportStack role cannot manage this team.";
-  return "The tally presentation could not be saved. Please try again.";
+  return message && message !== "[object Object]" ? message : "The tally presentation could not be saved. Please try again.";
 };
 
 export default function MvpTallyAdmin() {
@@ -56,6 +70,7 @@ export default function MvpTallyAdmin() {
   const [presentations, setPresentations] = useState<MvpTallyPresentationRecord[]>([]);
   const [loading, setLoading] = useState(Boolean(teamId));
   const [busy, setBusy] = useState(false);
+  const [logoBusy, setLogoBusy] = useState(false);
   const [step, setStep] = useState(0);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [replacesId, setReplacesId] = useState<string | null>(null);
@@ -65,7 +80,11 @@ export default function MvpTallyAdmin() {
   const [audience, setAudience] = useState<MvpTallyAudienceMember[]>([]);
   const [theme, setTheme] = useState<MvpTallyTheme | null>(null);
   const [speed, setSpeed] = useState<MvpTallySpeed>(1);
-  const [preview, setPreview] = useState<{ cards: NonNullable<MvpTallyPresentationRecord["card_snapshot"]>; results: NonNullable<MvpTallyPresentationRecord["result_snapshot"]> } | null>(null);
+  const [preview, setPreview] = useState<{
+    cards: NonNullable<MvpTallyPresentationRecord["card_snapshot"]>;
+    results: NonNullable<MvpTallyPresentationRecord["result_snapshot"]>;
+    commentary: MvpTallyPresentationRecord["commentary_snapshot"];
+  } | null>(null);
   const [scheduledFor, setScheduledFor] = useState("");
   const [withdrawTarget, setWithdrawTarget] = useState<MvpTallyPresentationRecord | null>(null);
   const [withdrawReason, setWithdrawReason] = useState("");
@@ -83,6 +102,7 @@ export default function MvpTallyAdmin() {
       setAudience(data.audience);
       setTheme(mergeInheritedTheme({
         logoUrl: data.branding.logoUrl,
+        logoStoragePath: null,
         bannerUrl: data.branding.bannerUrl,
         primaryColour: data.branding.primaryColour,
         secondaryColour: data.branding.secondaryColour,
@@ -106,8 +126,55 @@ export default function MvpTallyAdmin() {
 
   const resetPreview = () => setPreview(null);
   const toggleSession = (id: string) => {
-    setSelectedSessions((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+    setSelectedSessions((current) => {
+      const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
+      return (builderData?.sessions || []).filter((session) => next.includes(session.id)).map((session) => session.id);
+    });
     resetPreview();
+  };
+
+  const uploadLogo = async (file: File) => {
+    if (!teamId || !theme) return;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      toast({ title: "Logo not uploaded", description: "Choose a PNG, JPG or WebP image.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Logo not uploaded", description: "Choose an image smaller than 2 MB.", variant: "destructive" });
+      return;
+    }
+    setLogoBusy(true);
+    try {
+      const previousPath = theme.logoStoragePath;
+      const uploaded = await uploadMvpTallyLogo(teamId, file);
+      setTheme({ ...theme, logoUrl: uploaded.publicUrl, logoStoragePath: uploaded.path });
+      resetPreview();
+      if (previousPath) await removeMvpTallyLogo(previousPath);
+    } catch (error) {
+      toast({ title: "Logo not uploaded", description: friendlyError(error), variant: "destructive" });
+    } finally {
+      setLogoBusy(false);
+    }
+  };
+
+  const clearOwnedLogo = async (useInherited: boolean) => {
+    if (!theme || !builderData) return;
+    const previousPath = theme.logoStoragePath;
+    setTheme({
+      ...theme,
+      logoUrl: useInherited ? builderData.branding.logoUrl : null,
+      logoStoragePath: null,
+    });
+    resetPreview();
+    if (!previousPath) return;
+    setLogoBusy(true);
+    try {
+      await removeMvpTallyLogo(previousPath);
+    } catch (error) {
+      toast({ title: "Old logo not removed", description: friendlyError(error), variant: "destructive" });
+    } finally {
+      setLogoBusy(false);
+    }
   };
 
   const refreshAudience = async () => {
@@ -159,7 +226,15 @@ export default function MvpTallyAdmin() {
     try {
       const result = await previewMvpTally(id);
       if (!result.cards || !result.results) throw new Error("Preview snapshot missing");
-      setPreview({ cards: result.cards, results: result.results });
+      const rules = buildRuleCommentary(result.cards);
+      await saveMvpTallyCommentary(id, result.sourceFingerprint, rules);
+      let commentary = rules;
+      try {
+        commentary = await generateMvpTallyCommentary(id, result.sourceFingerprint);
+      } catch (commentaryError) {
+        console.warn("AI tally commentary unavailable; using local commentary", commentaryError);
+      }
+      setPreview({ cards: result.cards, results: result.results, commentary });
       setStep(3);
     } catch (error) {
       toast({ title: "Preview not ready", description: friendlyError(error), variant: "destructive" });
@@ -231,7 +306,11 @@ export default function MvpTallyAdmin() {
       })));
       setTheme(mergeInheritedTheme(item.theme));
       setSpeed(item.playback_speed);
-      setPreview(item.card_snapshot && item.result_snapshot ? { cards: item.card_snapshot, results: item.result_snapshot } : null);
+      setPreview(item.card_snapshot && item.result_snapshot ? {
+        cards: item.card_snapshot,
+        results: item.result_snapshot,
+        commentary: item.commentary_snapshot,
+      } : null);
       setStep(item.card_snapshot && item.result_snapshot ? 3 : 0);
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     } catch (error) {
@@ -301,7 +380,46 @@ export default function MvpTallyAdmin() {
           {step === 0 && (
             <div className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="tally-title">Presentation title</Label><Input id="tally-title" value={title} maxLength={120} onChange={(event) => { setTitle(event.target.value); resetPreview(); }} /></div><div className="space-y-2"><Label htmlFor="tally-subtitle">Subtitle (optional)</Label><Input id="tally-subtitle" value={subtitle} maxLength={240} onChange={(event) => { setSubtitle(event.target.value); resetPreview(); }} /></div></div>
-              <div className="space-y-2"><Label>Closed, undisputed rounds</Label>{builderData.sessions.length === 0 ? <Alert><AlertTitle>No eligible rounds</AlertTitle><AlertDescription>Close and resolve at least one Player MVP session first.</AlertDescription></Alert> : <div className="grid gap-3 md:grid-cols-2">{builderData.sessions.map((session) => <label key={session.id} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3"><Checkbox checked={selectedSessions.includes(session.id)} onCheckedChange={() => toggleSession(session.id)} /><span className="min-w-0"><span className="block font-semibold">{session.round} · {session.homeTeam} v {session.awayTeam}</span><span className="text-xs text-muted-foreground">{session.gameDate ? new Date(`${session.gameDate}T00:00:00`).toLocaleDateString("en-AU") : "Date unavailable"} · {session.voteCount} vote lines</span>{session.unlinkedCount > 0 && <span className="mt-1 block text-xs text-amber-700">{session.unlinkedCount} unlinked named {session.unlinkedCount === 1 ? "entry" : "entries"}</span>}</span></label>)}</div>}</div>
+              <div className="space-y-2">
+                <Label>Player MVP rounds</Label>
+                <p className="text-sm text-muted-foreground">Every round is shown. Closed rounds with at least one ballot and no result concern can be selected.</p>
+                {builderData.sessions.length === 0 ? (
+                  <Alert><AlertTitle>No rounds found</AlertTitle><AlertDescription>This team does not have any Player MVP rounds yet.</AlertDescription></Alert>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {builderData.sessions.map((session) => (
+                      <label
+                        key={session.id}
+                        className={`flex items-start gap-3 rounded-lg border p-3 ${session.selectable ? "cursor-pointer" : "cursor-not-allowed bg-muted/30 opacity-75"}`}
+                      >
+                        <Checkbox
+                          checked={selectedSessions.includes(session.id)}
+                          disabled={!session.selectable}
+                          onCheckedChange={() => toggleSession(session.id)}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold">{session.round} · {session.homeTeam} v {session.awayTeam}</span>
+                            <Badge variant={session.status === "CLOSED" ? "secondary" : "outline"}>{session.status.replace("_", " ")}</Badge>
+                          </span>
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            {session.gameDate ? new Date(`${session.gameDate}T00:00:00`).toLocaleDateString("en-AU") : "Date unavailable"}
+                            {` · ${session.ballotsReceived} of ${session.eligibleVoterCount} voted`}
+                          </span>
+                          {!session.selectable && session.unselectableReason && (
+                            <span className="mt-1 block text-xs text-amber-700">{session.unselectableReason}</span>
+                          )}
+                          {session.unlinkedCount > 0 && (
+                            <span className="mt-1 block text-xs text-amber-700">
+                              {session.unlinkedCount} unlinked named {session.unlinkedCount === 1 ? "entry" : "entries"}
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -319,13 +437,100 @@ export default function MvpTallyAdmin() {
 
           {step === 2 && (
             <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-4"><div className="space-y-2"><Label htmlFor="logo-url">Logo URL</Label><Input id="logo-url" value={theme.logoUrl || ""} placeholder="Inherited team logo" onChange={(event) => { setTheme({ ...theme, logoUrl: event.target.value || null }); resetPreview(); }} /></div><div className="space-y-2"><Label>Background style</Label><Select value={theme.backgroundStyle} onValueChange={(value) => { setTheme({ ...theme, backgroundStyle: value as MvpTallyTheme["backgroundStyle"] }); resetPreview(); }}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="SPOTLIGHT">Sports spotlight</SelectItem><SelectItem value="GRADIENT">Colour gradient</SelectItem><SelectItem value="SOLID">Solid colour</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Default speed</Label><Select value={String(speed)} onValueChange={(value) => { setSpeed(Number(value) as MvpTallySpeed); resetPreview(); }}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{[0.5, 1, 1.5, 2].map((option) => <SelectItem key={option} value={String(option)}>{option}×</SelectItem>)}</SelectContent></Select></div></div>
-              <div className="grid grid-cols-3 gap-4">{(["primaryColour", "secondaryColour", "accentColour"] as const).map((key) => <div key={key} className="space-y-2"><Label htmlFor={key}>{key === "primaryColour" ? "Primary" : key === "secondaryColour" ? "Secondary" : "Accent"}</Label><Input id={key} type="color" className="h-12 p-1" value={theme[key]} onChange={(event) => { setTheme({ ...theme, [key]: event.target.value }); resetPreview(); }} /><Input value={theme[key]} maxLength={7} onChange={(event) => { setTheme({ ...theme, [key]: event.target.value }); resetPreview(); }} /></div>)}</div>
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <Label>Presentation logo</Label>
+                  <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+                    {theme.logoUrl ? (
+                      <img className="h-20 w-20 rounded-lg bg-white object-contain p-1" src={theme.logoUrl} alt="Current tally logo" />
+                    ) : (
+                      <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-muted"><ImageOff className="h-7 w-7 text-muted-foreground" /></div>
+                    )}
+                    <div className="flex flex-1 flex-wrap gap-2">
+                      <Button asChild size="sm" variant="outline" disabled={logoBusy}>
+                        <label htmlFor="tally-logo-upload" className="cursor-pointer"><Upload className="mr-2 h-4 w-4" />{logoBusy ? "Uploading…" : "Upload logo"}</label>
+                      </Button>
+                      <Input
+                        id="tally-logo-upload"
+                        type="file"
+                        className="sr-only"
+                        accept="image/png,image/jpeg,image/webp"
+                        disabled={logoBusy}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) void uploadLogo(file);
+                          event.target.value = "";
+                        }}
+                      />
+                      <Button size="sm" variant="outline" disabled={logoBusy} onClick={() => void clearOwnedLogo(true)}>Use inherited</Button>
+                      <Button size="sm" variant="ghost" disabled={logoBusy || !theme.logoUrl} onClick={() => void clearOwnedLogo(false)}>Remove</Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">PNG, JPG or WebP, up to 2 MB. The team, Club or Association logo remains available as the inherited option.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Background style</Label>
+                  <Select value={theme.backgroundStyle} onValueChange={(value) => { setTheme({ ...theme, backgroundStyle: value as MvpTallyTheme["backgroundStyle"] }); resetPreview(); }}>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SPOTLIGHT">Sports spotlight</SelectItem>
+                      <SelectItem value="GRADIENT">Colour gradient</SelectItem>
+                      <SelectItem value="SOLID">Solid colour</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {theme.backgroundStyle === "SPOTLIGHT" && "A dark broadcast background with a bright team-colour spotlight."}
+                    {theme.backgroundStyle === "GRADIENT" && "A smooth blend from the secondary colour into the primary colour."}
+                    {theme.backgroundStyle === "SOLID" && "A clean single-colour background using the secondary colour."}
+                  </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Default speed</Label>
+                    <Select value={String(speed)} onValueChange={(value) => { setSpeed(Number(value) as MvpTallySpeed); resetPreview(); }}>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>{TALLY_SPEEDS.map((option) => <SelectItem key={option} value={String(option)}>{option}×</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="players-shown">Players shown</Label>
+                    <div className="flex gap-2">
+                      <Select
+                        value={theme.leaderboardLimit == null ? "ALL" : "LIMIT"}
+                        onValueChange={(value) => {
+                          setTheme({ ...theme, leaderboardLimit: value === "ALL" ? null : theme.leaderboardLimit || 10 });
+                          resetPreview();
+                        }}
+                      >
+                        <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="LIMIT">Top</SelectItem><SelectItem value="ALL">All</SelectItem></SelectContent>
+                      </Select>
+                      {theme.leaderboardLimit != null && (
+                        <Input
+                          id="players-shown"
+                          type="number"
+                          min={3}
+                          max={50}
+                          value={theme.leaderboardLimit}
+                          onChange={(event) => { setTheme({ ...theme, leaderboardLimit: Math.min(50, Math.max(3, Number(event.target.value) || 3)) }); resetPreview(); }}
+                        />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Players tied at the cutoff are all shown.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                {(["primaryColour", "secondaryColour", "accentColour"] as const).map((key) => <div key={key} className="space-y-2"><Label htmlFor={key}>{key === "primaryColour" ? "Primary" : key === "secondaryColour" ? "Secondary" : "Accent"}</Label><Input id={key} type="color" className="h-12 p-1" value={theme[key]} onChange={(event) => { setTheme({ ...theme, [key]: event.target.value }); resetPreview(); }} /><Input value={theme[key]} maxLength={7} onChange={(event) => { setTheme({ ...theme, [key]: event.target.value }); resetPreview(); }} /></div>)}
+              </div>
             </div>
           )}
 
           {step === 3 && (
-            <div className="space-y-4">{unlinkedCount > 0 && <Alert><AlertTitle>Unlinked result entries</AlertTitle><AlertDescription>{unlinkedCount} named result {unlinkedCount === 1 ? "entry is" : "entries are"} not linked to SportStack profiles. They remain in the tally but cannot receive access or notifications.</AlertDescription></Alert>}{preview ? <div className="overflow-hidden rounded-xl border"><MvpTallyPresentation title={title} subtitle={subtitle} teamName={builderData.branding.teamName} theme={theme} snapshot={preview.cards} finalResults={preview.results} initialSpeed={speed} preview /></div> : <div className="rounded-xl border border-dashed p-12 text-center"><Eye className="mx-auto h-10 w-10 text-muted-foreground" /><p className="mt-3 font-semibold">A fresh full preview is required</p><p className="mt-1 text-sm text-muted-foreground">SportStack will recheck every round, vote and recipient first.</p><Button className="mt-4" disabled={busy} onClick={() => void buildPreview()}>{busy ? "Building…" : "Build and watch preview"}</Button></div>}</div>
+            <div className="space-y-4">{unlinkedCount > 0 && <Alert><AlertTitle>Unlinked result entries</AlertTitle><AlertDescription>{unlinkedCount} named result {unlinkedCount === 1 ? "entry is" : "entries are"} not linked to SportStack profiles. They remain in the tally but cannot receive access or notifications.</AlertDescription></Alert>}{preview ? <div className="overflow-hidden rounded-xl border"><MvpTallyPresentation title={title} subtitle={subtitle} teamName={builderData.branding.teamName} theme={theme} snapshot={preview.cards} finalResults={preview.results} commentary={preview.commentary} initialSpeed={speed} preview /></div> : <div className="rounded-xl border border-dashed p-12 text-center"><Eye className="mx-auto h-10 w-10 text-muted-foreground" /><p className="mt-3 font-semibold">A fresh full preview is required</p><p className="mt-1 text-sm text-muted-foreground">SportStack will recheck every round, vote and recipient first.</p><Button className="mt-4" disabled={busy} onClick={() => void buildPreview()}>{busy ? "Building…" : "Build and watch preview"}</Button></div>}</div>
           )}
 
           {step === 4 && (

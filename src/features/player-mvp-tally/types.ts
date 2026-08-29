@@ -1,14 +1,17 @@
 export type MvpTallyStatus = "DRAFT" | "SCHEDULED" | "PUBLISHED" | "WITHDRAWN";
 export type MvpTallyAudienceGroup = "PRIMARY" | "SECONDARY" | "FILL_IN";
-export type MvpTallySpeed = 0.5 | 1 | 1.5 | 2;
+export type MvpTallySpeed = 0.5 | 1 | 1.5 | 2 | 3 | 4 | 5 | 7.5 | 10;
+export type MvpTallyRoundStatus = "PENDING" | "OPEN" | "CLOSED" | "RESULT_CONCERN";
 
 export interface MvpTallyTheme {
   logoUrl: string | null;
+  logoStoragePath: string | null;
   bannerUrl: string | null;
   backgroundStyle: "SPOTLIGHT" | "GRADIENT" | "SOLID";
   primaryColour: string;
   secondaryColour: string;
   accentColour: string;
+  leaderboardLimit: number | null;
 }
 
 export interface MvpTallyCard {
@@ -44,6 +47,19 @@ export interface MvpTallyResult {
   rank: number;
 }
 
+export interface MvpTallyRoundCommentary {
+  sessionId: string;
+  text: string;
+}
+
+export interface MvpTallyCommentarySnapshot {
+  version: 1;
+  source: "AI" | "RULES";
+  provider?: "OPENAI" | "ANTHROPIC";
+  model?: string;
+  rounds: MvpTallyRoundCommentary[];
+}
+
 export interface MvpTallyAudienceMember {
   profileId: string;
   name: string;
@@ -58,7 +74,11 @@ export interface MvpTallySessionOption {
   gameDate: string | null;
   homeTeam: string | null;
   awayTeam: string | null;
-  voteCount: number;
+  status: MvpTallyRoundStatus;
+  selectable: boolean;
+  ballotsReceived: number;
+  eligibleVoterCount: number;
+  unselectableReason: string | null;
   unlinkedCount: number;
 }
 
@@ -88,6 +108,7 @@ export interface MvpTallyPresentationRecord {
   playback_speed: MvpTallySpeed;
   card_snapshot: MvpTallyCardSnapshot | null;
   result_snapshot: MvpTallyResult[] | null;
+  commentary_snapshot: MvpTallyCommentarySnapshot | null;
   previewed_at: string | null;
   scheduled_for: string | null;
   published_at: string | null;

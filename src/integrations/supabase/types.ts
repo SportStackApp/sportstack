@@ -9081,6 +9081,7 @@ export type Database = {
       mvp_tally_presentations: {
         Row: {
           card_snapshot: Json | null
+          commentary_snapshot: Json | null
           created_at: string
           created_by: string
           id: string
@@ -9106,6 +9107,7 @@ export type Database = {
         }
         Insert: {
           card_snapshot?: Json | null
+          commentary_snapshot?: Json | null
           created_at?: string
           created_by: string
           id?: string
@@ -9131,6 +9133,7 @@ export type Database = {
         }
         Update: {
           card_snapshot?: Json | null
+          commentary_snapshot?: Json | null
           created_at?: string
           created_by?: string
           id?: string
@@ -9156,6 +9159,34 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "mvp_tally_presentations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "mvp_tally_presentations_replaces_presentation_id_fkey"
             columns: ["replaces_presentation_id"]
             isOneToOne: false
@@ -9167,6 +9198,34 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_withdrawn_by_fkey"
+            columns: ["withdrawn_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_withdrawn_by_fkey"
+            columns: ["withdrawn_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -9215,6 +9274,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mvp_tally_presentations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_recipients_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "mvp_tally_recipients_profile_id_fkey"
@@ -16168,6 +16234,36 @@ export type Database = {
         }
         Returns: Json
       }
+      provision_dev_test_account_data_scoped_legacy: {
+        Args: {
+          p_actor_id: string
+          p_association_id: string
+          p_club_id: string
+          p_created: boolean
+          p_email: string
+          p_role: string
+          p_team_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      provision_dev_umpire_test_account_data: {
+        Args: {
+          p_actor_id: string
+          p_association_id: string
+          p_club_id: string
+          p_created: boolean
+          p_email: string
+          p_role: string
+          p_team_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      publish_mvp_tally: {
+        Args: { p_presentation_id: string; p_scheduled_for?: string }
+        Returns: string
+      }
       recalculate_discipline_deadlines: {
         Args: { p_case_id: string; p_reason: string }
         Returns: undefined
@@ -16402,9 +16498,13 @@ export type Database = {
         Args: { p_case_id: string; p_members: Json; p_preparation: Json }
         Returns: string
       }
-      publish_mvp_tally: {
-        Args: { p_presentation_id: string; p_scheduled_for?: string }
-        Returns: string
+      save_mvp_tally_commentary: {
+        Args: {
+          p_commentary: Json
+          p_presentation_id: string
+          p_source_fingerprint: string
+        }
+        Returns: undefined
       }
       save_mvp_tally_draft: {
         Args: {
@@ -16625,10 +16725,6 @@ export type Database = {
         Args: { p_secret: string }
         Returns: boolean
       }
-      withdraw_mvp_tally: {
-        Args: { p_presentation_id: string; p_reason: string }
-        Returns: undefined
-      }
       withdraw_mvp_submission: {
         Args: {
           p_reason: string
@@ -16644,6 +16740,10 @@ export type Database = {
           p_voter_profile_id: string
         }
         Returns: Json
+      }
+      withdraw_mvp_tally: {
+        Args: { p_presentation_id: string; p_reason: string }
+        Returns: undefined
       }
     }
     Enums: {
