@@ -106,6 +106,9 @@ Current Player MVP Voting database tables:
 - `mvp_vote_tokens` stores private voting tokens
 - `mvp_votes` stores Player MVP Voting vote lines
 - `mvp_vote_audit` stores admin change history
+- `mvp_tally_presentations` stores immutable published presentation snapshots and lifecycle state
+- `mvp_tally_sessions` stores the ordered closed rounds included in each presentation
+- `mvp_tally_recipients` stores the explicit private audience and email-delivery state
 
 ## Umpire Match Voting
 
@@ -158,6 +161,7 @@ Protected app:
 - `/voting` (legacy Player MVP Voting portal route)
 - `/mvp-votes` (Player MVP Voting)
 - `/mvp-votes/:sessionId` (Player MVP Voting submission/result flow)
+- `/mvp-votes/tallies/:id` (private full-screen published Player MVP tally)
 - `/umpire/vote` (Umpire Match Voting submission)
 - `/committee` (private committee setup, polls, meetings, minutes, chat and activity)
 
@@ -182,6 +186,7 @@ Admin:
 - `/admin/venues`
 - `/admin/requests`
 - `/admin/mvp-voting` (Player MVP Voting administration)
+- `/admin/mvp-voting/tallies` (scoped Player MVP tally builder and publisher)
 - `/admin/umpire-voting` (Umpire Match Voting administration)
 - `/admin/analytics`
 

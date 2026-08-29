@@ -9078,6 +9078,186 @@ export type Database = {
           },
         ]
       }
+      mvp_tally_presentations: {
+        Row: {
+          card_snapshot: Json | null
+          created_at: string
+          created_by: string
+          id: string
+          playback_speed: number
+          previewed_at: string | null
+          published_at: string | null
+          published_by: string | null
+          replaces_presentation_id: string | null
+          result_snapshot: Json | null
+          scheduled_for: string | null
+          source_fingerprint: string | null
+          status: string
+          subtitle: string | null
+          team_id: string
+          theme: Json
+          title: string
+          updated_at: string
+          updated_by: string
+          validation_error: string | null
+          withdrawal_reason: string | null
+          withdrawn_at: string | null
+          withdrawn_by: string | null
+        }
+        Insert: {
+          card_snapshot?: Json | null
+          created_at?: string
+          created_by: string
+          id?: string
+          playback_speed?: number
+          previewed_at?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          replaces_presentation_id?: string | null
+          result_snapshot?: Json | null
+          scheduled_for?: string | null
+          source_fingerprint?: string | null
+          status?: string
+          subtitle?: string | null
+          team_id: string
+          theme?: Json
+          title: string
+          updated_at?: string
+          updated_by: string
+          validation_error?: string | null
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
+        }
+        Update: {
+          card_snapshot?: Json | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          playback_speed?: number
+          previewed_at?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          replaces_presentation_id?: string | null
+          result_snapshot?: Json | null
+          scheduled_for?: string | null
+          source_fingerprint?: string | null
+          status?: string
+          subtitle?: string | null
+          team_id?: string
+          theme?: Json
+          title?: string
+          updated_at?: string
+          updated_by?: string
+          validation_error?: string | null
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mvp_tally_presentations_replaces_presentation_id_fkey"
+            columns: ["replaces_presentation_id"]
+            isOneToOne: false
+            referencedRelation: "mvp_tally_presentations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mvp_tally_recipients: {
+        Row: {
+          audience_group: string
+          created_at: string
+          email_attempts: number
+          email_last_attempt_at: string | null
+          email_last_error: string | null
+          email_sent_at: string | null
+          email_status: string
+          id: string
+          presentation_id: string
+          profile_id: string
+        }
+        Insert: {
+          audience_group: string
+          created_at?: string
+          email_attempts?: number
+          email_last_attempt_at?: string | null
+          email_last_error?: string | null
+          email_sent_at?: string | null
+          email_status?: string
+          id?: string
+          presentation_id: string
+          profile_id: string
+        }
+        Update: {
+          audience_group?: string
+          created_at?: string
+          email_attempts?: number
+          email_last_attempt_at?: string | null
+          email_last_error?: string | null
+          email_sent_at?: string | null
+          email_status?: string
+          id?: string
+          presentation_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mvp_tally_recipients_presentation_id_fkey"
+            columns: ["presentation_id"]
+            isOneToOne: false
+            referencedRelation: "mvp_tally_presentations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_recipients_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mvp_tally_sessions: {
+        Row: {
+          display_order: number
+          presentation_id: string
+          session_id: string
+        }
+        Insert: {
+          display_order: number
+          presentation_id: string
+          session_id: string
+        }
+        Update: {
+          display_order?: number
+          presentation_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mvp_tally_sessions_presentation_id_fkey"
+            columns: ["presentation_id"]
+            isOneToOne: false
+            referencedRelation: "mvp_tally_presentations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_sessions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "mvp_voting_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mvp_tokens: {
         Row: {
           away_team: string
@@ -15286,6 +15466,19 @@ export type Database = {
           owner_id: string
         }[]
       }
+      claim_mvp_tally_notification_work: {
+        Args: { p_limit?: number }
+        Returns: {
+          action_url: string
+          body_text: string
+          delivery_id: string
+          idempotency_key: string
+          recipient_email: string
+          recipient_name: string
+          subject: string
+          work_type: string
+        }[]
+      }
       claim_placeholder_profile: {
         Args: { p_real_profile_id: string }
         Returns: {
@@ -15324,6 +15517,10 @@ export type Database = {
       }
       complete_discipline_stage: {
         Args: { p_case_id: string; p_next_status: string; p_reason: string }
+        Returns: undefined
+      }
+      complete_mvp_tally_notification_work: {
+        Args: { p_delivery_id: string; p_error?: string; p_success: boolean }
         Returns: undefined
       }
       complete_sportstack_notification_work: {
@@ -15745,6 +15942,10 @@ export type Database = {
           vote_count: number
         }[]
       }
+      get_mvp_tally_builder_data: {
+        Args: { p_session_ids?: string[]; p_team_id: string }
+        Returns: Json
+      }
       get_reserved_dev_test_account_id: {
         Args: { p_email: string; p_role: string }
         Returns: string
@@ -15940,6 +16141,7 @@ export type Database = {
         Args: { p_session_id: string; p_token_id: string }
         Returns: boolean
       }
+      preview_mvp_tally: { Args: { p_presentation_id: string }; Returns: Json }
       provision_dev_test_account_data: {
         Args: {
           p_actor_id: string
@@ -16200,6 +16402,24 @@ export type Database = {
         Args: { p_case_id: string; p_members: Json; p_preparation: Json }
         Returns: string
       }
+      publish_mvp_tally: {
+        Args: { p_presentation_id: string; p_scheduled_for?: string }
+        Returns: string
+      }
+      save_mvp_tally_draft: {
+        Args: {
+          p_playback_speed: number
+          p_presentation_id: string
+          p_recipients: Json
+          p_replaces_presentation_id?: string
+          p_session_ids: string[]
+          p_subtitle: string
+          p_team_id: string
+          p_theme: Json
+          p_title: string
+        }
+        Returns: string
+      }
       save_permission_assignment: {
         Args: {
           p_active?: boolean
@@ -16404,6 +16624,10 @@ export type Database = {
       verify_sportstack_notification_cron: {
         Args: { p_secret: string }
         Returns: boolean
+      }
+      withdraw_mvp_tally: {
+        Args: { p_presentation_id: string; p_reason: string }
+        Returns: undefined
       }
       withdraw_mvp_submission: {
         Args: {

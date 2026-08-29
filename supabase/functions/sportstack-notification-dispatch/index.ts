@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 type NotificationWork = {
-  work_type: "AVAILABILITY" | "BROADCAST" | "PLAYER_EXPLORER" | "COORDINATION";
+  work_type: "AVAILABILITY" | "BROADCAST" | "PLAYER_EXPLORER" | "COORDINATION" | "MVP_TALLY";
   delivery_id: string;
   recipient_email: string;
   recipient_name: string;
@@ -68,7 +68,9 @@ async function sendEmail(work: NotificationWork) {
           Open SportStack
         </a>
       </p>
-      <p style="font-size:12px;color:#667085">Coordination assignment notices are operational messages and are always sent while the capability is active.</p>
+      <p style="font-size:12px;color:#667085">${work.work_type === "MVP_TALLY"
+        ? "You can turn off Player MVP results email in your SportStack notification preferences."
+        : "Coordination assignment notices are operational messages and are always sent while the capability is active."}</p>
     </div>`;
 
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
@@ -153,34 +155,55 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "Unable to claim notification work" }, 500);
   }
 
-  const workItems = (data || []) as NotificationWork[];
+  const { data: tallyData, error: tallyError } = await serviceClient.rpc(
+    "claim_mvp_tally_notification_work",
+    { p_limit: 50 },
+  );
+  if (tallyError) {
+    console.error("Unable to claim Player MVP tally notification work", tallyError.message);
+    return jsonResponse({ error: "Unable to claim Player MVP tally notification work" }, 500);
+  }
+
+  const workItems = [...(data || []), ...(tallyData || [])] as NotificationWork[];
   let sent = 0;
   let failed = 0;
 
   for (const work of workItems) {
     try {
       await sendEmail(work);
-      const { error: completionError } = await serviceClient.rpc(
-        "complete_sportstack_notification_work",
-        {
-          p_work_type: work.work_type,
-          p_delivery_id: work.delivery_id,
-          p_success: true,
-          p_error: null,
-        },
-      );
+      const completion = work.work_type === "MVP_TALLY"
+        ? await serviceClient.rpc("complete_mvp_tally_notification_work", {
+            p_delivery_id: work.delivery_id,
+            p_success: true,
+            p_error: null,
+          })
+        : await serviceClient.rpc("complete_sportstack_notification_work", {
+            p_work_type: work.work_type,
+            p_delivery_id: work.delivery_id,
+            p_success: true,
+            p_error: null,
+          });
+      const completionError = completion.error;
       if (completionError) throw completionError;
       sent += 1;
     } catch (sendError) {
       failed += 1;
       const message = sendError instanceof Error ? sendError.message : "Unknown email error";
       console.error(`Notification delivery ${work.delivery_id} failed`, message);
-      await serviceClient.rpc("complete_sportstack_notification_work", {
-        p_work_type: work.work_type,
-        p_delivery_id: work.delivery_id,
-        p_success: false,
-        p_error: message.slice(0, 1000),
-      });
+      if (work.work_type === "MVP_TALLY") {
+        await serviceClient.rpc("complete_mvp_tally_notification_work", {
+          p_delivery_id: work.delivery_id,
+          p_success: false,
+          p_error: message.slice(0, 1000),
+        });
+      } else {
+        await serviceClient.rpc("complete_sportstack_notification_work", {
+          p_work_type: work.work_type,
+          p_delivery_id: work.delivery_id,
+          p_success: false,
+          p_error: message.slice(0, 1000),
+        });
+      }
     }
   }
 

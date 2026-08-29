@@ -1,0 +1,69 @@
+import { describe, expect, it } from "vitest";
+import { buildPlaybackFrames, calculateLeaderboard, mergeInheritedTheme, playbackDelayMs, podiumResults } from "./logic";
+import type { MvpTallyCardSnapshot } from "./types";
+
+const snapshot: MvpTallyCardSnapshot = {
+  version: 1,
+  rounds: [
+    {
+      sessionId: "round-1",
+      roundLabel: "Round 1",
+      gameDate: "2026-08-01",
+      matchLabel: "Pumas v Tigers",
+      cards: [
+        { cardId: "1", points: 3, playerKey: "a", playerId: "a", playerName: "Alex", avatarUrl: null, linked: true },
+        { cardId: "2", points: 2, playerKey: "b", playerId: "b", playerName: "Bailey", avatarUrl: null, linked: true },
+        { cardId: "3", points: 1, playerKey: "b", playerId: "b", playerName: "Bailey", avatarUrl: null, linked: true },
+      ],
+    },
+    {
+      sessionId: "round-2",
+      roundLabel: "Round 2",
+      gameDate: "2026-08-08",
+      matchLabel: "Pumas v Hawks",
+      cards: [
+        { cardId: "4", points: 3, playerKey: "c", playerId: null, playerName: "Casey", avatarUrl: null, linked: false },
+      ],
+    },
+  ],
+};
+
+describe("Player MVP tally playback", () => {
+  it("derives totals from the current card position without duplicating points", () => {
+    expect(calculateLeaderboard(snapshot, 2).map(({ playerName, points }) => ({ playerName, points }))).toEqual([
+      { playerName: "Alex", points: 3 },
+      { playerName: "Bailey", points: 2 },
+    ]);
+    expect(calculateLeaderboard(snapshot, 2)[0].points).toBe(3);
+  });
+
+  it("uses shared ranks and includes every tied podium player", () => {
+    const results = calculateLeaderboard(snapshot, 4);
+    expect(results.map(({ playerName, rank }) => ({ playerName, rank }))).toEqual([
+      { playerName: "Alex", rank: 1 },
+      { playerName: "Bailey", rank: 1 },
+      { playerName: "Casey", rank: 1 },
+    ]);
+    expect(podiumResults(results)).toHaveLength(3);
+  });
+
+  it("builds round summaries and one final frame", () => {
+    const frames = buildPlaybackFrames(snapshot);
+    expect(frames.filter((frame) => frame.kind === "ROUND_SUMMARY")).toHaveLength(2);
+    expect(frames.at(-1)?.kind).toBe("FINAL");
+  });
+
+  it("adjusts timing for speed and reduced motion", () => {
+    expect(playbackDelayMs(2, false)).toBe(1100);
+    expect(playbackDelayMs(0.5, false)).toBe(4400);
+    expect(playbackDelayMs(1, true)).toBe(350);
+  });
+
+  it("inherits branding while keeping explicit overrides", () => {
+    expect(mergeInheritedTheme({ primaryColour: "#111111" }, { accentColour: "#abcdef" })).toMatchObject({
+      primaryColour: "#111111",
+      accentColour: "#abcdef",
+      backgroundStyle: "SPOTLIGHT",
+    });
+  });
+});

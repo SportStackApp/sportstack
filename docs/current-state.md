@@ -4222,3 +4222,33 @@ When Codex finishes a task, add a dated entry with:
 - The main immediate access-control question remains explicit: a Pending team application must not
   grant team data, Player permissions or team navigation before approval.
 - No database schema or Production system changed.
+## 29 August 2026 - Published Player MVP tally presentations
+
+What changed:
+
+- Added a saved five-step Player MVP tally builder for closed, undisputed team rounds: Rounds, Audience, Appearance, Preview and Publish.
+- Added private full-screen player playback with anonymous 3-2-1 cards, live ranking bars, round summaries, shared-rank podium results, pause, resume, replay, skip, four speeds and reduced motion.
+- Added explicit Primary, Secondary and participating fill-in audiences. Fill-ins start selected and can be removed as a group or individually.
+- Added inherited team, club and association branding with presentation-level logo, background and colour overrides.
+- Added DRAFT, SCHEDULED, PUBLISHED and WITHDRAWN lifecycle controls. Published snapshots cannot be edited; corrections require a reason, withdrawal and a linked replacement.
+- Added one-minute scheduled publication, deduplicated in-app notifications, Player MVP result email delivery and a player email preference.
+- Added recipient-only Row Level Security, manager scope checks and controlled database operations. Browser roles have read-only table access and cannot directly change lifecycle records.
+- Original Player MVP vote, submission and session records remain unchanged by presentation publication.
+
+Development status:
+
+- Three additive tally migrations are applied to SportStack Dev only: the presentation foundation, foreign-key indexes and audience hardening.
+- `sportstack-notification-dispatch` version 8 is active on Dev. Production is unchanged.
+- Transactional database tests cover scoped management, closed-round validation, anonymous snapshots, stale-preview blocking, notification deduplication, scheduled publication, recipient-only reads, withdrawal and replacement.
+- Desktop, tablet and phone presentation layouts were checked locally with no horizontal overflow or Vite error overlay. Authenticated owner testing of the full admin-to-player flow on Dev remains required.
+
+What Aaron should test next:
+
+1. On Dev, select a team in Player MVP administration and open **Tally presentations**.
+2. Build a short presentation, untick one fill-in, preview it fully, then publish it to a test player.
+3. Sign in as that selected player, open the notification, and test pause, resume, speed, skip and replay on a phone.
+4. Confirm an unrelated player cannot open the same tally link.
+
+Risk level:
+
+- Medium. This includes three additive Dev database migrations and one Dev Edge Function deployment. Production is unchanged.

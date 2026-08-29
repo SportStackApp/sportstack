@@ -23,6 +23,7 @@ import {
   type MvpSessionStatus,
 } from "@/lib/mvpVoting";
 import { Award, Calendar, CheckCircle2, Clock, History, MapPin, Send, Star, TriangleAlert } from "lucide-react";
+import { PublishedMvpTallies } from "@/features/player-mvp-tally/PublishedMvpTallies";
 
 // MVP tables and functions are added before the generated client types are regenerated.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -518,6 +519,8 @@ export default function MvpVotes() {
         <h1 className="text-3xl font-display text-foreground font-semibold">Player MVP</h1>
         <p className="text-muted-foreground mt-1">Vote for your team and review your own submitted ballots</p>
       </div>
+
+      <PublishedMvpTallies />
 
       {schemaUnavailable ? (
         <Card className="border-amber-300 bg-amber-50/50">

@@ -31,6 +31,7 @@ import UmpirePortalLanding from "./pages/umpire/UmpirePortalLanding";
 import PublicUmpireVote from "./pages/umpire/PublicUmpireVote";
 import MvpVotes from "./pages/MvpVotes";
 import MvpVoteCast from "./pages/MvpVoteCast";
+import MvpTallyPresentationPage from "./pages/MvpTallyPresentationPage";
 import ExpenseDashboard from "./pages/expense-hub/ExpenseDashboard";
 import ExpensesPage from "./pages/expense-hub/ExpensesPage";
 import ExpenseEditorPage from "./pages/expense-hub/ExpenseEditorPage";
@@ -61,6 +62,7 @@ import ErrorLogs from "./pages/admin/ErrorLogs";
 import RevSportsEntityReview from "./pages/admin/RevSportsEntityReview";
 import PlayerExplorer from "./pages/admin/PlayerExplorer";
 import MvpVotingAdmin from "./pages/admin/MvpVotingAdmin";
+import MvpTallyAdmin from "./pages/admin/MvpTallyAdmin";
 import Analytics from "./pages/admin/Analytics";
 import FeedbackResponses from "./pages/admin/FeedbackResponses";
 import RolesPermissions from "./pages/admin/RolesPermissions";
@@ -165,6 +167,7 @@ const App = () => (
 
                   {/* Protected Routes with App Layout */}
                   <Route element={<ProtectedRoute />}>
+                    <Route path="/mvp-votes/tallies/:id" element={<ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpTallyPresentationPage /></ModuleGate>} />
                     <Route element={<DisciplineAccessGate />}>
                       <Route element={<DisciplinePortalLayout />}>
                         <Route path="/discipline" element={<DisciplineCaseList />} />
@@ -226,6 +229,7 @@ const App = () => (
                       <Route path="/admin/venues" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><VenuesManagement /></ModeRouteGate>} />
                       <Route path="/admin/requests" element={<ModeRouteGate allowedModes={ADMIN_MODES}><Requests /></ModeRouteGate>} />
                       <Route path="/admin/mvp-voting" element={<ModeRouteGate allowedModes={MVP_ADMIN_MODES}><ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpVotingAdmin /></ModuleGate></ModeRouteGate>} />
+                      <Route path="/admin/mvp-voting/tallies" element={<ModeRouteGate allowedModes={MVP_ADMIN_MODES}><ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpTallyAdmin /></ModuleGate></ModeRouteGate>} />
                       <Route path="/admin/umpire-voting" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><ModuleGate moduleKey="umpire_match_voting" moduleLabel="Umpire Match Voting"><UmpireVotingModule /></ModuleGate></ModeRouteGate>} />
                       <Route path="/admin/safety-risk" element={<ModeRouteGate allowedModes={ADMIN_MODES}><ModuleGate moduleKey="safety_risk" moduleLabel="Risk & Quality Improvement"><SafetyRiskModule /></ModuleGate></ModeRouteGate>} />
                       <Route path="/admin/analytics" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><Analytics /></ModeRouteGate>} />

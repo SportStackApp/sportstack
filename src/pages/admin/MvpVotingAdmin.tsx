@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { supabase as originalSupabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useToast } from "@/hooks/use-toast";
@@ -1596,6 +1596,13 @@ export default function MvpVotingAdmin() {
                 <CardDescription>
                   Control voting access and its emails separately for this team.
                 </CardDescription>
+                <div className="pt-2">
+                  <Button asChild size="sm" variant="outline">
+                    <Link to={`/admin/mvp-voting/tallies?team=${selectedTeam.id}`}>
+                      <Trophy className="mr-2 h-4 w-4" /> Tally presentations
+                    </Link>
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between gap-4">

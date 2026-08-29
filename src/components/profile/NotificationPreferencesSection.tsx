@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-type Category = "AVAILABILITY_REMINDERS" | "BROADCASTS" | "MENTIONS";
+type Category = "AVAILABILITY_REMINDERS" | "BROADCASTS" | "MENTIONS" | "PLAYER_MVP_RESULTS";
 type Channel = "in_app_enabled" | "email_enabled";
 
 interface Preference {
@@ -40,6 +40,12 @@ const CATEGORIES: Array<{
     label: "Team mentions",
     description: "An in-app alert when someone mentions you in Team Chat.",
     channels: ["in_app_enabled"],
+  },
+  {
+    key: "PLAYER_MVP_RESULTS",
+    label: "Player MVP results",
+    description: "Email when a private tally presentation is published to you. In-app alerts always remain on.",
+    channels: ["email_enabled"],
   },
 ];
 

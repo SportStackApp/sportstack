@@ -1205,3 +1205,29 @@ Risk level:
 
 - Low. One navigation entry and feedback administration fields changed. No schema migration or
   Production change is included.
+## 29 August 2026 - Published Player MVP tally presentations
+
+Implemented on `dev`:
+
+- Scoped Team Management users can build, preview, schedule, publish, withdraw and replace saved Player MVP tally presentations.
+- Player recipients see a new-results card under `/mvp-votes` and watch privately at `/mvp-votes/tallies/:id` without the normal SportStack navigation.
+- Published data is an anonymous, immutable snapshot. Original Player MVP votes are never updated by this feature.
+- Publishing rechecks the selected sessions, vote state and explicit audience against the saved preview fingerprint.
+- The Dev database has three new RLS tables, three additive migrations, secured RPCs, a one-minute `pg_cron` job and email work claimed by `sportstack-notification-dispatch` version 8.
+- New public-table Data API grants are explicit: authenticated users receive SELECT only, anon receives none, and all lifecycle changes use checked RPCs.
+
+Verification:
+
+- Both migrations passed rolled-back Dev dry-runs; the live transactional SQL regression test passed and rolled back all synthetic data.
+- Focused Vitest, ESLint, TypeScript and Vite build checks pass.
+- The Dev advisor reported only the five intentional authenticated SECURITY DEFINER management RPC warnings for this feature. All new foreign-key index notices were resolved in the second migration.
+- Local browser checks passed at 1440x900, 820x1180 and 390x844 with no horizontal overflow or Vite overlay. The protected route correctly redirected a signed-out browser to login.
+- Full authenticated owner testing is still required because no test account password was created or accessed.
+
+Production boundary:
+
+- No `prod` branch, Production Supabase project, Production Edge Function or production deployment was changed.
+
+Owner test:
+
+1. On `https://dev.sportstackapp.com.au`, publish a short tally to one selected test player and verify the notification deep link, playback controls and unrelated-player denial.
