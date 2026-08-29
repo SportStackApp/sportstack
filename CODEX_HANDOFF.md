@@ -54,8 +54,9 @@ Last updated: 2026-08-30
   unresolved-selection detection.
 - Automated checks pass: 28 Vitest files/113 tests, TypeScript, Production build and focused lint.
   Full lint remains at the existing 350-error/78-warning baseline.
-- No migration or live-data write is included. Aaron's deployed 13-player Apply/Save/reopen/refresh
-  check remains the closure evidence. Main, `prod` and Production remain unchanged.
+- **Passed and closed:** Aaron confirmed all 13 players were visible and selected, and that Apply,
+  Save and refresh retained the roster and assignments. No migration or live-data write is included.
+  Main, `prod` and Production remain unchanged.
 
 ## 29 August 2026 — Production readiness programme
 

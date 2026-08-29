@@ -60,8 +60,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
   selection still cannot be resolved, preventing a partial load from silently removing players.
 - The focused changed-file lint, TypeScript, Production build and 28 Vitest files/113 tests pass.
   Full lint remains at the existing 350-error/78-warning baseline.
-- No database migration or live-data write is included. Deployed owner acceptance still needs to
-  confirm 13 visible selections and unchanged assignments after Apply, Save, reopen and refresh.
+- **Passed and closed:** Aaron confirmed all 13 players are visible and selected, and that Apply,
+  Save and refresh retain the roster and assignments. No database migration or live-data write was
+  included.
 
 ## Production readiness programme — 29 August 2026
 

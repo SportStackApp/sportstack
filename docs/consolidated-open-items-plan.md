@@ -43,9 +43,10 @@ Current verified position:
   single priority list. It covers known-defect repair, complete table/form/route registers,
   consistency rules, missing role/device/workflow cycles, repeatable walk-away testing, Main staging
   and the separately approved Production release.
-- READY-001 now loads already-selected placeholder-linked players as explicit roster candidates and
-  blocks Apply when any saved selection cannot be resolved. Automated checks and the live read-only
-  13-player/13-assignment preflight pass; deployed owner save/reopen acceptance remains open.
+- READY-001 is **passed and closed**. The selector loads already-selected placeholder-linked players
+  as explicit roster candidates and blocks Apply when any saved selection cannot be resolved.
+  Automated checks and the live read-only 13-player/13-assignment preflight passed; Aaron confirmed
+  all 13 remained selected after Apply, Save and refresh.
 - READY-002, READY-003 and READY-007 are repaired and deployed on Dev: pitch and bench players use the
   same complete fixture-year history, the whole marker drags without snapping, the dotted handle is
   gone and the selected marker has a clear amber ring. Automated, deployment and signed-out route

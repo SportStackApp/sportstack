@@ -109,10 +109,10 @@ Repair these in small Dev-only batches, highest risk first.
 Additional confirmed defects found during the audit enter this table before repair. Avoid mixing
 unrelated fixes into one commit.
 
-READY-001 implementation status on 30 August 2026: the Dev repair and regression tests are complete.
-A read-only live preflight confirmed 13 saved roster rows, three placeholder-linked profiles and 13
-assignments. The finding remains open until the deployed Apply, Save, reopen and refresh owner test
-passes without changing the selected players or their assignments.
+READY-001 closure status on 30 August 2026: **PASSED AND CLOSED**. The Dev repair and regression
+tests are complete. A read-only live preflight confirmed 13 saved roster rows, three
+placeholder-linked profiles and 13 assignments. Aaron then confirmed that all 13 players were
+visible and selected, and that Apply, Save and refresh retained the roster and assignments.
 
 READY-002, READY-003 and READY-007 implementation status on 30 August 2026: the repair is deployed
 to Dev and automated checks pass. A pitch player now opens the same fixture-year history as a
@@ -312,9 +312,10 @@ This phase requires Aaron's explicit approval before any change.
 
 ## Recommended first cycle
 
-Start with READY-001 because it can remove selected players and saved assignments. In the same
-cycle, add regression tests for roster count/visibility/save/reopen agreement. Then repair pitch
-selection/history and marker dragging together because both depend on the marker interaction model.
+READY-001 is complete. Continue with signed-in owner acceptance for READY-002, READY-003 and
+READY-007: pitch-player history, whole-marker dragging and the selected-player visual state. Then
+complete the combined-position and coaching interaction checks for READY-004, READY-005 and
+READY-006.
 
 After those High/Medium line-up risks pass on Dev, run the first read-only consistency night over
 Admin, Fixtures and RevSports while the next repair batch is prepared.
