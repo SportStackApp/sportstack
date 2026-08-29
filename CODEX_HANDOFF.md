@@ -13,7 +13,8 @@ Future agents should start by reading these files in order:
 
 ## 29 August 2026 Player MVP tally presentation refinements
 
-- Commit `1faf79f` is deployed on Dev and Main staging. Dev Quality run `33235803032` and both
+- Commits `1faf79f` and follow-up `71af047` are deployed on Dev and Main staging. Dev Quality runs
+  `33235803032` and `33236928385` and both final
   Vercel deployments passed. Production and `prod` were not changed.
 - Player MVP sessions now close automatically at their deadline through the private one-minute
   `close-due-player-mvp-voting` job. Unresolved incorrect-result checks become **Result concern**;
@@ -29,7 +30,13 @@ Future agents should start by reading these files in order:
 - Playback uses full linked profile names, clickable rounds, speed-scaled six-second summaries and
   saved positive commentary. AI receives anonymous player tokens and aggregate totals only, has a
   five-second preview budget, and falls back to local rules.
-- The transactional Dev database suite, eight focused logic tests, focused lint, TypeScript and
+- Owner testing found one player duplicated by two historical active Secondary membership rows.
+  The builder now collapses overlapping membership rows by profile, prefers Primary over Secondary
+  when both exist, and also deduplicates at the browser boundary before saving. No membership row
+  was deleted or edited. The live Pumas audience now returns Reuben once.
+- The final podium was changed from three narrow truncated boxes to full-width vertical cards with
+  full names, avatars, place labels and points; tied podium players remain included.
+- The transactional Dev database suite, nine focused logic tests, focused lint, TypeScript and
   build passed. Full lint remains at the known unrelated 359-error/78-warning baseline.
 - Authenticated owner testing is still required for logo upload/removal, the complete preview,
   AI/fallback wording, publishing, player notification access and unrelated-player denial.

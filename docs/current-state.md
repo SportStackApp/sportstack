@@ -4248,19 +4248,24 @@ What changed:
 
 Development status:
 
-- Four additive tally migrations are applied to SportStack Dev only: the presentation foundation,
-  foreign-key indexes, audience hardening and the deadline/presentation refinements.
+- Five additive tally migrations are applied to SportStack Dev only: the presentation foundation,
+  foreign-key indexes, audience hardening, deadline/presentation refinements and audience deduplication.
 - `sportstack-notification-dispatch` version 8 and `mvp-tally-commentary` version 1 are active on
-  Dev. The app commit `1faf79f` passed Dev Quality run `33235803032` and was fast-forwarded to Main;
+  Dev. The follow-up commit `71af047` passed Dev Quality run `33236928385` and was fast-forwarded to Main;
   both Vercel deployments succeeded. Production is unchanged.
 - The counted dry run found 347 overdue Dev sessions. The rollback test passed, the sessions were
   reconciled, no false manager was assigned, and a repeat run processed zero sessions.
 - Transactional database tests cover automatic closure, disputes, one- and zero-ballot rounds,
   deadline vote rejection, scoped storage, full names, commentary, publication and recipient-only
-  access. Eight focused logic tests, focused lint, TypeScript and build passed. Full repository lint
+  access. Nine focused logic tests, focused lint, TypeScript and build passed. Full repository lint
   remains at its known unrelated baseline of 359 errors and 78 warnings.
 - The unauthenticated local route loaded without a Vite error overlay. Authenticated owner testing
   of the complete builder-to-player flow on Dev remains required.
+- Owner testing found Reuben Pougnault twice because two older active Secondary membership rows
+  exist for the same profile. The builder now returns every profile once without deleting those
+  historical rows; linked Primary membership takes display priority over Secondary membership.
+- The final podium now uses readable full-width vertical cards with full names, avatars, place
+  labels and points. Cutoff ties remain supported and longer podiums scroll within the panel.
 
 What Aaron should test next:
 
