@@ -6,6 +6,20 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## Production readiness programme — 29 August 2026
+
+- The detailed repair, consistency-audit, missing-test, walk-away, Main and Production gate plan is
+  now `docs/production-readiness/PLAN.md`. `docs/consolidated-open-items-plan.md` remains the single
+  priority list.
+- The programme records the known roster-selection data-loss risk first, then the pitch interaction,
+  player-history, combined-position, coaching-rating, card-detail and Quick Action findings.
+- Table readiness means every meaningful data column has its correct two-way sort; action-only
+  columns are deliberately not sortable. Form readiness uses an explicit persistence policy rather
+  than retaining sensitive or invalid state indiscriminately.
+- The walk-away default is Dev-only, read-only and report-only with isolated evidence. No Production
+  action, recurring automation, application code, database object or live data changed in this
+  planning pass.
+
 ## Admin, line-up and coaching improvement batch — 29 August 2026
 
 - The approved Dev batch adds preferred-name and nickname storage, without yet changing ordinary

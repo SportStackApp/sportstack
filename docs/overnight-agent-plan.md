@@ -2,6 +2,11 @@
 
 Last updated: 29/07/2026
 
+For current unattended UI/UX readiness runs, use
+`docs/production-readiness/WALK-AWAY-CHARTER.md`. This older document remains the narrower plan for
+an unattended Dev code/diagnosis job and does not replace the current Production readiness
+programme.
+
 ## Purpose
 
 Keep useful SportStack work progressing during an unattended overnight window without creating uncontrolled production, database or deployment risk.

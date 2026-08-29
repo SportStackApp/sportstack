@@ -2,6 +2,18 @@
 
 Last updated: 2026-08-29
 
+## 29 August 2026 — Production readiness programme
+
+- `docs/production-readiness/PLAN.md` now defines the full repair, consistency, missing-test,
+  walk-away, Main and Production sequence. The measurable future release ledger is
+  `docs/production-readiness/GATES.md`, and the unattended template is
+  `docs/production-readiness/WALK-AWAY-CHARTER.md`.
+- The known High application finding is the roster picker hiding selected placeholder-linked
+  players and risking their removal on save. The latest Production scraper failure is also an
+  operational High item. Both must close before a Production proposal.
+- No application code, database object, live data, recurring automation, Main, `prod` or Production
+  system changed in this planning pass. Production remains separately approval-gated.
+
 ## 29 August 2026 — admin, line-up and coaching improvement batch
 
 - Branch: `dev`. Production and `prod` untouched. Main staging waits for owner acceptance.

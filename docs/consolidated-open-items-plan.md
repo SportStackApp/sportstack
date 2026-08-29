@@ -23,7 +23,9 @@ Current verified position:
 - `dev` and `main` were aligned at the audit start; the reviewed catch-up fixes now leave Dev ahead
   for a later staging decision, while `prod` remains separately behind Main;
 - GitHub has no open issues or pull requests;
-- the latest Dev Quality run and the latest Dev and Production scraper workflows passed;
+- the latest Dev Quality run passed; the latest Production Supabase Scrapers run failed because
+  three manually targeted games were started without the required round number and is now a
+  readiness repair/retest item;
 - all declared npm dependencies are installed and the reviewed `nanoid` resolution removes the
   20 August high-severity transitive advisory;
 - the live Dev database still reports 201 duplicate membership groups, 44 people with multiple
@@ -34,6 +36,18 @@ Current verified position:
   current GitHub token does not have `read:project` access;
 - the Big Brain SportStack focus and general Open Items notes were dated 30 July; this audit refreshed
   their priority pointer without duplicating the changing implementation detail.
+
+### Production readiness execution programme
+
+- `docs/production-readiness/PLAN.md` is the detailed execution and evidence programme beneath this
+  single priority list. It covers known-defect repair, complete table/form/route registers,
+  consistency rules, missing role/device/workflow cycles, repeatable walk-away testing, Main staging
+  and the separately approved Production release.
+- The current first repair is the roster-picker mismatch that can hide and remove three selected
+  placeholder-linked players. The first read-only night cycle then audits Admin, Fixtures and
+  RevSports sorting, filtering, persistence and diagnostics.
+- The default walk-away boundary is Dev-only, read-only and report-only. Disposable Dev writes need
+  a named charter; Production remains separately approval-gated.
 
 ### 29 August admin, line-up and coaching batch
 
