@@ -1,6 +1,19 @@
 # Codex Handoff
 
-Last updated: 2026-08-29
+Last updated: 2026-08-30
+
+## 30 August 2026 — READY-001 roster selection safeguard
+
+- The saved Pumas vs Blaze line-up contains 13 roster rows and 13 assignments. The old roster
+  dialog excluded three selected placeholder-linked profiles while still counting them, which could
+  remove them when the visible partial list was applied.
+- The dialog now merges all saved selections into the normal candidate list and blocks Apply if a
+  selected profile cannot be resolved. Regression tests cover selected-placeholder retention and
+  unresolved-selection detection.
+- Automated checks pass: 28 Vitest files/113 tests, TypeScript, Production build and focused lint.
+  Full lint remains at the existing 350-error/78-warning baseline.
+- No migration or live-data write is included. Aaron's deployed 13-player Apply/Save/reopen/refresh
+  check remains the closure evidence. Main, `prod` and Production remain unchanged.
 
 ## 29 August 2026 — Production readiness programme
 

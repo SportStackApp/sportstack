@@ -1,9 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { clampPitchCoordinate, displayedFormationPosition, pitchPlayerLabel, uniqueRosterIds } from "./lineupPlanner";
+import {
+  clampPitchCoordinate,
+  displayedFormationPosition,
+  mergeRosterProfileRows,
+  missingRosterProfileIds,
+  pitchPlayerLabel,
+  uniqueRosterIds,
+} from "./lineupPlanner";
 
 describe("line-up planner", () => {
   it("deduplicates selected roster players without changing their order", () => {
     expect(uniqueRosterIds(["one", "two", "one", "three"])).toEqual(["one", "two", "three"]);
+  });
+
+  it("keeps already-selected placeholder-linked profiles visible in the roster picker", () => {
+    const eligible = [
+      { id: "real-one", isPlaceholder: false },
+      { id: "real-two", isPlaceholder: false },
+    ];
+    const selected = [
+      { id: "real-two", isPlaceholder: false },
+      { id: "selected-placeholder", isPlaceholder: true },
+    ];
+
+    expect(mergeRosterProfileRows(eligible, selected)).toEqual([
+      { id: "real-one", isPlaceholder: false },
+      { id: "real-two", isPlaceholder: false },
+      { id: "selected-placeholder", isPlaceholder: true },
+    ]);
+  });
+
+  it("detects unresolved saved selections before roster changes are applied", () => {
+    expect(missingRosterProfileIds(
+      ["loaded", "missing", "missing"],
+      [{ id: "loaded" }],
+    )).toEqual(["missing"]);
   });
 
   it("clamps fixture-only marker movement to the pitch", () => {

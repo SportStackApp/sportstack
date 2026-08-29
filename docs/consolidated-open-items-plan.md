@@ -43,9 +43,11 @@ Current verified position:
   single priority list. It covers known-defect repair, complete table/form/route registers,
   consistency rules, missing role/device/workflow cycles, repeatable walk-away testing, Main staging
   and the separately approved Production release.
-- The current first repair is the roster-picker mismatch that can hide and remove three selected
-  placeholder-linked players. The first read-only night cycle then audits Admin, Fixtures and
-  RevSports sorting, filtering, persistence and diagnostics.
+- READY-001 now loads already-selected placeholder-linked players as explicit roster candidates and
+  blocks Apply when any saved selection cannot be resolved. Automated checks and the live read-only
+  13-player/13-assignment preflight pass; deployed owner save/reopen acceptance remains open.
+- After that acceptance, the first read-only night cycle audits Admin, Fixtures and RevSports
+  sorting, filtering, persistence and diagnostics.
 - The default walk-away boundary is Dev-only, read-only and report-only. Disposable Dev writes need
   a named charter; Production remains separately approval-gated.
 

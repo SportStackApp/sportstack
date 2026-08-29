@@ -26,3 +26,26 @@ export function pitchPlayerLabel(
 export function uniqueRosterIds(ids: readonly string[]): string[] {
   return Array.from(new Set(ids.filter(Boolean)));
 }
+
+export function mergeRosterProfileRows<T extends { id: string }>(
+  eligibleRows: readonly T[],
+  selectedRows: readonly T[],
+): T[] {
+  const rowsById = new Map<string, T>();
+
+  // Keep the normal roster order, then append any saved selections that are
+  // deliberately outside the normal candidate filter, such as placeholders.
+  [...eligibleRows, ...selectedRows].forEach((row) => {
+    if (!rowsById.has(row.id)) rowsById.set(row.id, row);
+  });
+
+  return Array.from(rowsById.values());
+}
+
+export function missingRosterProfileIds<T extends { id: string }>(
+  selectedIds: readonly string[],
+  loadedRows: readonly T[],
+): string[] {
+  const loadedIds = new Set(loadedRows.map((row) => row.id));
+  return uniqueRosterIds(selectedIds).filter((id) => !loadedIds.has(id));
+}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { mergeRosterProfileRows, missingRosterProfileIds, uniqueRosterIds } from "@/lib/lineupPlanner";
 import { toast } from "sonner";
 
 const supabase = typedSupabase as any;
@@ -51,13 +52,16 @@ export const RosterSelectorDialog = ({
   const [query, setQuery] = useState("");
   const [candidates, setCandidates] = useState<RosterCandidate[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [missingSelectedIds, setMissingSelectedIds] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     if (!open) return;
     setLoading(true);
     setSelectedIds(new Set(selectedPlayerIds));
+    setMissingSelectedIds([]);
+    const savedSelectedIds = uniqueRosterIds(selectedPlayerIds);
 
-    const [membershipsRes, fillInsRes, availabilityRes, profilesRes] = await Promise.all([
+    const [membershipsRes, fillInsRes, availabilityRes, profilesRes, selectedProfilesRes] = await Promise.all([
       supabase
         .from("team_memberships")
         .select("user_id, jersey_number, membership_type, position")
@@ -77,9 +81,15 @@ export const RosterSelectorDialog = ({
         .eq("is_placeholder", false)
         .order("last_name")
         .limit(1000),
+      savedSelectedIds.length
+        ? supabase
+          .from("profiles")
+          .select("id, first_name, last_name, nickname")
+          .in("id", savedSelectedIds)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
-    const firstError = membershipsRes.error || fillInsRes.error || availabilityRes.error || profilesRes.error;
+    const firstError = membershipsRes.error || fillInsRes.error || availabilityRes.error || profilesRes.error || selectedProfilesRes.error;
     if (firstError) {
       toast.error(`The roster could not be loaded: ${firstError.message}`);
       setLoading(false);
@@ -94,7 +104,8 @@ export const RosterSelectorDialog = ({
       if (!lastFillIn.has(row.player_id) && fixture?.fixture_date) lastFillIn.set(row.player_id, fixture.fixture_date);
     });
 
-    const rows = (profilesRes.data || [])
+    const profileRows = mergeRosterProfileRows(profilesRes.data || [], selectedProfilesRes.data || []);
+    const rows = profileRows
       .map((profile: any): RosterCandidate => {
         const membership = memberships.get(profile.id) as any;
         return {
@@ -115,6 +126,11 @@ export const RosterSelectorDialog = ({
         return fullName(a).localeCompare(fullName(b), "en-AU");
       });
 
+    const unresolvedIds = missingRosterProfileIds(savedSelectedIds, rows);
+    setMissingSelectedIds(unresolvedIds);
+    if (unresolvedIds.length > 0) {
+      toast.error("Some already-selected players could not be loaded. Roster changes are blocked to protect the saved line-up.");
+    }
     setCandidates(rows);
     setLoading(false);
   }, [fixtureId, open, selectedPlayerIds, teamId]);
@@ -135,6 +151,10 @@ export const RosterSelectorDialog = ({
   }, [candidates, query, selectedIds]);
 
   const apply = () => {
+    if (missingSelectedIds.length > 0) {
+      toast.error("Roster changes cannot be applied until every selected player is loaded.");
+      return;
+    }
     onApply(candidates.filter((candidate) => selectedIds.has(candidate.id)));
     onOpenChange(false);
   };
@@ -155,6 +175,11 @@ export const RosterSelectorDialog = ({
         </div>
 
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+          {missingSelectedIds.length > 0 && (
+            <p role="alert" className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+              {missingSelectedIds.length} selected {missingSelectedIds.length === 1 ? "player is" : "players are"} unavailable. Your saved roster is protected and cannot be changed from this window yet.
+            </p>
+          )}
           {loading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Loading roster...</p>
           ) : filteredCandidates.length === 0 ? (
@@ -195,7 +220,7 @@ export const RosterSelectorDialog = ({
             <Users className="h-4 w-4" /> {selectedIds.size} selected
           </div>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={apply} disabled={loading}>Use selected roster</Button>
+          <Button onClick={apply} disabled={loading || missingSelectedIds.length > 0}>Use selected roster</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

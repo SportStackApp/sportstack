@@ -109,6 +109,11 @@ Repair these in small Dev-only batches, highest risk first.
 Additional confirmed defects found during the audit enter this table before repair. Avoid mixing
 unrelated fixes into one commit.
 
+READY-001 implementation status on 30 August 2026: the Dev repair and regression tests are complete.
+A read-only live preflight confirmed 13 saved roster rows, three placeholder-linked profiles and 13
+assignments. The finding remains open until the deployed Apply, Save, reopen and refresh owner test
+passes without changing the selected players or their assignments.
+
 ## C. Screen consistency review
 
 ### C1. Sorting contract

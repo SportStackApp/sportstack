@@ -1,10 +1,23 @@
 # SportStack Current State
 
-Last updated: 2026-08-29
+Last updated: 2026-08-30
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
+
+## READY-001 roster selection safeguard — 30 August 2026
+
+- A read-only Dev query confirmed the reported line-up has 13 saved roster players and 13 saved
+  assignments. David Jochinke, Sandon Schultz and Simon Grant are the three placeholder-linked
+  profiles excluded by the old roster candidate query.
+- The roster selector now loads normal non-placeholder candidates plus every already-selected
+  profile. It deduplicates the combined result and blocks **Use selected roster** if any saved
+  selection still cannot be resolved, preventing a partial load from silently removing players.
+- The focused changed-file lint, TypeScript, Production build and 28 Vitest files/113 tests pass.
+  Full lint remains at the existing 350-error/78-warning baseline.
+- No database migration or live-data write is included. Deployed owner acceptance still needs to
+  confirm 13 visible selections and unchanged assignments after Apply, Save, reopen and refresh.
 
 ## Production readiness programme — 29 August 2026
 
