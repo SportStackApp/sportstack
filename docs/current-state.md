@@ -6,6 +6,22 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## Walk-away Dev accounts and browser pre-flight — 30 August 2026
+
+- **Standing owner authority:** the seven reserved disposable Dev accounts for Association Admin,
+  Club Admin, Team Manager, Coach, Player, Umpire and Voter are the approved identities for
+  unattended actual-role testing. Aaron reaffirmed that Codex may reset these accounts and make
+  recoverable Dev-only test changes without waiting for another approval.
+- The accounts are managed by an actual Super Admin from **Roles & modules → Dev test accounts** at
+  `/admin/roles-permissions`. Temporary credentials are ephemeral: never commit them, place them in
+  Big Brain or other notes, or expose them in logs, screenshots or chat.
+- **Hard pre-flight:** before Aaron walks away, run the repository-pinned browser tool through
+  `npx agent-browser`, prove that the controllable browser—not only the Codex in-app browser—is
+  signed into Dev, open one protected route, confirm the exact role/scope and complete one harmless
+  interaction. Do not declare the unattended run ready until those checks pass.
+- This authority never covers Production, `prod`, normal user accounts, destructive cleanup,
+  secrets or unrecoverable changes.
+
 ## READY-004 combined playing-position display — 30 August 2026
 
 - Profile Team Player Details and Coaching Position Ratings now use one **Playing position** list.

@@ -2,6 +2,19 @@
 
 Last updated: 2026-08-30
 
+## 30 August 2026 — walk-away Dev-account operating rule
+
+- Aaron reaffirmed that the seven reserved disposable Dev identities on **Roles & modules → Dev
+  test accounts** are available for unattended actual-role testing. Hands-off password resets and
+  recoverable Dev-only test changes are authorised for those identities.
+- Temporary credentials must remain ephemeral and must never be committed, copied into Big Brain,
+  included in screenshots or exposed in logs/chat.
+- A walk-away run is not ready until `npx agent-browser` proves control of a signed-in Dev browser,
+  opens a protected route and completes one harmless interaction in the exact intended role/scope.
+  A signed-in Codex in-app tab does not prove that the separate automation browser is authenticated.
+- Production, `prod`, normal accounts, secrets, destructive cleanup and unrecoverable changes remain
+  outside this standing authority.
+
 ## 30 August 2026 — READY-004 combined playing-position display
 
 - Profile Team Player Details and Coaching Position Ratings now show one Playing position catalogue

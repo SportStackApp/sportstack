@@ -54,9 +54,17 @@ and mark the step Blocked when authority or disposable data is missing.
 - Confirm the repository is on `dev`, the working tree has no unexpected changes and remote Dev has
   not moved unexpectedly.
 - Confirm the live Dev build matches the recorded commit.
-- Confirm the browser session is the intended authorised identity and scope.
+- Run the repository-pinned browser tool through `npx agent-browser` and confirm it starts.
+- Confirm the controllable browser—not only a separate Codex in-app tab—is the intended authorised
+  Dev identity and scope.
+- Open one protected route and complete one harmless interaction in that controllable browser.
+- If actual-role testing is planned, confirm the reserved disposable Dev account and permitted
+  recoverable changes. Never record its temporary credentials.
 - Create an isolated evidence folder.
 - Copy these run details into `charter.md` and start `decisions.md`.
+
+The run status remains **NOT READY** until every required preflight item above passes. Report the
+smallest owner action immediately; do not wait until the unattended period has started.
 
 ### 2. Baseline health
 
