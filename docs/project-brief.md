@@ -98,6 +98,12 @@ Player MVP Voting is built and live. It works as follows:
 - Admin reopen, resend, close, and adjustment tools
 - Full audit logging for admin changes
 - RevSports scraped data staged before matching to real profiles
+- The voting deadline is the official closing event. A private minute job closes overdue rounds;
+  unresolved incorrect-result checks become **Result concern**, and there is no **Expired** state.
+- Authorised Team Management users can build private saved tally presentations from closed,
+  undisputed rounds with at least one ballot. Presentations support explicit audiences, owned logo
+  uploads, custom colours/backgrounds, leaderboard limits, speeds, commentary and immutable
+  published snapshots.
 
 Current Player MVP Voting database tables:
 

@@ -11,6 +11,29 @@ Future agents should start by reading these files in order:
 5. `docs/scraper-operations.md` — current scraper, backup and retention routine.
 6. `TECHNICAL_SPECIFICATION_AND_SYSTEM_HANDOFF.md` — fuller technical context when needed.
 
+## 29 August 2026 Player MVP tally presentation refinements
+
+- Commit `1faf79f` is deployed on Dev and Main staging. Dev Quality run `33235803032` and both
+  Vercel deployments passed. Production and `prod` were not changed.
+- Player MVP sessions now close automatically at their deadline through the private one-minute
+  `close-due-player-mvp-voting` job. Unresolved incorrect-result checks become **Result concern**;
+  the derived **Expired** status and copy were removed.
+- A counted Dev dry run found 347 overdue sessions. Rollback verification passed before the additive
+  migration was applied. All 347 were reconciled with actor-free audit entries; a repeat run
+  processed zero, and the scheduled job's latest run succeeded.
+- The tally builder now lists ordered rounds with state, ballot/eligible counts and exact disabled
+  reasons. Closed, undisputed rounds require at least one ballot at save, preview, schedule and
+  publish time.
+- Appearance now includes scoped 2 MB PNG/JPG/WebP logo uploads, background descriptions, nine
+  speeds and a top 3-50 or All leaderboard limit with cutoff ties.
+- Playback uses full linked profile names, clickable rounds, speed-scaled six-second summaries and
+  saved positive commentary. AI receives anonymous player tokens and aggregate totals only, has a
+  five-second preview budget, and falls back to local rules.
+- The transactional Dev database suite, eight focused logic tests, focused lint, TypeScript and
+  build passed. Full lint remains at the known unrelated 359-error/78-warning baseline.
+- Authenticated owner testing is still required for logo upload/removal, the complete preview,
+  AI/fallback wording, publishing, player notification access and unrelated-player denial.
+
 ## 29 August 2026 desktop UI/UX walk-away review
 
 - Dev and Main staging are aligned after reviewing the former 14-commit gap. No workflow or

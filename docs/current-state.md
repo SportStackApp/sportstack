@@ -4227,28 +4227,52 @@ When Codex finishes a task, add a dated entry with:
 What changed:
 
 - Added a saved five-step Player MVP tally builder for closed, undisputed team rounds: Rounds, Audience, Appearance, Preview and Publish.
-- Added private full-screen player playback with anonymous 3-2-1 cards, live ranking bars, round summaries, shared-rank podium results, pause, resume, replay, skip, four speeds and reduced motion.
+- Added private full-screen player playback with 3-2-1 reveals, live ranking bars, round summaries, shared-rank podium results, pause, resume, replay, skip, clickable rounds, nine speeds and reduced motion.
 - Added explicit Primary, Secondary and participating fill-in audiences. Fill-ins start selected and can be removed as a group or individually.
-- Added inherited team, club and association branding with presentation-level logo, background and colour overrides.
+- Added inherited team, club and association branding with presentation-level logo uploads, background and colour overrides.
 - Added DRAFT, SCHEDULED, PUBLISHED and WITHDRAWN lifecycle controls. Published snapshots cannot be edited; corrections require a reason, withdrawal and a linked replacement.
 - Added one-minute scheduled publication, deduplicated in-app notifications, Player MVP result email delivery and a player email preference.
 - Added recipient-only Row Level Security, manager scope checks and controlled database operations. Browser roles have read-only table access and cannot directly change lifecycle records.
 - Original Player MVP vote, submission and session records remain unchanged by presentation publication.
+- Voting deadlines are now the official closing event. A private one-minute job closes overdue
+  undisputed sessions, moves unresolved incorrect-result checks to **Result concern**, and records
+  an actor-free `CLOSED_AT_DEADLINE` audit event. The former derived **Expired** state is removed.
+- The round picker lists every round in stable fixture order with its state, ballots received,
+  eligible voter count and a clear disabled reason. Closed, undisputed rounds need at least one
+  ballot before they can be included.
+- Appearance settings now support a scoped 2 MB PNG/JPG/WebP logo upload, background descriptions,
+  speeds from 0.5x to 10x and a top 3-50 or All leaderboard limit that retains cutoff ties.
+- Playback uses full linked SportStack profile names, six-second round summaries at 1x and saved
+  positive commentary. Preview tries anonymous aggregate-only AI commentary for up to five seconds,
+  then keeps the rule-based commentary if the provider is slow or unavailable.
 
 Development status:
 
-- Three additive tally migrations are applied to SportStack Dev only: the presentation foundation, foreign-key indexes and audience hardening.
-- `sportstack-notification-dispatch` version 8 is active on Dev. Production is unchanged.
-- Transactional database tests cover scoped management, closed-round validation, anonymous snapshots, stale-preview blocking, notification deduplication, scheduled publication, recipient-only reads, withdrawal and replacement.
-- Desktop, tablet and phone presentation layouts were checked locally with no horizontal overflow or Vite error overlay. Authenticated owner testing of the full admin-to-player flow on Dev remains required.
+- Four additive tally migrations are applied to SportStack Dev only: the presentation foundation,
+  foreign-key indexes, audience hardening and the deadline/presentation refinements.
+- `sportstack-notification-dispatch` version 8 and `mvp-tally-commentary` version 1 are active on
+  Dev. The app commit `1faf79f` passed Dev Quality run `33235803032` and was fast-forwarded to Main;
+  both Vercel deployments succeeded. Production is unchanged.
+- The counted dry run found 347 overdue Dev sessions. The rollback test passed, the sessions were
+  reconciled, no false manager was assigned, and a repeat run processed zero sessions.
+- Transactional database tests cover automatic closure, disputes, one- and zero-ballot rounds,
+  deadline vote rejection, scoped storage, full names, commentary, publication and recipient-only
+  access. Eight focused logic tests, focused lint, TypeScript and build passed. Full repository lint
+  remains at its known unrelated baseline of 359 errors and 78 warnings.
+- The unauthenticated local route loaded without a Vite error overlay. Authenticated owner testing
+  of the complete builder-to-player flow on Dev remains required.
 
 What Aaron should test next:
 
 1. On Dev, select a team in Player MVP administration and open **Tally presentations**.
-2. Build a short presentation, untick one fill-in, preview it fully, then publish it to a test player.
-3. Sign in as that selected player, open the notification, and test pause, resume, speed, skip and replay on a phone.
-4. Confirm an unrelated player cannot open the same tally link.
+2. Confirm the rounds are ordered and show status plus ballot counts, then select a one-ballot round.
+3. Upload a small logo, choose a leaderboard limit and a faster speed, preview the presentation,
+   click a footer round, then publish it to a test player.
+4. Sign in as that selected player, open the notification, and test full names, pause, resume, speed,
+   skip and replay on a phone.
+5. Confirm an unrelated player cannot open the same tally link.
 
 Risk level:
 
-- Medium. This includes three additive Dev database migrations and one Dev Edge Function deployment. Production is unchanged.
+- Medium. This includes one additional additive Dev database migration, a Dev storage bucket and one
+  Dev Edge Function deployment. Production is unchanged.
