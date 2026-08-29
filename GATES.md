@@ -47,7 +47,7 @@ Scope: Complete the approved Development batch without changing Production or de
 - [ ] G10: Signed-in Development browser smoke confirms the completed workflows on desktop and mobile
   EVIDENCE: pending
 
-- [ ] G11: Canonical documentation is updated and Big Brain synchronisation passes after the Development commit
+- [x] G11: Canonical documentation is updated and Big Brain synchronisation passes after the Development commit
   CHECK: pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check
   EXPECT: CHECK_OK
-  EVIDENCE: pending
+  EVIDENCE: SYNC_OK and CHECK_OK passed against origin/dev commit 16839fe; 57 files mirrored to Big Brain.

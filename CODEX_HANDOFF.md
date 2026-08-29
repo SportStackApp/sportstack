@@ -17,7 +17,7 @@ Last updated: 2026-08-29
 - Automated result: 28 Vitest files/111 tests pass; TypeScript and build pass; focused lint passes.
   Full lint reproduces existing debt at 350 errors/78 warnings. Supabase adviser output contains the
   established broad backlog and no missing RLS policy on the three new tables.
-- Remaining acceptance: signed-in owner smoke on deployed Dev, then documentation sync check. Coach
+- Remaining acceptance: signed-in owner smoke on deployed Dev. Big Brain sync and check passed. Coach
   Narrative and app-wide preferred-name precedence are intentionally parked.
 
 Future agents should start by reading these files in order:
