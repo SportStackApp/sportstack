@@ -35,6 +35,34 @@ Current verified position:
 - the Big Brain SportStack focus and general Open Items notes were dated 30 July; this audit refreshed
   their priority pointer without duplicating the changing implementation detail.
 
+### 29 August admin, line-up and coaching batch
+
+**In progress now**
+
+- Dev implementation is complete for the approved UI feedback batch: editable Quick Actions,
+  navigation cleanup, shared table sorting, persistent/default-unmatched RevSports filters,
+  profile nickname fields, deliberate match-roster selection, nickname-aware pitch labels,
+  fixture-only marker movement/reset, recent player history, multi-team Coaching Squad filtering,
+  simplified position traits and author-private fixture notes.
+- The additive Dev migration is applied and live schema/RLS verification passes. Six stale
+  Hockey Ballarat review records caused by old venue parsing were marked ignored without deletion.
+- Automated gates pass: 28 Vitest files/111 tests, TypeScript, production build and focused lint.
+
+**Next**
+
+- Deploy the Dev commit and run Aaron's signed-in desktop/mobile checks for profile save/reload,
+  roster selection/save/reopen, nickname display, marker reset, player history, coaching notes,
+  Club Admin individual-vote scope and each sortable table.
+- Promote Dev to Main staging only after the owner checks pass.
+
+**Parked for later**
+
+- Coach Narrative: a short post-game questionnaire or dictated notes, AI-written match summary,
+  pros/cons and deliberate player-specific observations saved into the existing private note shape.
+  Speech capture, AI provider, consent, review/edit controls and retention rules still need design.
+- Preferred-name display precedence across the whole app and icon-only mode switching remain parked.
+- Production remains a separate approval-gated release decision.
+
 ### 21 August Dev catch-up result
 
 - Dev acceptance and repair commits `a6f2354` through `08b30f9` are deployed on

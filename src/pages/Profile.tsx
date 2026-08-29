@@ -82,6 +82,8 @@ interface ProfileData {
   id: string;
   first_name: string | null;
   last_name: string | null;
+  preferred_name: string | null;
+  nickname: string | null;
   phone: string | null;
   suburb: string | null;
   date_of_birth: string | null;
@@ -163,6 +165,8 @@ const Profile = () => {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    preferredName: "",
+    nickname: "",
     phone: "",
     suburb: "",
     dateOfBirth: "",
@@ -198,6 +202,8 @@ const Profile = () => {
       const newFormData = {
         firstName: profileData.first_name || "",
         lastName: profileData.last_name || "",
+        preferredName: profileData.preferred_name || "",
+        nickname: profileData.nickname || "",
         phone: profileData.phone || "",
         suburb: profileData.suburb || "",
         dateOfBirth: profileData.date_of_birth || "",
@@ -435,6 +441,8 @@ const Profile = () => {
     const profileUpdate = {
       first_name: formData.firstName.trim() || null,
       last_name: formData.lastName.trim() || null,
+      preferred_name: formData.preferredName.trim() || null,
+      nickname: formData.nickname.trim() || null,
       phone: formData.phone.trim() || null,
       suburb: formData.suburb.trim() || null,
       date_of_birth: formData.dateOfBirth || null,
@@ -469,6 +477,8 @@ const Profile = () => {
         ...formData,
         firstName: profileUpdate.first_name || "",
         lastName: profileUpdate.last_name || "",
+        preferredName: profileUpdate.preferred_name || "",
+        nickname: profileUpdate.nickname || "",
         phone: profileUpdate.phone || "",
         suburb: profileUpdate.suburb || "",
         dateOfBirth: profileUpdate.date_of_birth || "",

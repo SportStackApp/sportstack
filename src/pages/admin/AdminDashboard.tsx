@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useNavigate } from "react-router-dom";
-import { Building2, Users, Shield, Trophy, ArrowRight, Crown, Clock, AlertTriangle, MessageSquare } from "lucide-react";
+import { Building2, Users, Shield, Trophy, ArrowRight, Crown, Clock, AlertTriangle, MessageSquare, Pencil, ArrowUp, ArrowDown, Globe, GitMerge, UserCog } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { getRoleDisplayName, getRoleBadgeColor } from "@/hooks/useUserRole";
@@ -27,6 +29,21 @@ interface Stats {
   pendingMemberships: number;
 }
 
+const QUICK_ACTION_IDS = ["fixtures", "associations", "clubs", "teams", "users", "revsports", "error_logs", "feedback"] as const;
+type QuickActionId = typeof QUICK_ACTION_IDS[number];
+const DEFAULT_QUICK_ACTIONS: QuickActionId[] = ["fixtures", "error_logs", "feedback"];
+const QUICK_ACTION_STORAGE_KEY = "sportstack.admin.quick-actions.v1";
+
+const loadQuickActionIds = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(QUICK_ACTION_STORAGE_KEY) || "[]") as string[];
+    const valid = saved.filter((id): id is QuickActionId => QUICK_ACTION_IDS.includes(id as QuickActionId));
+    return valid.length ? [...valid, ...QUICK_ACTION_IDS.filter((id) => !valid.includes(id))] : [...DEFAULT_QUICK_ACTIONS, ...QUICK_ACTION_IDS.filter((id) => !DEFAULT_QUICK_ACTIONS.includes(id))];
+  } catch {
+    return [...DEFAULT_QUICK_ACTIONS, ...QUICK_ACTION_IDS.filter((id) => !DEFAULT_QUICK_ACTIONS.includes(id))];
+  }
+};
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { loading: scopeLoading, isSuperAdmin, isAnyAdmin, highestScopedRole, scopedAssociationIds, scopedClubIds, scopedTeamIds } = useAdminScope();
@@ -43,6 +60,21 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState<Stats>({ associations: 0, clubs: 0, teams: 0, divisions: 0, venues: 0, users: 0, pendingMemberships: 0 });
   const [loading, setLoading] = useState(true);
   const [unmatchedCount, setUnmatchedCount] = useState(0);
+  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  const [quickActionOrder, setQuickActionOrder] = useState<QuickActionId[]>(loadQuickActionIds);
+  const [enabledQuickActions, setEnabledQuickActions] = useState<Set<QuickActionId>>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(`${QUICK_ACTION_STORAGE_KEY}.enabled`) || "[]") as QuickActionId[];
+      return new Set(saved.length ? saved : DEFAULT_QUICK_ACTIONS);
+    } catch {
+      return new Set(DEFAULT_QUICK_ACTIONS);
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(QUICK_ACTION_STORAGE_KEY, JSON.stringify(quickActionOrder));
+    localStorage.setItem(`${QUICK_ACTION_STORAGE_KEY}.enabled`, JSON.stringify(Array.from(enabledQuickActions)));
+  }, [enabledQuickActions, quickActionOrder]);
 
   useEffect(() => {
     const fetchUnmatched = async () => {
@@ -194,6 +226,28 @@ const AdminDashboard = () => {
   if (selectedClubId) scopeQuery.set("club", selectedClubId);
   if (selectedTeamId) scopeQuery.set("team", selectedTeamId);
   const scopedHref = (path: string) => scopeQuery.size > 0 ? `${path}?${scopeQuery.toString()}` : path;
+  const quickActionCatalogue: Record<QuickActionId, { label: string; href: string; icon: typeof Clock; allowed: boolean }> = {
+    fixtures: { label: "Fixtures", href: scopedHref("/admin/fixtures"), icon: Clock, allowed: true },
+    associations: { label: "Associations", href: "/admin/associations", icon: Globe, allowed: isSuperAdmin },
+    clubs: { label: "Clubs", href: scopedHref("/admin/clubs"), icon: Building2, allowed: isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN" },
+    teams: { label: "Teams", href: scopedHref("/admin/teams"), icon: Shield, allowed: true },
+    users: { label: "Users", href: scopedHref("/admin/users"), icon: UserCog, allowed: true },
+    revsports: { label: "RevSports Review", href: "/admin/revsports-entities", icon: GitMerge, allowed: isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN" },
+    error_logs: { label: "Error Logs", href: "/admin/error-logs", icon: AlertTriangle, allowed: isSuperAdmin },
+    feedback: { label: "Feedback", href: "/admin/feedback", icon: MessageSquare, allowed: isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN" },
+  };
+  const availableQuickActionIds = quickActionOrder.filter((id) => quickActionCatalogue[id].allowed);
+  const visibleQuickActionIds = availableQuickActionIds.filter((id) => enabledQuickActions.has(id));
+  const moveQuickAction = (id: QuickActionId, direction: -1 | 1) => {
+    setQuickActionOrder((current) => {
+      const index = current.indexOf(id);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+  };
   const scopeBanner = (
     selectedTeam as { banner_url?: string | null; primary_colour?: string | null } | null
   )?.banner_url || (
@@ -364,37 +418,49 @@ const AdminDashboard = () => {
 
       {/* Quick Actions */}
       <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common administrative tasks</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Common administrative tasks</CardDescription>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setQuickActionsOpen(true)}>
+            <Pencil className="mr-2 h-4 w-4" /> Edit
+          </Button>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {contextLevel === "team" && (
-            <Button variant="outline" asChild className="h-auto py-4 flex-col">
-              <Link to={scopedHref("/admin/fixtures")}>
-                <Clock className="mb-2 h-6 w-6" />
-                <span>Fixtures</span>
-              </Link>
-            </Button>
-          )}
-          {isSuperAdmin && (
-            <Button variant="outline" asChild className="h-auto py-4 flex-col">
-              <Link to="/admin/error-logs">
-                <AlertTriangle className="mb-2 h-6 w-6" />
-                <span>Error Logs</span>
-              </Link>
-            </Button>
-          )}
-          {(isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN") && (
-            <Button variant="outline" asChild className="h-auto py-4 flex-col">
-              <Link to="/admin/feedback">
-                <MessageSquare className="mb-2 h-6 w-6" />
-                <span>Feedback</span>
-              </Link>
-            </Button>
-          )}
+          {visibleQuickActionIds.map((id) => {
+            const action = quickActionCatalogue[id];
+            const Icon = action.icon;
+            return <Button key={id} variant="outline" asChild className="h-auto flex-col py-4"><Link to={action.href}><Icon className="mb-2 h-6 w-6" /><span>{action.label}</span></Link></Button>;
+          })}
+          {visibleQuickActionIds.length === 0 && <p className="col-span-full text-sm text-muted-foreground">No quick actions selected. Use Edit to add some.</p>}
         </CardContent>
       </Card>
+
+      <Dialog open={quickActionsOpen} onOpenChange={setQuickActionsOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Quick Actions</DialogTitle>
+            <DialogDescription>Choose which shortcuts appear and use the arrows to change their order.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {availableQuickActionIds.map((id, index) => {
+              const action = quickActionCatalogue[id];
+              return <div key={id} className="flex items-center gap-3 rounded-md border p-3">
+                <Checkbox checked={enabledQuickActions.has(id)} onCheckedChange={(checked) => setEnabledQuickActions((current) => {
+                  const next = new Set(current);
+                  if (checked) next.add(id); else next.delete(id);
+                  return next;
+                })} aria-label={`Show ${action.label}`} />
+                <span className="flex-1 text-sm font-medium">{action.label}</span>
+                <Button size="icon" variant="ghost" disabled={index === 0} onClick={() => moveQuickAction(id, -1)} aria-label={`Move ${action.label} up`}><ArrowUp className="h-4 w-4" /></Button>
+                <Button size="icon" variant="ghost" disabled={index === availableQuickActionIds.length - 1} onClick={() => moveQuickAction(id, 1)} aria-label={`Move ${action.label} down`}><ArrowDown className="h-4 w-4" /></Button>
+              </div>;
+            })}
+          </div>
+          <DialogFooter><Button onClick={() => setQuickActionsOpen(false)}>Done</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

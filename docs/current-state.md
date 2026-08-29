@@ -6,6 +6,36 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## Admin, line-up and coaching improvement batch — 29 August 2026
+
+- The approved Dev batch adds preferred-name and nickname storage, without yet changing ordinary
+  name display precedence. Match pitch labels now use first initial plus surname, or the saved
+  per-fixture nickname choice.
+- Line-up building now starts from a deliberately selected match roster. The working side column is
+  labelled **Line-up**, recent player game summaries open on the same screen, formation markers can
+  be moved for one fixture, and **Reset positions** restores the template. The ineffective Suggest
+  action is removed.
+- Coaching Squad supports team selection for coaches/managers with more than one team. Formation-
+  specific position duplication is replaced by canonical area and optional side traits. Author-
+  private notes can be attached to a player's fixture history. The AI Coach Narrative remains a
+  parked future feature and does not call an AI service yet.
+- Admin navigation no longer repeats Dashboard and Fixtures in the top Admin menu. The top version
+  badge is removed, the mode switcher is at the top of the sidebar, and Quick Actions are editable
+  and reorderable in browser storage.
+- Clickable ascending/descending table headers were added to Fixtures, Player MVP sessions,
+  RevSports Review and Safety Hub register tables. RevSports filters persist for the browser
+  session and default to **Unmatched**.
+- Individual Player MVP ballot audit is now presented to Super Admins and Club Admins for their own
+  clubs; Association Admins retain aggregate analytics only. The matching Dev RLS policy was
+  changed from Association to Club scope.
+- Dev migration `20260829074811_admin_lineup_coaching_improvements.sql` is applied. It adds three
+  RLS-protected line-up/coaching tables, two profile fields and canonical formation-position fields.
+  Live verification found all expected columns, tables and policies. Six exact stale Hockey
+  Ballarat venue/pitch review rows, including `In8n`, were marked ignored; none were deleted.
+- TypeScript, the production build, 28 Vitest files/111 tests and focused changed-file lint pass.
+  Full lint now reports the existing repository debt at 350 errors/78 warnings. Signed-in deployed
+  Dev owner testing remains required before Main staging; Production is unchanged.
+
 ## Desktop persistence and accessibility review — 29 August 2026
 
 - The reviewed 14-commit Dev catch-up, followed by two small accessibility commits, is now aligned

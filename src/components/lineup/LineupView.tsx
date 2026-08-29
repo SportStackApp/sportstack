@@ -1,52 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Grip, RotateCcw, Save, Search, UserMinus, UserPlus, Users } from "lucide-react";
 import { supabase as typedSupabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HockeyPitch } from "./HockeyPitch";
-import { FillInFinderDialog } from "./FillInFinderDialog";
-import {
-  type FormationIconRow,
-  type FormationPositionRow,
-  type FormationRow,
-  formatOwnerScope,
-  getFormationFieldSource,
-  preferenceScore,
-} from "@/lib/formationPlanner";
+import { RosterSelectorDialog, type RosterCandidate } from "./FillInFinderDialog";
+import { type FormationIconRow, type FormationPositionRow, type FormationRow, formatOwnerScope, getFormationFieldSource } from "@/lib/formationPlanner";
+import { clampPitchCoordinate, displayedFormationPosition, pitchPlayerLabel, type PitchPositionOverride } from "@/lib/lineupPlanner";
+import { formatStandardName } from "@/lib/profileNames";
+import { loadPlayerHistory, type PlayerHistoryRecord } from "@/lib/playerHistory";
 import { cn } from "@/lib/utils";
-import { Lightbulb, Save, Search, UserMinus, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
-import {
-  coordinationAvailabilityLabel,
-  type CoordinationAvailabilityStatus,
-} from "@/features/coordination/coordination";
 
 const supabase = typedSupabase as any;
-
-type RosterPlayer = {
-  id: string;
-  name: string;
-  jerseyNumber: number | null;
-  membershipType: string;
-  rosterPosition: string | null;
-  availability: "AVAILABLE" | "UNAVAILABLE" | "UNSURE" | "MAYBE" | "NO_RESPONSE" | CoordinationAvailabilityStatus;
-};
-
-type FixtureLineup = {
-  id: string;
-  formation_id: string | null;
-};
-
-type FixtureLineupAssignment = {
-  player_id: string;
-  formation_position_id: string | null;
-  is_starting: boolean;
-  sort_order: number;
-};
+type LineupPlayer = RosterCandidate & { displayNickname: boolean };
+type FixtureLineup = { id: string; formation_id: string | null };
+type FixtureLineupAssignment = { player_id: string; formation_position_id: string | null; is_starting: boolean; sort_order: number };
 
 interface LineupViewProps {
   gameId: string;
@@ -56,693 +31,250 @@ interface LineupViewProps {
   isCoach?: boolean;
 }
 
-const AVAILABILITY_LABELS: Record<RosterPlayer["availability"], string> = {
-  AVAILABLE: "Available",
-  UNAVAILABLE: "Unavailable",
-  UNSURE: "Unsure",
-  MAYBE: "Maybe",
-  NO_RESPONSE: "No response",
-  UMPIRING: coordinationAvailabilityLabel("UMPIRING"),
-  TECHNICAL_BENCH: coordinationAvailabilityLabel("TECHNICAL_BENCH"),
-  VOLUNTEERING: coordinationAvailabilityLabel("VOLUNTEERING"),
+const AVAILABILITY_LABELS: Record<string, string> = {
+  AVAILABLE: "Available", UNAVAILABLE: "Unavailable", UNSURE: "Unsure", MAYBE: "Maybe", NO_RESPONSE: "No response",
+  UMPIRING: "Umpiring", TECHNICAL_BENCH: "Technical bench", VOLUNTEERING: "Volunteering",
 };
-
-const MEMBERSHIP_ORDER: Record<string, number> = {
-  PRIMARY: 0,
-  PERMANENT: 1,
-  FILL_IN: 2,
-  SECONDARY: 3,
-};
-
-const EXPECTED_SCHEMA_ERROR_PATTERNS = [
-  "field_templates",
-  "field_template_id",
-  "could not find",
-  "does not exist",
-  "schema cache",
-  "relationship",
-];
-
-const isExpectedMissingSchemaError = (error?: { message?: string } | null) => {
-  const message = String(error?.message || "").toLowerCase();
-  return EXPECTED_SCHEMA_ERROR_PATTERNS.some((pattern) => message.includes(pattern));
-};
+const fullName = (player: LineupPlayer) => formatStandardName({ firstName: player.firstName, lastName: player.lastName });
 
 export const LineupView = ({ gameId, teamId, teamName, opponentName, isCoach = false }: LineupViewProps) => {
   const { user } = useAuth();
+  const pitchRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formations, setFormations] = useState<FormationRow[]>([]);
   const [icons, setIcons] = useState<FormationIconRow[]>([]);
   const [positions, setPositions] = useState<FormationPositionRow[]>([]);
-  const [roster, setRoster] = useState<RosterPlayer[]>([]);
-  const [preferences, setPreferences] = useState<Record<string, Record<string, number>>>({});
-  const [selectedFormationId, setSelectedFormationId] = useState<string>("__none__");
+  const [roster, setRoster] = useState<LineupPlayer[]>([]);
+  const [selectedFormationId, setSelectedFormationId] = useState("__none__");
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [benchIds, setBenchIds] = useState<string[]>([]);
+  const [positionOverrides, setPositionOverrides] = useState<Record<string, PitchPositionOverride>>({});
   const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [fixtureLineupId, setFixtureLineupId] = useState<string | null>(null);
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
-  const [fillInFinderOpen, setFillInFinderOpen] = useState(false);
+  const [rosterDialogOpen, setRosterDialogOpen] = useState(false);
+  const [historyPlayerId, setHistoryPlayerId] = useState<string | null>(null);
+  const [history, setHistory] = useState<PlayerHistoryRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const selectedFormation = formations.find((formation) => formation.id === selectedFormationId) || null;
-  const selectedPositionPlayer = selectedPositionId
-    ? roster.find((player) => player.id === assignments[selectedPositionId])
-    : undefined;
-
-  const assignedPlayerIds = useMemo(() => {
-    return new Set([...Object.values(assignments), ...benchIds]);
-  }, [assignments, benchIds]);
-
+  const assignedPlayerIds = useMemo(() => new Set([...Object.values(assignments), ...benchIds]), [assignments, benchIds]);
+  const selectedRosterIds = useMemo(() => roster.map((player) => player.id), [roster]);
   const availablePlayers = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return roster
-      .filter((player) => !assignedPlayerIds.has(player.id))
-      .filter((player) => {
-        if (!query) return true;
-        return player.name.toLowerCase().includes(query) || String(player.jerseyNumber || "").includes(query);
-      });
-  }, [roster, assignedPlayerIds, search]);
+    return roster.filter((player) => !assignedPlayerIds.has(player.id)).filter((player) => !query || fullName(player).toLowerCase().includes(query) || String(player.jerseyNumber || "").includes(query));
+  }, [assignedPlayerIds, roster, search]);
+  const benchPlayers = benchIds.map((id) => roster.find((player) => player.id === id)).filter(Boolean) as LineupPlayer[];
 
-  const assignedBenchPlayers = benchIds
-    .map((playerId) => roster.find((player) => player.id === playerId))
-    .filter(Boolean) as RosterPlayer[];
-
-  const startersCount = Object.values(assignments).filter(Boolean).length;
-  const selectedFieldSource = getFormationFieldSource(selectedFormation);
-
-  const loadFormationRows = useCallback(async () => {
-    const [fieldTemplateIdRes, fieldTemplatesRes] = await Promise.all([
-      supabase.from("formations").select("id, field_template_id").limit(1),
-      supabase.from("field_templates").select("id").limit(1),
-    ]);
-
-    const canUseLinkedFieldTemplates = !fieldTemplateIdRes.error && !fieldTemplatesRes.error;
-
-    if (canUseLinkedFieldTemplates) {
-      const linkedRes = await supabase
-        .from("formations")
-        .select("*, field_templates(*)")
-        .order("is_default", { ascending: false })
-        .order("name");
-
-      if (!linkedRes.error) return linkedRes;
-      if (!isExpectedMissingSchemaError(linkedRes.error)) {
-        toast.warning(`Field template data is unavailable: ${linkedRes.error.message}`);
-      }
-    } else {
-      if (fieldTemplateIdRes.error && !isExpectedMissingSchemaError(fieldTemplateIdRes.error)) {
-        toast.warning(`Field template links are unavailable: ${fieldTemplateIdRes.error.message}`);
-      }
-    }
-
-    return supabase.from("formations").select("*").order("is_default", { ascending: false }).order("name");
-  }, []);
-
-  const loadSavedAssignments = useCallback(async (lineupId: string) => {
-    const { data, error } = await supabase
-      .from("fixture_lineup_assignments")
-      .select("player_id, formation_position_id, is_starting, sort_order")
-      .eq("fixture_lineup_id", lineupId)
-      .order("sort_order");
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
-    const nextAssignments: Record<string, string> = {};
-    const nextBench: string[] = [];
-    ((data || []) as FixtureLineupAssignment[]).forEach((row) => {
-      if (row.is_starting && row.formation_position_id) {
-        nextAssignments[row.formation_position_id] = row.player_id;
-      } else {
-        nextBench.push(row.player_id);
-      }
-    });
-    setAssignments(nextAssignments);
-    setBenchIds(nextBench);
-  }, []);
-
-  const loadLineupData = useCallback(async () => {
+  const loadLineup = useCallback(async () => {
     setLoading(true);
-    const formationsPromise = loadFormationRows();
-    const [formationsRes, iconsRes, rosterRes, fillInsRes, availabilityRes, prefsRes, lineupRes] = await Promise.all([
-      formationsPromise,
+    const [formationsRes, iconsRes, lineupRes] = await Promise.all([
+      supabase.from("formations").select("*, field_templates(*)").order("is_default", { ascending: false }).order("name"),
       supabase.from("formation_icons").select("*").order("name"),
-      supabase
-        .from("team_memberships")
-        .select("user_id, jersey_number, membership_type, position")
-        .eq("team_id", teamId)
-        .eq("status", "ACTIVE"),
-      supabase
-        .from("fixture_fill_ins")
-        .select("player_id")
-        .eq("fixture_id", gameId)
-        .eq("team_id", teamId)
-        .eq("status", "SELECTED"),
-      supabase.from("fixture_availability").select("user_id, status").eq("fixture_id", gameId),
-      supabase
-        .from("player_position_preferences")
-        .select("player_id, position_code, preference")
-        .or(`team_id.eq.${teamId},team_id.is.null`),
-      supabase
-        .from("fixture_lineups")
-        .select("id, formation_id")
-        .eq("fixture_id", gameId)
-        .eq("team_id", teamId)
-        .maybeSingle(),
+      supabase.from("fixture_lineups").select("id, formation_id").eq("fixture_id", gameId).eq("team_id", teamId).maybeSingle(),
     ]);
-
-    if (formationsRes.error) toast.error(formationsRes.error.message);
-    if (iconsRes.error) toast.error(iconsRes.error.message);
-    if (rosterRes.error) toast.error(rosterRes.error.message);
-    if (fillInsRes.error) toast.error(fillInsRes.error.message);
-    if (availabilityRes.error) toast.error(availabilityRes.error.message);
-    if (prefsRes.error) toast.error(prefsRes.error.message);
-    if (lineupRes.error) toast.error(lineupRes.error.message);
-
-    const memberships = [
-      ...(rosterRes.data || []),
-      ...(fillInsRes.data || []).map((row: any) => ({
-        user_id: row.player_id,
-        jersey_number: null,
-        membership_type: "FILL_IN",
-        position: null,
-      })),
-    ];
-    const userIds = memberships.map((member: any) => member.user_id);
-    const profilesRes = userIds.length
-      ? await supabase.from("profiles").select("id, first_name, last_name").in("id", userIds)
-      : { data: [], error: null };
-
-    if (profilesRes.error) toast.error(profilesRes.error.message);
-
-    const profileMap = new Map((profilesRes.data || []).map((profile: any) => [profile.id, profile]));
-    const availabilityMap = new Map((availabilityRes.data || []).map((row: any) => [row.user_id, row.status]));
-
-    const sortedRoster = memberships
-      .map((member: any) => {
-        const profile = profileMap.get(member.user_id);
-        const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() || "Unknown player";
-        return {
-          id: member.user_id,
-          name,
-          jerseyNumber: member.jersey_number,
-          membershipType: member.membership_type || "UNKNOWN",
-          rosterPosition: member.position,
-          availability: availabilityMap.get(member.user_id) || "NO_RESPONSE",
-        } as RosterPlayer;
-      })
-      .sort((a, b) => {
-        const order = (MEMBERSHIP_ORDER[a.membershipType] ?? 99) - (MEMBERSHIP_ORDER[b.membershipType] ?? 99);
-        if (order !== 0) return order;
-        if (a.availability === "UNAVAILABLE" && b.availability !== "UNAVAILABLE") return 1;
-        if (a.availability !== "UNAVAILABLE" && b.availability === "UNAVAILABLE") return -1;
-        return a.name.localeCompare(b.name);
-      });
-    const builtRoster = sortedRoster.filter(
-      (player, index, allPlayers) => allPlayers.findIndex((item) => item.id === player.id) === index
-    );
-
-    const prefMap: Record<string, Record<string, number>> = {};
-    (prefsRes.data || []).forEach((row: any) => {
-      if (!prefMap[row.player_id]) prefMap[row.player_id] = {};
-      prefMap[row.player_id][String(row.position_code).toUpperCase()] = row.preference;
-    });
+    const firstError = formationsRes.error || iconsRes.error || lineupRes.error;
+    if (firstError) { toast.error(firstError.message); setLoading(false); return; }
 
     const formationRows = (formationsRes.data || []) as FormationRow[];
     const savedLineup = lineupRes.data as FixtureLineup | null;
-    const initialFormationId = savedLineup?.formation_id || formationRows.find((formation) => formation.is_default)?.id || formationRows[0]?.id || "__none__";
-
     setFormations(formationRows);
     setIcons((iconsRes.data || []) as FormationIconRow[]);
-    setRoster(builtRoster);
-    setPreferences(prefMap);
-    setSelectedFormationId(initialFormationId);
-    setFixtureLineupId(savedLineup?.id || null);
+    setSelectedFormationId(savedLineup?.formation_id || formationRows.find((formation) => formation.is_default)?.id || formationRows[0]?.id || "__none__");
+    if (!savedLineup?.id) { setRoster([]); setAssignments({}); setBenchIds([]); setPositionOverrides({}); setLoading(false); return; }
 
-    if (savedLineup?.id) {
-      await loadSavedAssignments(savedLineup.id);
-    } else {
-      setAssignments({});
-      setBenchIds([]);
-    }
-
+    const [rosterRes, assignmentsRes, overridesRes] = await Promise.all([
+      supabase.from("fixture_lineup_roster_selections").select("player_id, sort_order, display_nickname").eq("fixture_lineup_id", savedLineup.id).order("sort_order"),
+      supabase.from("fixture_lineup_assignments").select("player_id, formation_position_id, is_starting, sort_order").eq("fixture_lineup_id", savedLineup.id).order("sort_order"),
+      supabase.from("fixture_lineup_position_overrides").select("formation_position_id, x_percent, y_percent").eq("fixture_lineup_id", savedLineup.id),
+    ]);
+    const childError = rosterRes.error || assignmentsRes.error || overridesRes.error;
+    if (childError) toast.error(childError.message);
+    const rosterRows = rosterRes.data || [];
+    const playerIds = rosterRows.map((row: any) => row.player_id);
+    const [profilesRes, membershipsRes, availabilityRes] = await Promise.all([
+      playerIds.length ? supabase.from("profiles").select("id, first_name, last_name, nickname").in("id", playerIds) : Promise.resolve({ data: [], error: null }),
+      playerIds.length ? supabase.from("team_memberships").select("user_id, jersey_number, membership_type, position").eq("team_id", teamId).eq("status", "ACTIVE").in("user_id", playerIds) : Promise.resolve({ data: [], error: null }),
+      playerIds.length ? supabase.from("fixture_availability").select("user_id, status").eq("fixture_id", gameId).in("user_id", playerIds) : Promise.resolve({ data: [], error: null }),
+    ]);
+    const profileMap = new Map((profilesRes.data || []).map((row: any) => [row.id, row]));
+    const membershipMap = new Map((membershipsRes.data || []).map((row: any) => [row.user_id, row]));
+    const availabilityMap = new Map((availabilityRes.data || []).map((row: any) => [row.user_id, row.status]));
+    setRoster(rosterRows.map((row: any) => {
+      const profile = profileMap.get(row.player_id) as any;
+      const membership = membershipMap.get(row.player_id) as any;
+      return { id: row.player_id, firstName: profile?.first_name || null, lastName: profile?.last_name || null, nickname: profile?.nickname || null,
+        jerseyNumber: membership?.jersey_number ?? null, membershipType: membership?.membership_type || "FILL_IN", rosterPosition: membership?.position || null,
+        availability: availabilityMap.get(row.player_id) || "NO_RESPONSE", isTeamMember: Boolean(membership), lastFillInDate: null, displayNickname: Boolean(row.display_nickname) } as LineupPlayer;
+    }));
+    const nextAssignments: Record<string, string> = {};
+    const nextBench: string[] = [];
+    ((assignmentsRes.data || []) as FixtureLineupAssignment[]).forEach((row) => row.is_starting && row.formation_position_id ? nextAssignments[row.formation_position_id] = row.player_id : nextBench.push(row.player_id));
+    setAssignments(nextAssignments);
+    setBenchIds(nextBench);
+    setPositionOverrides(Object.fromEntries((overridesRes.data || []).map((row: any) => [row.formation_position_id, { xPercent: Number(row.x_percent), yPercent: Number(row.y_percent) }])));
     setLoading(false);
-  }, [gameId, loadFormationRows, loadSavedAssignments, teamId]);
+  }, [gameId, teamId]);
 
-  const loadFormationPositions = useCallback(async (formationId: string) => {
-    const { data, error } = await supabase
-      .from("formation_positions")
-      .select("*")
-      .eq("formation_id", formationId)
-      .order("sort_order");
-
-    if (error) {
-      toast.error(error.message);
-      setPositions([]);
-      return;
-    }
+  const loadPositions = useCallback(async (formationId: string) => {
+    const { data, error } = await supabase.from("formation_positions").select("*").eq("formation_id", formationId).order("sort_order");
+    if (error) toast.error(error.message);
     setPositions((data || []) as FormationPositionRow[]);
   }, []);
 
+  useEffect(() => { void loadLineup(); }, [loadLineup]);
+  useEffect(() => { if (selectedFormationId === "__none__") setPositions([]); else void loadPositions(selectedFormationId); }, [loadPositions, selectedFormationId]);
   useEffect(() => {
-    if (!teamId || !gameId) return;
-    void loadLineupData();
-  }, [gameId, loadLineupData, teamId]);
-
-  useEffect(() => {
-    if (selectedFormationId === "__none__") {
-      setPositions([]);
-      return;
-    }
-    void loadFormationPositions(selectedFormationId);
-  }, [loadFormationPositions, selectedFormationId]);
-
-  const assignPlayer = (playerId: string) => {
-    if (!selectedPositionId) {
-      movePlayerToBench(playerId);
-      return;
-    }
-
-    assignPlayerToPosition(playerId, selectedPositionId);
-    setSelectedPositionId(null);
-  };
+    if (!historyPlayerId) { setHistory([]); return; }
+    setHistoryLoading(true);
+    void loadPlayerHistory(historyPlayerId).then((rows) => setHistory(rows.slice(0, 5))).catch((error) => { toast.error(`Player history could not be loaded: ${error.message}`); setHistory([]); }).finally(() => setHistoryLoading(false));
+  }, [historyPlayerId]);
 
   const assignPlayerToPosition = (playerId: string, positionId: string) => {
-    setAssignments((current) => {
-      const withoutPlayer = Object.fromEntries(Object.entries(current).filter(([, assignedId]) => assignedId !== playerId));
-      return { ...withoutPlayer, [positionId]: playerId };
-    });
+    setAssignments((current) => ({ ...Object.fromEntries(Object.entries(current).filter(([, assignedId]) => assignedId !== playerId)), [positionId]: playerId }));
     setBenchIds((current) => current.filter((id) => id !== playerId));
   };
-
-  const movePlayerToBench = (playerId: string) => {
-    setAssignments((current) => Object.fromEntries(Object.entries(current).filter(([, assignedId]) => assignedId !== playerId)));
-    setBenchIds((current) => (current.includes(playerId) ? current : [...current, playerId]));
-  };
-
-  const removePlayer = (playerId: string) => {
+  const removeFromPitchOrBench = (playerId: string) => {
     setAssignments((current) => Object.fromEntries(Object.entries(current).filter(([, assignedId]) => assignedId !== playerId)));
     setBenchIds((current) => current.filter((id) => id !== playerId));
   };
-
-  const suggestLineup = () => {
-    if (positions.length === 0 || roster.length === 0) return;
-
-    const used = new Set<string>();
-    const nextAssignments: Record<string, string> = {};
-    const sortedPositions = positions.filter((position) => position.is_starting_slot);
-
-    sortedPositions.forEach((position) => {
-      const positionCode = position.code.toUpperCase();
-      const ranked = roster
-        .filter((player) => !used.has(player.id) && player.availability !== "UNAVAILABLE")
-        .map((player) => {
-          const pref = preferenceScore(preferences[player.id]?.[positionCode]);
-          const rosterMatch = player.rosterPosition?.toLowerCase().includes(position.name.toLowerCase()) || player.rosterPosition?.toLowerCase().includes(positionCode.toLowerCase());
-          return { player, score: pref + (rosterMatch ? 2 : 0) };
-        })
-        .sort((a, b) => b.score - a.score || a.player.name.localeCompare(b.player.name));
-
-      const chosen = ranked[0]?.player;
-      if (chosen) {
-        used.add(chosen.id);
-        nextAssignments[position.id] = chosen.id;
-      }
-    });
-
-    setAssignments(nextAssignments);
-    // A suggested line-up must not silently select someone who has said they
-    // are unavailable. Coaches can still review the full availability list on
-    // the fixture before making a deliberate manual change.
-    setBenchIds(
-      roster
-        .filter((player) => !used.has(player.id) && player.availability !== "UNAVAILABLE")
-        .map((player) => player.id),
-    );
-    toast.success("Suggested line-up created. Review it before saving.");
+  const moveToBench = (playerId: string) => {
+    setAssignments((current) => Object.fromEntries(Object.entries(current).filter(([, assignedId]) => assignedId !== playerId)));
+    setBenchIds((current) => current.includes(playerId) ? current : [...current, playerId]);
   };
-
+  const applyRoster = (players: RosterCandidate[]) => {
+    const nextIds = new Set(players.map((player) => player.id));
+    setRoster(players.map((player) => ({ ...player, displayNickname: roster.find((current) => current.id === player.id)?.displayNickname || false })));
+    setAssignments((current) => Object.fromEntries(Object.entries(current).filter(([, playerId]) => nextIds.has(playerId))));
+    setBenchIds((current) => current.filter((playerId) => nextIds.has(playerId)));
+    if (historyPlayerId && !nextIds.has(historyPlayerId)) setHistoryPlayerId(null);
+  };
   const changeFormation = (formationId: string) => {
     if (!isCoach || formationId === selectedFormationId) return;
-    const selectedPlayerIds = Array.from(new Set([...Object.values(assignments), ...benchIds]));
-    setAssignments({});
-    setBenchIds(selectedPlayerIds);
-    setSelectedPositionId(null);
-    setSelectedFormationId(formationId);
-    if (selectedPlayerIds.length > 0) {
-      toast.info("Selected players were moved to the bench. Place them into the new formation before saving.");
-    }
+    const placedIds = Array.from(new Set([...Object.values(assignments), ...benchIds]));
+    setAssignments({}); setBenchIds(placedIds); setPositionOverrides({}); setSelectedPositionId(null); setSelectedFormationId(formationId);
+    if (placedIds.length) toast.info("Placed players moved to the bench for the new formation.");
   };
-
-  const saveLineup = async () => {
-    if (!user || selectedFormationId === "__none__") {
-      toast.error("Choose a formation before saving.");
-      return;
-    }
-
-    setSaving(true);
-    const lineupPayload = {
-      fixture_id: gameId,
-      team_id: teamId,
-      formation_id: selectedFormationId,
-      created_by: user.id,
-    };
-
-    const lineupRes = await supabase
-      .from("fixture_lineups")
-      .upsert(lineupPayload, { onConflict: "fixture_id,team_id" })
-      .select("id")
-      .single();
-
-    if (lineupRes.error) {
-      setSaving(false);
-      toast.error(lineupRes.error.message);
-      return;
-    }
-
-    const lineupId = lineupRes.data.id as string;
-    setFixtureLineupId(lineupId);
-
-    const starterRows = Object.entries(assignments).map(([positionId, playerId], index) => ({
-      fixture_lineup_id: lineupId,
-      formation_position_id: positionId,
-      player_id: playerId,
-      is_starting: true,
-      sort_order: index,
-    }));
-    const benchRows = benchIds.map((playerId, index) => ({
-      fixture_lineup_id: lineupId,
-      formation_position_id: null,
-      player_id: playerId,
-      is_starting: false,
-      sort_order: starterRows.length + index,
-    }));
-
-    const assignmentRows = [...starterRows, ...benchRows];
-    const existingAssignmentsRes = await supabase
-      .from("fixture_lineup_assignments")
-      .select("player_id")
-      .eq("fixture_lineup_id", lineupId);
-    if (existingAssignmentsRes.error) {
-      setSaving(false);
-      toast.error(existingAssignmentsRes.error.message);
-      return;
-    }
-
-    if (assignmentRows.length > 0) {
-      const assignmentRes = await supabase
-        .from("fixture_lineup_assignments")
-        .upsert(assignmentRows, { onConflict: "fixture_lineup_id,player_id" });
-      if (assignmentRes.error) {
-        setSaving(false);
-        toast.error(assignmentRes.error.message);
-        return;
-      }
-    }
-
-    const desiredPlayerIds = new Set(assignmentRows.map((row) => row.player_id));
-    const removedPlayerIds = (existingAssignmentsRes.data || [])
-      .map((row: any) => row.player_id as string)
-      .filter((playerId: string) => !desiredPlayerIds.has(playerId));
-    if (removedPlayerIds.length > 0) {
-      const removeResult = await supabase
-        .from("fixture_lineup_assignments")
-        .delete()
-        .eq("fixture_lineup_id", lineupId)
-        .in("player_id", removedPlayerIds);
-      if (removeResult.error) {
-        await loadSavedAssignments(lineupId);
-        setSaving(false);
-        toast.error(`The line-up could not be fully updated: ${removeResult.error.message}`);
-        return;
-      }
-    }
-
-    const publishResult = await supabase
-      .from("fixture_lineups")
-      .update({ published_at: new Date().toISOString() })
-      .eq("id", lineupId);
-    if (publishResult.error) {
-      setSaving(false);
-      toast.error(`The line-up was saved but could not be published: ${publishResult.error.message}`);
-      return;
-    }
-
-    await mirrorLegacyLineups();
-    setSaving(false);
-    toast.success("Line-up saved.");
+  const moveMarker = (positionId: string, clientX: number, clientY: number) => {
+    const bounds = pitchRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    setPositionOverrides((current) => ({ ...current, [positionId]: { xPercent: clampPitchCoordinate(((clientX - bounds.left) / bounds.width) * 100), yPercent: clampPitchCoordinate(((clientY - bounds.top) / bounds.height) * 100) } }));
   };
 
   const mirrorLegacyLineups = async () => {
-    const starterRows = Object.entries(assignments).map(([positionId, playerId]) => {
-      const position = positions.find((item) => item.id === positionId);
-      return {
-        fixture_id: gameId,
-        team_id: teamId,
-        player_id: playerId,
-        position: position?.code || position?.name || "Starter",
-        is_starting: true,
-      };
-    });
-    const benchRows = benchIds.map((playerId) => ({
-      fixture_id: gameId,
-      team_id: teamId,
-      player_id: playerId,
-      position: "Bench",
-      is_starting: false,
-    }));
-    const rows = [...starterRows, ...benchRows];
-    const existingResult = await supabase.from("lineups").select("id").eq("fixture_id", gameId).eq("team_id", teamId);
-    if (existingResult.error) {
-      toast.warning(`Saved new line-up, but legacy lineups could not be checked: ${existingResult.error.message}`);
-      return;
-    }
-
-    let insertedIds: string[] = [];
-    if (rows.length > 0) {
-      const insertResult = await supabase.from("lineups").insert(rows).select("id");
-      if (insertResult.error) {
-        toast.warning(`Saved new line-up, but legacy lineups sync failed: ${insertResult.error.message}`);
-        return;
-      }
-      insertedIds = (insertResult.data || []).map((row: any) => row.id as string);
-    }
-
-    const existingIds = (existingResult.data || []).map((row: any) => row.id as string);
-    if (existingIds.length > 0) {
-      const deleteResult = await supabase.from("lineups").delete().in("id", existingIds);
-      if (deleteResult.error) {
-        if (insertedIds.length > 0) await supabase.from("lineups").delete().in("id", insertedIds);
-        toast.warning(`Saved new line-up, but legacy lineups sync failed: ${deleteResult.error.message}`);
-      }
-    }
+    const rows = [
+      ...Object.entries(assignments).map(([positionId, playerId]) => { const position = positions.find((item) => item.id === positionId); return { fixture_id: gameId, team_id: teamId, player_id: playerId, position: position?.code || position?.name || "Starter", is_starting: true }; }),
+      ...benchIds.map((playerId) => ({ fixture_id: gameId, team_id: teamId, player_id: playerId, position: "Bench", is_starting: false })),
+    ];
+    const existing = await supabase.from("lineups").select("id").eq("fixture_id", gameId).eq("team_id", teamId);
+    if (existing.error) return toast.warning(`Legacy line-up sync could not start: ${existing.error.message}`);
+    if ((existing.data || []).length) await supabase.from("lineups").delete().in("id", existing.data.map((row: any) => row.id));
+    if (rows.length) { const inserted = await supabase.from("lineups").insert(rows); if (inserted.error) toast.warning(`New line-up saved, but the legacy copy failed: ${inserted.error.message}`); }
   };
 
-  const playerCard = (player: RosterPlayer, action: "assign" | "remove") => (
-    <div
-      key={player.id}
-      draggable={isCoach}
-      onDragStart={() => isCoach && setDraggingPlayerId(player.id)}
-      onDragEnd={() => setDraggingPlayerId(null)}
-      className={cn("flex items-center gap-2 rounded-md border p-2", isCoach && "cursor-grab", player.availability === "UNAVAILABLE" && "opacity-60")}
-    >
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-        {player.jerseyNumber || "-"}
+  const saveLineup = async () => {
+    if (!user || selectedFormationId === "__none__") return toast.error("Choose a formation before saving.");
+    setSaving(true);
+    try {
+      const lineupRes = await supabase.from("fixture_lineups").upsert({ fixture_id: gameId, team_id: teamId, formation_id: selectedFormationId, created_by: user.id }, { onConflict: "fixture_id,team_id" }).select("id").single();
+      if (lineupRes.error) throw lineupRes.error;
+      const lineupId = lineupRes.data.id as string;
+
+      const existingRoster = await supabase.from("fixture_lineup_roster_selections").select("player_id").eq("fixture_lineup_id", lineupId);
+      if (existingRoster.error) throw existingRoster.error;
+      if (roster.length) { const result = await supabase.from("fixture_lineup_roster_selections").upsert(roster.map((player, index) => ({ fixture_lineup_id: lineupId, player_id: player.id, sort_order: index, display_nickname: player.displayNickname })), { onConflict: "fixture_lineup_id,player_id" }); if (result.error) throw result.error; }
+      const rosterIds = new Set(roster.map((player) => player.id));
+      const removedRosterIds = (existingRoster.data || []).map((row: any) => row.player_id).filter((id: string) => !rosterIds.has(id));
+      if (removedRosterIds.length) { const result = await supabase.from("fixture_lineup_roster_selections").delete().eq("fixture_lineup_id", lineupId).in("player_id", removedRosterIds); if (result.error) throw result.error; }
+
+      const assignmentRows = [
+        ...Object.entries(assignments).map(([positionId, playerId], index) => ({ fixture_lineup_id: lineupId, formation_position_id: positionId, player_id: playerId, is_starting: true, sort_order: index })),
+        ...benchIds.map((playerId, index) => ({ fixture_lineup_id: lineupId, formation_position_id: null, player_id: playerId, is_starting: false, sort_order: Object.keys(assignments).length + index })),
+      ];
+      const existingAssignments = await supabase.from("fixture_lineup_assignments").select("player_id").eq("fixture_lineup_id", lineupId);
+      if (existingAssignments.error) throw existingAssignments.error;
+      if (assignmentRows.length) { const result = await supabase.from("fixture_lineup_assignments").upsert(assignmentRows, { onConflict: "fixture_lineup_id,player_id" }); if (result.error) throw result.error; }
+      const placedIds = new Set(assignmentRows.map((row) => row.player_id));
+      const removedAssignmentIds = (existingAssignments.data || []).map((row: any) => row.player_id).filter((id: string) => !placedIds.has(id));
+      if (removedAssignmentIds.length) { const result = await supabase.from("fixture_lineup_assignments").delete().eq("fixture_lineup_id", lineupId).in("player_id", removedAssignmentIds); if (result.error) throw result.error; }
+
+      const existingOverrides = await supabase.from("fixture_lineup_position_overrides").select("formation_position_id").eq("fixture_lineup_id", lineupId);
+      if (existingOverrides.error) throw existingOverrides.error;
+      const overrideRows = Object.entries(positionOverrides).map(([positionId, override]) => ({ fixture_lineup_id: lineupId, formation_position_id: positionId, x_percent: override.xPercent, y_percent: override.yPercent, updated_by: user.id }));
+      if (overrideRows.length) { const result = await supabase.from("fixture_lineup_position_overrides").upsert(overrideRows, { onConflict: "fixture_lineup_id,formation_position_id" }); if (result.error) throw result.error; }
+      const overrideIds = new Set(Object.keys(positionOverrides));
+      const resetOverrideIds = (existingOverrides.data || []).map((row: any) => row.formation_position_id).filter((id: string) => !overrideIds.has(id));
+      if (resetOverrideIds.length) { const result = await supabase.from("fixture_lineup_position_overrides").delete().eq("fixture_lineup_id", lineupId).in("formation_position_id", resetOverrideIds); if (result.error) throw result.error; }
+
+      const currentFillIns = await supabase.from("fixture_fill_ins").select("id, player_id").eq("fixture_id", gameId).eq("team_id", teamId).eq("status", "SELECTED");
+      if (currentFillIns.error) throw currentFillIns.error;
+      const desiredFillIns = roster.filter((player) => !player.isTeamMember);
+      if (desiredFillIns.length) { const result = await supabase.from("fixture_fill_ins").upsert(desiredFillIns.map((player) => ({ fixture_id: gameId, team_id: teamId, player_id: player.id, status: "SELECTED", access_starts_at: new Date().toISOString(), added_by: user.id })), { onConflict: "fixture_id,team_id,player_id" }); if (result.error) throw result.error; }
+      const desiredFillInIds = new Set(desiredFillIns.map((player) => player.id));
+      const removedFillInRows = (currentFillIns.data || []).filter((row: any) => !desiredFillInIds.has(row.player_id));
+      if (removedFillInRows.length) { const result = await supabase.from("fixture_fill_ins").update({ status: "REMOVED", removed_at: new Date().toISOString(), removed_by: user.id, removal_reason: "Removed from the match roster" }).in("id", removedFillInRows.map((row: any) => row.id)); if (result.error) throw result.error; }
+      const published = await supabase.from("fixture_lineups").update({ published_at: new Date().toISOString() }).eq("id", lineupId);
+      if (published.error) throw published.error;
+      await mirrorLegacyLineups();
+      toast.success("Line-up saved.");
+    } catch (error: any) { toast.error(`The line-up could not be saved: ${error.message}`); }
+    finally { setSaving(false); }
+  };
+
+  const playerCard = (player: LineupPlayer, action: "add" | "remove") => (
+    <div key={player.id} className={cn("rounded-md border p-2", player.availability === "UNAVAILABLE" && "border-destructive/40")} draggable={isCoach} onDragStart={() => isCoach && setDraggingPlayerId(player.id)} onDragEnd={() => setDraggingPlayerId(null)}>
+      <div className="flex items-center gap-2">
+        <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setHistoryPlayerId(historyPlayerId === player.id ? null : player.id)}>
+          <p className="truncate text-sm font-medium">{fullName(player)}</p>
+          <p className="truncate text-xs text-muted-foreground">{player.membershipType.replaceAll("_", " ")} · {AVAILABILITY_LABELS[player.availability] || player.availability}</p>
+        </button>
+        {isCoach && <Button size="sm" variant={action === "add" ? "default" : "outline"} onClick={() => action === "add" ? (selectedPositionId ? assignPlayerToPosition(player.id, selectedPositionId) : moveToBench(player.id)) : removeFromPitchOrBench(player.id)}>{action === "add" ? "Add" : <UserMinus className="h-4 w-4" />}</Button>}
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{player.name}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          {player.membershipType} - {AVAILABILITY_LABELS[player.availability]}
-        </p>
-      </div>
-      {isCoach && (
-        <Button size="sm" variant={action === "assign" ? "default" : "outline"} onClick={() => (action === "assign" ? assignPlayer(player.id) : removePlayer(player.id))}>
-          {action === "assign" ? "Add" : <UserMinus className="h-4 w-4" />}
-        </Button>
-      )}
+      {player.nickname && <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Checkbox checked={player.displayNickname} disabled={!isCoach} onCheckedChange={(checked) => setRoster((current) => current.map((item) => item.id === player.id ? { ...item, displayNickname: Boolean(checked) } : item))} />Display nickname “{player.nickname}” on pitch</label>}
     </div>
   );
 
-  if (loading) {
-    return <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading line-up...</CardContent></Card>;
-  }
+  if (loading) return <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading line-up...</CardContent></Card>;
+  const fieldSource = getFormationFieldSource(selectedFormation);
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
       <Card className="overflow-hidden">
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle className="text-lg">{teamName} Line-up</CardTitle>
-              <p className="text-sm text-muted-foreground">vs {opponentName}</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="gap-1">
-                <Users className="h-3 w-3" />
-                {startersCount}/{positions.filter((position) => position.is_starting_slot).length || 0}
-              </Badge>
-              {!isCoach && <Badge variant="secondary">View only</Badge>}
-            </div>
-          </div>
-        </CardHeader>
+        <CardHeader className="pb-3"><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="text-lg">{teamName} Line-up</CardTitle><p className="text-sm text-muted-foreground">vs {opponentName}</p></div><Badge variant="outline" className="gap-1"><Users className="h-3 w-3" /> {Object.keys(assignments).length}/{positions.filter((position) => position.is_starting_slot).length}</Badge></div></CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
-            <Select value={selectedFormationId} onValueChange={changeFormation} disabled={!isCoach}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose formation" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Choose a formation</SelectItem>
-                {formations.map((formation) => (
-                  <SelectItem key={formation.id} value={formation.id}>
-                    {formation.name} - {formatOwnerScope(formation.owner_scope)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {isCoach && (
-              <Button variant="outline" onClick={() => setFillInFinderOpen(true)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Find a fill-in
-              </Button>
-            )}
-            {isCoach && (
-              <Button variant="outline" onClick={suggestLineup} disabled={positions.length === 0 || roster.length === 0}>
-                <Lightbulb className="h-4 w-4 mr-2" />
-                Suggest
-              </Button>
-            )}
-            {isCoach && (
-              <Button onClick={saveLineup} disabled={saving || selectedFormationId === "__none__"}>
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            )}
+          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+            <Select value={selectedFormationId} onValueChange={changeFormation} disabled={!isCoach}><SelectTrigger><SelectValue placeholder="Choose formation" /></SelectTrigger><SelectContent><SelectItem value="__none__">Choose a formation</SelectItem>{formations.map((formation) => <SelectItem key={formation.id} value={formation.id}>{formation.name} - {formatOwnerScope(formation.owner_scope)}</SelectItem>)}</SelectContent></Select>
+            {isCoach && <Button variant="outline" onClick={() => setRosterDialogOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Select roster</Button>}
+            {isCoach && <Button variant="outline" onClick={() => setPositionOverrides({})} disabled={!Object.keys(positionOverrides).length}><RotateCcw className="mr-2 h-4 w-4" /> Reset positions</Button>}
+            {isCoach && <Button onClick={() => void saveLineup()} disabled={saving || selectedFormationId === "__none__"}><Save className="mr-2 h-4 w-4" />{saving ? "Saving..." : "Save"}</Button>}
           </div>
-
-          {selectedFormation && (
-            <div className="text-xs text-muted-foreground">
-              {selectedFormation.description || "Reusable formation template."}
-            </div>
-          )}
-
-          <HockeyPitch backgroundUrl={selectedFieldSource.background_image_url}>
-            {positions.map((position) => {
-              const player = roster.find((item) => item.id === assignments[position.id]);
-              const icon = icons.find((item) => item.id === position.icon_id);
-              const selected = selectedPositionId === position.id;
-              return (
-                <button
-                  key={position.id}
-                  type="button"
-                  aria-label={`${position.name}: ${player?.name || "unassigned"}`}
-                  className={cn(
-                    "absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg transition-transform",
-                    selected ? "scale-110 bg-accent text-accent-foreground" : player ? "bg-primary text-primary-foreground" : "bg-background/80 text-foreground",
-                    isCoach && "hover:scale-105",
-                  )}
-                  style={{ left: `${position.x_percent}%`, top: `${position.y_percent}%` }}
-                  onClick={() => isCoach && setSelectedPositionId(selected ? null : position.id)}
-                  draggable={isCoach && Boolean(player)}
-                  onDragStart={() => player && setDraggingPlayerId(player.id)}
-                  onDragEnd={() => setDraggingPlayerId(null)}
-                  onDragOver={(event) => isCoach && event.preventDefault()}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    if (!isCoach || !draggingPlayerId) return;
-                    assignPlayerToPosition(draggingPlayerId, position.id);
-                    setDraggingPlayerId(null);
-                  }}
-                >
-                  {icon?.image_url ? (
-                    <img src={icon.image_url} alt="" className="h-12 w-12 rounded-full object-cover" />
-                  ) : (
-                    <span className="flex h-12 w-12 items-center justify-center text-xs font-bold">
-                      {player?.jerseyNumber || position.code}
-                    </span>
-                  )}
-                  <span className="absolute left-1/2 top-full mt-1 -translate-x-1/2 rounded bg-background/90 px-1 text-[10px] font-semibold text-foreground">
-                    {player ? player.name.split(" ").slice(-1)[0] : position.code}
-                  </span>
-                </button>
-              );
-            })}
-          </HockeyPitch>
-
-          <div
-            className={cn("rounded-lg border bg-muted/30 p-3", isCoach && draggingPlayerId && "border-dashed border-primary")}
-            onDragOver={(event) => isCoach && event.preventDefault()}
-            onDrop={(event) => {
-              event.preventDefault();
-              if (!isCoach || !draggingPlayerId) return;
-              movePlayerToBench(draggingPlayerId);
-              setDraggingPlayerId(null);
-            }}
-          >
-            <p className="mb-2 text-sm font-medium">Bench / reserves</p>
-            <div className="grid gap-2 md:grid-cols-2">
-              {assignedBenchPlayers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No bench players selected.</p>
-              ) : (
-                assignedBenchPlayers.map((player) => playerCard(player, "remove"))
-              )}
-            </div>
+          {roster.length === 0 && isCoach && <button type="button" onClick={() => setRosterDialogOpen(true)} className="w-full rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground hover:border-primary hover:text-foreground">Start by selecting the match roster.</button>}
+          <div ref={pitchRef}>
+            <HockeyPitch backgroundUrl={fieldSource.background_image_url}>
+              {positions.map((originalPosition) => {
+                const position = displayedFormationPosition(originalPosition, positionOverrides[originalPosition.id]);
+                const player = roster.find((item) => item.id === assignments[originalPosition.id]);
+                const icon = icons.find((item) => item.id === originalPosition.icon_id);
+                const selected = selectedPositionId === originalPosition.id;
+                return <button key={originalPosition.id} type="button" aria-label={`${originalPosition.name}: ${player ? fullName(player) : "unassigned"}`} className={cn("absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg", selected ? "scale-110 bg-accent" : player ? "bg-primary text-primary-foreground" : "bg-background/80", isCoach && "hover:scale-105")} style={{ left: `${position.x_percent}%`, top: `${position.y_percent}%` }} onClick={() => isCoach && setSelectedPositionId(selected ? null : originalPosition.id)} onDragOver={(event) => isCoach && event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (isCoach && draggingPlayerId) assignPlayerToPosition(draggingPlayerId, originalPosition.id); setDraggingPlayerId(null); }}>
+                  {icon?.image_url ? <img src={icon.image_url} alt="" className="h-12 w-12 rounded-full object-cover" /> : <span className="flex h-12 w-12 items-center justify-center text-xs font-bold">{player?.jerseyNumber || originalPosition.code}</span>}
+                  <span className="absolute left-1/2 top-full mt-1 whitespace-nowrap -translate-x-1/2 rounded bg-background/90 px-1 text-[10px] font-semibold text-foreground">{player ? pitchPlayerLabel({ firstName: player.firstName, lastName: player.lastName, nickname: player.nickname }, player.displayNickname) : originalPosition.code}</span>
+                  {isCoach && <span role="button" tabIndex={0} aria-label={`Move ${originalPosition.name}`} className="absolute -right-3 -top-3 flex h-6 w-6 cursor-move items-center justify-center rounded-full border bg-background text-foreground" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); moveMarker(originalPosition.id, event.clientX, event.clientY); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) moveMarker(originalPosition.id, event.clientX, event.clientY); }} onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}><Grip className="h-3 w-3" /></span>}
+                </button>;
+              })}
+            </HockeyPitch>
           </div>
+          <div className={cn("rounded-lg border bg-muted/30 p-3", draggingPlayerId && "border-dashed border-primary")} onDragOver={(event) => isCoach && event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (isCoach && draggingPlayerId) moveToBench(draggingPlayerId); setDraggingPlayerId(null); }}><p className="mb-2 text-sm font-medium">Bench / reserves</p><div className="grid gap-2 md:grid-cols-2">{benchPlayers.length ? benchPlayers.map((player) => playerCard(player, "remove")) : <p className="text-sm text-muted-foreground">No bench players selected.</p>}</div></div>
         </CardContent>
       </Card>
-
-      {isCoach && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">{selectedPositionId ? "Select player" : "Roster"}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search players..." className="pl-9" />
-            </div>
-            {selectedPositionId && (
-              <div className="space-y-2">
-                {selectedPositionPlayer && (
-                  <Button
-                    variant="outline"
-                    className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => {
-                      removePlayer(selectedPositionPlayer.id);
-                      setSelectedPositionId(null);
-                    }}
-                  >
-                    <UserMinus className="mr-2 h-4 w-4" />
-                    Remove {selectedPositionPlayer.name}
-                  </Button>
-                )}
-                <Button variant="ghost" className="w-full" onClick={() => setSelectedPositionId(null)}>
-                  Clear position selection
-                </Button>
-              </div>
-            )}
-            <div className="max-h-[640px] space-y-2 overflow-auto pr-1">
-              {availablePlayers.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">No available roster players.</p>
-              ) : (
-                availablePlayers.map((player) => playerCard(player, "assign"))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      <FillInFinderDialog
-        open={fillInFinderOpen}
-        onOpenChange={setFillInFinderOpen}
-        fixtureId={gameId}
-        teamId={teamId}
-        rosterPlayerIds={roster.map((player) => player.id)}
-        onChanged={loadLineupData}
-      />
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-base">{selectedPositionId ? "Choose a player" : "Line-up"}</CardTitle></CardHeader>
+        <CardContent className="space-y-3"><p className="text-xs text-muted-foreground">Selected roster players not yet placed on the pitch or bench.</p><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search selected players..." className="pl-9" /></div><div className="max-h-[420px] space-y-2 overflow-auto pr-1">{availablePlayers.length ? availablePlayers.map((player) => playerCard(player, "add")) : <p className="py-5 text-center text-sm text-muted-foreground">No unplaced players.</p>}</div>
+          {historyPlayerId && <div className="space-y-2 border-t pt-3"><p className="text-sm font-semibold">Recent games</p>{historyLoading ? <p className="text-xs text-muted-foreground">Loading history...</p> : history.length ? history.map((row) => <div key={row.id} className="rounded-md bg-muted/50 p-2 text-xs"><p className="font-medium">{new Date(row.date).toLocaleDateString("en-AU")} vs {row.opponent} · {row.result}</p><p className="text-muted-foreground">{row.positionName || "Position not recorded"} · {row.goals} goals · cards {row.greenCards}/{row.yellowCards}/{row.redCards}</p></div>) : <p className="text-xs text-muted-foreground">No game history found.</p>}</div>}
+        </CardContent>
+      </Card>
+      <RosterSelectorDialog open={rosterDialogOpen} onOpenChange={setRosterDialogOpen} fixtureId={gameId} teamId={teamId} selectedPlayerIds={selectedRosterIds} onApply={applyRoster} />
     </div>
   );
 };

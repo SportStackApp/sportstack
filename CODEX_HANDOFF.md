@@ -2,6 +2,24 @@
 
 Last updated: 2026-08-29
 
+## 29 August 2026 — admin, line-up and coaching improvement batch
+
+- Branch: `dev`. Production and `prod` untouched. Main staging waits for owner acceptance.
+- Dev migration applied: `20260829074811_admin_lineup_coaching_improvements.sql`.
+- New schema: `profiles.preferred_name`, `profiles.nickname`, canonical formation area/side,
+  fixture roster selections, fixture position overrides and author-private coach fixture notes.
+- Line-up now uses Roster pop-up -> working Line-up column -> starting pitch/bench. It supports
+  nickname display, recent match history and fixture-only marker movement/reset. Suggest is removed.
+- Admin feedback implemented across navigation, Quick Actions, fixtures, Player MVP sessions,
+  RevSports Review, analytics access and Safety Hub tables.
+- RevSports investigation confirmed one old `In8n` venue parse plus two half-pitch-as-venue rows and
+  their three pitch counterparts. All six are ignored in Dev; no row was deleted.
+- Automated result: 28 Vitest files/111 tests pass; TypeScript and build pass; focused lint passes.
+  Full lint reproduces existing debt at 350 errors/78 warnings. Supabase adviser output contains the
+  established broad backlog and no missing RLS policy on the three new tables.
+- Remaining acceptance: signed-in owner smoke on deployed Dev, then documentation sync check. Coach
+  Narrative and app-wide preferred-name precedence are intentionally parked.
+
 Future agents should start by reading these files in order:
 
 1. `AGENTS.md` — repository rules, safety constraints, release path and testing expectations.

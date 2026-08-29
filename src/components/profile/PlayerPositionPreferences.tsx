@@ -6,7 +6,12 @@ import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { loadTeamPositionOptions, type TeamPositionOption } from "@/lib/teamPositions";
+import {
+  HOCKEY_POSITION_AREAS,
+  HOCKEY_POSITION_SIDES,
+  areaPositionCode,
+  sidePositionCode,
+} from "@/lib/hockeyPositions";
 
 interface PositionTeam {
   membershipId: string;
@@ -25,7 +30,6 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedByTeam, setSelectedByTeam] = useState<Record<string, string[]>>({});
-  const [optionsByTeam, setOptionsByTeam] = useState<Record<string, TeamPositionOption[]>>({});
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [numbersByTeam, setNumbersByTeam] = useState<Record<string, string>>({});
@@ -39,7 +43,6 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
     let active = true;
     if (!user || teamIds.length === 0) {
       setSelectedByTeam({});
-      setOptionsByTeam({});
       setLoadingOptions(false);
       return () => {
         active = false;
@@ -48,15 +51,12 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
 
     const loadPreferences = async () => {
       setLoadingOptions(true);
-      const [{ data, error }, teamOptions] = await Promise.all([
-        supabase
-          .from("player_position_preferences")
-          .select("team_id, position_code")
-          .eq("player_id", user.id)
-          .in("team_id", teamIds)
-          .order("position_code"),
-        loadTeamPositionOptions(teamIds),
-      ]);
+      const { data, error } = await supabase
+        .from("player_position_preferences")
+        .select("team_id, position_code")
+        .eq("player_id", user.id)
+        .in("team_id", teamIds)
+        .order("position_code");
 
       if (error) {
         if (active) {
@@ -73,7 +73,6 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
       }
       if (active) {
         setSelectedByTeam(next);
-        setOptionsByTeam(teamOptions);
         setLoadingOptions(false);
       }
     };
@@ -81,7 +80,7 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
     void loadPreferences().catch((error: Error) => {
       if (active) {
         setLoadingOptions(false);
-        toast({ title: "Team positions could not be loaded", description: error.message, variant: "destructive" });
+        toast({ title: "Position preferences could not be loaded", description: error.message, variant: "destructive" });
       }
     });
     return () => {
@@ -150,7 +149,7 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
     <Card>
       <CardHeader className="space-y-1 p-4 pb-2">
         <CardTitle className="text-base">Team Player Details</CardTitle>
-        <CardDescription className="text-xs">Set your player number and preferred positions separately for each team.</CardDescription>
+        <CardDescription className="text-xs">Set your player number, playing area and preferred side separately for each team.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2 px-4 pb-4 pt-0">
         {teams.map((team) => (
@@ -184,29 +183,58 @@ export function PlayerPositionPreferences({ teams }: PlayerPositionPreferencesPr
                 Save number
               </Button>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {loadingOptions ? (
-                <span className="text-xs text-muted-foreground">Loading team positions…</span>
-              ) : (optionsByTeam[team.teamId] || []).length === 0 ? (
-                <span className="text-xs text-muted-foreground">No team positions configured yet.</span>
-              ) : optionsByTeam[team.teamId].map((position) => {
-                const selected = selectedByTeam[team.teamId]?.includes(position.code) || false;
-                return (
-                  <Button
-                    type="button"
-                    key={position.code}
-                    variant={selected ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 rounded-full px-2.5 text-xs"
-                    disabled={savingKey === `${team.teamId}:${position.code}`}
-                    aria-pressed={selected}
-                    onClick={() => void togglePosition(team.teamId, position.code)}
-                  >
-                    {position.label}
-                  </Button>
-                );
-              })}
-            </div>
+            {loadingOptions ? (
+              <span className="text-xs text-muted-foreground">Loading position preferences…</span>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium">Playing area</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {HOCKEY_POSITION_AREAS.map((position) => {
+                      const code = areaPositionCode(position.value);
+                      const selected = selectedByTeam[team.teamId]?.includes(code) || false;
+                      return (
+                        <Button
+                          type="button"
+                          key={code}
+                          variant={selected ? "default" : "outline"}
+                          size="sm"
+                          className="h-7 rounded-full px-2.5 text-xs"
+                          disabled={savingKey === `${team.teamId}:${code}`}
+                          aria-pressed={selected}
+                          onClick={() => void togglePosition(team.teamId, code)}
+                        >
+                          {position.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium">Preferred side</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {HOCKEY_POSITION_SIDES.map((position) => {
+                      const code = sidePositionCode(position.value);
+                      const selected = selectedByTeam[team.teamId]?.includes(code) || false;
+                      return (
+                        <Button
+                          type="button"
+                          key={code}
+                          variant={selected ? "default" : "outline"}
+                          size="sm"
+                          className="h-7 rounded-full px-2.5 text-xs"
+                          disabled={savingKey === `${team.teamId}:${code}`}
+                          aria-pressed={selected}
+                          onClick={() => void togglePosition(team.teamId, code)}
+                        >
+                          {position.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
         ))}
       </CardContent>

@@ -22,6 +22,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { supabase as originalSupabase } from "@/integrations/supabase/client";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
 
 const UNMATCHED_VALUE = "__none__";
 const ALL_VALUE = "__all__";
@@ -34,6 +36,7 @@ const NONE_VALUE = "__none__";
 type EntityType = "competition" | "club" | "team" | "player" | "grade" | "venue" | "pitch";
 type LinkStatus = "unmatched" | "matched" | "ignored" | "needs_review";
 type PageSize = typeof PAGE_SIZE_OPTIONS[number];
+type EntitySortKey = "scraped" | "context" | "match" | "status" | "last_seen";
 
 interface EntityFilters {
   competition: string;
@@ -305,8 +308,9 @@ const DEFAULT_FILTERS: EntityFilters = {
   competition: ALL_VALUE,
   grade: ALL_VALUE,
   club: ALL_VALUE,
-  status: ALL_VALUE,
+  status: "unmatched",
 };
+const REVIEW_FILTER_STORAGE_KEY = "sportstack.revsports-review.filters.v1";
 
 const DEFAULT_ADD_NEW_FORM: AddNewForm = {
   name: "",
@@ -331,6 +335,19 @@ const buildFilterMap = <T,>(value: T): Record<EntityType, T> => ({
   venue: value,
   pitch: value,
 });
+
+const loadSavedReviewState = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem(REVIEW_FILTER_STORAGE_KEY) || "{}") as {
+      activeTab?: EntityType;
+      searchTerm?: string;
+      filtersByTab?: Partial<Record<EntityType, EntityFilters>>;
+      rowsPerPageByTab?: Partial<Record<EntityType, PageSize>>;
+    };
+  } catch {
+    return {};
+  }
+};
 
 const normaliseMatchText = (value: string | null | undefined) =>
   (value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -567,8 +584,9 @@ export default function RevSportsEntityReview() {
 
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<EntityType>("team");
-  const [searchTerm, setSearchTerm] = useState("");
+  const savedReviewState = useMemo(loadSavedReviewState, []);
+  const [activeTab, setActiveTab] = useState<EntityType>(savedReviewState.activeTab || "team");
+  const [searchTerm, setSearchTerm] = useState(savedReviewState.searchTerm || "");
   const [entities, setEntities] = useState<ExternalEntity[]>([]);
   const [links, setLinks] = useState<Record<string, ExternalEntityLink>>({});
   const [clubs, setClubs] = useState<TargetOption[]>([]);
@@ -588,14 +606,15 @@ export default function RevSportsEntityReview() {
   const [addNewForm, setAddNewForm] = useState<AddNewForm>({ ...DEFAULT_ADD_NEW_FORM });
   const [creatingNew, setCreatingNew] = useState(false);
   const [filtersByTab, setFiltersByTab] = useState<Record<EntityType, EntityFilters>>(
-    () => buildFilterMap({ ...DEFAULT_FILTERS })
+    () => Object.fromEntries(Object.keys(buildFilterMap(DEFAULT_FILTERS)).map((key) => [key, { ...DEFAULT_FILTERS, ...savedReviewState.filtersByTab?.[key as EntityType] }])) as Record<EntityType, EntityFilters>
   );
   const [currentPageByTab, setCurrentPageByTab] = useState<Record<EntityType, number>>(
     () => buildFilterMap(1)
   );
   const [rowsPerPageByTab, setRowsPerPageByTab] = useState<Record<EntityType, PageSize>>(
-    () => buildFilterMap(25)
+    () => ({ ...buildFilterMap(25 as PageSize), ...savedReviewState.rowsPerPageByTab })
   );
+  const [sortByTab, setSortByTab] = useState<Record<EntityType, SortState<EntitySortKey> | null>>(() => buildFilterMap(null));
   const [expandedTargetRows, setExpandedTargetRows] = useState<Set<string>>(() => new Set());
 
   const configs: Record<EntityType, EntityConfig> = useMemo(() => ({
@@ -793,6 +812,10 @@ export default function RevSportsEntityReview() {
     }
   }, [scopeLoading, isSuperAdmin, loadData]);
 
+  useEffect(() => {
+    sessionStorage.setItem(REVIEW_FILTER_STORAGE_KEY, JSON.stringify({ activeTab, searchTerm, filtersByTab, rowsPerPageByTab }));
+  }, [activeTab, filtersByTab, rowsPerPageByTab, searchTerm]);
+
   const tabEntities = useMemo(() => {
     const config = configs[activeTab];
     return entities.filter((entity) => entity.entity_type === config.entityType);
@@ -841,12 +864,25 @@ export default function RevSportsEntityReview() {
     });
   }, [activeTab, configs, filtersByTab, links, searchTerm, tabEntities]);
 
+  const sortedEntities = useMemo(() => {
+    const sort = sortByTab[activeTab];
+    if (!sort) return filteredEntities;
+    const config = configs[activeTab];
+    return stableSortRows(filteredEntities, sort, (entity, key) => {
+      const link = links[getLinkKey(entity.id, config.targetTable)];
+      if (key === "scraped") return entity.external_name;
+      if (key === "context") return [entity.association_name, entity.competition_name, entity.grade, entity.club_name, entity.team_name].filter(Boolean).join(" | ");
+      if (key === "match") return config.targets.find((target) => target.id === link?.target_id)?.label;
+      if (key === "status") return link?.status || "unmatched";
+      return entity.last_seen_at;
+    });
+  }, [activeTab, configs, filteredEntities, links, sortByTab]);
   const rowsPerPage = rowsPerPageByTab[activeTab];
   const currentPage = currentPageByTab[activeTab];
-  const totalPages = Math.max(1, Math.ceil(filteredEntities.length / rowsPerPage));
+  const totalPages = Math.max(1, Math.ceil(sortedEntities.length / rowsPerPage));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const pageStartIndex = (safeCurrentPage - 1) * rowsPerPage;
-  const pageEntities = filteredEntities.slice(pageStartIndex, pageStartIndex + rowsPerPage);
+  const pageEntities = sortedEntities.slice(pageStartIndex, pageStartIndex + rowsPerPage);
 
   useEffect(() => {
     setCurrentPageByTab((prev) => ({ ...prev, [activeTab]: 1 }));
@@ -1547,11 +1583,11 @@ export default function RevSportsEntityReview() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Scraped Item</TableHead>
-                <TableHead>Context</TableHead>
-                <TableHead className="w-64 max-w-xs">SportStack Match</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Seen</TableHead>
+                <SortableTableHead label="Scraped Item" sortKey="scraped" sort={sortByTab[activeTab]} onSort={(key) => setSortByTab((current) => ({ ...current, [activeTab]: nextSortState(current[activeTab], key) }))} />
+                <SortableTableHead label="Context" sortKey="context" sort={sortByTab[activeTab]} onSort={(key) => setSortByTab((current) => ({ ...current, [activeTab]: nextSortState(current[activeTab], key) }))} />
+                <SortableTableHead label="SportStack Match" sortKey="match" sort={sortByTab[activeTab]} onSort={(key) => setSortByTab((current) => ({ ...current, [activeTab]: nextSortState(current[activeTab], key) }))} className="w-64 max-w-xs" />
+                <SortableTableHead label="Status" sortKey="status" sort={sortByTab[activeTab]} onSort={(key) => setSortByTab((current) => ({ ...current, [activeTab]: nextSortState(current[activeTab], key) }))} />
+                <SortableTableHead label="Last Seen" sortKey="last_seen" sort={sortByTab[activeTab]} onSort={(key) => setSortByTab((current) => ({ ...current, [activeTab]: nextSortState(current[activeTab], key) }))} />
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>

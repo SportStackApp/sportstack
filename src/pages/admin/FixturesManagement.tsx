@@ -21,6 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { AdminCascadeFilters } from "@/components/admin/AdminCascadeFilters";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
 import {
   ALL_CASCADE_VALUE,
   emptyCascadeValue,
@@ -55,6 +57,8 @@ interface FixtureRow {
   away_team: { id: string; name: string } | null;
   venue: { id: string; name: string } | null;
 }
+
+type FixtureSortKey = "date" | "association" | "division" | "home" | "away" | "round" | "venue" | "status" | "score";
 
 interface RevSportsPlayer {
   id: string;
@@ -225,6 +229,7 @@ const FixturesManagement = () => {
   const [filterRound, setFilterRound] = useState("");
   const [fixtureCascade, setFixtureCascade] = useState<CascadeValue>(emptyCascadeValue);
   const [assocTeamIds, setAssocTeamIds] = useState<string[]>([]);
+  const [fixtureSort, setFixtureSort] = useState<SortState<FixtureSortKey> | null>(null);
 
   const teamIds = useMemo(
     () => selectedTeamId
@@ -794,7 +799,7 @@ const FixturesManagement = () => {
   const umpire1 = rosterPlayers.length > 0 ? rosterPlayers[0].umpire_1 : null;
   const umpire2 = rosterPlayers.length > 0 ? rosterPlayers[0].umpire_2 : null;
 
-  const displayFixtures = fixtures.filter((fixture) => {
+  const filteredFixtures = fixtures.filter((fixture) => {
     const matchesStatus = filterStatus === "ALL" || fixture.status === filterStatus;
     const matchesRound = !filterRound || fixture.round_number?.toString() === filterRound;
     const homeTeamInfo = teamById.get(fixture.home_team_id);
@@ -815,6 +820,18 @@ const FixturesManagement = () => {
       fixture.away_team_id === fixtureCascade.teamId;
     return matchesStatus && matchesRound && matchesAssociation && matchesClub && matchesDivision && matchesTeam;
   });
+  const displayFixtures = fixtureSort ? stableSortRows(filteredFixtures, fixtureSort, (fixture, key) => {
+    const team = allAssocTeams.find((item) => item.id === fixture.home_team_id);
+    if (key === "date") return fixture.fixture_date;
+    if (key === "association") return team?.associationName;
+    if (key === "division") return team?.divisionName;
+    if (key === "home") return getTeamLabel(fixture.home_team_id, fixture.home_team?.name || "Unknown");
+    if (key === "away") return getTeamLabel(fixture.away_team_id, fixture.away_team?.name || "BYE");
+    if (key === "round") return fixture.round_number;
+    if (key === "venue") return getFixtureLocationLabel(fixture);
+    if (key === "status") return fixture.status;
+    return fixture.home_score === null || fixture.away_score === null ? null : `${fixture.home_score}-${fixture.away_score}`;
+  }) : filteredFixtures;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -912,15 +929,15 @@ const FixturesManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Association</TableHead>
-                    <TableHead>Division</TableHead>
-                    <TableHead>Home Team</TableHead>
-                    <TableHead>Away Team</TableHead>
-                    <TableHead>Round</TableHead>
-                    <TableHead>Venue</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Score</TableHead>
+                    <SortableTableHead label="Date" sortKey="date" sort={fixtureSort} onSort={(key) => setFixtureSort(nextSortState(fixtureSort, key))} />
+                    <SortableTableHead label="Association" sortKey="association" sort={fixtureSort} onSort={(key) => setFixtureSort(nextSortState(fixtureSort, key))} />
+                    <SortableTableHead label="Division" sortKey="division" sort={fixtureSort} onSort={(key) => setFixtureSort(nextSortState(fixtureSort, key))} />
+                    <SortableTableHead label="Home Team" sortKey="home" sort={fixtureSort} onSort={(key) => setFixtureSort(nextSortState(fixtureSort, key))} />
+                    <SortableTableHead label="Away Team" sortKey="away" sort={fixtureSort} onSort={(key) => setFixtureSort(nextSortState(fixtureSort, key))} />
+                    <SortableTableHead label="Round" sortKey="round" sort={fixtureSort} onSort={(key) => setFixtureSort(nextSortState(fixtureSort, key))} />
+                    <SortableTableHead label="Venue" sortKey="venue" sort={fixtureSort} onSort={(key) => setFixtureSort(nextSortState(fixtureSort, key))} />
+                    <SortableTableHead label="Status" sortKey="status" sort={fixtureSort} onSort={(key) => setFixtureSort(nextSortState(fixtureSort, key))} />
+                    <SortableTableHead label="Score" sortKey="score" sort={fixtureSort} onSort={(key) => setFixtureSort(nextSortState(fixtureSort, key))} />
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>

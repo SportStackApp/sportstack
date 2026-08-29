@@ -18,6 +18,8 @@ interface PersonalDetailsSectionProps {
   formData: {
     firstName: string;
     lastName: string;
+    preferredName: string;
+    nickname: string;
     phone: string;
     suburb: string;
     dateOfBirth: string;
@@ -105,6 +107,39 @@ export const PersonalDetailsSection = ({
             ) : (
               <p className="text-foreground py-2">{formData.lastName || "Not set"}</p>
             )}
+          </div>
+        </div>
+
+        {/* Optional names are stored separately. Preferred name is not yet
+            used by the rest of the app; nickname is available for opt-in displays. */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="preferredName">Preferred name</Label>
+            {isEditing ? (
+              <Input
+                id="preferredName"
+                value={formData.preferredName}
+                onChange={(event) => onFormChange({ preferredName: event.target.value })}
+                placeholder="Optional"
+              />
+            ) : (
+              <p className="py-2 text-foreground">{formData.preferredName || "Not set"}</p>
+            )}
+            <p className="text-xs text-muted-foreground">Saved for future display-name use.</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="nickname">Nickname</Label>
+            {isEditing ? (
+              <Input
+                id="nickname"
+                value={formData.nickname}
+                onChange={(event) => onFormChange({ nickname: event.target.value })}
+                placeholder="Optional"
+              />
+            ) : (
+              <p className="py-2 text-foreground">{formData.nickname || "Not set"}</p>
+            )}
+            <p className="text-xs text-muted-foreground">Used only when you choose to display it.</p>
           </div>
         </div>
 

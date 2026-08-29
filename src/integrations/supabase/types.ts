@@ -526,6 +526,88 @@ export type Database = {
           },
         ]
       }
+      coach_player_fixture_notes: {
+        Row: {
+          author_id: string
+          coach_narrative_id: string | null
+          created_at: string
+          fixture_id: string
+          id: string
+          note: string
+          player_id: string
+          source: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          coach_narrative_id?: string | null
+          created_at?: string
+          fixture_id: string
+          id?: string
+          note: string
+          player_id: string
+          source?: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          coach_narrative_id?: string | null
+          created_at?: string
+          fixture_id?: string
+          id?: string
+          note?: string
+          player_id?: string
+          source?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_player_fixture_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coach_player_fixture_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_player_fixture_notes_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_player_fixture_notes_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "coach_player_fixture_notes_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_player_fixture_notes_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_position_assessments: {
         Row: {
           assessment: number
@@ -8388,6 +8470,120 @@ export type Database = {
           },
         ]
       }
+      fixture_lineup_position_overrides: {
+        Row: {
+          created_at: string
+          fixture_lineup_id: string
+          formation_position_id: string
+          id: string
+          updated_at: string
+          updated_by: string | null
+          x_percent: number
+          y_percent: number
+        }
+        Insert: {
+          created_at?: string
+          fixture_lineup_id: string
+          formation_position_id: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+          x_percent: number
+          y_percent: number
+        }
+        Update: {
+          created_at?: string
+          fixture_lineup_id?: string
+          formation_position_id?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+          x_percent?: number
+          y_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixture_lineup_position_overrides_fixture_lineup_id_fkey"
+            columns: ["fixture_lineup_id"]
+            isOneToOne: false
+            referencedRelation: "fixture_lineups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixture_lineup_position_overrides_formation_position_id_fkey"
+            columns: ["formation_position_id"]
+            isOneToOne: false
+            referencedRelation: "formation_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixture_lineup_position_overrides_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fixture_lineup_position_overrides_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fixture_lineup_roster_selections: {
+        Row: {
+          created_at: string
+          display_nickname: boolean
+          fixture_lineup_id: string
+          id: string
+          player_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_nickname?: boolean
+          fixture_lineup_id: string
+          id?: string
+          player_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_nickname?: boolean
+          fixture_lineup_id?: string
+          id?: string
+          player_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixture_lineup_roster_selections_fixture_lineup_id_fkey"
+            columns: ["fixture_lineup_id"]
+            isOneToOne: false
+            referencedRelation: "fixture_lineups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixture_lineup_roster_selections_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "coordination_umpire_matrix"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fixture_lineup_roster_selections_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fixture_lineups: {
         Row: {
           created_at: string
@@ -8680,6 +8876,8 @@ export type Database = {
           id: string
           is_starting_slot: boolean
           name: string
+          position_area: string | null
+          position_side: string | null
           sort_order: number
           updated_at: string
           x_percent: number
@@ -8697,6 +8895,8 @@ export type Database = {
           id?: string
           is_starting_slot?: boolean
           name: string
+          position_area?: string | null
+          position_side?: string | null
           sort_order?: number
           updated_at?: string
           x_percent: number
@@ -8714,6 +8914,8 @@ export type Database = {
           id?: string
           is_starting_slot?: boolean
           name?: string
+          position_area?: string | null
+          position_side?: string | null
           sort_order?: number
           updated_at?: string
           x_percent?: number
@@ -11295,7 +11497,9 @@ export type Database = {
           is_placeholder: boolean
           is_umpire: boolean
           last_name: string | null
+          nickname: string | null
           phone: string | null
+          preferred_name: string | null
           registered_club_id: string | null
           revsports_player_id: string | null
           street_address: string | null
@@ -11317,7 +11521,9 @@ export type Database = {
           is_placeholder?: boolean
           is_umpire?: boolean
           last_name?: string | null
+          nickname?: string | null
           phone?: string | null
+          preferred_name?: string | null
           registered_club_id?: string | null
           revsports_player_id?: string | null
           street_address?: string | null
@@ -11339,7 +11545,9 @@ export type Database = {
           is_placeholder?: boolean
           is_umpire?: boolean
           last_name?: string | null
+          nickname?: string | null
           phone?: string | null
+          preferred_name?: string | null
           registered_club_id?: string | null
           revsports_player_id?: string | null
           street_address?: string | null
@@ -16807,7 +17015,6 @@ export type Database = {
     }
   }
 }
-
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]

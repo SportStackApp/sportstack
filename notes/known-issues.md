@@ -3,6 +3,18 @@
 > This is the supporting defect and parked-item register. Current priority and sequencing come from
 > `docs/consolidated-open-items-plan.md`.
 
+## Coach Narrative
+
+**Logged:** 29 August 2026
+**Status:** Parked future Coaching feature
+
+The intended flow is a short post-game questionnaire or dictated note for a coach/team manager.
+An AI-assisted draft would produce a match summary, team positives and improvement areas. Any
+player-specific observation must be reviewed by the coach before it is deliberately saved against
+that player's fixture history. The current batch only supplies author-private manual fixture notes
+and the future `COACH_NARRATIVE` source shape. AI provider choice, speech capture, consent, retention,
+editing and visibility rules are not yet designed or implemented.
+
 ## 29 August 2026 desktop UI/UX review
 
 **Status:** Small accessibility repair deployed to Dev and Main; authenticated persistence remains open

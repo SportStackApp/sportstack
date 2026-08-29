@@ -44,6 +44,8 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { AdminCascadeFilters } from "@/components/admin/AdminCascadeFilters";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
 import { type CascadeValue } from "@/lib/adminCascade";
 import {
   getMvpErrorMessage,
@@ -122,6 +124,7 @@ interface MvpSession {
   totalVoters?: number | null;
   fixture?: FixtureSummary;
 }
+type SessionSortKey = "team" | "fixture" | "date" | "status" | "completed";
 
 interface OpenCandidate extends FixtureSummary {
   homeTeamName: string;
@@ -317,6 +320,7 @@ export default function MvpVotingAdmin() {
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
   const [sessions, setSessions] = useState<MvpSession[]>([]);
+  const [sessionSort, setSessionSort] = useState<SortState<SessionSortKey> | null>(null);
   const [listLoading, setListLoading] = useState(true);
   const [openCandidates, setOpenCandidates] = useState<OpenCandidate[]>([]);
   const [candidateSearch, setCandidateSearch] = useState("");
@@ -374,6 +378,17 @@ export default function MvpVotingAdmin() {
     () => (isSuperAdmin ? allDivisions : allDivisions.filter((division) => visibleDivisionIds.has(division.id))),
     [allDivisions, isSuperAdmin, visibleDivisionIds],
   );
+  const displayedSessions = useMemo(() => sessionSort ? stableSortRows(sessions, sessionSort, (session, key) => {
+    const team = allTeams.find((item) => item.id === session.team_id);
+    const fixture = session.fixture;
+    const homeName = allTeams.find((item) => item.id === fixture?.home_team_id)?.name || session.home_team || "Home";
+    const awayName = allTeams.find((item) => item.id === fixture?.away_team_id)?.name || session.away_team || "Away";
+    if (key === "team") return team?.name || "Legacy fixture-wide";
+    if (key === "fixture") return `${homeName} vs ${awayName}`;
+    if (key === "date") return session.game_date || fixture?.fixture_date;
+    if (key === "status") return session.status;
+    return session.votedCount || 0;
+  }) : sessions, [allTeams, sessionSort, sessions]);
   const selectedTeam = useMemo(
     () => visibleTeams.find((team) => team.id === filterTeam) || null,
     [filterTeam, visibleTeams],
@@ -1725,16 +1740,16 @@ export default function MvpVotingAdmin() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Team</TableHead>
-                          <TableHead>Fixture</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Completed</TableHead>
+                          <SortableTableHead label="Team" sortKey="team" sort={sessionSort} onSort={(key) => setSessionSort(nextSortState(sessionSort, key))} />
+                          <SortableTableHead label="Fixture" sortKey="fixture" sort={sessionSort} onSort={(key) => setSessionSort(nextSortState(sessionSort, key))} />
+                          <SortableTableHead label="Date" sortKey="date" sort={sessionSort} onSort={(key) => setSessionSort(nextSortState(sessionSort, key))} />
+                          <SortableTableHead label="Status" sortKey="status" sort={sessionSort} onSort={(key) => setSessionSort(nextSortState(sessionSort, key))} />
+                          <SortableTableHead label="Completed" sortKey="completed" sort={sessionSort} onSort={(key) => setSessionSort(nextSortState(sessionSort, key))} />
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sessions.map((session) => {
+                        {displayedSessions.map((session) => {
                           const team = allTeams.find((item) => item.id === session.team_id);
                           const fixture = session.fixture;
                           const homeName =

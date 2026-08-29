@@ -93,13 +93,6 @@ interface NavSection {
 
 const ADMIN_DROPDOWN_SECTIONS: NavSection[] = [
   {
-    heading: "Overview",
-    items: [
-      { path: "/admin", label: "Admin Dashboard", icon: LayoutDashboard },
-      { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
-    ],
-  },
-  {
     heading: "Organisation",
     items: [
       { path: "/admin/associations", label: "Associations", icon: Globe },
@@ -1469,6 +1462,33 @@ const AppLayout = () => {
           </select>
         </div>
       )}
+      {canSwitchMode && (
+        <div className="relative shrink-0 px-3 pb-1 pt-2">
+          <button
+            onClick={() => setIsModeSwitcherOpen(!isModeSwitcherOpen)}
+            disabled={modeChanging}
+            className="flex w-full items-center justify-between gap-2 rounded-lg border border-primary-foreground/20 px-4 py-3 text-sm font-medium text-primary-foreground/95 transition-all hover:bg-primary-foreground/10"
+          >
+            <span className="truncate">{modeLabel}</span>
+            <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", isModeSwitcherOpen && "rotate-180")} />
+          </button>
+          {isModeSwitcherOpen && (
+            <div className="absolute left-3 right-3 top-full z-50 mt-1 rounded-lg border border-border bg-background p-1 shadow-lg">
+              <p className="px-3 py-2 text-xs font-medium text-muted-foreground">Switch mode</p>
+              {availableModes.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => void handleModeSwitch(m)}
+                  disabled={modeChanging}
+                  className={cn("w-full rounded-md px-3 py-2 text-left text-sm transition-colors", m === mode ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted")}
+                >
+                  {MODE_LABELS[m]}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2">
         {visibleSections.map((section) => (
           <div key={section.heading} className="mb-2">
@@ -1520,40 +1540,6 @@ const AppLayout = () => {
       </nav>
 
       <div className="shrink-0 p-4 space-y-2">
-        {/* Mode Switcher */}
-        {canSwitchMode && (
-          <div className="relative">
-            <button
-              onClick={() => setIsModeSwitcherOpen(!isModeSwitcherOpen)}
-              disabled={modeChanging}
-              className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-lg text-sm font-medium text-primary-foreground/95 hover:bg-primary-foreground/10 transition-all border border-primary-foreground/20"
-            >
-              <span className="truncate">{modeLabel}</span>
-              <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", isModeSwitcherOpen && "rotate-180")} />
-            </button>
-            {isModeSwitcherOpen && (
-              <div className="absolute bottom-full left-0 right-0 mb-1 bg-background border border-border rounded-lg shadow-lg p-1 z-50">
-                <p className="text-xs font-medium text-muted-foreground px-3 py-2">Switch Mode</p>
-                {availableModes.map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => void handleModeSwitch(m)}
-                    disabled={modeChanging}
-                    className={cn(
-                      "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
-                      m === mode
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted text-foreground"
-                    )}
-                  >
-                    {MODE_LABELS[m]}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         <button
           onClick={() => setIsFeedbackOpen(true)}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-primary-foreground/95 hover:bg-primary-foreground/10 transition-all"
@@ -2054,9 +2040,6 @@ const AppLayout = () => {
               <Badge variant="outline" className={cn("px-1.5 py-0.5 text-[10px] font-semibold", APP_ENVIRONMENT_CLASS[APP_ENVIRONMENT])}>
                 {APP_ENVIRONMENT}
               </Badge>
-              <span className="inline-flex rounded-md border border-primary-foreground/20 px-1.5 py-1 text-[10px] font-medium text-primary-foreground/75 sm:px-2 sm:text-xs">
-                {APP_VERSION}
-              </span>
             </div>
 
             {showAdminDropdown && (

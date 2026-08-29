@@ -95,11 +95,12 @@ export default function Analytics() {
   
   // 1. ACCESS CONTROL AND PERMISSIONS
   // Any user with administrative access (isAnyAdmin) is allowed on this page.
-  // But individual votes are restricted to Super Admins and Association Admins.
-  const { loading: scopeLoading, isAnyAdmin, isSuperAdmin, highestScopedRole, scopedAssociationIds } = useAdminScope();
+  // Individual ballots are restricted to Super Admins and Club Admins for
+  // their own clubs. Association Admins keep aggregate reporting only.
+  const { loading: scopeLoading, isAnyAdmin, isSuperAdmin, highestScopedRole, scopedAssociationIds, scopedClubIds } = useAdminScope();
 
   // Determine whether the current user has access to view the individual votes section
-  const isPrivilegedAdmin = isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN";
+  const isPrivilegedAdmin = isSuperAdmin || highestScopedRole === "CLUB_ADMIN";
 
   // 2. STATE VARIABLES
   // Main data lists fetched from Supabase
@@ -252,7 +253,7 @@ export default function Analytics() {
       }
       setSessions(loadedSessions);
 
-      // Step B: Load safe published aggregates. Only Association and Super Admins
+      // Step B: Load safe published aggregates. Only Club and Super Admins
       // also load the individual raw ballot audit.
       let loadedVotes: AnalyticsVoteRow[] = [];
       let loadedAuditVotes: AuditVoteRow[] = [];
@@ -390,7 +391,15 @@ export default function Analytics() {
   }, [isAnyAdmin, isPrivilegedAdmin]);
 
   useEffect(() => {
-    if (!isSuperAdmin && scopedAssociationIds.length === 1) {
+    if (!isSuperAdmin && highestScopedRole === "CLUB_ADMIN" && scopedClubIds.length === 1) {
+      const club = allClubs.find((item) => item.id === scopedClubIds[0]);
+      setAnalyticsCascade({
+        associationId: club?.association_id || ALL_CASCADE_VALUE,
+        clubId: scopedClubIds[0],
+        divisionId: ALL_CASCADE_VALUE,
+        teamId: ALL_CASCADE_VALUE,
+      });
+    } else if (!isSuperAdmin && scopedAssociationIds.length === 1) {
       setAnalyticsCascade({
         associationId: scopedAssociationIds[0],
         clubId: ALL_CASCADE_VALUE,
@@ -398,7 +407,7 @@ export default function Analytics() {
         teamId: ALL_CASCADE_VALUE,
       });
     }
-  }, [isSuperAdmin, scopedAssociationIds]);
+  }, [allClubs, highestScopedRole, isSuperAdmin, scopedAssociationIds, scopedClubIds]);
 
   // 4. MAPS FOR SPEEDY CLIENT-SIDE LOOKUPS
   // We use ES6 Maps to quickly cross-reference related IDs without looping arrays repeatedly.
@@ -824,7 +833,15 @@ export default function Analytics() {
   };
 
   const handleResetFilters = () => {
-    setAnalyticsCascade(!isSuperAdmin && scopedAssociationIds.length === 1 ? {
+    const scopedClub = !isSuperAdmin && highestScopedRole === "CLUB_ADMIN" && scopedClubIds.length === 1
+      ? allClubs.find((item) => item.id === scopedClubIds[0])
+      : null;
+    setAnalyticsCascade(scopedClub ? {
+      associationId: scopedClub.association_id,
+      clubId: scopedClub.id,
+      divisionId: ALL_CASCADE_VALUE,
+      teamId: ALL_CASCADE_VALUE,
+    } : !isSuperAdmin && scopedAssociationIds.length === 1 ? {
       associationId: scopedAssociationIds[0],
       clubId: ALL_CASCADE_VALUE,
       divisionId: ALL_CASCADE_VALUE,
@@ -1259,7 +1276,7 @@ export default function Analytics() {
                       <CardDescription>Detailed audit of individual votes and voter allocations</CardDescription>
                     </div>
                     <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200 self-start md:self-auto uppercase text-[10px] font-bold tracking-wider py-1 px-3">
-                      Restricted: visible to Super and Association Admins only.
+                      Restricted: Super Admins and Club Admins for their own clubs.
                     </Badge>
                   </CardHeader>
                   <CardContent className="p-0 space-y-4">

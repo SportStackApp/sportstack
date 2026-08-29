@@ -1,0 +1,27 @@
+import { describe, expect, it } from "vitest";
+import { clampPitchCoordinate, displayedFormationPosition, pitchPlayerLabel, uniqueRosterIds } from "./lineupPlanner";
+
+describe("line-up planner", () => {
+  it("deduplicates selected roster players without changing their order", () => {
+    expect(uniqueRosterIds(["one", "two", "one", "three"])).toEqual(["one", "two", "three"]);
+  });
+
+  it("clamps fixture-only marker movement to the pitch", () => {
+    expect(clampPitchCoordinate(-4)).toBe(0);
+    expect(clampPitchCoordinate(105)).toBe(100);
+  });
+
+  it("applies and resets a fixture-only marker override", () => {
+    const position = { id: "p", formation_id: "f", name: "Left Half", code: "LH", icon_id: null, zone: null, grid_x: 1, grid_y: 1, x_percent: 25, y_percent: 30, sort_order: 1, is_starting_slot: true };
+    expect(displayedFormationPosition(position, { xPercent: 40, yPercent: 45 })).toMatchObject({ x_percent: 40, y_percent: 45 });
+    expect(displayedFormationPosition(position, null)).toMatchObject({ x_percent: 25, y_percent: 30 });
+  });
+
+  it("uses nickname only when the fixture selection enables it", () => {
+    const person = { firstName: "Hugh", lastName: "Cullen", nickname: "H" };
+    expect(pitchPlayerLabel(person, false)).toBe("H. Cullen");
+    expect(pitchPlayerLabel(person, true)).toBe("H");
+  });
+
+  console.log("line-up planner tests passed");
+});

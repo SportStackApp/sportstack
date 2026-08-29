@@ -58,6 +58,8 @@ export type FormationPositionRow = {
   y_percent: number;
   sort_order: number;
   is_starting_slot: boolean;
+  position_area?: "DEFENDER" | "MIDFIELDER" | "ATTACKER" | "GOALKEEPER" | null;
+  position_side?: "LEFT" | "CENTRE" | "RIGHT" | null;
 };
 
 export type FormationIconRow = {

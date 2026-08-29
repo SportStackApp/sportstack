@@ -10,6 +10,7 @@ export interface PlayerHistoryRecord {
   opponent: string;
   location: string;
   result: string;
+  positionName: string | null;
   goals: number;
   greenCards: number;
   yellowCards: number;
@@ -61,6 +62,22 @@ export async function loadPlayerHistory(profileId: string, revsportsTeamId?: str
   const { data, error } = await query;
   if (error) throw error;
 
+  const fixtureIds = Array.from(new Set((data || []).map((row) => row.fixture_id).filter((fixtureId): fixtureId is string => Boolean(fixtureId))));
+  const positionByFixture = new Map<string, string>();
+  if (fixtureIds.length > 0) {
+    const { data: assignmentRows, error: assignmentError } = await supabase
+      .from("fixture_lineup_assignments")
+      .select("formation_positions(name), fixture_lineups!inner(fixture_id)")
+      .eq("player_id", profileId)
+      .in("fixture_lineups.fixture_id", fixtureIds);
+    if (assignmentError) throw assignmentError;
+    (assignmentRows || []).forEach((assignment) => {
+      const lineup = Array.isArray(assignment.fixture_lineups) ? assignment.fixture_lineups[0] : assignment.fixture_lineups;
+      const position = Array.isArray(assignment.formation_positions) ? assignment.formation_positions[0] : assignment.formation_positions;
+      if (lineup?.fixture_id && position?.name) positionByFixture.set(lineup.fixture_id, position.name);
+    });
+  }
+
   return ((data || []) as RevSportsAppearance[])
     .filter((row) => Boolean(row.game_date))
     .map((row): PlayerHistoryRecord => {
@@ -78,6 +95,7 @@ export async function loadPlayerHistory(profileId: string, revsportsTeamId?: str
         opponent,
         location: [row.venue, row.pitch].filter(Boolean).join(" • ") || "Venue not recorded",
         result: scoreResult(row),
+        positionName: row.fixture_id ? positionByFixture.get(row.fixture_id) || null : null,
         goals: row.goals || 0,
         greenCards: row.green_cards || 0,
         yellowCards: row.yellow_cards || 0,

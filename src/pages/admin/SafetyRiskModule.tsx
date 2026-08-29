@@ -1,4 +1,4 @@
-import { createContext, Fragment, useContext, useEffect, useMemo, useState } from "react";
+import { Children, createContext, Fragment, isValidElement, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   BarChart3,
@@ -43,6 +43,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -2293,12 +2295,30 @@ function RegisterTable({
   emptyLabel: string;
   children: React.ReactNode;
 }) {
-  const hasRows = Boolean(children && (!Array.isArray(children) || children.length > 0));
+  const [sort, setSort] = useState<SortState<string> | null>(null);
+  const rowNodes = Children.toArray(children);
+  const hasRows = rowNodes.length > 0;
+  const extractText = (node: ReactNode): string => {
+    if (typeof node === "string" || typeof node === "number") return String(node);
+    if (Array.isArray(node)) return node.map(extractText).join(" ");
+    if (!isValidElement<{ children?: ReactNode }>(node)) return "";
+    return extractText(node.props.children);
+  };
+  const columnText = (node: ReactNode, columnIndex: number) => {
+    if (!isValidElement<{ children?: ReactNode }>(node)) return "";
+    const fragmentChildren = Children.toArray(node.props.children);
+    const row = node.type === Fragment ? fragmentChildren[0] : node;
+    if (!isValidElement<{ children?: ReactNode }>(row)) return "";
+    return extractText(Children.toArray(row.props.children)[columnIndex]);
+  };
+  const displayedRows = sort
+    ? stableSortRows(rowNodes, sort, (node, key) => columnText(node, Number(key)))
+    : rowNodes;
 
   return (
     <Card className="min-w-0">
       <CardHeader className="p-4 pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center gap-2 !font-sans text-base">
           <Icon className="h-4 w-4" />
           {title}
         </CardTitle>
@@ -2306,10 +2326,12 @@ function RegisterTable({
       <div className="overflow-x-auto">
         <Table className="[&_td]:py-2.5 [&_th]:h-10">
           <TableHeader>
-            <TableRow>{columns.map((column) => <TableHead key={column} className="whitespace-nowrap">{column}</TableHead>)}</TableRow>
+            <TableRow>{columns.map((column, index) => column ? (
+              <SortableTableHead key={`${column}-${index}`} label={column} sortKey={String(index)} sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} className="whitespace-nowrap" />
+            ) : <TableHead key={`actions-${index}`} />)}</TableRow>
           </TableHeader>
           <TableBody>
-            {hasRows ? children : (
+            {hasRows ? displayedRows : (
               <TableRow>
                 <TableCell colSpan={columns.length}>
                   <EmptyState label={emptyLabel} />
@@ -2392,8 +2414,8 @@ function ExpandedLinkedRecordsRow({
 
   return (
     <TableRow id={id} className="bg-muted/35 hover:bg-muted/35">
-      <TableCell colSpan={colSpan} className="px-4 py-3">
-        <div className="space-y-3">
+      <TableCell colSpan={colSpan} className="py-3 pl-8 pr-4">
+        <div className="space-y-3 border-l-2 border-muted-foreground/20 pl-3">
           {visibleGroups.map((group) => (
             <AssociatedRecordSection
               key={group.kind}
@@ -2433,7 +2455,7 @@ function AssociatedRecordSection({
       ) : (
         <div className="mt-1 overflow-x-auto">
           <div className="min-w-[720px]">
-            <div className={cn("grid w-full items-center gap-3 border-y bg-muted/45 px-1 py-2 text-[11px] font-semibold uppercase text-muted-foreground", associationSummaryGridClass)}>
+            <div className={cn("grid w-full items-center gap-3 border-y bg-muted/45 px-1 py-1 text-[11px] font-semibold uppercase text-muted-foreground", associationSummaryGridClass)}>
               {associationColumnLabels[records[0].kind].map((column) => (
                 <span key={column}>{column}</span>
               ))}

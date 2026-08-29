@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,12 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { loadPlayerHistory, type PlayerHistoryRecord } from "@/lib/playerHistory";
-import { loadTeamPositionOptions, type TeamPositionOption } from "@/lib/teamPositions";
+import {
+  HOCKEY_POSITION_AREAS,
+  HOCKEY_POSITION_SIDES,
+  areaPositionCode,
+  sidePositionCode,
+} from "@/lib/hockeyPositions";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Profile {
   first_name: string;
@@ -27,9 +34,30 @@ interface Assessment {
   notes: string;
 }
 
+interface CoachNote {
+  id: string;
+  note: string;
+  source: "MANUAL" | "COACH_NARRATIVE";
+  created_at: string;
+}
+
+const POSITION_TRAITS = [
+  ...HOCKEY_POSITION_AREAS.map((position) => ({
+    code: areaPositionCode(position.value),
+    label: position.label,
+    section: "Playing area",
+  })),
+  ...HOCKEY_POSITION_SIDES.map((position) => ({
+    code: sidePositionCode(position.value),
+    label: position.label,
+    section: "Preferred side",
+  })),
+];
+
 export default function CoachingPlayerProfile() {
   const { playerId } = useParams<{ playerId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { selectedTeamId } = useTeamContext();
   
@@ -38,10 +66,14 @@ export default function CoachingPlayerProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [assessments, setAssessments] = useState<Record<string, Assessment>>({});
   const [preferences, setPreferences] = useState<Record<string, number>>({});
-  const [positionOptions, setPositionOptions] = useState<TeamPositionOption[]>([]);
   const [matchHistory, setMatchHistory] = useState<PlayerHistoryRecord[]>([]);
   const [seasonFilter, setSeasonFilter] = useState<"This Season" | "All Time">("This Season");
   const [activeSeason, setActiveSeason] = useState<{ startDate: string | null; endDate: string | null; year: number | null } | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<PlayerHistoryRecord | null>(null);
+  const [matchNotes, setMatchNotes] = useState<CoachNote[]>([]);
+  const [draftNote, setDraftNote] = useState("");
+  const [notesLoading, setNotesLoading] = useState(false);
+  const requestedTeamId = searchParams.get("team");
 
   useEffect(() => {
     let active = true;
@@ -61,40 +93,32 @@ export default function CoachingPlayerProfile() {
         let tId: string | null = null;
 
         if (isSuperAdmin) {
-          tId = selectedTeamId;
+          tId = requestedTeamId || selectedTeamId;
           if (!tId) {
             toast.error("Please select a team from the cascade menu first.");
             navigate("/coaching");
             return;
           }
         } else {
-          // 1. Check coach role
           const { data: roleData } = await supabase
             .from("user_roles")
             .select("team_id")
             .eq("user_id", user.id)
-            .eq("role", "COACH")
-            .maybeSingle();
+            .in("role", ["COACH", "TEAM_MANAGER"]);
 
-          if (!roleData?.team_id) {
-            toast.error("You are not assigned as a coach for any team.");
+          const authorisedTeamIds = Array.from(new Set((roleData || []).map((role) => role.team_id).filter(Boolean)));
+          tId = requestedTeamId && authorisedTeamIds.includes(requestedTeamId)
+            ? requestedTeamId
+            : authorisedTeamIds[0] || null;
+          if (!tId) {
+            toast.error("You are not assigned as a coach or team manager for any team.");
             navigate("/coaching");
             return;
           }
-          
-          tId = roleData.team_id;
         }
 
         if (!active || !tId) return;
         setTeamId(tId);
-        setPositionOptions([]);
-        try {
-          const teamPositions = await loadTeamPositionOptions([tId]);
-          if (active) setPositionOptions(teamPositions[tId] || []);
-        } catch (positionError) {
-          console.error("Error loading team positions:", positionError);
-          if (active) toast.error("Team positions could not be loaded.");
-        }
 
         const { data: teamData } = await supabase
           .from("teams")
@@ -170,7 +194,7 @@ export default function CoachingPlayerProfile() {
     return () => {
       active = false;
     };
-  }, [user, playerId, navigate, selectedTeamId]);
+  }, [user, playerId, navigate, requestedTeamId, selectedTeamId]);
 
   const handleAssessmentChange = async (position: string, val: number) => {
     if (!user || !playerId || !teamId) return;
@@ -212,6 +236,64 @@ export default function CoachingPlayerProfile() {
       console.error(err);
       toast.error("Failed to save notes");
     }
+  };
+
+  useEffect(() => {
+    let active = true;
+    async function loadMatchNotes() {
+      if (!selectedMatch?.fixtureId || !teamId || !playerId || !user) {
+        setMatchNotes([]);
+        return;
+      }
+      setNotesLoading(true);
+      const { data, error } = await supabase
+        .from("coach_player_fixture_notes")
+        .select("id, note, source, created_at")
+        .eq("fixture_id", selectedMatch.fixtureId)
+        .eq("team_id", teamId)
+        .eq("player_id", playerId)
+        .eq("author_id", user.id)
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      if (error) toast.error("Match notes could not be loaded.");
+      setMatchNotes((data || []) as CoachNote[]);
+      setNotesLoading(false);
+    }
+    void loadMatchNotes();
+    return () => { active = false; };
+  }, [playerId, selectedMatch, teamId, user]);
+
+  const addMatchNote = async () => {
+    if (!selectedMatch?.fixtureId || !teamId || !playerId || !user || !draftNote.trim()) return;
+    const { data, error } = await supabase
+      .from("coach_player_fixture_notes")
+      .insert({
+        fixture_id: selectedMatch.fixtureId,
+        team_id: teamId,
+        player_id: playerId,
+        author_id: user.id,
+        note: draftNote.trim(),
+        source: "MANUAL",
+      })
+      .select("id, note, source, created_at")
+      .single();
+    if (error) {
+      toast.error("Match note could not be saved.");
+      return;
+    }
+    setMatchNotes((current) => [data as CoachNote, ...current]);
+    setDraftNote("");
+    toast.success("Match note saved.");
+  };
+
+  const updateMatchNote = async (note: CoachNote) => {
+    if (!note.note.trim()) return;
+    const { error } = await supabase
+      .from("coach_player_fixture_notes")
+      .update({ note: note.note.trim() })
+      .eq("id", note.id);
+    if (error) toast.error("Match note could not be updated.");
+    else toast.success("Match note updated.");
   };
 
   const getPrefLabel = (val?: number) => {
@@ -271,7 +353,7 @@ export default function CoachingPlayerProfile() {
 
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <Button variant="ghost" className="mb-4 -ml-4 text-muted-foreground hover:text-foreground" onClick={() => navigate("/coaching")}>
+      <Button variant="ghost" className="mb-4 -ml-4 text-muted-foreground hover:text-foreground" onClick={() => navigate(teamId ? `/coaching?team=${teamId}` : "/coaching")}>
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Squad
       </Button>
 
@@ -310,20 +392,14 @@ export default function CoachingPlayerProfile() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {positionOptions.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-4 py-6 text-center text-sm text-muted-foreground">
-                        No positions have been configured for this team yet.
-                      </td>
-                    </tr>
-                  ) : positionOptions.map((position) => {
+                  {POSITION_TRAITS.map((position) => {
                     const pos = position.code;
                     const currentAss = assessments[pos]?.assessment;
                     return (
                       <tr key={pos} className="hover:bg-muted/30">
                         <td className="px-4 py-3">
                           <div className="font-medium">{position.label}</div>
-                          <div className="text-xs text-muted-foreground">{pos}</div>
+                          <div className="text-xs text-muted-foreground">{position.section}</div>
                         </td>
                         <td className="px-4 py-3">{getPrefLabel(preferences[pos])}</td>
                         <td className="px-4 py-3">
@@ -400,7 +476,8 @@ export default function CoachingPlayerProfile() {
               </Card>
             ) : (
               filteredMatches.map(m => (
-                <Card key={m.id} className="hover:border-primary/50 transition-colors">
+                <button key={m.id} type="button" className="w-full text-left" onClick={() => setSelectedMatch(m)}>
+                <Card className="transition-colors hover:border-primary/50 hover:bg-muted/20">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start mb-2">
                       <div className="font-medium text-sm">
@@ -417,6 +494,7 @@ export default function CoachingPlayerProfile() {
                       </div>
                       <div className="text-right">
                         <div className="text-xs text-muted-foreground">{m.teamName}</div>
+                        <div className="text-xs text-muted-foreground">{m.positionName || "Position not recorded"}</div>
                         <div className="font-bold font-mono">{m.goals} goal{m.goals === 1 ? "" : "s"}</div>
                         {(m.greenCards + m.yellowCards + m.redCards) > 0 && (
                           <div className="text-xs text-muted-foreground">
@@ -427,12 +505,52 @@ export default function CoachingPlayerProfile() {
                     </div>
                   </CardContent>
                 </Card>
+                </button>
               ))
             )}
           </div>
         </div>
 
       </div>
+
+      <Dialog open={Boolean(selectedMatch)} onOpenChange={(open) => !open && setSelectedMatch(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Match notes</DialogTitle>
+            <DialogDescription>
+              {selectedMatch ? `${new Date(selectedMatch.date).toLocaleDateString("en-AU")} vs ${selectedMatch.opponent}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {!selectedMatch?.fixtureId ? (
+            <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">This historical game is not linked to a SportStack fixture, so notes cannot be attached yet.</p>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Textarea value={draftNote} onChange={(event) => setDraftNote(event.target.value)} placeholder="Add your note for this player and game…" rows={4} />
+                <Button onClick={() => void addMatchNote()} disabled={!draftNote.trim()}><Plus className="mr-2 h-4 w-4" />Add note</Button>
+              </div>
+              {notesLoading ? (
+                <p className="text-sm text-muted-foreground">Loading notes…</p>
+              ) : matchNotes.length === 0 ? (
+                <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">No private coaching notes for this match yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {matchNotes.map((note) => (
+                    <div key={note.id} className="space-y-2 rounded-md border p-3">
+                      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                        <span>{new Date(note.created_at).toLocaleString("en-AU")}</span>
+                        <Badge variant="outline">{note.source === "COACH_NARRATIVE" ? "Coach Narrative" : "Manual"}</Badge>
+                      </div>
+                      <Textarea value={note.note} onChange={(event) => setMatchNotes((current) => current.map((item) => item.id === note.id ? { ...item, note: event.target.value } : item))} rows={3} />
+                      <Button size="sm" variant="outline" onClick={() => void updateMatchNote(note)}>Save changes</Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

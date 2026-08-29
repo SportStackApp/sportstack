@@ -1,279 +1,202 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, Search, UserPlus, X } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { CalendarDays, Search, Users } from "lucide-react";
 import { supabase as typedSupabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 const supabase = typedSupabase as any;
 
-type ProfileOption = {
+export type RosterCandidate = {
   id: string;
-  first_name: string | null;
-  last_name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  nickname: string | null;
+  jerseyNumber: number | null;
+  membershipType: string;
+  rosterPosition: string | null;
+  availability: string;
+  isTeamMember: boolean;
+  lastFillInDate: string | null;
 };
 
-type FillInRow = {
-  id: string;
-  player_id: string;
-  fixture_id: string;
-  access_expires_at: string;
-  fixtures?: { fixture_date: string } | null;
-};
-
-interface FillInFinderDialogProps {
+interface RosterSelectorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   fixtureId: string;
   teamId: string;
-  rosterPlayerIds: string[];
-  onChanged: () => Promise<void> | void;
+  selectedPlayerIds: string[];
+  onApply: (players: RosterCandidate[]) => void;
 }
 
-const displayName = (profile?: ProfileOption | null) =>
-  [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() || "Unnamed player";
+const fullName = (player: Pick<RosterCandidate, "firstName" | "lastName">) =>
+  [player.firstName, player.lastName].filter(Boolean).join(" ").trim() || "Unnamed player";
 
-const formatGameDate = (value: string) =>
+const formatDate = (value: string) =>
   new Date(value).toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" });
 
-export const FillInFinderDialog = ({
+export const RosterSelectorDialog = ({
   open,
   onOpenChange,
   fixtureId,
   teamId,
-  rosterPlayerIds,
-  onChanged,
-}: FillInFinderDialogProps) => {
-  const { user } = useAuth();
+  selectedPlayerIds,
+  onApply,
+}: RosterSelectorDialogProps) => {
   const [loading, setLoading] = useState(false);
-  const [savingPlayerId, setSavingPlayerId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [profiles, setProfiles] = useState<ProfileOption[]>([]);
-  const [currentRows, setCurrentRows] = useState<FillInRow[]>([]);
-  const [previousRows, setPreviousRows] = useState<FillInRow[]>([]);
+  const [candidates, setCandidates] = useState<RosterCandidate[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
-    if (!open || !teamId || !fixtureId) return;
+    if (!open) return;
     setLoading(true);
+    setSelectedIds(new Set(selectedPlayerIds));
 
-    const [currentRes, previousRes, profileRes] = await Promise.all([
+    const [membershipsRes, fillInsRes, availabilityRes, profilesRes] = await Promise.all([
       supabase
-        .from("fixture_fill_ins")
-        .select("id, player_id, fixture_id, access_expires_at")
+        .from("team_memberships")
+        .select("user_id, jersey_number, membership_type, position")
         .eq("team_id", teamId)
-        .eq("fixture_id", fixtureId)
-        .eq("status", "SELECTED"),
+        .eq("status", "ACTIVE"),
       supabase
         .from("fixture_fill_ins")
-        .select("id, player_id, fixture_id, access_expires_at, fixtures(fixture_date)")
+        .select("player_id, fixture_id, created_at, fixtures(fixture_date)")
         .eq("team_id", teamId)
         .eq("status", "SELECTED")
-        .neq("fixture_id", fixtureId)
         .order("created_at", { ascending: false })
-        .limit(30),
+        .limit(100),
+      supabase.from("fixture_availability").select("user_id, status").eq("fixture_id", fixtureId),
       supabase
         .from("profiles")
-        .select("id, first_name, last_name")
+        .select("id, first_name, last_name, nickname")
         .eq("is_placeholder", false)
         .order("last_name")
-        .limit(500),
+        .limit(1000),
     ]);
 
-    const firstError = currentRes.error || previousRes.error || profileRes.error;
+    const firstError = membershipsRes.error || fillInsRes.error || availabilityRes.error || profilesRes.error;
     if (firstError) {
-      toast.error(`Fill-ins could not be loaded: ${firstError.message}`);
+      toast.error(`The roster could not be loaded: ${firstError.message}`);
+      setLoading(false);
+      return;
     }
 
-    setCurrentRows((currentRes.data || []) as FillInRow[]);
-    setPreviousRows((previousRes.data || []) as FillInRow[]);
-    setProfiles((profileRes.data || []) as ProfileOption[]);
+    const memberships = new Map((membershipsRes.data || []).map((row: any) => [row.user_id, row]));
+    const availability = new Map((availabilityRes.data || []).map((row: any) => [row.user_id, row.status]));
+    const lastFillIn = new Map<string, string>();
+    (fillInsRes.data || []).forEach((row: any) => {
+      const fixture = Array.isArray(row.fixtures) ? row.fixtures[0] : row.fixtures;
+      if (!lastFillIn.has(row.player_id) && fixture?.fixture_date) lastFillIn.set(row.player_id, fixture.fixture_date);
+    });
+
+    const rows = (profilesRes.data || [])
+      .map((profile: any): RosterCandidate => {
+        const membership = memberships.get(profile.id) as any;
+        return {
+          id: profile.id,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+          nickname: profile.nickname,
+          jerseyNumber: membership?.jersey_number ?? null,
+          membershipType: membership?.membership_type || (lastFillIn.has(profile.id) ? "PREVIOUS FILL-IN" : "OTHER PLAYER"),
+          rosterPosition: membership?.position || null,
+          availability: availability.get(profile.id) || "NO_RESPONSE",
+          isTeamMember: Boolean(membership),
+          lastFillInDate: lastFillIn.get(profile.id) || null,
+        };
+      })
+      .sort((a: RosterCandidate, b: RosterCandidate) => {
+        if (a.isTeamMember !== b.isTeamMember) return a.isTeamMember ? -1 : 1;
+        return fullName(a).localeCompare(fullName(b), "en-AU");
+      });
+
+    setCandidates(rows);
     setLoading(false);
-  }, [fixtureId, open, teamId]);
+  }, [fixtureId, open, selectedPlayerIds, teamId]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const profileById = useMemo(
-    () => new Map(profiles.map((profile) => [profile.id, profile])),
-    [profiles],
-  );
-  const currentPlayerIds = useMemo(
-    () => new Set(currentRows.map((row) => row.player_id)),
-    [currentRows],
-  );
-  const persistentRosterIds = useMemo(() => new Set(rosterPlayerIds), [rosterPlayerIds]);
-  const previousPlayers = useMemo(() => {
-    const firstGameByPlayer = new Map<string, FillInRow>();
-    previousRows.forEach((row) => {
-      if (!firstGameByPlayer.has(row.player_id)) firstGameByPlayer.set(row.player_id, row);
-    });
-    return Array.from(firstGameByPlayer.values()).filter((row) => !currentPlayerIds.has(row.player_id));
-  }, [currentPlayerIds, previousRows]);
-  const searchResults = useMemo(() => {
+  const filteredCandidates = useMemo(() => {
     const normalised = query.trim().toLowerCase();
+    if (!normalised) return candidates.filter((candidate) => candidate.isTeamMember || candidate.lastFillInDate || selectedIds.has(candidate.id));
     if (normalised.length < 2) return [];
-    return profiles
-      .filter((profile) => !persistentRosterIds.has(profile.id) && !currentPlayerIds.has(profile.id))
-      .filter((profile) => displayName(profile).toLowerCase().includes(normalised))
-      .slice(0, 30);
-  }, [currentPlayerIds, persistentRosterIds, profiles, query]);
-
-  const selectFillIn = async (playerId: string) => {
-    if (!user) return;
-    setSavingPlayerId(playerId);
-    const { error } = await supabase.from("fixture_fill_ins").upsert(
-      {
-        fixture_id: fixtureId,
-        team_id: teamId,
-        player_id: playerId,
-        status: "SELECTED",
-        access_starts_at: new Date().toISOString(),
-        added_by: user.id,
-      },
-      { onConflict: "fixture_id,team_id,player_id" },
+    return candidates.filter((candidate) =>
+      [fullName(candidate), candidate.nickname, candidate.rosterPosition, candidate.membershipType]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalised)),
     );
+  }, [candidates, query, selectedIds]);
 
-    if (error) {
-      toast.error(`Fill-in was not added: ${error.message}`);
-    } else {
-      toast.success(`${displayName(profileById.get(playerId))} added as a fill-in.`);
-      await load();
-      await onChanged();
-    }
-    setSavingPlayerId(null);
-  };
-
-  const removeFillIn = async (row: FillInRow) => {
-    if (!user) return;
-    setSavingPlayerId(row.player_id);
-    const { error } = await supabase
-      .from("fixture_fill_ins")
-      .update({
-        status: "REMOVED",
-        removed_at: new Date().toISOString(),
-        removed_by: user.id,
-        removal_reason: "Removed from the fixture line-up",
-      })
-      .eq("id", row.id);
-
-    if (error) {
-      toast.error(`Fill-in was not removed: ${error.message}`);
-    } else {
-      toast.success("Fill-in removed from this fixture.");
-      await load();
-      await onChanged();
-    }
-    setSavingPlayerId(null);
+  const apply = () => {
+    onApply(candidates.filter((candidate) => selectedIds.has(candidate.id)));
+    onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Find a fill-in</DialogTitle>
+          <DialogTitle>Roster</DialogTitle>
           <DialogDescription>
-            Fill-ins receive this team’s dashboard, chat and line-up access until one hour after the match.
+            Select the players you want available while building this match line-up. You can return here to add or remove players.
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Loading fill-ins...</p>
-        ) : (
-          <div className="space-y-5">
-            {currentRows.length > 0 && (
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold">Selected for this game</h3>
-                {currentRows.map((row) => (
-                  <div key={row.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{displayName(profileById.get(row.player_id))}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Access ends {new Date(row.access_expires_at).toLocaleString("en-AU")}
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={savingPlayerId === row.player_id}
-                      onClick={() => void removeFillIn(row)}
-                    >
-                      <X className="mr-1 h-4 w-4" /> Remove
-                    </Button>
-                  </div>
-                ))}
-              </section>
-            )}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search all players (type at least two letters)..." className="pl-9" />
+        </div>
 
-            <section className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold">Previous fill-ins</h3>
-                <Badge variant="secondary">{previousPlayers.length}</Badge>
-              </div>
-              {previousPlayers.length === 0 ? (
-                <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">No previous fill-ins for this team.</p>
-              ) : (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {previousPlayers.map((row) => (
-                    <div key={row.player_id} className="flex items-center justify-between gap-2 rounded-md border p-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{displayName(profileById.get(row.player_id))}</p>
-                        {row.fixtures?.fixture_date && (
-                          <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <CalendarDays className="h-3 w-3" /> {formatGameDate(row.fixtures.fixture_date)}
-                          </p>
-                        )}
-                      </div>
-                      <Button
-                        size="sm"
-                        disabled={savingPlayerId === row.player_id}
-                        onClick={() => void selectFillIn(row.player_id)}
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        <span className="sr-only">Add {displayName(profileById.get(row.player_id))}</span>
-                      </Button>
-                    </div>
-                  ))}
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+          {loading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Loading roster...</p>
+          ) : filteredCandidates.length === 0 ? (
+            <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">No matching players.</p>
+          ) : filteredCandidates.map((candidate) => (
+            <label key={candidate.id} className="flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-muted/50">
+              <Checkbox
+                checked={selectedIds.has(candidate.id)}
+                onCheckedChange={(checked) => setSelectedIds((current) => {
+                  const next = new Set(current);
+                  if (checked) next.add(candidate.id);
+                  else next.delete(candidate.id);
+                  return next;
+                })}
+                aria-label={`Select ${fullName(candidate)}`}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{fullName(candidate)}</span>
+                  {candidate.jerseyNumber && <Badge variant="outline">#{candidate.jerseyNumber}</Badge>}
+                  <Badge variant={candidate.isTeamMember ? "secondary" : "outline"}>{candidate.membershipType.replaceAll("_", " ")}</Badge>
                 </div>
-              )}
-            </section>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {candidate.rosterPosition || "No position recorded"} · {candidate.availability.replaceAll("_", " ").toLowerCase()}
+                </p>
+                {candidate.lastFillInDate && !candidate.isTeamMember && (
+                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    <CalendarDays className="h-3 w-3" /> Last selected {formatDate(candidate.lastFillInDate)}
+                  </p>
+                )}
+              </div>
+            </label>
+          ))}
+        </div>
 
-            <section className="space-y-2">
-              <h3 className="text-sm font-semibold">Search players</h3>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Type at least two letters..."
-                  className="pl-9"
-                />
-              </div>
-              {query.trim().length >= 2 && (
-                <div className="max-h-64 space-y-2 overflow-y-auto">
-                  {searchResults.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-muted-foreground">No matching players found.</p>
-                  ) : searchResults.map((profile) => (
-                    <div key={profile.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
-                      <p className="truncate text-sm font-medium">{displayName(profile)}</p>
-                      <Button
-                        size="sm"
-                        disabled={savingPlayerId === profile.id}
-                        onClick={() => void selectFillIn(profile.id)}
-                      >
-                        <UserPlus className="mr-1 h-4 w-4" /> Add
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <div className="mr-auto flex items-center gap-2 text-sm text-muted-foreground">
+            <Users className="h-4 w-4" /> {selectedIds.size} selected
           </div>
-        )}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={apply} disabled={loading}>Use selected roster</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
