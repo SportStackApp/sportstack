@@ -16,8 +16,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - The Cards summary is now an accessible button. It opens a compact list of affected games with the
   date, opponent, result and exact green/yellow/red card counts for the selected history period.
 - The focused lint, TypeScript, Production build and 30 Vitest files/117 tests pass. Full lint remains
-  at the existing 350-error/78-warning baseline. Production is unchanged; deployment and signed-in
-  owner acceptance remain open.
+  at the existing 350-error/78-warning baseline. Commit `7b955e3` is deployed on Dev; Dev Quality,
+  Vercel, deployed-bundle and signed-out return-path checks pass.
+- Production is unchanged. Signed-in owner acceptance remains open.
 
 ## READY-002/003/007 pitch interaction repair — 30 August 2026
 

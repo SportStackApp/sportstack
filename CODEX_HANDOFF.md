@@ -12,8 +12,9 @@ Last updated: 2026-08-30
 - The Cards summary is now a labelled button that opens the affected games and exact green, yellow
   and red card counts for the selected period.
 - Automated checks pass: 30 Vitest files/117 tests, TypeScript, Production build and focused lint.
-  Full lint remains at the existing 350-error/78-warning baseline. Dev deployment and signed-in
-  owner acceptance remain open; `main`, `prod` and Production are unchanged.
+  Full lint remains at the existing 350-error/78-warning baseline. Commit `7b955e3` is deployed on
+  Dev; Dev Quality, Vercel, deployed-bundle and signed-out return-path checks pass.
+- Signed-in owner acceptance remains open; `main`, `prod` and Production are unchanged.
 
 ## 30 August 2026 — READY-002/003/007 pitch interaction repair
 

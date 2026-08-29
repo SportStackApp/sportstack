@@ -52,8 +52,8 @@ Current verified position:
   checks pass; owner click/drag/save/refresh acceptance remains open.
 - READY-005 and READY-006 have a tested Dev repair: an active coaching rating can be cleared without
   losing its note, and the Cards summary opens exact game/card details. The nullable-rating Dev
-  schema change passed preflight and rollback verification; deployment and owner acceptance remain
-  open.
+  schema change passed preflight and rollback verification. Deployment checks pass; signed-in owner
+  acceptance remains open.
 - After that acceptance, the first read-only night cycle audits Admin, Fixtures and RevSports
   sorting, filtering, persistence and diagnostics.
 - The default walk-away boundary is Dev-only, read-only and report-only. Disposable Dev writes need

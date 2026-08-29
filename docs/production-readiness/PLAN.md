@@ -122,12 +122,13 @@ ring, and movement is kept separate from a normal click. Dev Quality, Vercel dep
 bundle and signed-out route checks pass. These findings remain open until Aaron's signed-in click,
 drag, save and refresh checks pass.
 
-READY-005 and READY-006 implementation status on 30 August 2026: the Dev repair and automated tests
-are complete. Selecting the active coaching rating again now clears it without discarding its note.
+READY-005 and READY-006 implementation status on 30 August 2026: the repair is deployed to Dev and
+automated checks pass. Selecting the active coaching rating again now clears it without discarding its note.
 The Cards total is a labelled button that opens each affected game and its green, yellow and red
 card counts. The Dev assessment column now permits null as an explicit cleared state while enforcing
 valid saved ratings from 1 to 4. All eight existing rows were valid and a transaction rollback test
-left them unchanged. These findings remain open until deployment and signed-in owner acceptance.
+left them unchanged. Dev Quality, Vercel, deployed-bundle and signed-out route checks pass. These
+findings remain open until signed-in owner acceptance.
 
 ## C. Screen consistency review
 
