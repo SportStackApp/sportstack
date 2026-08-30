@@ -352,11 +352,11 @@ const FeedbackResponses = () => {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={handleDownloadCsv} disabled={feedbackRows.length === 0}>
+          <Button variant="outline" size="sm" onClick={handleDownloadCsv} disabled={feedbackRows.length === 0} className="text-foreground hover:bg-primary hover:text-primary-foreground">
             <Download className="mr-2 h-4 w-4" />
             Download CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={fetchFeedback}>
+          <Button variant="outline" size="sm" onClick={fetchFeedback} className="text-foreground hover:bg-primary hover:text-primary-foreground">
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>

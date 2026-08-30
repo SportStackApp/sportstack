@@ -127,7 +127,7 @@ const ErrorLogs = () => {
           </p>
         </div>
         {/* Refresh button to reload the list */}
-        <Button variant="outline" size="sm" onClick={fetchLogs}>
+        <Button variant="outline" size="sm" onClick={fetchLogs} className="text-foreground hover:bg-primary hover:text-primary-foreground">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
