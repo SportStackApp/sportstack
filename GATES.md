@@ -2,25 +2,25 @@
 
 Scope: Complete the approved Development batch without changing Production or deleting existing data.
 
-- [x] G1: Profile personal details store preferred name and nickname while leaving preferred-name display precedence parked
+- [ ] G1: Profile personal details store preferred name and nickname while leaving preferred-name display precedence parked
   CHECK: npx vitest run src/lib/profileNames.test.ts
-  EXPECT: 1 test file passed
-  EVIDENCE: Passed as part of the 4-file focused run; 15 focused tests passed.
+  EXPECT: Test Files
+  EVIDENCE: pending
 
-- [x] G2: Requested admin tables expose deterministic accessible ascending and descending sorting
+- [ ] G2: Requested admin tables expose deterministic accessible ascending and descending sorting
   CHECK: npx vitest run src/lib/adminSorting.test.ts
-  EXPECT: 1 test file passed
-  EVIDENCE: Passed as part of the 4-file focused run; focused changed-file ESLint also passed.
+  EXPECT: Test Files
+  EVIDENCE: pending
 
-- [x] G3: The fixture roster workflow persists selected players, nickname display choices and position overrides
+- [ ] G3: The fixture roster workflow persists selected players, nickname display choices and position overrides
   CHECK: npx vitest run src/lib/lineupPlanner.test.ts
-  EXPECT: 1 test file passed
-  EVIDENCE: Passed as part of the 4-file focused run; live Dev schema contains both RLS-protected line-up tables.
+  EXPECT: Test Files
+  EVIDENCE: pending
 
-- [x] G4: Coaching position traits support area-only, side-only, combined and goalkeeper cases
+- [ ] G4: Coaching position traits support area-only, side-only, combined and goalkeeper cases
   CHECK: npx vitest run src/lib/hockeyPositions.test.ts
-  EXPECT: 1 test file passed
-  EVIDENCE: Passed as part of the 4-file focused run.
+  EXPECT: Test Files
+  EVIDENCE: pending
 
 - [x] G5: Development database migration and RLS regression checks pass without retained test data
   EVIDENCE: Linked CLI test was blocked by Supabase HTTP 403. The exact migration plus assertions passed inside BEGIN/ROLLBACK through the authorised Supabase connection, then applied to Dev. Post-apply counts were 2 profile columns, 3 RLS tables and 2 intended MVP policies.
@@ -28,17 +28,17 @@ Scope: Complete the approved Development batch without changing Production or de
 - [x] G6: Focused frontend tests pass
   CHECK: npx vitest run
   EXPECT: Test Files
-  EVIDENCE: 28 files and 111 tests passed.
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  703ms (transform 2.12s, setup 0ms, import 3.12s, tests 197ms, environment 3ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vi
 
 - [x] G7: TypeScript validates the complete application
   CHECK: npx tsc --noEmit
   EXPECT: /(?:^|\n)\s*$/
-  EVIDENCE: Passed with exit code 0 and no diagnostics.
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=(no output)
 
 - [x] G8: Production build succeeds
   CHECK: npm run build
   EXPECT: built in
-  EVIDENCE: Vite built 3,123 modules in 2.15 seconds. Existing chunk/Browserslist warnings remain.
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting | - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
 
 - [x] G9: Full lint is measured and any pre-existing baseline debt is reported separately from new errors
   EVIDENCE: Full lint reproduced repository debt at 350 errors/78 warnings. Focused lint over changed implementation files passed with zero findings; Profile, AdminDashboard and Analytics retain pre-existing any/hook debt.
@@ -49,27 +49,27 @@ Scope: Complete the approved Development batch without changing Production or de
 - [x] G11: Canonical documentation is updated and Big Brain synchronisation passes after the Development commit
   CHECK: pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check
   EXPECT: CHECK_OK
-  EVIDENCE: SYNC_OK and CHECK_OK passed against origin/dev commit 16839fe; 57 files mirrored to Big Brain.
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=CHECK_OK ref=origin/dev commit=09efcb18f4f1d4b6bf68c3d985854544a83d635a files=61 vault=C:\Users\mulla\OneDrive\Documents\Big Brain
 
 - [x] G12: Club Admin can open Player MVP analytics while individual ballots remain limited to Super Admin and Club Admin scope
   CHECK: npx vitest run src/lib/adminAnalyticsAccess.test.ts
   EXPECT: Test Files
-  EVIDENCE: Focused access tests passed, including the separate route and individual-ballot rules.
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  171ms (transform 18ms, setup 0ms, import 30ms, tests 2ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
 - [x] G13: The explicitly chosen line-up team survives refresh without overriding an invalid or inaccessible team
   CHECK: npx vitest run src/lib/lineupTeamSelection.test.ts
   EXPECT: Test Files
-  EVIDENCE: Focused tests passed for valid restore, inaccessible restore rejection, scoped-team fallback and per-user/per-fixture storage keys.
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  399ms (transform 17ms, setup 0ms, import 28ms, tests 2ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
 - [x] G14: The mobile pitch uses a portrait mapping and converts dragged coordinates back to the saved landscape formation
   CHECK: npx vitest run src/lib/lineupPlanner.test.ts
   EXPECT: Test Files
-  EVIDENCE: Line-up planner tests passed for portrait rotation, orientation detection and drag conversion back to canonical landscape coordinates.
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  174ms (transform 26ms, setup 0ms, import 38ms, tests 3ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
 - [x] G15: Every Profile role, including Legacy Umpire Admin, has a visible label and icon
   CHECK: npx vitest run src/lib/profileRoles.test.ts
   EXPECT: Test Files
-  EVIDENCE: Focused role-catalogue test passed for all nine live enum values.
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  156ms (transform 17ms, setup 0ms, import 28ms, tests 2ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
 - [ ] G16: The formation selector has an accessible name and the repaired line-up passes desktop and mobile browser checks without marker overlap or clipping
   EVIDENCE: Formation now has the accessible name in code; deployed desktop/mobile browser evidence remains pending.
@@ -83,7 +83,7 @@ Scope: Complete the approved Development batch without changing Production or de
 - [x] G19: The walk-away findings and repair results are committed to Dev, mirrored into Big Brain and verified by the sync check
   CHECK: pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check
   EXPECT: CHECK_OK
-  EVIDENCE: Repository findings and deployed-repair results were pushed through b980446; SYNC_OK and CHECK_OK mirrored 61 files at that exact origin/dev commit.
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=CHECK_OK ref=origin/dev commit=09efcb18f4f1d4b6bf68c3d985854544a83d635a files=61 vault=C:\Users\mulla\OneDrive\Documents\Big Brain
 
 ABANDON: G16 Current unattended run cannot reach the authenticated line-up; the in-app tab is not controllable and the normal Chrome profile attempt timed out and reached Dev signed out.
 ABANDON: G18 Current unattended run cannot reset or sign into the reserved Dev accounts because the controllable browser lost its authenticated Super Admin hand-off.
