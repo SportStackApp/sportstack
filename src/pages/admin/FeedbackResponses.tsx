@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Download, ExternalLink, MessageSquare, RefreshCw, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -373,7 +373,7 @@ const FeedbackResponses = () => {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Submitted Feedback</CardTitle>
+            <h2 className="font-display text-2xl font-semibold leading-none tracking-wide">Submitted Feedback</h2>
             <CardDescription>{feedbackRows.length} item(s), newest first</CardDescription>
           </CardHeader>
           <CardContent>

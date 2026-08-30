@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
+  Card, CardContent, CardDescription, CardHeader,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -146,7 +146,7 @@ const ErrorLogs = () => {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Logged Errors</CardTitle>
+            <h2 className="font-display text-2xl font-semibold leading-none tracking-wide">Logged Errors</h2>
             <CardDescription>{logs.length} error(s) recorded (showing latest 100)</CardDescription>
           </CardHeader>
           <CardContent>
