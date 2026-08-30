@@ -84,6 +84,7 @@ import TeamDashboard from "./pages/TeamDashboard";
 import AppLayout from "./components/layout/AppLayout";
 import { GlobalLoadingBar } from "./components/GlobalLoadingBar";
 import { ThemeAccountSync } from "./components/ThemeAccountSync";
+import { ANALYTICS_ADMIN_MODES } from "./lib/adminAnalyticsAccess";
 
 // Auth
 import { AuthProvider } from "./contexts/AuthContext";
@@ -232,7 +233,7 @@ const App = () => (
                       <Route path="/admin/mvp-voting/tallies" element={<ModeRouteGate allowedModes={MVP_ADMIN_MODES}><ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpTallyAdmin /></ModuleGate></ModeRouteGate>} />
                       <Route path="/admin/umpire-voting" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><ModuleGate moduleKey="umpire_match_voting" moduleLabel="Umpire Match Voting"><UmpireVotingModule /></ModuleGate></ModeRouteGate>} />
                       <Route path="/admin/safety-risk" element={<ModeRouteGate allowedModes={ADMIN_MODES}><ModuleGate moduleKey="safety_risk" moduleLabel="Risk & Quality Improvement"><SafetyRiskModule /></ModuleGate></ModeRouteGate>} />
-                      <Route path="/admin/analytics" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><Analytics /></ModeRouteGate>} />
+                      <Route path="/admin/analytics" element={<ModeRouteGate allowedModes={ANALYTICS_ADMIN_MODES}><Analytics /></ModeRouteGate>} />
                       <Route path="/admin/roles-permissions" element={<ModeRouteGate allowedModes={ADMIN_MODES}><RolesPermissions /></ModeRouteGate>} />
                       <Route path="/admin/module-preview" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><ModuleLayoutPreview /></ModeRouteGate>} />
 

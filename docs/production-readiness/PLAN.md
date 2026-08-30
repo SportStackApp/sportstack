@@ -28,7 +28,7 @@ This is a release programme, not a promise that Production is ready today.
 
 The snapshot must be refreshed at the start of each work cycle.
 
-- Dev is `a08fad1`; Main is `d48239d` and is five commits behind Dev.
+- Dev is `5de25e5`; Main is `d48239d` and is 12 commits behind Dev.
 - Production is `682b8ea` and is 195 commits behind Main.
 - Dev Quality passed for `74f6d93`.
 - The latest Production Supabase Scrapers run failed because three manually targeted games were
@@ -105,6 +105,11 @@ Repair these in small Dev-only batches, highest risk first.
 | READY-008 | Medium, confirm first | Quick Action arrows may move an item within the full catalogue rather than the visible authorised list. | A scoped admin can visibly reorder only actions they can access; hidden actions do not disrupt the order. |
 | READY-009 | High operational | The latest Production scraper workflow failed because required target input was blank. | Invalid targeted runs fail before jobs fan out with a clear message, and a correctly configured rerun passes. |
 | READY-010 | Medium coverage | Authenticated focus/persistence and several actual-role workflows still lack complete evidence. | Complete the role and persistence cycles in sections C and D. |
+| READY-011 | Medium | A multi-team line-up can reset from the selected Pumas view to Blaze after refresh. | Remember the valid fixture team for the signed-in browser session; never restore a team outside the user's current access. |
+| READY-012 | Medium | At mobile width, the landscape pitch compresses player markers and clips labels. | Use a portrait pitch below the mobile breakpoint, preserve saved landscape coordinates and keep every marker/label readable and draggable. |
+| READY-013 | Medium | Club Admin is redirected away from Player MVP analytics before the existing club-scoped individual audit can render. | Allow Club Admin through the analytics route; keep raw ballots limited to Super Admin and the Club Admin's own club. Association Admin remains aggregate-only. |
+| READY-014 | Medium accessibility | The line-up formation selector has no accessible name. | Expose a stable **Formation** name and pass the focused accessibility check. |
+| READY-015 | Low | Profile can display an icon followed by a blank role name for the legacy umpire-admin enum value. | Every live database role has a plain-English label; the legacy value displays as **Legacy Umpire Admin**. |
 
 Additional confirmed defects found during the audit enter this table before repair. Avoid mixing
 unrelated fixes into one commit.
@@ -136,6 +141,15 @@ as **Defender - Left**, **Midfielder - Centre** and **Attacker - Right**. Area-o
 Goalkeeper choices remain available for flexible selections. Existing separate preference rows are
 still displayed and were not guessed into pairs or rewritten. Dev Quality, Vercel and the deployed
 bundle checks pass. The finding remains open until signed-in owner save/reload acceptance.
+
+READY-011 to READY-015 implementation status on 30 August 2026: the local Dev repairs are complete.
+The selected fixture team is stored per user and fixture in session storage and validated against
+current access before use. The mobile pitch rotates its presentation while translating pointer
+movement back to the same canonical coordinates used on desktop. Club Admin is included in the
+analytics route but the individual-ballot check remains Super Admin or Club Admin only. The
+formation selector is named and all database role values have labels. Regression tests, TypeScript
+and the Production build pass. These findings remain open until deployment and signed-in Dev
+desktop/mobile retesting.
 
 ## C. Screen consistency review
 

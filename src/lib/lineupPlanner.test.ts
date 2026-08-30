@@ -4,6 +4,9 @@ import {
   displayedFormationPosition,
   mergeRosterProfileRows,
   missingRosterProfileIds,
+  orientedPitchPosition,
+  pitchOrientationFromBounds,
+  pitchPositionFromOrientedPointer,
   pitchPositionFromPointer,
   pitchPlayerLabel,
   uniqueRosterIds,
@@ -56,6 +59,22 @@ describe("line-up planner", () => {
       { left: 100, top: 100, width: 400, height: 400 },
       { x: 20, y: -10 },
     )).toEqual({ xPercent: 15, yPercent: 42.5 });
+  });
+
+  it("rotates landscape formation positions for a portrait phone pitch", () => {
+    expect(orientedPitchPosition({ xPercent: 20, yPercent: 35 }, "portrait"))
+      .toEqual({ xPercent: 35, yPercent: 80 });
+    expect(pitchOrientationFromBounds({ left: 0, top: 0, width: 390, height: 629 })).toBe("portrait");
+  });
+
+  it("converts portrait dragging back to canonical landscape coordinates", () => {
+    expect(pitchPositionFromOrientedPointer(
+      195,
+      157.25,
+      { left: 0, top: 0, width: 390, height: 629 },
+      { x: 0, y: 0 },
+      "portrait",
+    )).toEqual({ xPercent: 75, yPercent: 50 });
   });
 
   it("uses nickname only when the fixture selection enables it", () => {

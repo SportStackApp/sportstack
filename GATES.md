@@ -41,13 +41,46 @@ Scope: Complete the approved Development batch without changing Production or de
   EVIDENCE: Vite built 3,123 modules in 2.15 seconds. Existing chunk/Browserslist warnings remain.
 
 - [x] G9: Full lint is measured and any pre-existing baseline debt is reported separately from new errors
-  CHECK: npm run lint
   EVIDENCE: Full lint reproduced repository debt at 350 errors/78 warnings. Focused lint over changed implementation files passed with zero findings; Profile, AdminDashboard and Analytics retain pre-existing any/hook debt.
 
-- [ ] G10: Signed-in Development browser smoke confirms the completed workflows on desktop and mobile
-  EVIDENCE: pending
+- [x] G10: Signed-in Development browser smoke confirms the completed workflows on desktop and mobile
+  EVIDENCE: The 30 August walk-away run used actual Player, Coach and Club Admin Dev accounts. READY-001 through READY-008 passed; five new issues were recorded separately with desktop and mobile evidence.
 
 - [x] G11: Canonical documentation is updated and Big Brain synchronisation passes after the Development commit
   CHECK: pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check
   EXPECT: CHECK_OK
   EVIDENCE: SYNC_OK and CHECK_OK passed against origin/dev commit 16839fe; 57 files mirrored to Big Brain.
+
+- [x] G12: Club Admin can open Player MVP analytics while individual ballots remain limited to Super Admin and Club Admin scope
+  CHECK: npx vitest run src/lib/adminAnalyticsAccess.test.ts
+  EXPECT: Test Files
+  EVIDENCE: Focused access tests passed, including the separate route and individual-ballot rules.
+
+- [x] G13: The explicitly chosen line-up team survives refresh without overriding an invalid or inaccessible team
+  CHECK: npx vitest run src/lib/lineupTeamSelection.test.ts
+  EXPECT: Test Files
+  EVIDENCE: Focused tests passed for valid restore, inaccessible restore rejection, scoped-team fallback and per-user/per-fixture storage keys.
+
+- [x] G14: The mobile pitch uses a portrait mapping and converts dragged coordinates back to the saved landscape formation
+  CHECK: npx vitest run src/lib/lineupPlanner.test.ts
+  EXPECT: Test Files
+  EVIDENCE: Line-up planner tests passed for portrait rotation, orientation detection and drag conversion back to canonical landscape coordinates.
+
+- [x] G15: Every Profile role, including Legacy Umpire Admin, has a visible label and icon
+  CHECK: npx vitest run src/lib/profileRoles.test.ts
+  EXPECT: Test Files
+  EVIDENCE: Focused role-catalogue test passed for all nine live enum values.
+
+- [ ] G16: The formation selector has an accessible name and the repaired line-up passes desktop and mobile browser checks without marker overlap or clipping
+  EVIDENCE: Formation now has the accessible name in code; deployed desktop/mobile browser evidence remains pending.
+
+- [x] G17: Focused lint, the complete Vitest suite, TypeScript and the Production build pass for the repair batch
+  EVIDENCE: Focused lint and TypeScript passed with no diagnostics; 33 Vitest files/127 tests and the Production build passed. Full lint remains unchanged at the established 350 errors/78 warnings.
+
+- [ ] G18: Actual-role Dev testing records Association Admin, Club Admin, Team Manager, Coach, Player, Umpire and Voter outcomes without changing normal accounts
+  EVIDENCE: pending
+
+- [ ] G19: The walk-away findings and repair results are committed to Dev, mirrored into Big Brain and verified by the sync check
+  CHECK: pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check
+  EXPECT: CHECK_OK
+  EVIDENCE: pending

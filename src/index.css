@@ -208,6 +208,18 @@
 }
 
 @layer utilities {
+  .lineup-marker {
+    left: var(--pitch-mobile-left);
+    top: var(--pitch-mobile-top);
+  }
+
+  @media (min-width: 640px) {
+    .lineup-marker {
+      left: var(--pitch-desktop-left);
+      top: var(--pitch-desktop-top);
+    }
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.5s ease-out forwards;
   }

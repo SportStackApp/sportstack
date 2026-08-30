@@ -36,6 +36,7 @@ import {
   emptyCascadeValue,
   type CascadeValue,
 } from "@/lib/adminCascade";
+import { canViewIndividualPlayerMvpVotes } from "@/lib/adminAnalyticsAccess";
 
 // Cast the Supabase client to `any` type to widen API support for these tables
 const supabase = originalSupabase as any;
@@ -100,7 +101,7 @@ export default function Analytics() {
   const { loading: scopeLoading, isAnyAdmin, isSuperAdmin, highestScopedRole, scopedAssociationIds, scopedClubIds } = useAdminScope();
 
   // Determine whether the current user has access to view the individual votes section
-  const isPrivilegedAdmin = isSuperAdmin || highestScopedRole === "CLUB_ADMIN";
+  const isPrivilegedAdmin = canViewIndividualPlayerMvpVotes(isSuperAdmin, highestScopedRole);
 
   // 2. STATE VARIABLES
   // Main data lists fetched from Supabase

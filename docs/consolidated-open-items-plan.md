@@ -64,6 +64,24 @@ Current verified position:
 - The default walk-away boundary is Dev-only, read-only and report-only. Disposable Dev writes need
   a named charter; Production remains separately approval-gated.
 
+### 30 August walk-away consistency cycle
+
+**In progress now**
+
+- The signed-in Dev cycle completed the planned sorting, persistence, role, accessibility and
+  responsive checks across Admin, Fixtures, RevSports Review, Player MVP, Safety Hub, Profile,
+  Coaching and line-up screens. No Blocker or High issue was found.
+- READY-011 to READY-015 record the five findings: line-up team refresh persistence, mobile pitch
+  layout, Club Admin Player MVP analytics routing, formation-control labelling and the blank legacy
+  role label. Local repairs and regression tests pass; deployed Dev retesting is next.
+
+**Next**
+
+- Deploy the repair to Dev, rerun the original desktop/mobile steps and complete actual-role checks
+  for Association Admin, Team Manager, Umpire and Voter using only the reserved disposable accounts.
+- Refresh the route/table/form registers from observed evidence. Main staging remains after Dev
+  acceptance; Production remains separately approval-gated.
+
 ### 29 August admin, line-up and coaching batch
 
 **In progress now**

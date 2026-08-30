@@ -2,6 +2,17 @@
 
 Last updated: 2026-08-30
 
+## 30 August 2026 — walk-away consistency cycle and repair
+
+- The completed signed-in Dev cycle found zero Blocker/High, four Medium and one Low defect. Existing
+  sorting, RevSports filters, Quick Actions and repaired line-up interactions passed their checks.
+- READY-011 to READY-015 cover the new defects: fixture team choice reset, cramped mobile pitch,
+  Club Admin Player MVP route block, unlabelled formation select and blank legacy role label.
+- Local repairs are implemented with focused regression coverage. Current checks pass: 33 Vitest
+  files/127 tests, TypeScript and Production build. Deployment and signed-in Dev retesting remain.
+- Actual-role checks remain incomplete for Association Admin, Team Manager, Umpire and Voter. No
+  Main, `prod`, Production or database change is included.
+
 ## 30 August 2026 — walk-away Dev-account operating rule
 
 - Aaron reaffirmed that the seven reserved disposable Dev identities on **Roles & modules → Dev

@@ -11,6 +11,7 @@ import { useTeamContext } from "@/contexts/TeamContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getLineupAccess, type LineupAccess } from "@/lib/lineupAccess";
+import { chooseInitialLineupTeam, lineupTeamStorageKey } from "@/lib/lineupTeamSelection";
 
 interface GameRow {
   id: string;
@@ -26,6 +27,22 @@ interface GameRow {
 
 const FIXTURE_SELECT =
   "id, fixture_date, status, venue_id, home_team_id, away_team_id, home_team:teams!home_team_id(id, name), away_team:teams!away_team_id(id, name), venue:venues!venue_id(id, name)";
+
+const readStoredLineupTeam = (key: string): string | null => {
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const storeLineupTeam = (key: string, teamId: string): void => {
+  try {
+    window.sessionStorage.setItem(key, teamId);
+  } catch {
+    // The selection still works for this page load when browser storage is unavailable.
+  }
+};
 
 const Lineup = () => {
   const { id } = useParams();
@@ -46,10 +63,14 @@ const Lineup = () => {
       setGame(fixture);
       if (fixture) {
         const accessResult = await getLineupAccess(user?.id, fixture);
-        const preferredTeamId =
-          selectedTeam?.id && accessResult.visibleTeamIds.includes(selectedTeam.id)
-            ? selectedTeam.id
-            : accessResult.visibleTeamIds[0] || fixture.home_team_id;
+        const storageKey = lineupTeamStorageKey(user?.id, id);
+        const persistedTeamId = readStoredLineupTeam(storageKey);
+        const preferredTeamId = chooseInitialLineupTeam({
+          persistedTeamId,
+          selectedTeamId: selectedTeam?.id,
+          visibleTeamIds: accessResult.visibleTeamIds,
+          fallbackTeamId: fixture.home_team_id,
+        });
         setAccess(accessResult);
         setLineupTeamId(preferredTeamId);
         setIsCoachView(accessResult.editableTeamIds.includes(preferredTeamId));
@@ -111,6 +132,7 @@ const Lineup = () => {
   const opponentName = activeLineupTeamId === game.away_team_id ? homeTeam : awayTeam;
   const gameDate = new Date(game.fixture_date);
   const changeLineupTeam = (teamId: string) => {
+    storeLineupTeam(lineupTeamStorageKey(user?.id, game.id), teamId);
     setLineupTeamId(teamId);
     setIsCoachView(access.editableTeamIds.includes(teamId));
   };

@@ -4,6 +4,7 @@ import { formatPitchPlayerName, type PersonNameParts } from "./profileNames";
 export type PitchPositionOverride = { xPercent: number; yPercent: number };
 export type PitchBounds = { left: number; top: number; width: number; height: number };
 export type PointerOffset = { x: number; y: number };
+export type PitchOrientation = "landscape" | "portrait";
 
 export function clampPitchCoordinate(value: number): number {
   return Math.min(100, Math.max(0, Number(value.toFixed(3))));
@@ -28,6 +29,35 @@ export function pitchPositionFromPointer(
     xPercent: clampPitchCoordinate((((clientX - offset.x) - bounds.left) / bounds.width) * 100),
     yPercent: clampPitchCoordinate((((clientY - offset.y) - bounds.top) / bounds.height) * 100),
   };
+}
+
+export function pitchOrientationFromBounds(bounds: PitchBounds): PitchOrientation {
+  return bounds.height > bounds.width ? "portrait" : "landscape";
+}
+
+export function orientedPitchPosition(
+  position: PitchPositionOverride,
+  orientation: PitchOrientation,
+): PitchPositionOverride {
+  return orientation === "portrait"
+    ? { xPercent: position.yPercent, yPercent: 100 - position.xPercent }
+    : position;
+}
+
+export function pitchPositionFromOrientedPointer(
+  clientX: number,
+  clientY: number,
+  bounds: PitchBounds,
+  offset: PointerOffset,
+  orientation: PitchOrientation,
+): PitchPositionOverride {
+  const displayedPosition = pitchPositionFromPointer(clientX, clientY, bounds, offset);
+  return orientation === "portrait"
+    ? {
+        xPercent: clampPitchCoordinate(100 - displayedPosition.yPercent),
+        yPercent: clampPitchCoordinate(displayedPosition.xPercent),
+      }
+    : displayedPosition;
 }
 
 export function pitchPlayerLabel(

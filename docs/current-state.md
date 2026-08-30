@@ -6,6 +6,24 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 30 August walk-away consistency findings and repair — in progress
+
+- A signed-in Dev walk-away cycle completed the Admin, Fixtures, RevSports Review, Player MVP,
+  Safety Hub, Profile, Coaching and line-up checks. It found no Blocker or High defect, four Medium
+  defects and one Low defect. Sorting, RevSports filter persistence/default-Unmatched behaviour,
+  Quick Action persistence and the previously repaired line-up interactions passed.
+- The five recorded defects are: line-up team choice resetting on refresh, cramped mobile line-up
+  markers, Club Admin being blocked at the Player MVP analytics route, an unlabelled formation
+  selector and a blank legacy role label on Profile.
+- A local Dev repair now remembers the chosen fixture team for the browser session, rotates the pitch
+  into portrait on small screens while preserving canonical drag coordinates, allows Club Admin
+  through the route while keeping Association Admin out of individual ballots, labels the formation
+  control and displays **Legacy Umpire Admin** instead of a blank role.
+- Local verification passes: 33 Vitest files/127 tests, TypeScript and the Production build. The
+  repair remains open until it is committed, deployed and retested in the signed-in Dev browser.
+- Actual-role coverage is still incomplete for Association Admin, Team Manager, Umpire and Voter.
+  Production, `prod`, Main and live data are unchanged.
+
 ## Walk-away Dev accounts and browser pre-flight — 30 August 2026
 
 - **Standing owner authority:** the seven reserved disposable Dev accounts for Association Admin,

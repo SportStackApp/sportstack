@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { RotateCcw, Save, Search, UserMinus, UserPlus, Users } from "lucide-react";
 import { supabase as typedSupabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,7 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { HockeyPitch } from "./HockeyPitch";
 import { RosterSelectorDialog, type RosterCandidate } from "./FillInFinderDialog";
 import { type FormationIconRow, type FormationPositionRow, type FormationRow, formatOwnerScope, getFormationFieldSource } from "@/lib/formationPlanner";
-import { displayedFormationPosition, pitchPlayerLabel, pitchPositionFromPointer, type PitchPositionOverride, type PointerOffset } from "@/lib/lineupPlanner";
+import {
+  displayedFormationPosition,
+  orientedPitchPosition,
+  pitchOrientationFromBounds,
+  pitchPlayerLabel,
+  pitchPositionFromOrientedPointer,
+  type PitchOrientation,
+  type PitchPositionOverride,
+  type PointerOffset,
+} from "@/lib/lineupPlanner";
 import { formatStandardName } from "@/lib/profileNames";
 import { loadPlayerHistory, type PlayerHistoryRecord } from "@/lib/playerHistory";
 import { playerHistoryForCalendarYear } from "@/lib/playerHistoryFilters";
@@ -46,6 +55,7 @@ type MarkerDrag = {
   startX: number;
   startY: number;
   moved: boolean;
+  orientation: PitchOrientation;
 };
 
 export const LineupView = ({ gameId, fixtureDate, teamId, teamName, opponentName, isCoach = false }: LineupViewProps) => {
@@ -170,10 +180,13 @@ export const LineupView = ({ gameId, fixtureDate, teamId, teamName, opponentName
     setAssignments({}); setBenchIds(placedIds); setPositionOverrides({}); setSelectedPositionId(null); setSelectedFormationId(formationId);
     if (placedIds.length) toast.info("Placed players moved to the bench for the new formation.");
   };
-  const moveMarker = (positionId: string, clientX: number, clientY: number, offset: PointerOffset) => {
+  const moveMarker = (positionId: string, clientX: number, clientY: number, offset: PointerOffset, orientation: PitchOrientation) => {
     const bounds = pitchRef.current?.getBoundingClientRect();
     if (!bounds) return;
-    setPositionOverrides((current) => ({ ...current, [positionId]: pitchPositionFromPointer(clientX, clientY, bounds, offset) }));
+    setPositionOverrides((current) => ({
+      ...current,
+      [positionId]: pitchPositionFromOrientedPointer(clientX, clientY, bounds, offset, orientation),
+    }));
   };
 
   const mirrorLegacyLineups = async () => {
@@ -259,22 +272,32 @@ export const LineupView = ({ gameId, fixtureDate, teamId, teamName, opponentName
         <CardHeader className="pb-3"><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="text-lg">{teamName} Line-up</CardTitle><p className="text-sm text-muted-foreground">vs {opponentName}</p></div><Badge variant="outline" className="gap-1"><Users className="h-3 w-3" /> {Object.keys(assignments).length}/{positions.filter((position) => position.is_starting_slot).length}</Badge></div></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
-            <Select value={selectedFormationId} onValueChange={changeFormation} disabled={!isCoach}><SelectTrigger><SelectValue placeholder="Choose formation" /></SelectTrigger><SelectContent><SelectItem value="__none__">Choose a formation</SelectItem>{formations.map((formation) => <SelectItem key={formation.id} value={formation.id}>{formation.name} - {formatOwnerScope(formation.owner_scope)}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedFormationId} onValueChange={changeFormation} disabled={!isCoach}><SelectTrigger aria-label="Formation"><SelectValue placeholder="Choose formation" /></SelectTrigger><SelectContent><SelectItem value="__none__">Choose a formation</SelectItem>{formations.map((formation) => <SelectItem key={formation.id} value={formation.id}>{formation.name} - {formatOwnerScope(formation.owner_scope)}</SelectItem>)}</SelectContent></Select>
             {isCoach && <Button variant="outline" onClick={() => setRosterDialogOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Select roster</Button>}
             {isCoach && <Button variant="outline" onClick={() => setPositionOverrides({})} disabled={!Object.keys(positionOverrides).length}><RotateCcw className="mr-2 h-4 w-4" /> Reset positions</Button>}
             {isCoach && <Button onClick={() => void saveLineup()} disabled={saving || selectedFormationId === "__none__"}><Save className="mr-2 h-4 w-4" />{saving ? "Saving..." : "Save"}</Button>}
           </div>
           {roster.length === 0 && isCoach && <button type="button" onClick={() => setRosterDialogOpen(true)} className="w-full rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground hover:border-primary hover:text-foreground">Start by selecting the match roster.</button>}
           <div ref={pitchRef}>
-            <HockeyPitch backgroundUrl={fieldSource.background_image_url}>
+            <HockeyPitch backgroundUrl={fieldSource.background_image_url} orientation="responsive">
               {positions.map((originalPosition) => {
                 const position = displayedFormationPosition(originalPosition, positionOverrides[originalPosition.id]);
+                const mobilePosition = orientedPitchPosition(
+                  { xPercent: position.x_percent, yPercent: position.y_percent },
+                  "portrait",
+                );
+                const markerStyle = {
+                  "--pitch-desktop-left": `${position.x_percent}%`,
+                  "--pitch-desktop-top": `${position.y_percent}%`,
+                  "--pitch-mobile-left": `${mobilePosition.xPercent}%`,
+                  "--pitch-mobile-top": `${mobilePosition.yPercent}%`,
+                } as CSSProperties;
                 const player = roster.find((item) => item.id === assignments[originalPosition.id]);
                 const icon = icons.find((item) => item.id === originalPosition.icon_id);
                 const selected = selectedPositionId === originalPosition.id || Boolean(player && historyPlayerId === player.id);
-                return <button key={originalPosition.id} type="button" aria-label={`${originalPosition.name}: ${player ? fullName(player) : "unassigned"}`} className={cn("absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg", selected ? "scale-110 bg-accent ring-4 ring-amber-400 ring-offset-2 ring-offset-[#2d8a4e]" : player ? "bg-primary text-primary-foreground" : "bg-background/80", isCoach && "touch-none cursor-grab hover:scale-105 active:cursor-grabbing")} style={{ left: `${position.x_percent}%`, top: `${position.y_percent}%` }} onClick={() => { if (suppressMarkerClickRef.current === originalPosition.id) { suppressMarkerClickRef.current = null; return; } const nextSelected = !selected; if (isCoach) setSelectedPositionId(nextSelected ? originalPosition.id : null); if (player) setHistoryPlayerId(nextSelected ? player.id : null); }} onPointerDown={(event) => { if (!isCoach) return; const bounds = pitchRef.current?.getBoundingClientRect(); if (!bounds) return; markerDragRef.current = { positionId: originalPosition.id, pointerId: event.pointerId, offset: { x: event.clientX - (bounds.left + (position.x_percent / 100) * bounds.width), y: event.clientY - (bounds.top + (position.y_percent / 100) * bounds.height) }, startX: event.clientX, startY: event.clientY, moved: false }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { const drag = markerDragRef.current; if (!isCoach || !drag || drag.positionId !== originalPosition.id || drag.pointerId !== event.pointerId) return; if (!drag.moved && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 3) return; drag.moved = true; event.preventDefault(); moveMarker(originalPosition.id, event.clientX, event.clientY, drag.offset); }} onPointerUp={(event) => { const drag = markerDragRef.current; if (drag?.pointerId === event.pointerId && drag.moved) suppressMarkerClickRef.current = drag.positionId; if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); if (drag?.pointerId === event.pointerId) markerDragRef.current = null; }} onPointerCancel={(event) => { if (markerDragRef.current?.pointerId === event.pointerId) markerDragRef.current = null; }} onDragOver={(event) => isCoach && event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (isCoach && draggingPlayerId) assignPlayerToPosition(draggingPlayerId, originalPosition.id); setDraggingPlayerId(null); }}>
+                return <button key={originalPosition.id} type="button" aria-label={`${originalPosition.name}: ${player ? fullName(player) : "unassigned"}`} className={cn("lineup-marker absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg", selected ? "scale-110 bg-accent ring-4 ring-amber-400 ring-offset-2 ring-offset-[#2d8a4e]" : player ? "bg-primary text-primary-foreground" : "bg-background/80", isCoach && "touch-none cursor-grab hover:scale-105 active:cursor-grabbing")} style={markerStyle} onClick={() => { if (suppressMarkerClickRef.current === originalPosition.id) { suppressMarkerClickRef.current = null; return; } const nextSelected = !selected; if (isCoach) setSelectedPositionId(nextSelected ? originalPosition.id : null); if (player) setHistoryPlayerId(nextSelected ? player.id : null); }} onPointerDown={(event) => { if (!isCoach) return; const bounds = pitchRef.current?.getBoundingClientRect(); if (!bounds) return; const orientation = pitchOrientationFromBounds(bounds); const displayedPosition = orientedPitchPosition({ xPercent: position.x_percent, yPercent: position.y_percent }, orientation); markerDragRef.current = { positionId: originalPosition.id, pointerId: event.pointerId, offset: { x: event.clientX - (bounds.left + (displayedPosition.xPercent / 100) * bounds.width), y: event.clientY - (bounds.top + (displayedPosition.yPercent / 100) * bounds.height) }, startX: event.clientX, startY: event.clientY, moved: false, orientation }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { const drag = markerDragRef.current; if (!isCoach || !drag || drag.positionId !== originalPosition.id || drag.pointerId !== event.pointerId) return; if (!drag.moved && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 3) return; drag.moved = true; event.preventDefault(); moveMarker(originalPosition.id, event.clientX, event.clientY, drag.offset, drag.orientation); }} onPointerUp={(event) => { const drag = markerDragRef.current; if (drag?.pointerId === event.pointerId && drag.moved) suppressMarkerClickRef.current = drag.positionId; if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); if (drag?.pointerId === event.pointerId) markerDragRef.current = null; }} onPointerCancel={(event) => { if (markerDragRef.current?.pointerId === event.pointerId) markerDragRef.current = null; }} onDragOver={(event) => isCoach && event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (isCoach && draggingPlayerId) assignPlayerToPosition(draggingPlayerId, originalPosition.id); setDraggingPlayerId(null); }}>
                   {icon?.image_url ? <img src={icon.image_url} alt="" className="h-12 w-12 rounded-full object-cover" /> : <span className="flex h-12 w-12 items-center justify-center text-xs font-bold">{player?.jerseyNumber || originalPosition.code}</span>}
-                  <span className="absolute left-1/2 top-full mt-1 whitespace-nowrap -translate-x-1/2 rounded bg-background/90 px-1 text-[10px] font-semibold text-foreground">{player ? pitchPlayerLabel({ firstName: player.firstName, lastName: player.lastName, nickname: player.nickname }, player.displayNickname) : originalPosition.code}</span>
+                  <span className={cn("absolute left-1/2 top-full mt-1 max-w-[76px] -translate-x-1/2 truncate whitespace-nowrap rounded bg-background/90 px-1 text-[9px] font-semibold text-foreground sm:max-w-none sm:text-[10px]", originalPosition.x_percent < 15 && "max-sm:bottom-full max-sm:top-auto max-sm:mb-1 max-sm:mt-0", originalPosition.y_percent < 15 && "max-sm:left-0 max-sm:translate-x-0", originalPosition.y_percent > 85 && "max-sm:left-auto max-sm:right-0 max-sm:translate-x-0")}>{player ? pitchPlayerLabel({ firstName: player.firstName, lastName: player.lastName, nickname: player.nickname }, player.displayNickname) : originalPosition.code}</span>
                 </button>;
               })}
             </HockeyPitch>

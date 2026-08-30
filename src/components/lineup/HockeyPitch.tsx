@@ -5,7 +5,7 @@ interface HockeyPitchProps {
   children: React.ReactNode;
   className?: string;
   backgroundUrl?: string | null;
-  orientation?: "landscape" | "portrait";
+  orientation?: "landscape" | "portrait" | "responsive";
 }
 
 // Field dimensions within the SVG viewBox (0 0 1000 620)
@@ -67,17 +67,33 @@ export const HockeyPitch = ({ children, className, backgroundUrl, orientation = 
   return (
     <div
       className={cn(
-        "relative w-full mx-auto rounded-xl overflow-hidden",
+        "relative mx-auto w-full overflow-hidden rounded-xl",
+        orientation === "responsive" && "aspect-[620/1000] sm:aspect-[1000/620]",
         className
       )}
-      style={{ aspectRatio: orientation === "portrait" ? "620 / 1000" : "1000 / 620" }}
+      style={orientation === "responsive" ? undefined : { aspectRatio: orientation === "portrait" ? "620 / 1000" : "1000 / 620" }}
     >
       {/* Field background image */}
-      <img
-        src={backgroundUrl || fieldBg}
-        alt="Playing surface"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+      {orientation === "responsive" ? (
+        <>
+          <img
+            src={backgroundUrl || fieldBg}
+            alt="Playing surface"
+            className="absolute left-1/2 top-1/2 h-[61.99%] w-[161.29%] max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover sm:hidden"
+          />
+          <img
+            src={backgroundUrl || fieldBg}
+            alt=""
+            className="absolute inset-0 hidden h-full w-full object-cover sm:block"
+          />
+        </>
+      ) : (
+        <img
+          src={backgroundUrl || fieldBg}
+          alt="Playing surface"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
 
       {/* Players overlay */}
       <div className="absolute inset-0">

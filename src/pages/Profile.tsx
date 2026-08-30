@@ -35,8 +35,9 @@ import type { Database } from "@/integrations/supabase/types";
 import { loadPlayerHistory, type PlayerHistoryRecord } from "@/lib/playerHistory";
 import { getSafeAppPath } from "@/lib/authRedirect";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { getProfileRoleEmoji, getProfileRoleLabel, type ProfileRole } from "@/lib/profileRoles";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = ProfileRole;
 type MembershipType = Database["public"]["Enums"]["membership_type"];
 
 const ALL_ROLES: AppRole[] = ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN", "ASSOCIATION_ADMIN", "SUPER_ADMIN", "UMPIRE", "VOTER"];
@@ -50,33 +51,8 @@ const APP_MODE_LABELS: Record<AppMode, string> = {
   player: "Player",
 };
 
-const getRoleDisplayName = (role: AppRole): string => {
-  const names: Record<AppRole, string> = {
-    PLAYER: "Player",
-    COACH: "Coach",
-    TEAM_MANAGER: "Team Manager",
-    CLUB_ADMIN: "Club Admin",
-    ASSOCIATION_ADMIN: "Association Admin",
-    SUPER_ADMIN: "Super Admin",
-    UMPIRE: "Umpire",
-    VOTER: "Voter",
-  };
-  return names[role];
-};
-
-const getRoleEmoji = (role: AppRole): string => {
-  const emojis: Record<AppRole, string> = {
-    PLAYER: "🏃",
-    COACH: "📋",
-    TEAM_MANAGER: "📊",
-    CLUB_ADMIN: "🏢",
-    ASSOCIATION_ADMIN: "🏛️",
-    SUPER_ADMIN: "👑",
-    UMPIRE: "🏳️",
-    VOTER: "🗳️",
-  };
-  return emojis[role];
-};
+const getRoleDisplayName = getProfileRoleLabel;
+const getRoleEmoji = getProfileRoleEmoji;
 
 interface ProfileData {
   id: string;
