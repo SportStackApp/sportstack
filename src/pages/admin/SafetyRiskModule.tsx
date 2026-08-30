@@ -1967,7 +1967,7 @@ function AddRecordButton({ onOpenForm }: { onOpenForm: (mode: SafetyFormMode) =>
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" className="text-foreground hover:bg-primary hover:text-primary-foreground">
           <Plus className="mr-2 h-4 w-4" />
           Add record
         </Button>
@@ -2096,7 +2096,7 @@ function DonutChart({ data }: { data: ChartDatum[] }) {
       <div className="h-56" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie data={data} dataKey="value" nameKey="name" innerRadius={52} outerRadius={78} paddingAngle={2}>
+            <Pie data={data} dataKey="value" nameKey="name" innerRadius={52} outerRadius={78} paddingAngle={2} rootTabIndex={-1}>
               {data.map((entry) => (
                 <Cell key={entry.name} fill={entry.fill} />
               ))}
