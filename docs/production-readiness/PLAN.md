@@ -121,6 +121,15 @@ Repair these in small Dev-only batches, highest risk first.
 Additional confirmed defects found during the audit enter this table before repair. Avoid mixing
 unrelated fixes into one commit.
 
+READY-017 to READY-021 closure status on 31 August 2026: **PASSED AND CLOSED ON DEV**. Commits
+`db1717b` and `8b6ad73` are deployed. Safety Hub now reports zero Axe WCAG A/AA violations on
+desktop and mobile; the two remaining Radix/graph contrast items are tool-incomplete rather than
+failed checks. Player MVP completion Round and individual-log Points both reverse correctly and
+expose their active direction. Expense headers reverse correctly, and its per-user session filter
+survives refresh without adding search content to the URL. Dev Quality runs `33317078740` and
+`33317202053` passed. The broader sorting and persistence registers still contain open gaps, so
+readiness gates R4 and R5 remain open.
+
 READY-001 closure status on 30 August 2026: **PASSED AND CLOSED**. The Dev repair and regression
 tests are complete. A read-only live preflight confirmed 13 saved roster rows, three
 placeholder-linked profiles and 13 assignments. Aaron then confirmed that all 13 players were

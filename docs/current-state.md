@@ -6,7 +6,7 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
-## 31 August readiness inventory and Dev consistency batch — verification underway
+## 31 August readiness inventory and Dev consistency batch — completed on Dev
 
 - The complete route, table and form inventories are now in `docs/production-readiness/`. They
   distinguish observed passes, source-only checks, sorting exemptions and persistence gaps rather
@@ -21,9 +21,12 @@ Update this file after every meaningful Codex task, pull request, schema change,
   numeric RevSports round identifier before workflow fan-out. The repair is documented in
   `docs/production-readiness/PRODUCTION-SCRAPER-FAILURE-2026-08-31.md` and remains approval-gated
   because it affects a Production-capable workflow.
-- Current local checks pass: 33 Vitest files/128 tests, TypeScript and Production build. Full lint
-  remains unchanged at the established 350-error/78-warning baseline. Deployment and signed-in
-  acceptance are still pending; no Main, `prod`, database or Production change is included.
+- Commits `db1717b` and `8b6ad73` are deployed. Player MVP sorting, Expense sorting and Expense
+  session-filter refresh pass in the signed-in Dev browser. Safety Hub reports zero Axe WCAG A/AA
+  violations at 1440x900 and 390x844.
+- Checks pass: 33 Vitest files/128 tests, TypeScript, Production build and Dev Quality runs
+  `33317078740` and `33317202053`. Full lint remains unchanged at the established 350-error/78-warning
+  baseline. No Main, `prod`, database or Production change is included.
 
 ## 30 August walk-away consistency findings and repair — completed on Dev
 

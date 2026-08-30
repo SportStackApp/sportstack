@@ -12,7 +12,7 @@ exempt. **Text only** means arrows exist but business/date values are currently 
 | Coaching position ratings | Position; Player Pref; Your Assessment; Notes | None | Fixed form taxonomy exempt |
 | Hockey Trace movement peaks | Time; Marker; Acceleration; Rotation | None | Gap: date/numeric sorting |
 | Hockey Trace imported files | File; Data; Input rows; Used rows; Skipped; Status | Fixed filename order | Gap: interactive typed sorting |
-| Expenses | select; Date; Supplier; Description; Invoice; Category; Total; Business; Status; Actions | Local Dev fix: all data columns use typed two-way sorting | Deployed retest pending; select/Actions exempt |
+| Expenses | select; Date; Supplier; Description; Invoice; Category; Total; Business; Status; Actions | All data columns use typed two-way sorting | Deployed headers/direction passed 31/08; select/Actions exempt |
 | Associations | Name; Abbreviation; Website; Logo; Default Duration; Actions | None | Gap except Logo/Actions |
 | Competitions | Name; Association; Season; Active; Actions | None | Gap except Actions |
 | Clubs | Name; Association; Website; Abbreviation; Actions | None | Gap except Actions |
@@ -34,8 +34,8 @@ exempt. **Text only** means arrows exist but business/date values are currently 
 | Player MVP ranking | Rank; Player; Points | Fixed leaderboard | Exempt |
 | Player MVP ballot detail | Player; Vote; Result check; Action | None | Small detail table; explicit exemption |
 | Analytics leaderboard | Rank; Player Name; Votes Received; Total Points | Fixed leaderboard | Exempt |
-| Analytics vote completion | Round; Game; Voter; Team; Status; Submitted | Local Dev fix: stable two-way sorting on every column | Deployed retest pending |
-| Analytics individual log | Voter Name; Voted-For Player Name; Points; Round | Local Dev fix: stable two-way sorting on every column | Deployed retest pending |
+| Analytics vote completion | Round; Game; Voter; Team; Status; Submitted | Stable two-way sorting on every column | Deployed Round asc/desc passed 31/08 |
+| Analytics individual log | Voter Name; Voted-For Player Name; Points; Round | Stable two-way sorting on every column | Deployed Points asc/desc passed 31/08 |
 | Umpire submissions | Round; Division; Fixture; Submitted for/by; Source; Votes; Status; Submitted; Actions | All data columns | Source checked; shared-header inconsistency |
 | Umpire leaderboard | Rank; Player; Team; 3s; 2s; 1s; Total | Fixed leaderboard | Exempt |
 | Safety dashboard risks | ID; Risk; Rating; Owner; Review | Text only | Arrows passed; typed semantics gap |
@@ -51,8 +51,7 @@ exempt. **Text only** means arrows exist but business/date values are currently 
 ## Consistency findings
 
 - Deployed typed interactive sorting currently exists in Fixtures, RevSports Entity Review, Player
-  Explorer, Player MVP sessions and Umpire submissions. Local Dev fixes for Expenses and Analytics
-  operational tables await deployment and browser retesting.
+  Explorer, Player MVP sessions, Umpire submissions, Expenses and Analytics operational tables.
 - Safety uses generic displayed-text extraction; its arrows do not guarantee chronological date,
   severity or workflow ordering.
 - RevSports Mappings and Unmatched visibly lag behind the newer Entity Review pattern.

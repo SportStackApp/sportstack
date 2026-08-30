@@ -56,7 +56,7 @@ Save; **Transient** intentionally resets when the page/dialog unmounts.
 
 | Surface | Expected persistence | Latest result |
 |---|---|---|
-| Expenses filters | Session, isolated per signed-in user; never URL | Local Dev fix implemented; deployed refresh/navigation retest pending |
+| Expenses filters | Session, isolated per signed-in user; never URL | Deployed search refresh passed and URL remained clean 31/08 |
 | Reports filters | Currently Transient | Gap: does not share Expenses context |
 | Expense create/edit/allocation/attachments | Transient draft; explicit Save/backend attachments Saved | Source checked |
 | Statement import/reconciliation | Transient import session; committed match Saved | Source checked |
@@ -108,4 +108,4 @@ Save; **Transient** intentionally resets when the page/dialog unmounts.
   explicitly designed secure draft mechanism.
 - Highest-value remaining persistence gaps are Fixtures, Safety, RevSports Mappings, Expense
   Reports, Player MVP administration and organisation management filters. Expense-list session
-  persistence is a local Dev fix awaiting deployed retest.
+  persistence passed its deployed refresh test.

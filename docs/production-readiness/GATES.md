@@ -21,25 +21,25 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
   EVIDENCE: Super Admin plus the reserved Association Admin, Club Admin, Team Manager, Coach, Player and Umpire identities have current results. Voter was also tested. Coordinator remains pending.
 
 - [ ] R7: the high-risk workflows pass on desktop and mobile, with tablet evidence where the layout needs it
-  EVIDENCE: The repaired line-up passes 1569x912 and 390x844 visual, overflow and accessibility checks. Remaining high-risk workflows and any necessary tablet layouts are pending.
+  EVIDENCE: The repaired line-up passes 1569x912 and 390x844 visual, overflow and accessibility checks. Safety Hub also passes 1440x900 and 390x844 with zero Axe WCAG A/AA violations. Remaining high-risk workflows and any necessary tablet layouts are pending.
 
 - [ ] R8: public, signed-out, direct-link, refresh, back-forward, keyboard, empty, error and unavailable-module states have current results
-  EVIDENCE: pending
+  EVIDENCE: Current signed-out checks pass for protected-route returnTo, public Umpire ballot, forgot-password and useful 404. Additional error, unavailable-module, back-forward and keyboard coverage remains pending.
 
 - [x] R9: focused regression tests and the complete Vitest suite pass
   CHECK: npx vitest run
   EXPECT: Test Files
-  EVIDENCE: 33 files and 128 tests passed at Dev commit 3a4ffd4.
+  EVIDENCE: 33 files and 128 tests passed locally before Dev commits db1717b and 8b6ad73; both Dev Quality runs passed.
 
 - [x] R10: TypeScript validates the complete application
   CHECK: npx tsc --noEmit
   EXPECT: /(?:^|\n)\s*$/
-  EVIDENCE: npx tsc --noEmit passed at Dev commit 3a4ffd4 with no diagnostics.
+  EVIDENCE: npx tsc --noEmit passed before both 31 August Dev commits; both Dev Quality runs passed.
 
 - [x] R11: the Production application build succeeds and build warnings are reviewed
   CHECK: npm run build
   EXPECT: built in
-  EVIDENCE: npm run build passed at Dev commit 3a4ffd4. The known large-bundle/dynamic-import and stale Browserslist warnings remain non-blocking debt.
+  EVIDENCE: npm run build passed before both 31 August Dev commits. The known large-bundle/dynamic-import and stale Browserslist warnings remain non-blocking debt.
 
 - [x] R12: full lint is measured and no new error exists beyond the documented legacy baseline
   EVIDENCE: Full lint remains at the documented 350 errors/78 warnings. Focused lint over the latest changed components passed with zero findings.
