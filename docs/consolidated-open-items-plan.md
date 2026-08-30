@@ -73,14 +73,21 @@ Current verified position:
   Coaching and line-up screens. No Blocker or High issue was found.
 - READY-011 to READY-015 record the five findings: line-up team refresh persistence, mobile pitch
   layout, Club Admin Player MVP analytics routing, formation-control labelling and the blank legacy
-  role label. Local repairs and regression tests pass; deployed Dev retesting is next.
+  role label. Commit `99dff2c` is deployed on Dev; regression, TypeScript, build, Dev Quality and
+  live-bundle checks pass.
 
 **Next**
 
-- Deploy the repair to Dev, rerun the original desktop/mobile steps and complete actual-role checks
+- Reconnect a controllable authenticated browser, rerun the original desktop/mobile steps and complete actual-role checks
   for Association Admin, Team Manager, Umpire and Voter using only the reserved disposable accounts.
 - Refresh the route/table/form registers from observed evidence. Main staging remains after Dev
   acceptance; Production remains separately approval-gated.
+
+**Current block**
+
+- The automation browser could not reuse the signed-in Codex in-app tab. The normal Chrome profile
+  attempt timed out and reached Dev signed out. Signed-in closure and the remaining actual-role cycle
+  are explicitly blocked until the hard pre-flight succeeds in the same browser session.
 
 ### 29 August admin, line-up and coaching batch
 

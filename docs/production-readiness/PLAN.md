@@ -142,14 +142,17 @@ Goalkeeper choices remain available for flexible selections. Existing separate p
 still displayed and were not guessed into pairs or rewritten. Dev Quality, Vercel and the deployed
 bundle checks pass. The finding remains open until signed-in owner save/reload acceptance.
 
-READY-011 to READY-015 implementation status on 30 August 2026: the local Dev repairs are complete.
+READY-011 to READY-015 implementation status on 30 August 2026: commit `99dff2c` is deployed on Dev.
 The selected fixture team is stored per user and fixture in session storage and validated against
 current access before use. The mobile pitch rotates its presentation while translating pointer
 movement back to the same canonical coordinates used on desktop. Club Admin is included in the
 analytics route but the individual-ballot check remains Super Admin or Club Admin only. The
 formation selector is named and all database role values have labels. Regression tests, TypeScript
-and the Production build pass. These findings remain open until deployment and signed-in Dev
-desktop/mobile retesting.
+and the Production build pass. Dev Quality run `33293555208`, the live `99dff2c` bundle and the
+signed-out protected-route return path also pass. These findings remain open because the automation
+browser could not reconnect to the signed-in in-app tab, and the normal Chrome-profile attempt
+timed out and reached Dev signed out. Signed-in desktop/mobile and actual-role retesting must resume
+only after the hard pre-flight succeeds in that same controllable session.
 
 ## C. Screen consistency review
 

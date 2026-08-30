@@ -8,8 +8,12 @@ Last updated: 2026-08-30
   sorting, RevSports filters, Quick Actions and repaired line-up interactions passed their checks.
 - READY-011 to READY-015 cover the new defects: fixture team choice reset, cramped mobile pitch,
   Club Admin Player MVP route block, unlabelled formation select and blank legacy role label.
-- Local repairs are implemented with focused regression coverage. Current checks pass: 33 Vitest
-  files/127 tests, TypeScript and Production build. Deployment and signed-in Dev retesting remain.
+- Commit `99dff2c` is deployed on Dev. Current checks pass: 33 Vitest files/127 tests, focused lint,
+  TypeScript, Production build, Dev Quality run `33293555208`, live-bundle identification and the
+  signed-out protected-route return path. Full lint remains at 350 errors/78 warnings.
+- Signed-in Dev retesting remains blocked because the controllable browser could not reconnect to
+  the authenticated in-app tab; the normal Chrome profile attempt timed out and reached Dev signed
+  out. Do not convert this into a pass. Complete the hard pre-flight in the same controllable session.
 - Actual-role checks remain incomplete for Association Admin, Team Manager, Umpire and Voter. No
   Main, `prod`, Production or database change is included.
 

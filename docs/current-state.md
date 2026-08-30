@@ -15,12 +15,17 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - The five recorded defects are: line-up team choice resetting on refresh, cramped mobile line-up
   markers, Club Admin being blocked at the Player MVP analytics route, an unlabelled formation
   selector and a blank legacy role label on Profile.
-- A local Dev repair now remembers the chosen fixture team for the browser session, rotates the pitch
+- Dev commit `99dff2c` now remembers the chosen fixture team for the browser session, rotates the pitch
   into portrait on small screens while preserving canonical drag coordinates, allows Club Admin
   through the route while keeping Association Admin out of individual ballots, labels the formation
   control and displays **Legacy Umpire Admin** instead of a blank role.
-- Local verification passes: 33 Vitest files/127 tests, TypeScript and the Production build. The
-  repair remains open until it is committed, deployed and retested in the signed-in Dev browser.
+- Verification passes: 33 Vitest files/127 tests, focused lint, TypeScript, Production build, Dev
+  Quality run `33293555208`, live bundle and signed-out protected-route return path. Full lint remains
+  at the established 350-error/78-warning baseline.
+- The repair is deployed but the signed-in closure checks remain open. The controllable browser could
+  not reconnect to the authenticated in-app tab, and attempting to reuse the normal Chrome profile
+  timed out and opened signed out. This is the exact hard pre-flight failure the operating rule is
+  intended to catch; no signed-in result is inferred from source or signed-out evidence.
 - Actual-role coverage is still incomplete for Association Admin, Team Manager, Umpire and Voter.
   Production, `prod`, Main and live data are unchanged.
 

@@ -78,9 +78,12 @@ Scope: Complete the approved Development batch without changing Production or de
   EVIDENCE: Focused lint and TypeScript passed with no diagnostics; 33 Vitest files/127 tests and the Production build passed. Full lint remains unchanged at the established 350 errors/78 warnings.
 
 - [ ] G18: Actual-role Dev testing records Association Admin, Club Admin, Team Manager, Coach, Player, Umpire and Voter outcomes without changing normal accounts
-  EVIDENCE: pending
+  EVIDENCE: Player, Coach and Club Admin have earlier actual-role evidence. The remaining roles could not be run after deployment because the controllable browser had no authenticated Dev session.
 
 - [ ] G19: The walk-away findings and repair results are committed to Dev, mirrored into Big Brain and verified by the sync check
   CHECK: pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check
   EXPECT: CHECK_OK
   EVIDENCE: pending
+
+ABANDON: G16 Current unattended run cannot reach the authenticated line-up; the in-app tab is not controllable and the normal Chrome profile attempt timed out and reached Dev signed out.
+ABANDON: G18 Current unattended run cannot reset or sign into the reserved Dev accounts because the controllable browser lost its authenticated Super Admin hand-off.
