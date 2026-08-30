@@ -83,4 +83,4 @@ Scope: Complete the approved Development batch without changing Production or de
 - [x] G19: The walk-away findings and repair results are committed to Dev, mirrored into Big Brain and verified by the sync check
   CHECK: pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check
   EXPECT: CHECK_OK
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=CHECK_OK ref=origin/dev commit=5a3cfd33960192e405341a6d02841176c7a1172d files=61 vault=C:\Users\mulla\OneDrive\Documents\Big Brain
+  EVIDENCE: The final canonical readiness notes were pushed to Dev, mirrored into Big Brain and the post-push sync check returned CHECK_OK for 61 files.
