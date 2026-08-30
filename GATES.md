@@ -2,25 +2,25 @@
 
 Scope: Complete the approved Development batch without changing Production or deleting existing data.
 
-- [ ] G1: Profile personal details store preferred name and nickname while leaving preferred-name display precedence parked
+- [x] G1: Profile personal details store preferred name and nickname while leaving preferred-name display precedence parked
   CHECK: npx vitest run src/lib/profileNames.test.ts
   EXPECT: Test Files
-  EVIDENCE: pending
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  158ms (transform 17ms, setup 0ms, import 29ms, tests 2ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
-- [ ] G2: Requested admin tables expose deterministic accessible ascending and descending sorting
+- [x] G2: Requested admin tables expose deterministic accessible ascending and descending sorting
   CHECK: npx vitest run src/lib/adminSorting.test.ts
   EXPECT: Test Files
-  EVIDENCE: pending
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  180ms (transform 20ms, setup 0ms, import 33ms, tests 8ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
-- [ ] G3: The fixture roster workflow persists selected players, nickname display choices and position overrides
+- [x] G3: The fixture roster workflow persists selected players, nickname display choices and position overrides
   CHECK: npx vitest run src/lib/lineupPlanner.test.ts
   EXPECT: Test Files
-  EVIDENCE: pending
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  170ms (transform 25ms, setup 0ms, import 38ms, tests 3ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
-- [ ] G4: Coaching position traits support area-only, side-only, combined and goalkeeper cases
+- [x] G4: Coaching position traits support area-only, side-only, combined and goalkeeper cases
   CHECK: npx vitest run src/lib/hockeyPositions.test.ts
   EXPECT: Test Files
-  EVIDENCE: pending
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  171ms (transform 22ms, setup 0ms, import 34ms, tests 4ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
 - [x] G5: Development database migration and RLS regression checks pass without retained test data
   EVIDENCE: Linked CLI test was blocked by Supabase HTTP 403. The exact migration plus assertions passed inside BEGIN/ROLLBACK through the authorised Supabase connection, then applied to Dev. Post-apply counts were 2 profile columns, 3 RLS tables and 2 intended MVP policies.
@@ -28,7 +28,7 @@ Scope: Complete the approved Development batch without changing Production or de
 - [x] G6: Focused frontend tests pass
   CHECK: npx vitest run
   EXPECT: Test Files
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  703ms (transform 2.12s, setup 0ms, import 3.12s, tests 197ms, environment 3ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vi
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  871ms (transform 2.04s, setup 0ms, import 3.05s, tests 180ms, environment 3ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vi
 
 - [x] G7: TypeScript validates the complete application
   CHECK: npx tsc --noEmit
@@ -49,27 +49,27 @@ Scope: Complete the approved Development batch without changing Production or de
 - [x] G11: Canonical documentation is updated and Big Brain synchronisation passes after the Development commit
   CHECK: pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check
   EXPECT: CHECK_OK
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=CHECK_OK ref=origin/dev commit=09efcb18f4f1d4b6bf68c3d985854544a83d635a files=61 vault=C:\Users\mulla\OneDrive\Documents\Big Brain
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=CHECK_OK ref=origin/dev commit=5a3cfd33960192e405341a6d02841176c7a1172d files=61 vault=C:\Users\mulla\OneDrive\Documents\Big Brain
 
 - [x] G12: Club Admin can open Player MVP analytics while individual ballots remain limited to Super Admin and Club Admin scope
   CHECK: npx vitest run src/lib/adminAnalyticsAccess.test.ts
   EXPECT: Test Files
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  171ms (transform 18ms, setup 0ms, import 30ms, tests 2ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  160ms (transform 17ms, setup 0ms, import 29ms, tests 2ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
 - [x] G13: The explicitly chosen line-up team survives refresh without overriding an invalid or inaccessible team
   CHECK: npx vitest run src/lib/lineupTeamSelection.test.ts
   EXPECT: Test Files
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  399ms (transform 17ms, setup 0ms, import 28ms, tests 2ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  155ms (transform 16ms, setup 0ms, import 26ms, tests 2ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
 - [x] G14: The mobile pitch uses a portrait mapping and converts dragged coordinates back to the saved landscape formation
   CHECK: npx vitest run src/lib/lineupPlanner.test.ts
   EXPECT: Test Files
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  174ms (transform 26ms, setup 0ms, import 38ms, tests 3ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  161ms (transform 24ms, setup 0ms, import 36ms, tests 3ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
 - [x] G15: Every Profile role, including Legacy Umpire Admin, has a visible label and icon
   CHECK: npx vitest run src/lib/profileRoles.test.ts
   EXPECT: Test Files
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  156ms (transform 17ms, setup 0ms, import 28ms, tests 2ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  154ms (transform 17ms, setup 0ms, import 27ms, tests 2ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
 - [ ] G16: The formation selector has an accessible name and the repaired line-up passes desktop and mobile browser checks without marker overlap or clipping
   EVIDENCE: Formation now has the accessible name in code; deployed desktop/mobile browser evidence remains pending.
@@ -83,7 +83,7 @@ Scope: Complete the approved Development batch without changing Production or de
 - [x] G19: The walk-away findings and repair results are committed to Dev, mirrored into Big Brain and verified by the sync check
   CHECK: pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check
   EXPECT: CHECK_OK
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=CHECK_OK ref=origin/dev commit=09efcb18f4f1d4b6bf68c3d985854544a83d635a files=61 vault=C:\Users\mulla\OneDrive\Documents\Big Brain
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=CHECK_OK ref=origin/dev commit=5a3cfd33960192e405341a6d02841176c7a1172d files=61 vault=C:\Users\mulla\OneDrive\Documents\Big Brain
 
 ABANDON: G16 Current unattended run cannot reach the authenticated line-up; the in-app tab is not controllable and the normal Chrome profile attempt timed out and reached Dev signed out.
 ABANDON: G18 Current unattended run cannot reset or sign into the reserved Dev accounts because the controllable browser lost its authenticated Super Admin hand-off.
