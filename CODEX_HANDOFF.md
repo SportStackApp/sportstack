@@ -1,6 +1,19 @@
 # Codex Handoff
 
-Last updated: 2026-08-30
+Last updated: 2026-08-31
+
+## 31 August 2026 — readiness inventory and local Dev consistency batch
+
+- Added current route, table and form registers under `docs/production-readiness/`; major open
+  consistency gaps remain visible rather than being inferred as passes.
+- Local Dev fixes cover the shared Viewing-as name/sidebar contrast, duplicate Safety donut
+  accessibility, Player MVP Analytics operational sorting, Expense sorting and per-user
+  browser-session filter persistence.
+- Read-only Production scraper diagnosis proves that finals labels lose their numeric round value.
+  The protected repair package is documented separately and was not implemented.
+- Local Vitest (33 files/128 tests), TypeScript and Production build pass. Full lint remains at the
+  existing 350-error/78-warning baseline. Independent review, Dev push/deployment and deployed
+  browser retesting remain pending. Main, `prod`, databases and Production are unchanged.
 
 ## 30 August 2026 — walk-away consistency cycle and repair
 

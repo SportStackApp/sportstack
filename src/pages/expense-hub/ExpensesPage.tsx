@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Archive, ArchiveRestore, Copy, Download, FileSpreadsheet, Paperclip, Pencil } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -18,18 +18,57 @@ import { ExpenseStatusBadge } from "@/features/expense-hub/ExpenseStatusBadge";
 import { ExpenseSummaryCards } from "@/features/expense-hub/ExpenseSummaryCards";
 import { EMPTY_EXPENSE_FILTERS, type ExpenseFilters } from "@/features/expense-hub/types";
 import { filterExpenses, financialYearForDate, formatAustralianDate, formatCurrency } from "@/features/expense-hub/utils";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
+
+type ExpenseSortKey = "date" | "supplier" | "description" | "invoice" | "category" | "total" | "business" | "status";
+
+const expenseStatusOrder = { DRAFT: 0, NEEDS_REVIEW: 1, READY: 2, ARCHIVED: 3 } as const;
+
+const expenseFiltersStorageKey = (userId: string | undefined) => `sportstack:expense-filters:${userId || "unknown"}`;
+
+function readExpenseFilters(userId: string | undefined): ExpenseFilters {
+  if (typeof window === "undefined") return { ...EMPTY_EXPENSE_FILTERS };
+  try {
+    const stored = window.sessionStorage.getItem(expenseFiltersStorageKey(userId));
+    if (!stored) return { ...EMPTY_EXPENSE_FILTERS };
+    return { ...EMPTY_EXPENSE_FILTERS, ...JSON.parse(stored) as Partial<ExpenseFilters> };
+  } catch {
+    return { ...EMPTY_EXPENSE_FILTERS };
+  }
+}
 
 export default function ExpensesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { expenses, suppliers, categories, paymentMethods, loading, error, refresh } = useExpenseHub();
-  const [filters, setFilters] = useState<ExpenseFilters>({ ...EMPTY_EXPENSE_FILTERS });
+  const [filters, setFilters] = useState<ExpenseFilters>(() => readExpenseFilters(user?.id));
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState(false);
+  const [sort, setSort] = useState<SortState<ExpenseSortKey> | null>(null);
   const financialYears = useMemo(() => [...new Set(expenses.map((expense) => financialYearForDate(expense.expense_date)))].sort().reverse(), [expenses]);
   const filtered = useMemo(() => filterExpenses(expenses, filters), [expenses, filters]);
+  const displayedExpenses = useMemo(() => {
+    if (!sort) return filtered;
+    return stableSortRows(filtered, sort, (expense, key) => {
+      if (key === "date") return expense.expense_date;
+      if (key === "supplier") return expense.supplier?.display_name || "";
+      if (key === "description") return expense.description;
+      if (key === "invoice") return expense.invoice_number || "";
+      if (key === "category") return expense.category?.name || "";
+      if (key === "total") return Number(expense.total_amount);
+      if (key === "business") return Number(expense.business_amount);
+      const status = expense.archived_at ? "ARCHIVED" : expense.expense_status;
+      return expenseStatusOrder[status as keyof typeof expenseStatusOrder] ?? -1;
+    });
+  }, [filtered, sort]);
   const selectedExpenses = filtered.filter((expense) => selected.has(expense.id));
+
+  useEffect(() => {
+    if (!user?.id) return;
+    window.sessionStorage.setItem(expenseFiltersStorageKey(user.id), JSON.stringify(filters));
+  }, [filters, user?.id]);
 
   const toggleAll = () => setSelected((current) => current.size === filtered.length ? new Set() : new Set(filtered.map((expense) => expense.id)));
   const toggleOne = (id: string) => setSelected((current) => {
@@ -83,8 +122,8 @@ export default function ExpensesPage() {
       </div>
       <ExpenseSummaryCards expenses={filtered} />
       <ExpenseFiltersPanel filters={filters} onChange={setFilters} suppliers={suppliers} categories={categories} paymentMethods={paymentMethods} financialYears={financialYears} />
-      <Card className="hidden lg:block"><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead className="w-10"><Checkbox checked={filtered.length > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} aria-label="Select all filtered expenses" /></TableHead><TableHead>Date</TableHead><TableHead>Supplier</TableHead><TableHead>Description</TableHead><TableHead>Invoice</TableHead><TableHead>Category</TableHead><TableHead className="text-right">Total</TableHead><TableHead className="text-right">Business</TableHead><TableHead>Status</TableHead><TableHead className="w-32">Actions</TableHead></TableRow></TableHeader><TableBody>
-        {filtered.map((expense) => <TableRow key={expense.id} className={expense.archived_at ? "opacity-60" : undefined}><TableCell><Checkbox checked={selected.has(expense.id)} onCheckedChange={() => toggleOne(expense.id)} aria-label={`Select ${expense.description}`} /></TableCell><TableCell>{formatAustralianDate(expense.expense_date)}</TableCell><TableCell className="w-64 max-w-xs"><span className="block truncate">{expense.supplier?.display_name || "Unknown"}</span></TableCell><TableCell className="max-w-xs"><span className="block truncate">{expense.description}</span></TableCell><TableCell>{expense.invoice_number || "—"}</TableCell><TableCell>{expense.category?.name || "Uncategorised"}</TableCell><TableCell className="text-right font-medium">{formatCurrency(Number(expense.total_amount))}</TableCell><TableCell className="text-right"><div>{formatCurrency(Number(expense.business_amount))}</div><div className="text-xs text-muted-foreground">{Number(expense.business_use_percentage).toFixed(0)}%</div></TableCell><TableCell><div className="flex items-center gap-2"><ExpenseStatusBadge expense={expense} />{expense.attachments.length > 0 && <Paperclip className="h-4 w-4 text-muted-foreground" />}</div></TableCell><TableCell><div className="flex gap-1"><Button size="icon" variant="ghost" onClick={() => navigate(`/expense-hub/expenses/${expense.id}/edit`)} aria-label="Edit expense"><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" onClick={() => navigate(`/expense-hub/expenses/new?duplicate=${expense.id}`)} aria-label="Duplicate expense"><Copy className="h-4 w-4" /></Button><Button size="icon" variant="ghost" disabled={busy} onClick={() => void setArchived(expense.id, !expense.archived_at)} aria-label={expense.archived_at ? "Restore expense" : "Archive expense"}>{expense.archived_at ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}</Button></div></TableCell></TableRow>)}
+      <Card className="hidden lg:block"><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead className="w-10"><Checkbox checked={filtered.length > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} aria-label="Select all filtered expenses" /></TableHead><SortableTableHead label="Date" sortKey="date" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} /><SortableTableHead label="Supplier" sortKey="supplier" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} /><SortableTableHead label="Description" sortKey="description" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} /><SortableTableHead label="Invoice" sortKey="invoice" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} /><SortableTableHead label="Category" sortKey="category" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} /><SortableTableHead label="Total" sortKey="total" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} className="[&_button]:justify-end" /><SortableTableHead label="Business" sortKey="business" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} className="[&_button]:justify-end" /><SortableTableHead label="Status" sortKey="status" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} /><TableHead className="w-32">Actions</TableHead></TableRow></TableHeader><TableBody>
+        {displayedExpenses.map((expense) => <TableRow key={expense.id} className={expense.archived_at ? "opacity-60" : undefined}><TableCell><Checkbox checked={selected.has(expense.id)} onCheckedChange={() => toggleOne(expense.id)} aria-label={`Select ${expense.description}`} /></TableCell><TableCell>{formatAustralianDate(expense.expense_date)}</TableCell><TableCell className="w-64 max-w-xs"><span className="block truncate">{expense.supplier?.display_name || "Unknown"}</span></TableCell><TableCell className="max-w-xs"><span className="block truncate">{expense.description}</span></TableCell><TableCell>{expense.invoice_number || "—"}</TableCell><TableCell>{expense.category?.name || "Uncategorised"}</TableCell><TableCell className="text-right font-medium">{formatCurrency(Number(expense.total_amount))}</TableCell><TableCell className="text-right"><div>{formatCurrency(Number(expense.business_amount))}</div><div className="text-xs text-muted-foreground">{Number(expense.business_use_percentage).toFixed(0)}%</div></TableCell><TableCell><div className="flex items-center gap-2"><ExpenseStatusBadge expense={expense} />{expense.attachments.length > 0 && <Paperclip className="h-4 w-4 text-muted-foreground" />}</div></TableCell><TableCell><div className="flex gap-1"><Button size="icon" variant="ghost" onClick={() => navigate(`/expense-hub/expenses/${expense.id}/edit`)} aria-label="Edit expense"><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" onClick={() => navigate(`/expense-hub/expenses/new?duplicate=${expense.id}`)} aria-label="Duplicate expense"><Copy className="h-4 w-4" /></Button><Button size="icon" variant="ghost" disabled={busy} onClick={() => void setArchived(expense.id, !expense.archived_at)} aria-label={expense.archived_at ? "Restore expense" : "Archive expense"}>{expense.archived_at ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}</Button></div></TableCell></TableRow>)}
         {filtered.length === 0 && <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">No expenses match the current filters.</TableCell></TableRow>}
       </TableBody></Table></CardContent></Card>
       <div className="grid gap-3 lg:hidden">{filtered.map((expense) => <Card key={expense.id} className={expense.archived_at ? "opacity-60" : undefined}><CardContent className="space-y-3 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold">{expense.supplier?.display_name || "Unknown supplier"}</p><p className="text-sm text-muted-foreground">{formatAustralianDate(expense.expense_date)} · {expense.description}</p></div><Checkbox checked={selected.has(expense.id)} onCheckedChange={() => toggleOne(expense.id)} aria-label={`Select ${expense.description}`} /></div><div className="flex items-end justify-between"><div><ExpenseStatusBadge expense={expense} /><p className="mt-2 text-xs text-muted-foreground">Business {Number(expense.business_use_percentage).toFixed(0)}% · {formatCurrency(Number(expense.business_amount))}</p></div><p className="text-lg font-semibold">{formatCurrency(Number(expense.total_amount))}</p></div><div className="flex justify-end gap-1"><Button size="sm" variant="ghost" onClick={() => navigate(`/expense-hub/expenses/${expense.id}/edit`)}><Pencil className="mr-2 h-4 w-4" />Edit</Button><Button size="sm" variant="ghost" onClick={() => navigate(`/expense-hub/expenses/new?duplicate=${expense.id}`)}><Copy className="mr-2 h-4 w-4" />Duplicate</Button><Button size="sm" variant="ghost" disabled={busy} onClick={() => void setArchived(expense.id, !expense.archived_at)}>{expense.archived_at ? "Restore" : "Archive"}</Button></div></CardContent></Card>)}{filtered.length === 0 && <Card><CardContent className="p-8 text-center text-muted-foreground">No expenses match the current filters.</CardContent></Card>}</div>

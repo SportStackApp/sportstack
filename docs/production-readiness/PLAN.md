@@ -1,8 +1,8 @@
 # SportStack Production Readiness Programme
 
-Status: **active — known-defect repair underway**
+Status: **active — inventory complete; consistency repair and verification underway**
 
-Last updated: **30 August 2026**
+Last updated: **31 August 2026**
 
 This document is the detailed execution plan beneath `docs/consolidated-open-items-plan.md`. The
 consolidated plan remains the single priority list. This programme defines how SportStack will move
@@ -28,14 +28,15 @@ This is a release programme, not a promise that Production is ready today.
 
 The snapshot must be refreshed at the start of each work cycle.
 
-- Dev is `3a4ffd4`; Main is `d48239d` and is 19 commits behind Dev.
+- The current unattended cycle started from Dev `affa751`; exact divergence must be refreshed again
+  before any staging decision.
 - Production is `682b8ea` and is 195 commits behind Main.
 - Dev Quality passed for `3a4ffd4` in run `33298089720`.
-- The latest Production Supabase Scrapers run failed because three manually targeted games were
-  started without a required round number. This must be repaired and rerun successfully.
-- The repository has about 80 declared routes, 26 source files containing table headings and 15
-  source files containing recognised form patterns. These are inventory starting points, not exact
-  counts of user-visible tables or forms.
+- Three consecutive Production Supabase Scrapers runs failed because finals labels such as
+  **Semi Finals** lose the numeric round identifier. The confirmed evidence and approval-gated
+  repair package are in `PRODUCTION-SCRAPER-FAILURE-2026-08-31.md`.
+- The current route, table and form inventories are now recorded in `ROUTE-REGISTER.md`,
+  `TABLE-REGISTER.md` and `FORM-REGISTER.md`.
 - Dev and Production migration histories have drifted and cannot be reconciled by counting migration
   files alone. The live schema is the source of truth.
 - The current signed-in walkthrough found a serious roster-selection defect and several line-up and
@@ -111,6 +112,11 @@ Repair these in small Dev-only batches, highest risk first.
 | READY-014 | Medium accessibility | The line-up formation selector has no accessible name. | Expose a stable **Formation** name and pass the focused accessibility check. |
 | READY-015 | Low | Profile can display an icon followed by a blank role name for the legacy umpire-admin enum value. | Every live database role has a plain-English label; the legacy value displays as **Legacy Umpire Admin**. |
 | READY-016 | Medium accessibility | The mobile navigation and icon-only bench removal buttons have no screen-reader name. | Give every icon-only control a stable action name and pass the deployed focused accessibility check. |
+| READY-017 | Medium accessibility | The global **Viewing as** selector has no accessible name. | Give the control a stable screen-reader name and pass the deployed Axe check. |
+| READY-018 | Low accessibility | The Safety Hub donut graphic repeats its adjacent textual legend but is exposed as an unnamed image. | Treat the duplicate graphic as decorative while keeping the complete text legend available. |
+| READY-019 | Medium consistency | Player MVP Vote Completion and Individual Votes Log columns have no interactive two-way sorting. | Add stable typed sorting to all operational columns while leaving the fixed-rank leaderboard exempt. |
+| READY-020 | Medium accessibility | The desktop sidebar has multiple foreground/background colour combinations below WCAG AA contrast. | Local Dev fix removes the failing text opacity; deployed desktop/mobile Axe retest pending. |
+| READY-021 | Medium consistency | Expense Hub operational columns do not sort and its filters reset on navigation. | Add typed two-way sorting and keep filters in per-user browser-session storage, never the URL. |
 
 Additional confirmed defects found during the audit enter this table before repair. Avoid mixing
 unrelated fixes into one commit.

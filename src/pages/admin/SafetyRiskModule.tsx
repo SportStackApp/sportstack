@@ -2093,7 +2093,7 @@ function SimpleBarChart({ data }: { data: ChartDatum[] }) {
 function DonutChart({ data }: { data: ChartDatum[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
-      <div className="h-56">
+      <div className="h-56" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie data={data} dataKey="value" nameKey="name" innerRadius={52} outerRadius={78} paddingAngle={2}>

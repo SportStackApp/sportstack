@@ -1,10 +1,29 @@
 # SportStack Current State
 
-Last updated: 2026-08-30
+Last updated: 2026-08-31
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
+
+## 31 August readiness inventory and Dev consistency batch — verification underway
+
+- The complete route, table and form inventories are now in `docs/production-readiness/`. They
+  distinguish observed passes, source-only checks, sorting exemptions and persistence gaps rather
+  than treating an arrow or saved field as proof.
+- The current Dev batch gives the shared **Viewing as** selector an accessible name, removes the
+  confirmed sidebar text-contrast failures and prevents the Safety donut's duplicated graphic from
+  being announced as an unnamed image.
+- Player MVP Analytics Vote Completion and Individual Votes Log now have stable two-way sorting.
+  Expense Hub now sorts all operational data columns by their actual value and keeps filters in
+  per-user browser-session storage rather than exposing search or amount values in the URL.
+- The Production scraper failure is confirmed: finals labels such as **Semi Finals** lose their
+  numeric RevSports round identifier before workflow fan-out. The repair is documented in
+  `docs/production-readiness/PRODUCTION-SCRAPER-FAILURE-2026-08-31.md` and remains approval-gated
+  because it affects a Production-capable workflow.
+- Current local checks pass: 33 Vitest files/128 tests, TypeScript and Production build. Full lint
+  remains unchanged at the established 350-error/78-warning baseline. Deployment and signed-in
+  acceptance are still pending; no Main, `prod`, database or Production change is included.
 
 ## 30 August walk-away consistency findings and repair — completed on Dev
 

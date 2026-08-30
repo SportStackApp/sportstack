@@ -1167,11 +1167,11 @@ const AppLayout = () => {
   const staticCascadeClass =
     "flex h-10 min-w-0 max-w-[190px] items-center rounded-md bg-primary-foreground/10 px-3 text-sm font-medium text-primary-foreground truncate lg:max-w-[260px]";
   const cascadeSelectTriggerClass =
-    "h-10 min-w-0 max-w-[190px] bg-primary-foreground/10 text-primary-foreground border-primary-foreground/15 font-medium data-[placeholder]:text-primary-foreground/70 lg:max-w-[260px]";
+    "h-10 min-w-0 max-w-[190px] bg-primary-foreground/10 text-primary-foreground border-primary-foreground/15 font-medium data-[placeholder]:text-primary-foreground lg:max-w-[260px]";
   const cascadePanelSelectTriggerClass =
     "h-10 w-full min-w-0 bg-background text-foreground border-border font-medium";
   const cascadeClearClass =
-    "h-7 w-7 shrink-0 rounded-full text-primary-foreground/60 hover:text-primary-foreground hover:bg-primary-foreground/10";
+    "h-7 w-7 shrink-0 rounded-full text-primary-foreground hover:text-primary-foreground hover:bg-primary-foreground/10";
   const cascadeSummaryParts = [
     selectedAssociation?.name || (isTeamScopedMode ? playerAssociationName : ""),
     selectedClub?.name || (isTeamScopedMode ? playerClubName : ""),
@@ -1437,8 +1437,9 @@ const AppLayout = () => {
       {/* Viewing As dropdown — Super Admin only */}
       {mode === "super_admin" && (
         <div className="shrink-0 px-3 pt-3 pb-1">
-          <p className="text-xs font-medium text-primary-foreground/75 mb-1 px-1">Viewing as</p>
+          <p className="text-xs font-medium text-primary-foreground mb-1 px-1">Viewing as</p>
           <select
+            aria-label="Viewing as"
             value={viewingAs}
             disabled={modeChanging}
             onChange={(e) => {
@@ -1467,7 +1468,7 @@ const AppLayout = () => {
           <button
             onClick={() => setIsModeSwitcherOpen(!isModeSwitcherOpen)}
             disabled={modeChanging}
-            className="flex w-full items-center justify-between gap-2 rounded-lg border border-primary-foreground/20 px-4 py-3 text-sm font-medium text-primary-foreground/95 transition-all hover:bg-primary-foreground/10"
+            className="flex w-full items-center justify-between gap-2 rounded-lg border border-primary-foreground/20 px-4 py-3 text-sm font-medium text-primary-foreground transition-all hover:bg-primary-foreground/10"
           >
             <span className="truncate">{modeLabel}</span>
             <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", isModeSwitcherOpen && "rotate-180")} />
@@ -1492,7 +1493,7 @@ const AppLayout = () => {
       <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2">
         {visibleSections.map((section) => (
           <div key={section.heading} className="mb-2">
-            <p className="text-xs font-semibold text-primary-foreground/75 uppercase tracking-wider px-6 py-2">
+            <p className="text-xs font-semibold text-primary-foreground uppercase tracking-wider px-6 py-2">
               {section.heading}
             </p>
             {section.items.map((item) => {
@@ -1516,7 +1517,7 @@ const AppLayout = () => {
                       "flex items-center gap-3 px-4 py-3 mx-2 my-1 rounded-lg text-sm font-medium transition-all border-l-4",
                       isActive
                         ? "bg-primary-foreground text-primary border-primary-foreground"
-                        : "text-primary-foreground/95 hover:bg-primary-foreground/10 border-transparent"
+                        : "text-primary-foreground hover:bg-primary-foreground/10 border-transparent"
                     )}
                   >
                     <Icon className="h-5 w-5" />
@@ -1542,7 +1543,7 @@ const AppLayout = () => {
       <div className="shrink-0 p-4 space-y-2">
         <button
           onClick={() => setIsFeedbackOpen(true)}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-primary-foreground/95 hover:bg-primary-foreground/10 transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-primary-foreground hover:bg-primary-foreground/10 transition-all"
         >
           <MessageSquare className="h-5 w-5" />
           Send feedback
@@ -1550,13 +1551,13 @@ const AppLayout = () => {
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-primary-foreground/95 hover:bg-primary-foreground/10 transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-primary-foreground hover:bg-primary-foreground/10 transition-all"
         >
           <LogOut className="h-5 w-5" />
           Logout
         </button>
 
-        <div className="px-4 pt-2 text-xs text-primary-foreground/65">
+        <div className="px-4 pt-2 text-xs text-primary-foreground">
           SportStack {APP_VERSION}
         </div>
       </div>

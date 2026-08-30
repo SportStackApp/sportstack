@@ -37,6 +37,8 @@ import {
   type CascadeValue,
 } from "@/lib/adminCascade";
 import { canViewIndividualPlayerMvpVotes } from "@/lib/adminAnalyticsAccess";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
 
 // Cast the Supabase client to `any` type to widen API support for these tables
 const supabase = originalSupabase as any;
@@ -87,6 +89,8 @@ type SubmissionRow = {
 };
 
 type MvpAnalyticsView = "leaderboard" | "completion" | "individual";
+type CompletionSortKey = "round" | "game" | "voterName" | "team" | "status" | "submittedAt";
+type IndividualSortKey = "voterName" | "playerName" | "points" | "round";
 
 const readRounds = (value: string | null) => value ? value.split(",").filter(Boolean) : ["all"];
 
@@ -152,6 +156,8 @@ export default function Analytics() {
 
   // Search query for the individual votes log
   const [individualSearchQuery, setIndividualSearchQuery] = useState<string>(searchParams.get("log_search") || "");
+  const [completionSort, setCompletionSort] = useState<SortState<CompletionSortKey> | null>(null);
+  const [individualSort, setIndividualSort] = useState<SortState<IndividualSortKey> | null>(null);
 
   useEffect(() => {
     setSearchParams((current) => {
@@ -739,6 +745,14 @@ export default function Analytics() {
       });
   }, [filteredSessions, eligibleVoters, submissions, profileNameMap]);
 
+  const displayedVoteCompletionRows = useMemo(() => {
+    if (!completionSort) return voteCompletionRows;
+    return stableSortRows(voteCompletionRows, completionSort, (row, key) => {
+      if (key === "status") return row.submitted ? 1 : 0;
+      return row[key];
+    });
+  }, [completionSort, voteCompletionRows]);
+
   // 8. COMPILING STANDINGS (Leaderboard Table - Deduplicated)
   // Group votes by profile_id (fallback to lowercased player name if no profile linked)
   // to ensure duplicate appearances for the same player across rounds/clubs are merged.
@@ -814,6 +828,11 @@ export default function Analytics() {
       );
     });
   }, [individualVotesList, individualSearchQuery]);
+
+  const displayedIndividualVotes = useMemo(() => {
+    if (!individualSort) return searchedIndividualVotes;
+    return stableSortRows(searchedIndividualVotes, individualSort, (row, key) => row[key]);
+  }, [individualSort, searchedIndividualVotes]);
 
   // Helper handlers for modifying filters
   const handleRoundToggle = (round: string) => {
@@ -1223,16 +1242,16 @@ export default function Analytics() {
                       <Table>
                         <TableHeader className="bg-muted/40">
                           <TableRow>
-                            <TableHead className="font-semibold">Round</TableHead>
-                            <TableHead className="font-semibold">Game</TableHead>
-                            <TableHead className="font-semibold">Voter</TableHead>
-                            <TableHead className="font-semibold">Team</TableHead>
-                            <TableHead className="font-semibold">Status</TableHead>
-                            <TableHead className="text-right font-semibold">Submitted</TableHead>
+                            <SortableTableHead label="Round" sortKey="round" sort={completionSort} onSort={(key) => setCompletionSort(nextSortState(completionSort, key))} className="font-semibold" />
+                            <SortableTableHead label="Game" sortKey="game" sort={completionSort} onSort={(key) => setCompletionSort(nextSortState(completionSort, key))} className="font-semibold" />
+                            <SortableTableHead label="Voter" sortKey="voterName" sort={completionSort} onSort={(key) => setCompletionSort(nextSortState(completionSort, key))} className="font-semibold" />
+                            <SortableTableHead label="Team" sortKey="team" sort={completionSort} onSort={(key) => setCompletionSort(nextSortState(completionSort, key))} className="font-semibold" />
+                            <SortableTableHead label="Status" sortKey="status" sort={completionSort} onSort={(key) => setCompletionSort(nextSortState(completionSort, key))} className="font-semibold" />
+                            <SortableTableHead label="Submitted" sortKey="submittedAt" sort={completionSort} onSort={(key) => setCompletionSort(nextSortState(completionSort, key))} className="font-semibold [&_button]:justify-end" />
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {voteCompletionRows.map((row) => (
+                          {displayedVoteCompletionRows.map((row) => (
                             <TableRow key={row.id} className="hover:bg-muted/30 transition-colors">
                               <TableCell className="font-medium">{row.round}</TableCell>
                               <TableCell className="text-sm text-muted-foreground">{row.game}</TableCell>
@@ -1427,7 +1446,7 @@ export default function Analytics() {
                       </div>
                     </div>
 
-                    {searchedIndividualVotes.length === 0 ? (
+                    {displayedIndividualVotes.length === 0 ? (
                       <div className="p-12 text-center text-muted-foreground text-sm">
                         No individual votes records found for these filters.
                       </div>
@@ -1436,14 +1455,14 @@ export default function Analytics() {
                         <Table>
                           <TableHeader className="bg-muted/40">
                             <TableRow>
-                              <TableHead className="font-semibold">Voter Name</TableHead>
-                              <TableHead className="font-semibold">Voted-For Player Name</TableHead>
-                              <TableHead className="text-center font-semibold">Points</TableHead>
-                              <TableHead className="text-right font-semibold">Round</TableHead>
+                              <SortableTableHead label="Voter Name" sortKey="voterName" sort={individualSort} onSort={(key) => setIndividualSort(nextSortState(individualSort, key))} className="font-semibold" />
+                              <SortableTableHead label="Voted-For Player Name" sortKey="playerName" sort={individualSort} onSort={(key) => setIndividualSort(nextSortState(individualSort, key))} className="font-semibold" />
+                              <SortableTableHead label="Points" sortKey="points" sort={individualSort} onSort={(key) => setIndividualSort(nextSortState(individualSort, key))} className="font-semibold [&_button]:justify-center" />
+                              <SortableTableHead label="Round" sortKey="round" sort={individualSort} onSort={(key) => setIndividualSort(nextSortState(individualSort, key))} className="font-semibold [&_button]:justify-end" />
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {searchedIndividualVotes.map((vote) => (
+                            {displayedIndividualVotes.map((vote) => (
                               <TableRow key={vote.id} className="hover:bg-muted/30 transition-colors">
                                 <TableCell className="font-medium text-foreground">{vote.voterName}</TableCell>
                                 <TableCell className="font-medium text-muted-foreground">{vote.playerName}</TableCell>
