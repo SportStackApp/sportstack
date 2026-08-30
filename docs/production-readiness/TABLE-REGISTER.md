@@ -27,8 +27,8 @@ exempt. **Text only** means arrows exist but business/date values are currently 
 | RevSports Entity Review, all tabs | Scraped Item; Context; SportStack Match; Status; Last Seen; Actions | All data columns | Passed 30/08 |
 | RevSports Mappings, all tabs | CSV Column; Scraped Value; Maps To; Destination; Status | None | Gap: inconsistent with Entity Review |
 | RevSports Unmatched | Association; Competition; Grade; Team; Club; First Seen; Actions | None | Gap except Actions |
-| Error Logs | control; When; Context; Message | None | Gap; control needs accessible label |
-| Feedback | When; Feedback; Status; Admin notes; control | None | Gap; control needs accessible label |
+| Error Logs | control; When; Context; Message | Local Dev fix: all data columns use typed two-way sorting | Deployed retest pending; Details control labelled |
+| Feedback | When; Feedback; Status; Admin notes; control | Local Dev fix: all data columns use typed two-way sorting | Deployed retest pending; Actions control labelled |
 | Player Explorer | Player; Identity; Teams; Games; Goals; Green; Yellow; Red | All typed columns | Source tests passed |
 | Player MVP sessions | Team; Fixture; Date; Status; Completed; Actions | All data columns | Passed 30/08 |
 | Player MVP ranking | Rank; Player; Points | Fixed leaderboard | Exempt |
@@ -55,6 +55,6 @@ exempt. **Text only** means arrows exist but business/date values are currently 
 - Safety uses generic displayed-text extraction; its arrows do not guarantee chronological date,
   severity or workflow ordering.
 - RevSports Mappings and Unmatched visibly lag behind the newer Entity Review pattern.
-- Organisation, people, Requests, Error Logs, Feedback, RevSports Mappings and Hockey Trace are the
+- Organisation, people, Requests, RevSports Mappings and Hockey Trace are the
   largest remaining operational sorting gaps.
 - Blank action/control headings must receive accessible names even when they remain non-sortable.

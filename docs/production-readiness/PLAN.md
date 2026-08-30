@@ -117,6 +117,7 @@ Repair these in small Dev-only batches, highest risk first.
 | READY-019 | Medium consistency | Player MVP Vote Completion and Individual Votes Log columns have no interactive two-way sorting. | Add stable typed sorting to all operational columns while leaving the fixed-rank leaderboard exempt. |
 | READY-020 | Medium accessibility | The desktop sidebar has multiple foreground/background colour combinations below WCAG AA contrast. | Local Dev fix removes the failing text opacity; deployed desktop/mobile Axe retest pending. |
 | READY-021 | Medium consistency | Expense Hub operational columns do not sort and its filters reset on navigation. | Add typed two-way sorting and keep filters in per-user browser-session storage, never the URL. |
+| READY-022 | Medium consistency/accessibility | Error Logs and Feedback have no interactive sorting and use unnamed control headings; Error Logs also relies on a pointer-only expandable row. | Add stable typed sorting, name control columns and expose Error details through a keyboard-operable button. |
 
 Additional confirmed defects found during the audit enter this table before repair. Avoid mixing
 unrelated fixes into one commit.

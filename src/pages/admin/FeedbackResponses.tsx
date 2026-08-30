@@ -12,6 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
+
+type FeedbackSortKey = "createdAt" | "message" | "status" | "adminNotes";
 
 type FeedbackStatus = "OPEN" | "REVIEWED" | "CLOSED";
 
@@ -79,6 +83,8 @@ const STATUS_STYLES: Record<FeedbackStatus, string> = {
   CLOSED: "bg-success/15 text-success border-success/30",
 };
 
+const STATUS_ORDER: Record<FeedbackStatus, number> = { OPEN: 0, REVIEWED: 1, CLOSED: 2 };
+
 const FeedbackResponses = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -88,11 +94,21 @@ const FeedbackResponses = () => {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, { status: FeedbackStatus; admin_notes: string }>>({});
   const [feedbackAttachments, setFeedbackAttachments] = useState<Record<string, FeedbackAttachmentRow[]>>({});
+  const [sort, setSort] = useState<SortState<FeedbackSortKey> | null>(null);
 
   const canViewFeedback = isSuperAdmin || highestScopedRole === "ASSOCIATION_ADMIN";
 
   const feedbackClient = useMemo(() => supabase as unknown as FeedbackClient, []);
   const attachmentClient = useMemo(() => supabase as unknown as FeedbackAttachmentClient, []);
+  const displayedFeedbackRows = useMemo(() => {
+    if (!sort) return feedbackRows;
+    return stableSortRows(feedbackRows, sort, (row, key) => {
+      if (key === "createdAt") return row.created_at;
+      if (key === "message") return row.message;
+      if (key === "status") return STATUS_ORDER[row.status];
+      return row.admin_notes || "";
+    });
+  }, [feedbackRows, sort]);
 
   const fetchFeedback = async () => {
     setLoading(true);
@@ -327,7 +343,7 @@ const FeedbackResponses = () => {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} aria-label="Back to Admin Dashboard">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -364,15 +380,15 @@ const FeedbackResponses = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="whitespace-nowrap">When</TableHead>
-                  <TableHead>Feedback</TableHead>
-                  <TableHead className="w-44">Status</TableHead>
-                  <TableHead className="min-w-64">Admin notes</TableHead>
-                  <TableHead className="w-24"></TableHead>
+                  <SortableTableHead label="When" sortKey="createdAt" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} className="whitespace-nowrap" />
+                  <SortableTableHead label="Feedback" sortKey="message" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Status" sortKey="status" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} className="w-44" />
+                  <SortableTableHead label="Admin notes" sortKey="adminNotes" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} className="min-w-64" />
+                  <TableHead className="w-24"><span className="sr-only">Actions</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {feedbackRows.map((row) => {
+                {displayedFeedbackRows.map((row) => {
                   const draft = drafts[row.id] || { status: row.status, admin_notes: row.admin_notes || "" };
                   const hasChanges = draft.status !== row.status || draft.admin_notes !== (row.admin_notes || "");
 

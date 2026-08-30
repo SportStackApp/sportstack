@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
@@ -12,6 +12,10 @@ import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, RefreshCw } from "l
 import { useToast } from "@/hooks/use-toast";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { supabase } from "@/integrations/supabase/client";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
+
+type ErrorLogSortKey = "createdAt" | "context" | "message";
 
 // One row from the error_logs table
 interface ErrorLog {
@@ -35,9 +39,19 @@ const ErrorLogs = () => {
   const [loading, setLoading] = useState(true);
   // Tracks which row is "expanded" to show its full technical details
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortState<ErrorLogSortKey> | null>(null);
+
+  const displayedLogs = useMemo(() => {
+    if (!sort) return logs;
+    return stableSortRows(logs, sort, (log, key) => {
+      if (key === "createdAt") return log.created_at;
+      if (key === "context") return log.context || "";
+      return log.message;
+    });
+  }, [logs, sort]);
 
   // Load the most recent 100 error logs, newest first
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -48,16 +62,16 @@ const ErrorLogs = () => {
 
       if (error) throw error;
       setLogs(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error loading logs",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   // If a non-super-admin somehow lands here, send them back to the dashboard
   useEffect(() => {
@@ -71,7 +85,7 @@ const ErrorLogs = () => {
     if (!scopeLoading && isSuperAdmin) {
       fetchLogs();
     }
-  }, [scopeLoading, isSuperAdmin]);
+  }, [scopeLoading, isSuperAdmin, fetchLogs]);
 
   // Turn a timestamp into a readable local date + time
   const formatDate = (dateStr: string) => {
@@ -103,7 +117,7 @@ const ErrorLogs = () => {
     <div className="space-y-6">
       {/* Page header with back button */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} aria-label="Back to Admin Dashboard">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
@@ -139,14 +153,14 @@ const ErrorLogs = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-8"></TableHead>
-                  <TableHead className="whitespace-nowrap">When</TableHead>
-                  <TableHead>Context</TableHead>
-                  <TableHead>Message</TableHead>
+                  <TableHead className="w-8"><span className="sr-only">Details</span></TableHead>
+                  <SortableTableHead label="When" sortKey="createdAt" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} className="whitespace-nowrap" />
+                  <SortableTableHead label="Context" sortKey="context" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Message" sortKey="message" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logs.map((log) => (
+                {displayedLogs.map((log) => (
                   // React Fragment lets us render two rows per log:
                   // the summary row, and (if expanded) the details row.
                   <ErrorLogRow
@@ -180,11 +194,9 @@ const ErrorLogRow = ({ log, expanded, onToggle, formatDate }: ErrorLogRowProps) 
     <>
       <TableRow className="cursor-pointer" onClick={onToggle}>
         <TableCell>
-          {expanded ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
+          <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={(event) => { event.stopPropagation(); onToggle(); }} aria-label={`${expanded ? "Hide" : "Show"} error details`} aria-expanded={expanded}>
+            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </Button>
         </TableCell>
         <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
           {formatDate(log.created_at)}
