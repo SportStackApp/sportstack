@@ -78,9 +78,9 @@ const STATUS_LABELS: Record<FeedbackStatus, string> = {
 };
 
 const STATUS_STYLES: Record<FeedbackStatus, string> = {
-  OPEN: "bg-warning/15 text-warning-foreground border-warning/30",
-  REVIEWED: "bg-primary/15 text-primary border-primary/30",
-  CLOSED: "bg-success/15 text-success border-success/30",
+  OPEN: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-700",
+  REVIEWED: "bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-700",
+  CLOSED: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-700",
 };
 
 const STATUS_ORDER: Record<FeedbackStatus, number> = { OPEN: 0, REVIEWED: 1, CLOSED: 2 };
@@ -413,7 +413,7 @@ const FeedbackResponses = () => {
                                   href={attachment.signedUrl}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
+                                  className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30"
                                 >
                                   <ExternalLink className="h-3 w-3" />
                                   Photo {index + 1}
@@ -431,7 +431,7 @@ const FeedbackResponses = () => {
                           value={draft.status}
                           onValueChange={(value) => handleDraftChange(row.id, { status: value as FeedbackStatus })}
                         >
-                          <SelectTrigger className="w-full min-w-0 overflow-hidden">
+                          <SelectTrigger className="w-full min-w-0 overflow-hidden" aria-label={`Status for feedback from ${row.submitter_name || "Unknown user"}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
