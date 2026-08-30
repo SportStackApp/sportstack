@@ -61,7 +61,7 @@ Scope: Complete the approved Development batch without changing Production or de
   EXPECT: Test Files
   EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  155ms (transform 16ms, setup 0ms, import 26ms, tests 2ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
-- [x] G14: The mobile pitch uses a portrait mapping and converts dragged coordinates back to the saved landscape formation
+- [x] G14: The mobile pitch uses a portrait mapping, keeps markers inside safe mobile bounds and converts dragged coordinates back to the saved landscape formation
   CHECK: npx vitest run src/lib/lineupPlanner.test.ts
   EXPECT: Test Files
   EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  161ms (transform 24ms, setup 0ms, import 36ms, tests 3ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
@@ -71,19 +71,16 @@ Scope: Complete the approved Development batch without changing Production or de
   EXPECT: Test Files
   EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=Duration  154ms (transform 17ms, setup 0ms, import 27ms, tests 2ms, environment 0ms) | [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.d
 
-- [ ] G16: The formation selector has an accessible name and the repaired line-up passes desktop and mobile browser checks without marker overlap or clipping
-  EVIDENCE: Formation now has the accessible name in code; deployed desktop/mobile browser evidence remains pending.
+- [x] G16: The formation selector has an accessible name and the repaired line-up passes desktop and mobile browser checks without marker overlap or clipping
+  EVIDENCE: The deployed 3a4ffd4 Dev line-up kept Pumas after refresh, exposed Formation and Line-up team names, had no horizontal overflow at 390x844 or 1569x912, and showed all eleven labels without the earlier collision. Axe reported zero WCAG A/AA violations after the icon-only control repair; two Radix/contrast checks remained tool-incomplete rather than failed.
 
 - [x] G17: Focused lint, the complete Vitest suite, TypeScript and the Production build pass for the repair batch
-  EVIDENCE: Focused lint and TypeScript passed with no diagnostics; 33 Vitest files/127 tests and the Production build passed. Full lint remains unchanged at the established 350 errors/78 warnings.
+  EVIDENCE: Focused lint and TypeScript passed with no diagnostics; 33 Vitest files/128 tests and the Production build passed. Full lint remains unchanged at the established 350 errors/78 warnings.
 
-- [ ] G18: Actual-role Dev testing records Association Admin, Club Admin, Team Manager, Coach, Player, Umpire and Voter outcomes without changing normal accounts
-  EVIDENCE: Player, Coach and Club Admin have earlier actual-role evidence. The remaining roles could not be run after deployment because the controllable browser had no authenticated Dev session.
+- [x] G18: Actual-role Dev testing records Association Admin, Club Admin, Team Manager, Coach, Player, Umpire and Voter outcomes without changing normal accounts
+  EVIDENCE: Reserved disposable Dev identities supplied actual-role evidence for all seven roles. Club Admin reached its club-scoped Individual Votes Log; Association Admin stayed aggregate-only; Team Manager reached Player MVP Voting and was denied Roles & modules; Umpire reached /umpire/vote and was denied Roles & modules; Voter reached /mvp-votes and was denied Roles & modules. Earlier current-cycle evidence covers Coach and Player. Only reserved Dev accounts were reset; no normal account changed.
 
 - [x] G19: The walk-away findings and repair results are committed to Dev, mirrored into Big Brain and verified by the sync check
   CHECK: pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check
   EXPECT: CHECK_OK
   EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=D:\AI-Workspace\Projects\Local-Projects\SportStackApp\sportstack; path=41a31e43f690/55 entries; output=CHECK_OK ref=origin/dev commit=5a3cfd33960192e405341a6d02841176c7a1172d files=61 vault=C:\Users\mulla\OneDrive\Documents\Big Brain
-
-ABANDON: G16 Current unattended run cannot reach the authenticated line-up; the in-app tab is not controllable and the normal Chrome profile attempt timed out and reached Dev signed out.
-ABANDON: G18 Current unattended run cannot reset or sign into the reserved Dev accounts because the controllable browser lost its authenticated Super Admin hand-off.

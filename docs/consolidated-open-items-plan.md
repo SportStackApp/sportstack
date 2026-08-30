@@ -66,28 +66,25 @@ Current verified position:
 
 ### 30 August walk-away consistency cycle
 
-**In progress now**
+**Completed on Dev**
 
 - The signed-in Dev cycle completed the planned sorting, persistence, role, accessibility and
   responsive checks across Admin, Fixtures, RevSports Review, Player MVP, Safety Hub, Profile,
   Coaching and line-up screens. No Blocker or High issue was found.
 - READY-011 to READY-015 record the five findings: line-up team refresh persistence, mobile pitch
   layout, Club Admin Player MVP analytics routing, formation-control labelling and the blank legacy
-  role label. Commit `99dff2c` is deployed on Dev; regression, TypeScript, build, Dev Quality and
-  live-bundle checks pass.
+  role label. Commits `99dff2c` and `bdc8867` are deployed on Dev and pass regression, TypeScript,
+  build, Dev Quality, live-bundle, desktop and mobile checks.
+- A final accessibility pass found unnamed icon-only navigation and bench controls. Commit `3a4ffd4`
+  labels those controls; the deployed line-up then returned zero Axe WCAG A/AA violations.
+- Actual-role checks now cover every reserved disposable identity: Association Admin, Club Admin,
+  Team Manager, Coach, Player, Umpire and Voter. Role-specific allowed routes worked and restricted
+  Roles & modules access redirected as expected. No normal account was changed.
 
 **Next**
 
-- Reconnect a controllable authenticated browser, rerun the original desktop/mobile steps and complete actual-role checks
-  for Association Admin, Team Manager, Umpire and Voter using only the reserved disposable accounts.
 - Refresh the route/table/form registers from observed evidence. Main staging remains after Dev
   acceptance; Production remains separately approval-gated.
-
-**Current block**
-
-- The automation browser could not reuse the signed-in Codex in-app tab. The normal Chrome profile
-  attempt timed out and reached Dev signed out. Signed-in closure and the remaining actual-role cycle
-  are explicitly blocked until the hard pre-flight succeeds in the same browser session.
 
 ### 29 August admin, line-up and coaching batch
 

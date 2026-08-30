@@ -28,9 +28,9 @@ This is a release programme, not a promise that Production is ready today.
 
 The snapshot must be refreshed at the start of each work cycle.
 
-- Dev is `5de25e5`; Main is `d48239d` and is 12 commits behind Dev.
+- Dev is `3a4ffd4`; Main is `d48239d` and is 19 commits behind Dev.
 - Production is `682b8ea` and is 195 commits behind Main.
-- Dev Quality passed for `74f6d93`.
+- Dev Quality passed for `3a4ffd4` in run `33298089720`.
 - The latest Production Supabase Scrapers run failed because three manually targeted games were
   started without a required round number. This must be repaired and rerun successfully.
 - The repository has about 80 declared routes, 26 source files containing table headings and 15
@@ -110,6 +110,7 @@ Repair these in small Dev-only batches, highest risk first.
 | READY-013 | Medium | Club Admin is redirected away from Player MVP analytics before the existing club-scoped individual audit can render. | Allow Club Admin through the analytics route; keep raw ballots limited to Super Admin and the Club Admin's own club. Association Admin remains aggregate-only. |
 | READY-014 | Medium accessibility | The line-up formation selector has no accessible name. | Expose a stable **Formation** name and pass the focused accessibility check. |
 | READY-015 | Low | Profile can display an icon followed by a blank role name for the legacy umpire-admin enum value. | Every live database role has a plain-English label; the legacy value displays as **Legacy Umpire Admin**. |
+| READY-016 | Medium accessibility | The mobile navigation and icon-only bench removal buttons have no screen-reader name. | Give every icon-only control a stable action name and pass the deployed focused accessibility check. |
 
 Additional confirmed defects found during the audit enter this table before repair. Avoid mixing
 unrelated fixes into one commit.
@@ -142,17 +143,19 @@ Goalkeeper choices remain available for flexible selections. Existing separate p
 still displayed and were not guessed into pairs or rewritten. Dev Quality, Vercel and the deployed
 bundle checks pass. The finding remains open until signed-in owner save/reload acceptance.
 
-READY-011 to READY-015 implementation status on 30 August 2026: commit `99dff2c` is deployed on Dev.
+READY-011 to READY-016 closure status on 30 August 2026: **PASSED AND CLOSED ON DEV**. Commit
+`99dff2c` is deployed on Dev.
 The selected fixture team is stored per user and fixture in session storage and validated against
 current access before use. The mobile pitch rotates its presentation while translating pointer
 movement back to the same canonical coordinates used on desktop. Club Admin is included in the
 analytics route but the individual-ballot check remains Super Admin or Club Admin only. The
-formation selector is named and all database role values have labels. Regression tests, TypeScript
-and the Production build pass. Dev Quality run `33293555208`, the live `99dff2c` bundle and the
-signed-out protected-route return path also pass. These findings remain open because the automation
-browser could not reconnect to the signed-in in-app tab, and the normal Chrome-profile attempt
-timed out and reached Dev signed out. Signed-in desktop/mobile and actual-role retesting must resume
-only after the hard pre-flight succeeds in that same controllable session.
+formation selector is named and all database role values have labels. Commit `bdc8867` adds safe
+mobile marker insets, and commit `3a4ffd4` names the icon-only navigation and bench controls.
+Signed-in 390x844 and 1569x912 checks show no overflow or label collision, Pumas survives refresh,
+and the final Axe WCAG A/AA run reports zero violations. Reserved disposable-account checks cover
+Association Admin, Club Admin, Team Manager, Coach, Player, Umpire and Voter without changing normal
+accounts. Regression tests, TypeScript, the Production build, Dev Quality and deployed-bundle checks
+pass. Full lint remains at the documented 350-error/78-warning baseline.
 
 ## C. Screen consistency review
 
@@ -329,13 +332,11 @@ This phase requires Aaron's explicit approval before any change.
 
 ## Recommended first cycle
 
-READY-001 is complete. Continue with signed-in owner acceptance for READY-002, READY-003 and
-READY-007: pitch-player history, whole-marker dragging and the selected-player visual state. Then
-complete the combined-position and coaching interaction checks for READY-004, READY-005 and
-READY-006.
-
-After those High/Medium line-up risks pass on Dev, run the first read-only consistency night over
-Admin, Fixtures and RevSports while the next repair batch is prepared.
+READY-001 to READY-008 and READY-011 to READY-016 have current Dev results. Continue by refreshing
+the complete route, table and form registers from observed evidence, then close the remaining role,
+device, keyboard, empty/error-state and operational workflow gaps. READY-009 remains a High
+operational blocker: the latest Production Supabase Scrapers run `33286035646` failed and must be
+diagnosed and successfully rerun before a Production proposal.
 
 ## Reporting rhythm
 

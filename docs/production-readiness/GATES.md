@@ -12,40 +12,40 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
   EVIDENCE: pending
 
 - [ ] R4: every meaningful table column follows the documented two-way sorting contract and action-only columns are explicitly non-sortable
-  EVIDENCE: pending
+  EVIDENCE: The first Dev consistency cycle passed the requested Fixtures, RevSports Review, Player MVP and Safety Hub tables. The complete table/column register is still pending.
 
 - [ ] R5: every form, filter, search and modal follows the documented persistence and sensitive-data contract
-  EVIDENCE: pending
+  EVIDENCE: RevSports tab filters/default-Unmatched, Quick Actions and line-up team refresh persistence pass. The complete form/filter/modal register is still pending.
 
 - [ ] R6: actual-role Dev testing covers Super Admin, Association Admin, Club Admin, Team Manager, Coach, Player, Umpire and Coordinator at their real scopes
-  EVIDENCE: pending
+  EVIDENCE: Super Admin plus the reserved Association Admin, Club Admin, Team Manager, Coach, Player and Umpire identities have current results. Voter was also tested. Coordinator remains pending.
 
 - [ ] R7: the high-risk workflows pass on desktop and mobile, with tablet evidence where the layout needs it
-  EVIDENCE: pending
+  EVIDENCE: The repaired line-up passes 1569x912 and 390x844 visual, overflow and accessibility checks. Remaining high-risk workflows and any necessary tablet layouts are pending.
 
 - [ ] R8: public, signed-out, direct-link, refresh, back-forward, keyboard, empty, error and unavailable-module states have current results
   EVIDENCE: pending
 
-- [ ] R9: focused regression tests and the complete Vitest suite pass
+- [x] R9: focused regression tests and the complete Vitest suite pass
   CHECK: npx vitest run
   EXPECT: Test Files
-  EVIDENCE: pending
+  EVIDENCE: 33 files and 128 tests passed at Dev commit 3a4ffd4.
 
-- [ ] R10: TypeScript validates the complete application
+- [x] R10: TypeScript validates the complete application
   CHECK: npx tsc --noEmit
   EXPECT: /(?:^|\n)\s*$/
-  EVIDENCE: pending
+  EVIDENCE: npx tsc --noEmit passed at Dev commit 3a4ffd4 with no diagnostics.
 
-- [ ] R11: the Production application build succeeds and build warnings are reviewed
+- [x] R11: the Production application build succeeds and build warnings are reviewed
   CHECK: npm run build
   EXPECT: built in
-  EVIDENCE: pending
+  EVIDENCE: npm run build passed at Dev commit 3a4ffd4. The known large-bundle/dynamic-import and stale Browserslist warnings remain non-blocking debt.
 
-- [ ] R12: full lint is measured and no new error exists beyond the documented legacy baseline
-  EVIDENCE: pending
+- [x] R12: full lint is measured and no new error exists beyond the documented legacy baseline
+  EVIDENCE: Full lint remains at the documented 350 errors/78 warnings. Focused lint over the latest changed components passed with zero findings.
 
 - [ ] R13: at least one complete read-only walk-away cycle has current evidence and no unresolved Blocker or High finding
-  EVIDENCE: pending
+  EVIDENCE: The 30 August Dev UI cycle found no new Blocker or High application defect, but READY-009 remains an unresolved High operational scraper item.
 
 - [ ] R14: any authorised disposable-data cycle proves create, save, reopen and recoverable cleanup without retained test damage
   EVIDENCE: pending

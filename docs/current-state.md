@@ -6,7 +6,7 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
-## 30 August walk-away consistency findings and repair — in progress
+## 30 August walk-away consistency findings and repair — completed on Dev
 
 - A signed-in Dev walk-away cycle completed the Admin, Fixtures, RevSports Review, Player MVP,
   Safety Hub, Profile, Coaching and line-up checks. It found no Blocker or High defect, four Medium
@@ -15,19 +15,24 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - The five recorded defects are: line-up team choice resetting on refresh, cramped mobile line-up
   markers, Club Admin being blocked at the Player MVP analytics route, an unlabelled formation
   selector and a blank legacy role label on Profile.
-- Dev commit `99dff2c` now remembers the chosen fixture team for the browser session, rotates the pitch
+- Dev commit `99dff2c` remembers the chosen fixture team for the browser session, rotates the pitch
   into portrait on small screens while preserving canonical drag coordinates, allows Club Admin
   through the route while keeping Association Admin out of individual ballots, labels the formation
   control and displays **Legacy Umpire Admin** instead of a blank role.
-- Verification passes: 33 Vitest files/127 tests, focused lint, TypeScript, Production build, Dev
-  Quality run `33293555208`, live bundle and signed-out protected-route return path. Full lint remains
-  at the established 350-error/78-warning baseline.
-- The repair is deployed but the signed-in closure checks remain open. The controllable browser could
-  not reconnect to the authenticated in-app tab, and attempting to reuse the normal Chrome profile
-  timed out and opened signed out. This is the exact hard pre-flight failure the operating rule is
-  intended to catch; no signed-in result is inferred from source or signed-out evidence.
-- Actual-role coverage is still incomplete for Association Admin, Team Manager, Umpire and Voter.
-  Production, `prod`, Main and live data are unchanged.
+- Follow-up commit `bdc8867` constrains portrait marker positions to safe mobile insets. Commit
+  `3a4ffd4` gives the mobile navigation button and icon-only bench removal controls accessible names.
+- Signed-in Dev closure now passes. Pumas remains selected after refresh; the formation and team
+  selectors have stable names; 390x844 and 1569x912 show no horizontal overflow or marker-label
+  collision; and the final Axe WCAG A/AA run reports zero violations. Two Radix/contrast checks were
+  tool-incomplete rather than failed and remain review notes, not inferred passes.
+- Reserved disposable identities now cover Association Admin, Club Admin, Team Manager, Coach,
+  Player, Umpire and Voter. Club Admin reaches its club-scoped Individual Votes Log; Association
+  Admin remains aggregate-only; Team Manager, Umpire and Voter reach their expected modules and are
+  redirected away from Roles & modules. No normal account was changed.
+- Verification passes: 33 Vitest files/128 tests, focused lint, TypeScript, Production build, Dev
+  Quality runs `33297236883` and `33298089720`, and live bundles for `bdc8867` and `3a4ffd4`. Full lint
+  remains at the established 350-error/78-warning baseline. Production, `prod`, Main and the database
+  are unchanged by this closure pass.
 
 ## Walk-away Dev accounts and browser pre-flight — 30 August 2026
 
