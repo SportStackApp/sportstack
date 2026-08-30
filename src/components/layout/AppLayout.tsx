@@ -1165,9 +1165,9 @@ const AppLayout = () => {
       })
     : filteredTeams;
   const staticCascadeClass =
-    "flex h-10 min-w-0 max-w-[190px] items-center rounded-md bg-primary-foreground/10 px-3 text-sm font-medium text-primary-foreground truncate lg:max-w-[260px]";
+    "flex h-10 min-w-0 max-w-[190px] items-center rounded-md bg-transparent px-3 text-sm font-medium text-primary-foreground truncate lg:max-w-[260px]";
   const cascadeSelectTriggerClass =
-    "h-10 min-w-0 max-w-[190px] bg-primary-foreground/10 text-primary-foreground border-primary-foreground/15 font-medium data-[placeholder]:text-primary-foreground lg:max-w-[260px]";
+    "h-10 min-w-0 max-w-[190px] bg-transparent text-primary-foreground border-primary-foreground/30 font-medium data-[placeholder]:text-primary-foreground lg:max-w-[260px]";
   const cascadePanelSelectTriggerClass =
     "h-10 w-full min-w-0 bg-background text-foreground border-border font-medium";
   const cascadeClearClass =
@@ -1651,7 +1651,7 @@ const AppLayout = () => {
                         setIsCascadePopoverOpen(false);
                       }}
                     >
-                      <SelectTrigger className={cascadePanelSelectTriggerClass}>
+                      <SelectTrigger className={cascadePanelSelectTriggerClass} aria-label="Association">
                         <SelectValue placeholder="Select association" />
                       </SelectTrigger>
                       <SelectContent className="bg-background border-border">
@@ -1872,7 +1872,7 @@ const AppLayout = () => {
                       </button>
                     )}
                     <Select value={selectedTeamId || voterTeamMemberships[0]?.teamId} onValueChange={handleVoterTeamChange}>
-                      <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[190px]")}>
+                      <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[190px]")} aria-label="Team">
                         <SelectValue placeholder="Select team" />
                       </SelectTrigger>
                       <SelectContent className="bg-background border-border">
@@ -1932,7 +1932,7 @@ const AppLayout = () => {
                     setSelectedClubId(v);
                     navigate(`/clubs/${v}`);
                   }}>
-                    <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[170px] lg:w-[230px]")}>
+                    <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[170px] lg:w-[230px]")} aria-label="Club">
                       <SelectValue placeholder="Select Club" />
                     </SelectTrigger>
                     <SelectContent className="bg-background border-border">
@@ -1969,7 +1969,7 @@ const AppLayout = () => {
                     setSelectedDivision(v);
                     navigate("/admin/division");
                   }}>
-                    <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[150px] lg:w-[210px]")}>
+                    <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[150px] lg:w-[210px]")} aria-label="Division">
                       <SelectValue placeholder="Division" />
                     </SelectTrigger>
                     <SelectContent className="bg-background border-border">
@@ -2005,7 +2005,7 @@ const AppLayout = () => {
                     setSelectedTeamId(v);
                     navigate(`/teams/${v}`);
                   }}>
-                    <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[150px] lg:w-[210px]")}>
+                    <SelectTrigger className={cn(cascadeSelectTriggerClass, "w-[150px] lg:w-[210px]")} aria-label="Team">
                       <SelectValue placeholder="Select Team" />
                     </SelectTrigger>
                     <SelectContent className="bg-background border-border">
