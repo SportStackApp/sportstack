@@ -12,7 +12,7 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
   EVIDENCE: pending
 
 - [ ] R4: every meaningful table column follows the documented two-way sorting contract and action-only columns are explicitly non-sortable
-  EVIDENCE: The first Dev consistency cycle passed the requested Fixtures, RevSports Review, Player MVP and Safety Hub tables. The complete table/column register is still pending.
+  EVIDENCE: The complete table/column register exists. Fixtures, RevSports Review, Player MVP, Expense Hub, Error Logs and Feedback pass the contract; remaining register gaps keep this gate open.
 
 - [ ] R5: every form, filter, search and modal follows the documented persistence and sensitive-data contract
   EVIDENCE: RevSports tab filters/default-Unmatched, Quick Actions and line-up team refresh persistence pass. The complete form/filter/modal register is still pending.
@@ -29,20 +29,20 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
 - [x] R9: focused regression tests and the complete Vitest suite pass
   CHECK: npx vitest run
   EXPECT: Test Files
-  EVIDENCE: 33 files and 128 tests passed locally before Dev commits db1717b and 8b6ad73; both Dev Quality runs passed.
+  EVIDENCE: 33 files and 128 tests passed locally before the 31 August support-table batch; its Dev Quality runs passed.
 
 - [x] R10: TypeScript validates the complete application
   CHECK: npx tsc --noEmit
   EXPECT: /(?:^|\n)\s*$/
-  EVIDENCE: npx tsc --noEmit passed before both 31 August Dev commits; both Dev Quality runs passed.
+  EVIDENCE: npx tsc --noEmit passed before the 31 August support-table commits; their Dev Quality runs passed.
 
 - [x] R11: the Production application build succeeds and build warnings are reviewed
   CHECK: npm run build
   EXPECT: built in
-  EVIDENCE: npm run build passed before both 31 August Dev commits. The known large-bundle/dynamic-import and stale Browserslist warnings remain non-blocking debt.
+  EVIDENCE: npm run build passed before the 31 August support-table commits. The known large-bundle/dynamic-import and stale Browserslist warnings remain non-blocking debt.
 
 - [x] R12: full lint is measured and no new error exists beyond the documented legacy baseline
-  EVIDENCE: Full lint remains at the documented 350 errors/78 warnings. Focused lint over the latest changed components passed with zero findings.
+  EVIDENCE: Full lint is 349 errors/77 warnings, one error and one warning lower than the prior baseline. Focused lint over the changed components passed with zero findings.
 
 - [ ] R13: at least one complete read-only walk-away cycle has current evidence and no unresolved Blocker or High finding
   EVIDENCE: The 30 August Dev UI cycle found no new Blocker or High application defect, but READY-009 remains an unresolved High operational scraper item.

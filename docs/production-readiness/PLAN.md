@@ -117,7 +117,7 @@ Repair these in small Dev-only batches, highest risk first.
 | READY-019 | Medium consistency | Player MVP Vote Completion and Individual Votes Log columns have no interactive two-way sorting. | Add stable typed sorting to all operational columns while leaving the fixed-rank leaderboard exempt. |
 | READY-020 | Medium accessibility | The desktop sidebar has multiple foreground/background colour combinations below WCAG AA contrast. | Local Dev fix removes the failing text opacity; deployed desktop/mobile Axe retest pending. |
 | READY-021 | Medium consistency | Expense Hub operational columns do not sort and its filters reset on navigation. | Add typed two-way sorting and keep filters in per-user browser-session storage, never the URL. |
-| READY-022 | Medium consistency/accessibility | Error Logs and Feedback have no interactive sorting and use unnamed control headings; Error Logs also relies on a pointer-only expandable row. | Add stable typed sorting, name control columns and expose Error details through a keyboard-operable button. |
+| READY-022 | Medium consistency/accessibility | Error Logs and Feedback lacked interactive sorting and named controls; Error Logs also relied on a pointer-only expandable row. | **Closed on Dev 31/08:** stable typed sorting, labelled controls, keyboard-operable Error details and corrected heading hierarchy pass deployed checks. |
 
 Additional confirmed defects found during the audit enter this table before repair. Avoid mixing
 unrelated fixes into one commit.
@@ -171,7 +171,14 @@ Signed-in 390x844 and 1569x912 checks show no overflow or label collision, Pumas
 and the final Axe WCAG A/AA run reports zero violations. Reserved disposable-account checks cover
 Association Admin, Club Admin, Team Manager, Coach, Player, Umpire and Voter without changing normal
 accounts. Regression tests, TypeScript, the Production build, Dev Quality and deployed-bundle checks
-pass. Full lint remains at the documented 350-error/78-warning baseline.
+pass. Full lint is now measured at 349 errors/77 warnings after one existing Error Logs error and
+warning were removed; focused lint over this batch passes.
+
+READY-022 closure on 31 August 2026: **PASSED AND CLOSED ON DEV**. Error Logs and Feedback now sort
+every meaningful data column in both directions while control-only columns remain fixed. Error
+details are keyboard operable, row status selectors and scope selectors have accessible names, and
+the support-page heading hierarchy and local contrast pass the deployed audit. No database, Main,
+`prod` or Production change is included.
 
 ## C. Screen consistency review
 

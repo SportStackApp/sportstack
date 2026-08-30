@@ -9,14 +9,18 @@ Last updated: 2026-08-31
 - Local Dev fixes cover the shared Viewing-as name/sidebar contrast, duplicate Safety donut
   accessibility, Player MVP Analytics operational sorting, Expense sorting and per-user
   browser-session filter persistence.
+- Error Logs and Feedback now have typed two-way sorting for every data column, labelled fixed
+  control columns, keyboard-operable Error details and corrected support-page heading hierarchy.
+  Shared scope selectors and Feedback row status selectors are named, with repaired local contrast.
 - Read-only Production scraper diagnosis proves that finals labels lose their numeric round value.
   The protected repair package is documented separately and was not implemented.
-- Commits `db1717b` and `8b6ad73` are deployed. Analytics and Expense two-way sorting pass their
+- Commits through `68192c4` are deployed. Analytics, Expense and support-table sorting pass their
   signed-in checks; Expense search persists through refresh without entering the URL; desktop and
-  mobile Safety Hub report zero Axe WCAG A/AA violations.
+  mobile Safety Hub report zero Axe WCAG A/AA violations. Feedback's deployed audit has no control,
+  contrast or heading violation after the final support build.
 - Vitest (33 files/128 tests), TypeScript, Production build and Dev Quality runs `33317078740` and
-  `33317202053` pass. Full lint remains at the existing 350-error/78-warning baseline. Main, `prod`,
-  databases and Production are unchanged.
+  `33317202053` and the support-table Dev Quality runs pass. Full lint improved to 349 errors/77
+  warnings. Main, `prod`, databases and Production are unchanged.
 
 ## 30 August 2026 — walk-away consistency cycle and repair
 

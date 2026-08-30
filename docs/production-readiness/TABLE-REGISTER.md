@@ -27,8 +27,8 @@ exempt. **Text only** means arrows exist but business/date values are currently 
 | RevSports Entity Review, all tabs | Scraped Item; Context; SportStack Match; Status; Last Seen; Actions | All data columns | Passed 30/08 |
 | RevSports Mappings, all tabs | CSV Column; Scraped Value; Maps To; Destination; Status | None | Gap: inconsistent with Entity Review |
 | RevSports Unmatched | Association; Competition; Grade; Team; Club; First Seen; Actions | None | Gap except Actions |
-| Error Logs | control; When; Context; Message | Local Dev fix: all data columns use typed two-way sorting | Deployed retest pending; Details control labelled |
-| Feedback | When; Feedback; Status; Admin notes; control | Local Dev fix: all data columns use typed two-way sorting | Deployed retest pending; Actions control labelled |
+| Error Logs | control; When; Context; Message | All data columns use typed two-way sorting | Passed 31/08; Details is a labelled keyboard-operable control |
+| Feedback | When; Feedback; Status; Admin notes; control | All data columns use typed two-way sorting | Passed 31/08; status order and accessible labels verified |
 | Player Explorer | Player; Identity; Teams; Games; Goals; Green; Yellow; Red | All typed columns | Source tests passed |
 | Player MVP sessions | Team; Fixture; Date; Status; Completed; Actions | All data columns | Passed 30/08 |
 | Player MVP ranking | Rank; Player; Points | Fixed leaderboard | Exempt |

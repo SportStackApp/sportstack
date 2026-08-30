@@ -17,16 +17,21 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - Player MVP Analytics Vote Completion and Individual Votes Log now have stable two-way sorting.
   Expense Hub now sorts all operational data columns by their actual value and keeps filters in
   per-user browser-session storage rather than exposing search or amount values in the URL.
+- Error Logs and Feedback now sort every meaningful data column in both directions. Error details
+  are keyboard operable, support controls and scope selectors have accessible names, and the two
+  support pages use the correct heading order and locally compliant contrast.
 - The Production scraper failure is confirmed: finals labels such as **Semi Finals** lose their
   numeric RevSports round identifier before workflow fan-out. The repair is documented in
   `docs/production-readiness/PRODUCTION-SCRAPER-FAILURE-2026-08-31.md` and remains approval-gated
   because it affects a Production-capable workflow.
-- Commits `db1717b` and `8b6ad73` are deployed. Player MVP sorting, Expense sorting and Expense
+- Commits `db1717b`, `8b6ad73`, `6368058`, `c413edc`, `cfe794b`, `ae39443` and `68192c4` are deployed. Player MVP sorting, Expense sorting and Expense
   session-filter refresh pass in the signed-in Dev browser. Safety Hub reports zero Axe WCAG A/AA
-  violations at 1440x900 and 390x844.
+  violations at 1440x900 and 390x844; the support-table browser checks and accessibility audit pass.
 - Checks pass: 33 Vitest files/128 tests, TypeScript, Production build and Dev Quality runs
-  `33317078740` and `33317202053`. Full lint remains unchanged at the established 350-error/78-warning
-  baseline. No Main, `prod`, database or Production change is included.
+  `33317078740`, `33317202053`, `33338050802`, `33338148158`, `33338265367`, `33338415213`
+  and `33338541068`.
+  Full lint improved to 349 errors/77 warnings. No Main, `prod`, database or Production change is
+  included.
 
 ## 30 August walk-away consistency findings and repair — completed on Dev
 
