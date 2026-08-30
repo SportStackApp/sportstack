@@ -29,6 +29,9 @@ Last updated: 2026-08-30
   recoverable Dev-only test changes are authorised for those identities.
 - Temporary credentials must remain ephemeral and must never be committed, copied into Big Brain,
   included in screenshots or exposed in logs/chat.
+- On 30 August, an Umpire temporary password was briefly unmasked in internal automation output.
+  Codex immediately replaced it with an undisclosed random value through the authenticated Dev
+  account and closed every automation browser session. Treat the earlier temporary value as invalid.
 - A walk-away run is not ready until `npx agent-browser` proves control of a signed-in Dev browser,
   opens a protected route and completes one harmless interaction in the exact intended role/scope.
   A signed-in Codex in-app tab does not prove that the separate automation browser is authenticated.

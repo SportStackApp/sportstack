@@ -49,6 +49,10 @@ Update this file after every meaningful Codex task, pull request, schema change,
   interaction. Do not declare the unattended run ready until those checks pass.
 - This authority never covers Production, `prod`, normal user accounts, destructive cleanup,
   secrets or unrecoverable changes.
+- During the 30 August role cycle, one Umpire temporary password was briefly unmasked in internal
+  automation output. The affected disposable-account password was immediately replaced with a new
+  random value that was never displayed or retained, and all automation browser sessions were
+  closed. No normal account or Production identity was involved.
 
 ## READY-004 combined playing-position display — 30 August 2026
 
