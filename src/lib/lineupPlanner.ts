@@ -44,6 +44,14 @@ export function orientedPitchPosition(
     : position;
 }
 
+export function mobilePitchPosition(position: PitchPositionOverride): PitchPositionOverride {
+  const oriented = orientedPitchPosition(position, "portrait");
+  return {
+    xPercent: Math.min(92, Math.max(8, oriented.xPercent)),
+    yPercent: Math.min(90, Math.max(8, oriented.yPercent)),
+  };
+}
+
 export function pitchPositionFromOrientedPointer(
   clientX: number,
   clientY: number,

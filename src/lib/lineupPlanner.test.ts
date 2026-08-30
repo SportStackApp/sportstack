@@ -4,6 +4,7 @@ import {
   displayedFormationPosition,
   mergeRosterProfileRows,
   missingRosterProfileIds,
+  mobilePitchPosition,
   orientedPitchPosition,
   pitchOrientationFromBounds,
   pitchPositionFromOrientedPointer,
@@ -65,6 +66,13 @@ describe("line-up planner", () => {
     expect(orientedPitchPosition({ xPercent: 20, yPercent: 35 }, "portrait"))
       .toEqual({ xPercent: 35, yPercent: 80 });
     expect(pitchOrientationFromBounds({ left: 0, top: 0, width: 390, height: 629 })).toBe("portrait");
+  });
+
+  it("keeps portrait markers and their labels inside the mobile pitch", () => {
+    expect(mobilePitchPosition({ xPercent: 5, yPercent: 50 }))
+      .toEqual({ xPercent: 50, yPercent: 90 });
+    expect(mobilePitchPosition({ xPercent: 95, yPercent: 2 }))
+      .toEqual({ xPercent: 8, yPercent: 8 });
   });
 
   it("converts portrait dragging back to canonical landscape coordinates", () => {
