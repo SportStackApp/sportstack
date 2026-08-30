@@ -23,7 +23,9 @@ Unless Aaron has explicitly authorised more in the completed run details, the ru
 - Authorised identities and exact Working-as scopes:
 - Viewports:
 - Read-only or named disposable Dev data:
-- Report-only or separately authorised fix-and-retest:
+- Mode: report-only or fix-and-retest:
+- Authorised fix classes, if any:
+- Final verification reserve:
 - Evidence folder:
 - Known findings to retest:
 
@@ -101,7 +103,24 @@ For every form/filter/modal:
 - Do not call a problem fixed from code inspection alone.
 - Continue past ordinary Low/Medium findings when the remaining route bundle is safe.
 
-### 5. Close-out
+### 5. Authorised fix-and-retest
+
+Skip this section in report-only mode.
+
+- Build an ordered queue from reproducible findings that fit the authorised fix classes.
+- Accept a fix only when it is directly relevant, low risk, supported by evidence and has a clear
+  verification path.
+- Do not impose an arbitrary numerical fix limit. Continue through eligible fixes while enough
+  time remains for the final verification reserve.
+- Make the smallest coherent change and run its focused check before starting another. Group fixes
+  only when they share the same cause or verification path.
+- Stop accepting new fixes when the final verification reserve begins.
+- During the reserve, run the complete required quality checks, inspect the final diff, retest the
+  repaired behaviour and prepare the handoff.
+- Commit or push only when the run details and repository rules authorise it and all required gates
+  pass.
+
+### 6. Close-out
 
 - Save `summary.md`, `issues.md`, `decisions.md` and screenshots.
 - Record Passed, Failed, Blocked and Not tested coverage separately.

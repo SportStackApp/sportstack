@@ -1,6 +1,6 @@
 # SportStack Overnight Agent Plan
 
-Last updated: 29/07/2026
+Last updated: 31/08/2026
 
 For current unattended UI/UX readiness runs, use
 `docs/production-readiness/WALK-AWAY-CHARTER.md`. This older document remains the narrower plan for
@@ -19,8 +19,9 @@ Keep useful SportStack work progressing during an unattended overnight window wi
 - Inspect GitHub Actions run summaries and redacted logs.
 - Run lint, TypeScript checks, builds and existing non-destructive tests.
 - Compare failed and successful Dev scraper runs.
-- Make one small, evidence-backed, low-risk improvement on `dev`.
-- Commit and push that improvement to `dev` only after required checks pass.
+- Work through the approved queue of evidence-backed, low-risk improvements on `dev` while time
+  and verification capacity remain.
+- Commit and push coherent improvements to `dev` only after required checks pass.
 - Perform an independent review and, if necessary, push a narrowly scoped correction to `dev`.
 - Produce one morning briefing with evidence, commit identifiers, checks and blockers.
 
@@ -47,20 +48,30 @@ Keep useful SportStack work progressing during an unattended overnight window wi
 - Determine whether the scraper failure is transient, code-driven or Dev-database-driven.
 - Return a concise evidence-based baseline; make no source change.
 
-### 2. One bounded Dev improvement — approximately two hours
+### 2. Approved Dev fix queue — until the final verification reserve
 
 - Consume the baseline output.
 - Stop if the tree is dirty, branch identity is wrong, remote state changed unexpectedly or the task reaches a protected boundary.
-- Select exactly one low-risk improvement supported by repository evidence.
-- Prefer a deterministic application, scraper or documentation fix with a clear verification path.
-- Run focused checks plus lint, TypeScript and build gates.
-- Commit and push to `dev` only if the change is scoped, explainable and no new failure is introduced.
+- Order reproducible findings by severity, direct relevance, confidence and verification cost.
+- Accept only improvements within the authorised fix classes. Prefer deterministic application,
+  scraper or documentation fixes with clear verification paths.
+- Make each change coherent and run its focused check before starting the next one. Group changes
+  only when they share the same cause or verification path.
+- Do not impose a numerical fix cap. Continue while eligible work and enough verification time
+  remain.
+- Stop accepting new fixes at least 60 minutes before the run ends, or earlier when mandatory
+  checks need longer.
+- Run the complete lint-baseline comparison, TypeScript, build and relevant test gates during that
+  reserve.
+- Commit and push coherent changes to `dev` only if they are scoped, explainable and introduce no
+  new failure.
 
-### 3. Independent Dev review — approximately five hours
+### 3. Independent Dev review — final verification reserve
 
 - Review the baseline and implementation outputs and inspect the actual current Git diff/history.
 - Re-run relevant checks.
-- Correct only a clear defect introduced by the overnight change; otherwise make no edit.
+- Correct a clear defect introduced by the overnight changes and re-run the affected gates. Do not
+  begin another unrelated fix during the reserve.
 - Keep all work on `dev`.
 
 ### 4. Morning briefing — approximately eight hours
@@ -84,7 +95,7 @@ Every job must stop safely and report rather than improvise if:
 - The repository is not on the expected branch.
 - A change requires a secret or production access.
 - A migration, live database write, destructive command or remote-policy change would be required.
-- The evidence does not support one clear low-risk change.
+- The evidence does not support any clear low-risk change within the approved fix classes.
 - Required checks cannot be completed within the bounded run.
 
 ## Audit and delivery
