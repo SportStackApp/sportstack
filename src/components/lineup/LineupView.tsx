@@ -257,7 +257,7 @@ export const LineupView = ({ gameId, fixtureDate, teamId, teamName, opponentName
           <p className="truncate text-sm font-medium">{fullName(player)}</p>
           <p className="truncate text-xs text-muted-foreground">{player.membershipType.replaceAll("_", " ")} · {AVAILABILITY_LABELS[player.availability] || player.availability}</p>
         </button>
-        {isCoach && <Button size="sm" variant={action === "add" ? "default" : "outline"} onClick={() => action === "add" ? (selectedPositionId ? assignPlayerToPosition(player.id, selectedPositionId) : moveToBench(player.id)) : removeFromPitchOrBench(player.id)}>{action === "add" ? "Add" : <UserMinus className="h-4 w-4" />}</Button>}
+        {isCoach && <Button size="sm" variant={action === "add" ? "default" : "outline"} aria-label={action === "add" ? undefined : `Remove ${fullName(player)} from line-up`} onClick={() => action === "add" ? (selectedPositionId ? assignPlayerToPosition(player.id, selectedPositionId) : moveToBench(player.id)) : removeFromPitchOrBench(player.id)}>{action === "add" ? "Add" : <UserMinus className="h-4 w-4" />}</Button>}
       </div>
       {player.nickname && <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Checkbox checked={player.displayNickname} disabled={!isCoach} onCheckedChange={(checked) => setRoster((current) => current.map((item) => item.id === player.id ? { ...item, displayNickname: Boolean(checked) } : item))} />Display nickname “{player.nickname}” on pitch</label>}
     </div>

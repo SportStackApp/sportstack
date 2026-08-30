@@ -1573,6 +1573,7 @@ const AppLayout = () => {
             <Button
               variant="ghost"
               size="icon"
+              aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
               className="lg:hidden text-primary-foreground hover:bg-primary-foreground/10"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
