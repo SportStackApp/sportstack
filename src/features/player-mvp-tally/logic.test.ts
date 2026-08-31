@@ -63,6 +63,12 @@ describe("Player MVP tally playback", () => {
     expect(frames.at(-1)?.kind).toBe("FINAL");
   });
 
+  it("preserves the 3-2-1 reveal order within a ballot snapshot", () => {
+    const cardFrames = buildPlaybackFrames(snapshot)
+      .filter((frame) => frame.kind === "CARD" && frame.roundIndex === 0);
+    expect(cardFrames.map((frame) => frame.kind === "CARD" ? frame.card.points : null)).toEqual([3, 2, 1]);
+  });
+
   it("adjusts timing for speed and reduced motion", () => {
     expect(playbackDelayMs(2, false)).toBe(1100);
     expect(playbackDelayMs(0.5, false)).toBe(4400);

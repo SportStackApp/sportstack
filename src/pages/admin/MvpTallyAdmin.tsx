@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CalendarClock, Check, Eye, ImageOff, Palette, Send, Trophy, Upload, Users } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,10 @@ const GROUP_LABELS: Record<MvpTallyAudienceGroup, string> = {
   SECONDARY: "Secondary players",
   FILL_IN: "Fill-ins",
 };
+
+const TallyCardHeading = ({ children }: { children: ReactNode }) => (
+  <h2 className="font-display text-2xl font-semibold leading-none tracking-wide">{children}</h2>
+);
 
 const friendlyError = (error: unknown) => {
   const message = error instanceof Error
@@ -324,7 +328,7 @@ export default function MvpTallyAdmin() {
     return (
       <div className="container mx-auto max-w-3xl p-6">
         <Card>
-          <CardHeader><CardTitle>Select a team first</CardTitle><CardDescription>Use the normal Association → Club → Division → Team filters before opening the tally builder.</CardDescription></CardHeader>
+          <CardHeader><h1 className="font-display text-2xl font-semibold leading-none tracking-wide">Select a team first</h1><CardDescription>Use the normal Association → Club → Division → Team filters before opening the tally builder.</CardDescription></CardHeader>
           <CardContent><Button asChild><Link to="/admin/mvp-voting"><ArrowLeft className="mr-2 h-4 w-4" />Back to Player MVP administration</Link></Button></CardContent>
         </Card>
       </div>
@@ -344,7 +348,7 @@ export default function MvpTallyAdmin() {
 
       {presentations.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>Saved presentations</CardTitle><CardDescription>Published results cannot be edited. Withdraw them and create a replacement if a correction is needed.</CardDescription></CardHeader>
+          <CardHeader><TallyCardHeading>Saved presentations</TallyCardHeading><CardDescription>Published results cannot be edited. Withdraw them and create a replacement if a correction is needed.</CardDescription></CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {presentations.map((item) => (
               <div key={item.id} className="rounded-lg border p-4">
@@ -364,7 +368,7 @@ export default function MvpTallyAdmin() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{draftId ? "Continue draft" : replacesId ? "Replacement presentation" : "New presentation"}</CardTitle>
+          <TallyCardHeading>{draftId ? "Continue draft" : replacesId ? "Replacement presentation" : "New presentation"}</TallyCardHeading>
           <CardDescription>Choose closed rounds, the audience and the broadcast look, then watch the full preview before publishing.</CardDescription>
         </CardHeader>
         <CardContent>

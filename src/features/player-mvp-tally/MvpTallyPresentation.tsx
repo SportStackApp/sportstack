@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Gauge, Pause, Play, RefreshCw, SkipForward, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -57,6 +57,7 @@ export function MvpTallyPresentation({
   storageKey,
   preview = false,
 }: MvpTallyPresentationProps) {
+  const titleId = useId();
   const frames = useMemo(() => buildPlaybackFrames(snapshot), [snapshot]);
   const [frameIndex, setFrameIndex] = useState(() => {
     if (!storageKey) return 0;
@@ -106,9 +107,23 @@ export function MvpTallyPresentation({
       ? `linear-gradient(135deg, ${theme.secondaryColour}, ${theme.primaryColour})`
       : `radial-gradient(circle at 75% 20%, ${theme.primaryColour}cc 0%, transparent 38%), linear-gradient(135deg, ${theme.secondaryColour}, #080b1d 72%)`;
   const podium = podiumResults(finalResults);
+  const PresentationRoot = preview ? "section" : "main";
+  const TitleHeading = preview ? "h2" : "h1";
+  const SectionHeading = preview ? "h3" : "h2";
+  const playbackComplete = frame.kind === "FINAL";
+  const announcement = frame.kind === "INTRO"
+    ? `${title}. Player MVP results. The count is about to begin.`
+    : frame.kind === "ROUND_INTRO"
+      ? `${currentRound.roundLabel}. ${currentRound.matchLabel}.`
+      : frame.kind === "CARD"
+        ? `${frame.card.points} ${frame.card.points === 1 ? "point" : "points"} to ${frame.card.playerName}. ${frame.revealedCards} cards revealed.`
+        : frame.kind === "ROUND_SUMMARY"
+          ? `${currentRound.roundLabel} complete. ${effectiveCommentary.rounds.find((item) => item.sessionId === currentRound.sessionId)?.text || ""}`
+          : `Final podium. ${podium.map((result) => `Rank ${result.rank}, ${result.playerName}, ${result.points} points`).join(". ")}.`;
 
   return (
-    <main
+    <PresentationRoot
+      aria-labelledby={titleId}
       className={`relative flex min-h-screen flex-col overflow-hidden text-white ${preview ? "min-h-[680px] rounded-xl" : ""}`}
       style={{ background }}
     >
@@ -128,7 +143,7 @@ export function MvpTallyPresentation({
           )}
           <div className="min-w-0">
             <p className="truncate text-xs font-bold uppercase tracking-[0.24em] text-white/65">{teamName}</p>
-            <h1 className="truncate text-xl font-black tracking-tight md:text-3xl">{title}</h1>
+            <TitleHeading id={titleId} className="truncate text-xl font-black tracking-tight md:text-3xl">{title}</TitleHeading>
             {subtitle && <p className="truncate text-sm text-white/65">{subtitle}</p>}
           </div>
         </div>
@@ -143,9 +158,9 @@ export function MvpTallyPresentation({
           <div className="mb-5 flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-white/55">Live leaderboard</p>
-              <h2 className="mt-1 text-2xl font-black">
+              <SectionHeading className="mt-1 text-2xl font-black">
                 {theme.leaderboardLimit == null ? "Complete tally" : `Top ${theme.leaderboardLimit}`}
-              </h2>
+              </SectionHeading>
             </div>
             <p className="text-sm text-white/60">{frame.revealedCards} cards revealed</p>
           </div>
@@ -181,13 +196,13 @@ export function MvpTallyPresentation({
             <div className={reducedMotion ? "" : "animate-in fade-in zoom-in duration-700"}>
               <Trophy className="mx-auto h-20 w-20" style={{ color: theme.accentColour }} />
               <p className="mt-6 text-sm font-bold uppercase tracking-[0.3em] text-white/55">Player MVP results</p>
-              <h2 className="mt-2 text-4xl font-black">Let the count begin</h2>
+              <SectionHeading className="mt-2 text-4xl font-black">Let the count begin</SectionHeading>
             </div>
           )}
           {frame.kind === "ROUND_INTRO" && (
             <div className={reducedMotion ? "" : "animate-in slide-in-from-right-8 fade-in duration-500"}>
               <p className="text-sm font-bold uppercase tracking-[0.3em]" style={{ color: theme.accentColour }}>Next round</p>
-              <h2 className="mt-3 text-5xl font-black">{currentRound.roundLabel}</h2>
+              <SectionHeading className="mt-3 text-5xl font-black">{currentRound.roundLabel}</SectionHeading>
               <p className="mt-3 text-lg text-white/65">{currentRound.matchLabel}</p>
             </div>
           )}
@@ -198,7 +213,7 @@ export function MvpTallyPresentation({
               </div>
               <div className="mt-7 flex flex-col items-center">
                 <PlayerAvatar name={frame.card.playerName} url={frame.card.avatarUrl} large />
-                <h2 className="mt-4 text-3xl font-black">{frame.card.playerName}</h2>
+                <SectionHeading className="mt-4 text-3xl font-black">{frame.card.playerName}</SectionHeading>
                 <p className="mt-2 text-white/60">{frame.card.points} {frame.card.points === 1 ? "point" : "points"}</p>
               </div>
             </div>
@@ -206,7 +221,7 @@ export function MvpTallyPresentation({
           {frame.kind === "ROUND_SUMMARY" && (
             <div className={reducedMotion ? "" : "animate-in fade-in slide-in-from-bottom-6 duration-500"}>
               <p className="text-sm font-bold uppercase tracking-[0.3em]" style={{ color: theme.accentColour }}>Round complete</p>
-              <h2 className="mt-3 text-4xl font-black">{currentRound.roundLabel}</h2>
+              <SectionHeading className="mt-3 text-4xl font-black">{currentRound.roundLabel}</SectionHeading>
               <p className="mt-3 max-w-xl text-lg text-white/70">
                 {effectiveCommentary.rounds.find((item) => item.sessionId === currentRound.sessionId)?.text}
               </p>
@@ -239,6 +254,8 @@ export function MvpTallyPresentation({
         </div>
       </section>
 
+      <p className="sr-only" aria-live="polite" aria-atomic="true">{announcement}</p>
+
       <footer className="relative z-10 border-t border-white/15 bg-black/35 px-4 py-3 backdrop-blur md:px-8">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-1">
@@ -250,7 +267,10 @@ export function MvpTallyPresentation({
                   className={`rounded px-1 py-0.5 text-xs font-bold transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${index === frame.roundIndex ? "text-white" : "text-white/45"}`}
                   onClick={() => {
                     const roundIntroIndex = frames.findIndex((candidate) => candidate.kind === "ROUND_INTRO" && candidate.roundIndex === index);
-                    if (roundIntroIndex >= 0) setFrameIndex(roundIntroIndex);
+                    if (roundIntroIndex >= 0) {
+                      setFrameIndex(roundIntroIndex);
+                      setPlaying(true);
+                    }
                   }}
                   aria-label={`Jump to ${round.roundLabel}`}
                 >
@@ -261,9 +281,9 @@ export function MvpTallyPresentation({
             ))}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setPlaying((current) => !current)}>
-              {playing ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-              {playing ? "Pause" : "Resume"}
+            <Button size="sm" variant="secondary" disabled={playbackComplete} onClick={() => setPlaying((current) => !current)}>
+              {playing && !playbackComplete ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+              {playbackComplete ? "Finished" : playing ? "Pause" : "Resume"}
             </Button>
             <Button size="sm" variant="secondary" onClick={() => { setFrameIndex(0); setPlaying(true); }}>
               <RefreshCw className="mr-2 h-4 w-4" /> Replay
@@ -272,17 +292,17 @@ export function MvpTallyPresentation({
               <SkipForward className="mr-2 h-4 w-4" /> Skip
             </Button>
             <Select value={String(speed)} onValueChange={(value) => setSpeed(Number(value) as MvpTallySpeed)}>
-              <SelectTrigger className="w-24 border-white/20 bg-white/10 text-white"><Gauge className="mr-1 h-4 w-4" /><SelectValue /></SelectTrigger>
+              <SelectTrigger aria-label="Playback speed" className="w-24 border-white/20 bg-white/10 text-white"><Gauge className="mr-1 h-4 w-4" /><SelectValue /></SelectTrigger>
               <SelectContent>
                 {TALLY_SPEEDS.map((option) => <SelectItem key={option} value={String(option)}>{option}×</SelectItem>)}
               </SelectContent>
             </Select>
-            <label className="flex items-center gap-2 text-xs font-semibold text-white/70">
-              <Switch checked={reducedMotion} onCheckedChange={setReducedMotion} /> Reduced motion
-            </label>
+            <div className="flex items-center gap-2 text-xs font-semibold text-white/70">
+              <Switch aria-label="Reduced motion" checked={reducedMotion} onCheckedChange={setReducedMotion} /> Reduced motion
+            </div>
           </div>
         </div>
       </footer>
-    </main>
+    </PresentationRoot>
   );
 }
