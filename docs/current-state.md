@@ -6,6 +6,33 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 31 August Vote Tally production-readiness run — Dev/Main candidate tested
+
+- Player MVP Vote Tally accessibility and playback fixes are deployed on Dev and Main at
+  `1924404642710bf570e9bde424a09e34be181658` (`v2026.08.31+1924404`). The full-screen Player route
+  keeps one labelled `main`; the builder preview is a labelled embedded region; heading order,
+  playback-speed naming, live announcements and reduced-motion semantics are corrected.
+- The 3-2-1 reveal and final ranking passed with Bonnie Arnel 3, Glen Cosgriff 2 and Luke Rudolph 1.
+  Pause, resume, replay, skip, round jump, speed, keyboard focus and final-frame refresh persistence
+  also pass. The embedded preview and Player route have zero confirmed Axe violations and no page
+  overflow at 1440x900, 820x1180 or 390x844.
+- A disposable Player received the in-app notification and opened its deep link. A disposable
+  unrelated Voter was denied. Both the Dev end-to-end presentation and the Main-bundle smoke
+  presentation were withdrawn with audit reasons; their withdrawn Dev rows remain retained.
+- Checks pass: tally migration verifier, focused tests, focused lint, 33 Vitest files/129 tests,
+  TypeScript, Production build and Dev Quality run `33393069833`. Full lint remains exactly at the
+  349-error/77-warning legacy baseline.
+- Main was fast-forwarded after a reviewed Dev-to-Main diff; no new Production-selecting workflow
+  change was included in that promotion. Production and `prod` were not changed.
+- The frozen Production candidate is broad: Main is 228 commits, 398 paths, 111 migration files,
+  12 Edge Function files and three workflow files ahead of Production. Live Production has none of
+  the three tally tables or eight public tally functions, has notification dispatcher v1 and
+  reminder v6, and lacks `mvp-tally-commentary`. The exact inventory, rehearsal, backup, rollback
+  and blocker packet is under `docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-*`.
+- Current decision: **Vote Tally is ready for an isolated Production rehearsal; the full Production
+  release is not safe until migration/function reconciliation, backup proof, workflow review and
+  Aaron's separate approval are complete.**
+
 ## 31 August readiness inventory and Dev consistency batch — completed on Dev
 
 - The complete route, table and form inventories are now in `docs/production-readiness/`. They

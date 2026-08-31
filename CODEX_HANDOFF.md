@@ -2,6 +2,36 @@
 
 Last updated: 2026-08-31
 
+## 31 August 2026 — Player MVP Vote Tally Dev/Main readiness run
+
+- Dev and Main now serve `1924404642710bf570e9bde424a09e34be181658`
+  (`v2026.08.31+1924404`). The accessibility repair separates the embedded preview region from the
+  one full-screen `main`, corrects heading hierarchy, names the speed/reduced-motion controls,
+  shortens live announcements and makes a round jump resume playback. Finished playback now uses a
+  disabled Finished control while Replay remains available.
+- Deployed testing passes the embedded preview and full-screen Player route at 1440x900, 820x1180
+  and 390x844 with no horizontal overflow and zero confirmed Axe violations. Pause/resume, replay,
+  skip, speed, round jump, keyboard focus, reduced motion, final persistence, 3-2-1 scoring, ranking
+  and podium behaviour pass.
+- Disposable Dev presentation `096a67db-0cf4-4ea2-80db-eb1f75f5d942` proved notification deep-link
+  access for the intended Player and denial for an unrelated Voter. Main presentation
+  `770a6607-5f4c-4355-a9dd-456f9bee1124` proved the signed-in Main application bundle. Both were
+  withdrawn with audit reasons and remain retained as withdrawn Dev rows.
+- The reserved Player and Voter temporary passwords were rotated again after testing without
+  revealing or retaining the replacement values. Temporary automation auth profiles and all four
+  run-specific browser sessions were removed. No normal account was changed.
+- Automated evidence passes: migration verifier, focused tally tests, focused lint, 33 Vitest
+  files/129 tests, TypeScript, Production build and Dev Quality `33393069833`. Full lint matches the
+  accepted 349-error/77-warning baseline.
+- Production remains untouched. Live read-only reconciliation proves Production lacks the three
+  tally tables, the eight public tally functions and `mvp-tally-commentary`; its dispatcher is v1
+  and reminders v6 compared with Dev v8/v7. Main is 228 commits/398 paths/111 migration files/12
+  Edge Function files/three workflows ahead of `prod`.
+- Do not cherry-pick only the tally. Use
+  `docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-01.md` and its exact
+  inventory appendix. The next safe step is an isolated Production-schema rehearsal and exact
+  migration/function allow-list review, followed by Aaron's separate Production approval.
+
 ## 31 August 2026 — readiness inventory and completed Dev consistency batch
 
 - Added current route, table and form registers under `docs/production-readiness/`; major open

@@ -1,6 +1,6 @@
 # SportStack Production Readiness Programme
 
-Status: **active — inventory complete; consistency repair and verification underway**
+Status: **active — Vote Tally Dev/Main candidate tested; full Production reconciliation still open**
 
 Last updated: **31 August 2026**
 
@@ -28,10 +28,15 @@ This is a release programme, not a promise that Production is ready today.
 
 The snapshot must be refreshed at the start of each work cycle.
 
-- The current unattended cycle started from Dev `affa751`; exact divergence must be refreshed again
-  before any staging decision.
-- Production is `682b8ea` and is 195 commits behind Main.
-- Dev Quality passed for `3a4ffd4` in run `33298089720`.
+- The Player MVP Vote Tally candidate is deployed on Dev and Main at `1924404`; Dev Quality passed
+  in run `33393069833` and the signed-in Dev/Main smoke evidence is recorded in the tally release
+  packet.
+- Production remains `682b8ea` and is now 228 commits, 398 changed paths, 111 migration files,
+  12 Edge Function files and three workflow files behind Main.
+- Live Production lacks the three tally tables, eight public tally functions and
+  `mvp-tally-commentary`. Its notification dispatcher/reminder versions also trail Dev. Exact
+  inventory and rehearsal/rollback requirements are in
+  `PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-01.md`.
 - Three consecutive Production Supabase Scrapers runs failed because finals labels such as
   **Semi Finals** lose the numeric round identifier. The confirmed evidence and approval-gated
   repair package are in `PRODUCTION-SCRAPER-FAILURE-2026-08-31.md`.
