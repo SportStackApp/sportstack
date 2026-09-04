@@ -24,9 +24,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import type { Database } from "@/integrations/supabase/types";
 import { useTeamContext } from "@/contexts/TeamContext";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
 
 type Club = Database["public"]["Tables"]["clubs"]["Row"];
 type Association = Database["public"]["Tables"]["associations"]["Row"];
+type ClubSortKey = "name" | "association" | "website" | "abbreviation";
 
 type ValidationState = {
   status: "success" | "error";
@@ -98,6 +101,7 @@ const ClubsManagement = () => {
   const [filterAssociation, setFilterAssociation] = useState<string>(searchParams.get("association") || selectedAssociationId || "all");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [sort, setSort] = useState<SortState<ClubSortKey>>({ key: "name", direction: "asc" });
 
   useEffect(() => {
     setCurrentPage(1);
@@ -190,8 +194,14 @@ const ClubsManagement = () => {
 
   const paginatedClubs = useMemo(() => {
     const startIdx = (currentPage - 1) * rowsPerPage;
-    return filteredClubs.slice(startIdx, startIdx + rowsPerPage);
-  }, [filteredClubs, currentPage, rowsPerPage]);
+    const sorted = stableSortRows(filteredClubs, sort, (club, key) => {
+      if (key === "association") return associations.find((association) => association.id === club.association_id)?.name;
+      if (key === "website") return club.website_url;
+      if (key === "abbreviation") return club.abbreviation;
+      return club.name;
+    });
+    return sorted.slice(startIdx, startIdx + rowsPerPage);
+  }, [associations, currentPage, filteredClubs, rowsPerPage, sort]);
 
   // Can add clubs if SUPER_ADMIN or ASSOCIATION_ADMIN
   const canAdd = isSuperAdmin || scopedAssociationIds.length > 0;
@@ -739,10 +749,10 @@ const ClubsManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Association</TableHead>
-                  <TableHead>Website</TableHead>
-                  <TableHead>Abbreviation</TableHead>
+                  <SortableTableHead label="Name" sortKey="name" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Association" sortKey="association" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Website" sortKey="website" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Abbreviation" sortKey="abbreviation" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>

@@ -6,6 +6,19 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 5 September readiness work package 2 — Dev candidate
+
+- The six organisation-management tables now use the established accessible sort header and stable
+  typed sorting before pagination. Associations, Competitions, Clubs, Divisions, Teams and Venues
+  cover every meaningful data column; Logo and Actions remain non-sortable by design.
+- Related organisation names sort by their displayed names, numeric durations and pitch counts sort
+  numerically, and Division Age Group now uses one shared display/sort formatter so visible age
+  bounds cannot compare as equal. The focused formatter/sorter tests pass.
+- The full 42-file/164-test suite, TypeScript, Production build, diff check and unchanged
+  349-error/77-warning lint baseline pass. Authenticated Dev browser verification and deployment
+  are pending for this candidate.
+- No database migration is included. Main, `prod` and Production remain untouched.
+
 ## 5 September readiness work package 1 — Dev candidate
 
 - Direct-route account protection now treats a normal account as assigned only when it has an app

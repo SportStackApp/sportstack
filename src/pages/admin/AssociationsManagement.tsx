@@ -39,6 +39,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import type { Database } from "@/integrations/supabase/types";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
 
 type Association = Database["public"]["Tables"]["associations"]["Row"] & {
   banner_url?: string | null;
@@ -50,6 +52,8 @@ type ValidationState = {
   status: "success" | "error";
   message: string;
 };
+
+type AssociationSortKey = "name" | "abbreviation" | "website" | "duration";
 
 const createImage = (url: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
@@ -110,11 +114,18 @@ const AssociationsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [sort, setSort] = useState<SortState<AssociationSortKey>>({ key: "name", direction: "asc" });
 
   const paginatedAssociations = useMemo(() => {
     const startIdx = (currentPage - 1) * rowsPerPage;
-    return associations.slice(startIdx, startIdx + rowsPerPage);
-  }, [associations, currentPage, rowsPerPage]);
+    const sorted = stableSortRows(associations, sort, (association, key) => {
+      if (key === "abbreviation") return association.abbreviation;
+      if (key === "website") return association.website_url;
+      if (key === "duration") return association.default_match_duration_minutes;
+      return association.name;
+    });
+    return sorted.slice(startIdx, startIdx + rowsPerPage);
+  }, [associations, currentPage, rowsPerPage, sort]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAssociation, setEditingAssociation] = useState<Association | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -743,11 +754,11 @@ const AssociationsManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Abbreviation</TableHead>
-                  <TableHead>Website</TableHead>
+                  <SortableTableHead label="Name" sortKey="name" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Abbreviation" sortKey="abbreviation" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Website" sortKey="website" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
                   <TableHead>Logo</TableHead>
-                  <TableHead>Default Duration</TableHead>
+                  <SortableTableHead label="Default Duration" sortKey="duration" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>

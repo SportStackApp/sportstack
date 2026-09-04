@@ -22,6 +22,9 @@ import { LayoutGrid, Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import type { Database } from "@/integrations/supabase/types";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
+import { formatDivisionAgeGroup } from "@/lib/divisionDisplay";
 
 type Association = Database["public"]["Tables"]["associations"]["Row"];
 
@@ -51,6 +54,8 @@ interface Division {
   created_at: string;
 }
 
+type DivisionSortKey = "name" | "competition" | "association" | "gender" | "ageGroup" | "duration";
+
 const DivisionsManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -68,6 +73,7 @@ const DivisionsManagement = () => {
   const [filterCompetition, setFilterCompetition] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [sort, setSort] = useState<SortState<DivisionSortKey>>({ key: "name", direction: "asc" });
 
   useEffect(() => {
     setCurrentPage(1);
@@ -154,8 +160,19 @@ const DivisionsManagement = () => {
 
   const paginatedDivisions = useMemo(() => {
     const startIdx = (currentPage - 1) * rowsPerPage;
-    return filteredDivisions.slice(startIdx, startIdx + rowsPerPage);
-  }, [filteredDivisions, currentPage, rowsPerPage]);
+    const sorted = stableSortRows(filteredDivisions, sort, (division, key) => {
+      if (key === "competition") return competitions.find((competition) => competition.id === division.competition_id)?.name;
+      if (key === "association") return associations.find((association) => association.id === division.association_id)?.name;
+      if (key === "gender") return division.gender;
+      if (key === "ageGroup") return formatDivisionAgeGroup(division);
+      if (key === "duration") {
+        return division.default_match_duration_minutes
+          ?? associations.find((association) => association.id === division.association_id)?.default_match_duration_minutes;
+      }
+      return division.name;
+    });
+    return sorted.slice(startIdx, startIdx + rowsPerPage);
+  }, [associations, competitions, currentPage, filteredDivisions, rowsPerPage, sort]);
 
   const associationById = useMemo(
     () => new Map(associations.map((association) => [association.id, association])),
@@ -533,12 +550,12 @@ const DivisionsManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Competition</TableHead>
-                  <TableHead>Association</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>Age Group</TableHead>
-                  <TableHead>Match Duration</TableHead>
+                  <SortableTableHead label="Name" sortKey="name" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Competition" sortKey="competition" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Association" sortKey="association" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Gender" sortKey="gender" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Age Group" sortKey="ageGroup" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Match Duration" sortKey="duration" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -553,7 +570,7 @@ const DivisionsManagement = () => {
                       <TableCell>{assocName}</TableCell>
                       <TableCell>{div.gender === "Womens" ? "Women's" : (div.gender || "-")}</TableCell>
                       <TableCell>
-                        {div.age_group ? div.age_group + (div.max_age ? " (U" + div.max_age + ")" : "") + (div.min_age ? " (" + div.min_age + "+)" : "") : "-"}
+                        {formatDivisionAgeGroup(div)}
                       </TableCell>
                       <TableCell>
                         {div.default_match_duration_minutes !== null

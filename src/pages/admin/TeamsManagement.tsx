@@ -24,6 +24,8 @@ import { getTeamDisplayName } from "@/lib/utils";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import type { Database } from "@/integrations/supabase/types";
 import { useTeamContext } from "@/contexts/TeamContext";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
 
 type Team = Database["public"]["Tables"]["teams"]["Row"] & {
   division_id?: string | null;
@@ -42,6 +44,8 @@ interface Division {
   association_id: string;
   season_id: string | null;
 }
+
+type TeamSortKey = "name" | "club" | "division" | "gender" | "ageGroup";
 
 type SupabaseQueryResult<T> = Promise<{ data: T[] | null; error: { message: string } | null }>;
 type UntypedSupabaseClient = {
@@ -74,6 +78,7 @@ const TeamsManagement = () => {
   const [filterDivision, setFilterDivision] = useState<string>(searchParams.get("division") || selectedDivision || "all");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [sort, setSort] = useState<SortState<TeamSortKey>>({ key: "name", direction: "asc" });
 
   useEffect(() => {
     setCurrentPage(1);
@@ -225,8 +230,15 @@ const TeamsManagement = () => {
 
   const paginatedTeams = useMemo(() => {
     const startIdx = (currentPage - 1) * rowsPerPage;
-    return filteredTeams.slice(startIdx, startIdx + rowsPerPage);
-  }, [filteredTeams, currentPage, rowsPerPage]);
+    const sorted = stableSortRows(filteredTeams, sort, (team, key) => {
+      if (key === "club") return clubs.find((club) => club.id === team.club_id)?.name;
+      if (key === "division") return divisions.find((division) => division.id === team.division_id)?.name ?? team.division;
+      if (key === "gender") return team.gender;
+      if (key === "ageGroup") return team.age_group;
+      return getTeamDisplayName(team);
+    });
+    return sorted.slice(startIdx, startIdx + rowsPerPage);
+  }, [clubs, currentPage, divisions, filteredTeams, rowsPerPage, sort]);
 
   const canAdd = isSuperAdmin || scopedAssociationIds.length > 0 || scopedClubIds.length > 0;
   const canDelete = isSuperAdmin || scopedAssociationIds.length > 0 || scopedClubIds.length > 0;
@@ -613,11 +625,11 @@ const TeamsManagement = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Logo</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Club</TableHead>
-                  <TableHead>Division</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>Age Group</TableHead>
+                  <SortableTableHead label="Name" sortKey="name" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Club" sortKey="club" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Division" sortKey="division" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Gender" sortKey="gender" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Age Group" sortKey="ageGroup" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>

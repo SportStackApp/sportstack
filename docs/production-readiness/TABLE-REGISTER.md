@@ -1,6 +1,6 @@
 # Production Readiness Table Register
 
-Last refreshed: 31/08/2026 from current TSX source and targeted Dev evidence.
+Last refreshed: 05/09/2026 from current TSX source and targeted Dev evidence.
 
 Expected rule: operational data columns sort ascending and descending using their real type.
 Action/control, fixed-rank, import-row-order, matrix and small form-like tables may be explicitly
@@ -13,12 +13,12 @@ exempt. **Text only** means arrows exist but business/date values are currently 
 | Hockey Trace movement peaks | Time; Marker; Acceleration; Rotation | None | Gap: date/numeric sorting |
 | Hockey Trace imported files | File; Data; Input rows; Used rows; Skipped; Status | Fixed filename order | Gap: interactive typed sorting |
 | Expenses | select; Date; Supplier; Description; Invoice; Category; Total; Business; Status; Actions | All data columns use typed two-way sorting | Deployed headers/direction passed 31/08; select/Actions exempt |
-| Associations | Name; Abbreviation; Website; Logo; Default Duration; Actions | None | Gap except Logo/Actions |
-| Competitions | Name; Association; Season; Active; Actions | None | Gap except Actions |
-| Clubs | Name; Association; Website; Abbreviation; Actions | None | Gap except Actions |
-| Divisions | Name; Competition; Association; Gender; Age Group; Match Duration; Actions | None | Gap except Actions |
-| Teams | Logo; Name; Club; Division; Gender; Age Group; Actions | None | Gap except Logo/Actions |
-| Venues | Name; Suburb; Association; Pitches; Actions | None | Gap except Actions |
+| Associations | Name; Abbreviation; Website; Logo; Default Duration; Actions | All meaningful data columns use typed two-way sorting | Source and focused sorter tests passed 05/09; Logo/Actions exempt; deployed check pending |
+| Competitions | Name; Association; Season; Active; Actions | All data columns use typed two-way sorting | Source and focused sorter tests passed 05/09; Actions exempt; deployed check pending |
+| Clubs | Name; Association; Website; Abbreviation; Actions | All data columns use typed two-way sorting | Source and focused sorter tests passed 05/09; Actions exempt; deployed check pending |
+| Divisions | Name; Competition; Association; Gender; Age Group; Match Duration; Actions | All data columns use typed two-way sorting | Source and focused sorter tests passed 05/09; Actions exempt; deployed check pending |
+| Teams | Logo; Name; Club; Division; Gender; Age Group; Actions | All meaningful data columns use typed two-way sorting | Source and focused sorter tests passed 05/09; Logo/Actions exempt; deployed check pending |
+| Venues | Name; Suburb; Association; Pitches; Actions | All data columns use typed two-way sorting | Source and focused sorter tests passed 05/09; Actions exempt; deployed check pending |
 | Users | control; Name; Association / Club / Team; Status; Roles; Actions | None | Gap; control needs accessible label |
 | Requests | Date; Type; Player; Team; Club; Membership Type; Status; Actions | Fixed newest first | Gap: interactive reversal/typed sorting |
 | Fixtures | Date; Association; Division; Home Team; Away Team; Round; Venue; Status; Score; Actions | All data columns | Passed 30/08; Score semantic rule still undefined |
@@ -55,6 +55,7 @@ exempt. **Text only** means arrows exist but business/date values are currently 
 - Safety uses generic displayed-text extraction; its arrows do not guarantee chronological date,
   severity or workflow ordering.
 - RevSports Mappings and Unmatched visibly lag behind the newer Entity Review pattern.
-- Organisation, people, Requests, RevSports Mappings and Hockey Trace are the
-  largest remaining operational sorting gaps.
+- People, Requests, RevSports Mappings and Hockey Trace are the largest remaining operational
+  sorting gaps. Organisation sorting is implemented in the current Dev candidate and still needs
+  authenticated deployed verification.
 - Blank action/control headings must receive accessible names even when they remain non-sortable.

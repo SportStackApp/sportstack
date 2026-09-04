@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-05
 
+## 5 September 2026 — readiness work package 2 candidate
+
+- Added accessible two-way sorting to every meaningful data column in Associations, Competitions,
+  Clubs, Divisions, Teams and Venues. Related entities use their displayed names and numeric fields
+  retain numeric ordering; sorting happens before pagination.
+- Logo and Actions are explicit non-sortable columns. Division Age Group uses one formatter for
+  both display and sorting, with a regression covering equal labels with different visible bounds.
+- Focused tests, 42 Vitest files/164 tests, TypeScript, Production build and the unchanged
+  349-error/77-warning lint baseline pass. Independent review found no blocker. The candidate still
+  needs a Dev push, deployment evidence and authenticated browser verification.
+- No migration is included. Main, `prod` and Production were not changed.
+
 ## 5 September 2026 — readiness work package 1
 
 - Added a fail-closed direct-route assignment gate for unassigned and pending normal accounts,
