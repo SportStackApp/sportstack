@@ -1,10 +1,23 @@
 # SportStack Current State
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
+
+## 5 September single plan and feedback reconciliation
+
+- `docs/consolidated-open-items-plan.md` is now the only active SportStack priority and sequencing
+  plan. It combines feedback, form/date sizing, table sorting, persistence, acceptance testing,
+  data cleanup, staging and Production readiness in one ordered queue.
+- Supporting documents retain evidence and detailed checklists only. `notes/known-issues.md` is now
+  explicitly an evidence register, and `docs/production-readiness/PLAN.md` is a supporting release
+  reference rather than a second active plan.
+- Dev feedback retains all 88 rows: 0 OPEN, 53 REVIEWED and 35 CLOSED. Each reviewed row has a
+  category, priority, canonical backlog reference and reason.
+- The plan begins with five P0 access, workflow and privacy checks, followed by the common form,
+  table and persistence contract. Production remains separately approval-gated.
 
 ## 4 September Pumas placeholder and Dev Auth repair
 
@@ -4445,10 +4458,11 @@ When Codex finishes a task, add a dated entry with:
 - What Aaron should test next
 - Risk level
 - Any unknowns that still need confirmation
-## 21 August 2026 — Dev feedback register reconciled
+## 21 August 2026 — Dev feedback register reconciled (historical snapshot)
 
 - The Development feedback register was audited against current source, deployed owner checks and
-  the single consolidated plan. It now contains 53 Open and 35 Closed items; no row was deleted.
+  the single consolidated plan. It then contained 53 Open and 35 Closed items; no row was deleted.
+  The 5 September entry above supersedes those status counts.
 - Twenty-six completed, stale, duplicate or test-only items have auditable closure notes. The exact
   IDs and grouped remaining themes are recorded in
   `docs/feedback-register-reconciliation-2026-08-21.md`.

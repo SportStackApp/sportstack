@@ -1,6 +1,18 @@
 # Codex Handoff
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
+
+## 5 September 2026 — single active plan and feedback reconciliation
+
+- Replaced the dated multi-phase backlog with one active plan at
+  `docs/consolidated-open-items-plan.md`. It now orders P0 access/privacy checks, shared
+  form/table/persistence repairs, P1 product defects, acceptance cycles, lower-priority consistency
+  work, data cleanup, staging and Production approval.
+- Dev feedback retains all 88 records: 0 OPEN, 53 REVIEWED and 35 CLOSED. Every reviewed item has a
+  category, priority, backlog reference and reason; none was falsely closed during reconciliation.
+- `notes/known-issues.md` is evidence only and `docs/production-readiness/PLAN.md` is a detailed
+  release reference only. Neither is a competing priority plan.
+- Production and `prod` remain untouched.
 
 ## 4 September 2026 — Pumas placeholder and Dev Auth repair
 

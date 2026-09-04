@@ -1,6 +1,7 @@
-# SportStack — Known Issues & Parked Tasks
+# SportStack — Evidence and Known-Issue Register
 
-> This is the supporting defect and parked-item register. Current priority and sequencing come from
+> This file preserves defect evidence and historical decisions. It is not a second plan. All current
+> priority, sequencing, next actions and parked work live only in
 > `docs/consolidated-open-items-plan.md`.
 
 ## Feedback log reconciliation — 5 September 2026

@@ -1,12 +1,12 @@
-# SportStack Production Readiness Programme
+# SportStack Production Readiness Reference
 
-Status: **active — Vote Tally Dev/Main candidate tested; full Production reconciliation still open**
+Status: **supporting release checklist — not a separate active plan**
 
 Last updated: **31 August 2026**
 
-This document is the detailed execution plan beneath `docs/consolidated-open-items-plan.md`. The
-consolidated plan remains the single priority list. This programme defines how SportStack will move
-from the current Dev build to an evidence-backed Production decision.
+This document preserves detailed release checks beneath `docs/consolidated-open-items-plan.md`.
+The consolidated plan is the only active priority and sequencing plan. Use this reference for the
+release evidence expected by that plan, not as a competing work queue.
 
 ## Outcome
 
