@@ -2,7 +2,38 @@
 
 Last updated: 2026-09-05
 
-## 5 September 2026 — readiness work package 2 candidate
+## 5 September 2026 — readiness work package 3 deployed to Dev
+
+- Replaced Fixture Management's browser-wide active-dialog key with expiring account/role-mode/
+  cascade-scoped session state. Delete confirmations are never restored. This remembers dialog
+  identity only, not unsaved Add/Edit form fields; the legacy key is removed.
+- Replaced the signed-in Umpire Match ballot's account-only raw JSON with a validated expiring draft
+  per account in native sessionStorage. Tabs have independent storage even when a copied tab starts
+  with the same key/value. Actual-helper Chromium checks passed copy/edit/clear/refresh isolation.
+  Successful hierarchy/fixture/player loads validate saved IDs; failed loads retain work. Reset and
+  successful submit clear this tab only; unfinished work has a leave-page warning, not browser-restart
+  durability.
+- Replaced Chat's text-only local draft with a validated account/channel envelope containing text,
+  reply ID, Important and mention IDs. Failed validation keeps saved IDs; confirmed invalid IDs clear.
+  Old replies outside the first message page are checked separately. Scoped channel/message requests
+  reject late results; Cancel Reply keeps text; saved-message editing keeps the new-message draft.
+- Actual shared-control browser measurements passed 44 px and no overflow at phone, tablet and
+  desktop sizes. These are isolated local components, not signed-in route or Safari acceptance.
+- Final code checks pass: 45 Vitest files/180 tests, 153 Python unittests, five Umpire source checks,
+  locked development-plan lint, TypeScript and Production-mode build. Full lint remains existing
+  debt at 343 errors/77 warnings. Independent source review and seven actual-Chat isolated browser
+  checks pass. Source `464d809` passed Dev Quality `33928475268` and Vercel. Dev and its commit
+  preview serve the same `/assets/index-DWsFbnAl.js` bundle (HTTP 200, expected commit present). Actual-role
+  deployed acceptance is still blocked; local mocks do not prove live permissions or delivery.
+  No migration is included; Main, `prod` and Production remain untouched.
+
+Full timing, package and evidence record: `docs/production-readiness/2026-09-05-readiness-run.md`.
+The six-hour run was interrupted; resumed work completed the open batch and verification, not a
+new overnight budget. Remaining work stays in the single consolidated plan.
+The signed-out `/chat` route redirects to Login with the correct return URL and no observed page
+errors. Authenticate a disposable account in the explicitly controlled browser to unblock live tests.
+
+## 5 September 2026 — readiness work package 2 deployed to Dev
 
 - Added accessible two-way sorting to every meaningful data column in Associations, Competitions,
   Clubs, Divisions, Teams and Venues. Related entities use their displayed names and numeric fields
@@ -11,8 +42,8 @@ Last updated: 2026-09-05
   both display and sorting, with a regression covering equal labels with different visible bounds.
 - Focused tests, 42 Vitest files/164 tests, locked development-plan lint, TypeScript and Production
   build pass. Replacing obsolete competition casts reduced the full lint baseline from 349
-  errors/77 warnings to 343 errors/77 warnings. Independent review found no blocker. The candidate
-  still needs deployment evidence and authenticated browser verification.
+  errors/77 warnings to 343 errors/77 warnings. Independent review found no blocker. Dev Quality
+  run `33895737532` and Vercel passed for commit `7134f49`; authenticated browser verification remains.
 - No migration is included. Main, `prod` and Production were not changed.
 
 ## 5 September 2026 — readiness work package 1
@@ -38,6 +69,7 @@ Last updated: 2026-09-05
   out, so deployed actual-role/responsive acceptance is still required. Do not close the affected
   P0 feedback or promote this candidate to Main on source evidence alone.
 - Production, `prod`, Production data, functions, secrets and DNS were not changed.
+- Deployed source `3a52bd9` passed Dev Quality `33893606813`; actual-role acceptance remains open.
 
 ## 5 September 2026 — single active plan and feedback reconciliation
 

@@ -6,7 +6,37 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
-## 5 September readiness work package 2 — Dev candidate
+## 5 September readiness work package 3 — deployed to Dev
+
+- Fixture destructive confirmations are no longer written to browser storage. Non-destructive
+  dialog continuity is expiring session state scoped by account, role mode and working cascade,
+  and the old browser-wide key is retired. This remembers the dialog, not unsaved form fields.
+- Signed-in Umpire Match ballot drafts use native per-tab session storage, scoped by account.
+  Successful data loads validate the association/round/division/fixture hierarchy and linked
+  player IDs; failed loads retain work. Copied-tab edits, clearing and refresh passed a local
+  Chromium test using the actual storage helper. Reset/submit cannot clear another tab's copy.
+  Closing the tab is not durable storage; unfinished ballots have a leave-page warning.
+- Chat drafts now round-trip text, reply ID, Important and mention IDs under account/channel scope.
+  Failed member/reply validation retains work; old replies outside the latest message page are
+  checked separately. Channel/message requests are scope-bound, Cancel Reply preserves text, and
+  editing a saved message preserves the separate new-message draft. A successful send clears only
+  an unchanged persisted draft; neither the visible reset nor blank autosave can erase a newer one.
+- Local tests of the actual Input, Select and Button primitives measured 44 px at 390x844,
+  820x1180 and 1440x900 without page overflow. This does not prove every route override, Safari,
+  200% zoom or the whole 42-date-control inventory.
+- Final code checks pass: 45 Vitest files/180 tests, 153 Python unittests, five Umpire source
+  regressions, locked lint, TypeScript and Production-mode build. Full lint remains the existing
+  343 errors/77 warnings. Independent source review and seven actual-Chat isolated browser checks
+  pass, including delayed sends and failed-member Retry. Source `464d809` passed Dev Quality
+  `33928475268` and Vercel. Dev and its commit preview serve `/assets/index-DWsFbnAl.js` (HTTP 200),
+  containing the expected commit and repair. Authenticated deployed acceptance is still blocked. No migration
+  is included; Main, `prod` and Production remain untouched.
+- Full run evidence and remaining acceptance limits are in
+  `docs/production-readiness/2026-09-05-readiness-run.md`; the consolidated plan remains the only queue.
+- Signed-out Dev `/chat` correctly redirects to `/login?returnTo=%2Fchat` with no observed page
+  errors. This confirms the controlled session is still signed out; it does not pass Chat acceptance.
+
+## 5 September readiness work package 2 — deployed to Dev
 
 - The six organisation-management tables now use the established accessible sort header and stable
   typed sorting before pagination. Associations, Competitions, Clubs, Divisions, Teams and Venues
@@ -16,11 +46,11 @@ Update this file after every meaningful Codex task, pull request, schema change,
   bounds cannot compare as equal. The focused formatter/sorter tests pass.
 - The full 42-file/164-test suite, locked development-plan lint, TypeScript, Production build and
   diff check pass. Replacing obsolete competition casts reduced the full lint baseline from 349
-  errors/77 warnings to 343 errors/77 warnings. Authenticated Dev browser verification and
-  deployment are pending for this candidate.
+  errors/77 warnings to 343 errors/77 warnings. Dev Quality run `33895737532` and Vercel deployment
+  passed at commit `7134f49`; authenticated Dev browser verification is still pending.
 - No database migration is included. Main, `prod` and Production remain untouched.
 
-## 5 September readiness work package 1 — Dev candidate
+## 5 September readiness work package 1 — deployed to Dev
 
 - Direct-route account protection now treats a normal account as assigned only when it has an app
   role or ACTIVE team membership. Unassigned and pending users retain Dashboard/Profile access but
@@ -46,6 +76,8 @@ Update this file after every meaningful Codex task, pull request, schema change,
   browser is signed out and cannot reuse the user's in-app session.
 - Production and `prod` remain untouched. Main promotion is not part of this candidate until the
   deployed Dev acceptance blocker is cleared.
+- Commit `3a52bd9` passed Dev Quality run `33893606813` and Dev deployment. This is deployment
+  evidence, not replacement evidence for the blocked actual-role browser checks.
 
 ## 5 September single plan and feedback reconciliation
 

@@ -53,6 +53,29 @@ artifacts provide evidence. They do not create separate competing work plans.
   so the site-wide sorting contract remains open while Requests, Users, RevSports Mappings,
   RevSports Unmatched and Hockey Trace are unfinished.
 
+### 5 September readiness work package 3 evidence
+
+- Fixture Management no longer persists destructive confirmation targets. Add, Edit and Details
+  identity now uses an expiring session envelope scoped by account, role mode and the active
+  organisation, club, division and team. Unsaved Add/Edit field values are not covered.
+- Signed-in Umpire Match ballot drafts now use native per-tab session storage scoped by account.
+  Actual-helper Chromium tests passed copied-tab edit/clear/refresh isolation. Successful loads
+  revalidate the hierarchy, fixture teams and linked players; failed loads retain work. The legacy
+  account-only draft is discarded. Closing the tab is not durable storage; a leave warning is shown.
+- Chat drafts now preserve reply identity, the Important flag and selected mention IDs as well as
+  text. Failed validation retains them; confirmed stale IDs are removed. Scoped channel/message
+  responses cannot replace another scope's data, and cancelling a reply preserves typed text.
+- A delayed successful send clears only a matching persisted draft; newer drafts survive, including
+  another tab's changes. The visible reset and blank autosave cannot bypass that safeguard.
+- Final code checks pass: 45 Vitest files/180 tests, 153 Python unittests, five Umpire source checks,
+  locked lint, TypeScript and Production-mode build. Independent source review passes; full lint
+  remains at 343 errors/77 warnings. Seven isolated actual-Chat browser checks pass, including the
+  delayed-send regression. Source `464d809` passed Dev Quality `33928475268`, Vercel and exact
+  alias/commit-preview bundle checks. Actual-role acceptance remains required before these
+  persistence findings can close.
+- The actual shared controls measured 44 px without overflow at 390x844, 820x1180 and 1440x900.
+  Whole-route overrides, all 42 date controls, Safari and 200% zoom remain unproven.
+
 ## Working rules
 
 1. Fix confirmed access, privacy and data-integrity defects before visual improvements.
@@ -141,6 +164,9 @@ from REVIEWED to CLOSED.
 - [ ] Retest multi-club Team Manager switching through refresh, logout/login and incognito.
 - [ ] Complete Team Chat history, pagination, drafts, broadcast-author exclusion and notification
   deep-link checks.
+- [ ] Reproduce Chat's partial-send failure: the message can succeed while a separate mention
+  insert fails silently. Source review confirmed missing error handling; test the delivery impact
+  with disposable data before deciding recovery/retry behaviour. This is not closed by draft repair.
 - [ ] Complete one disposable Coordination workflow: need, offer, acceptance, confirmation,
   replacement and notification.
 - [ ] Complete one disposable Committee workflow: committee, subcommittee, private upload, meeting,
