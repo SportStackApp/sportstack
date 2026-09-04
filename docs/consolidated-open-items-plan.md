@@ -366,6 +366,36 @@ Exit condition: no known blocker remains for the accepted staging scope.
 
 ### Feedback-derived product clean-up
 
+#### Feedback log reconciliation — 5 September 2026
+
+The Dev feedback inbox has been triaged without deleting any record. Its status contract is now:
+
+- **OPEN** — new feedback that has not yet been reviewed;
+- **REVIEWED** — acknowledged and assigned to a canonical backlog reference;
+- **CLOSED** — verified fixed, duplicate, superseded or deliberately declined with evidence.
+
+The reconciliation retained all 88 rows and moved the 53 previously OPEN rows to REVIEWED with a
+category, priority, backlog reference and decision note. The remaining reviewed queue is 5 P0, 16
+P1, 18 P2, 5 P3 and 9 parked items. OPEN is now zero, so new feedback is visible as a true inbox.
+
+Work the reviewed queue in this order:
+
+1. **P0 access, workflow and privacy checks:** new-user access (`ACCESS-ONBOARD-001`), primary-team
+   approval completion (`REQUESTS-WORKFLOW-001`), pending-team isolation (`ACCESS-PENDING-001`),
+   Player MVP shout-out confidentiality (`PLAYER-MVP-PRIVACY-001`) and unmatched participant
+   visibility (`PLAYER-MVP-UNMATCHED-001`).
+2. **P1 usability and data repairs:** common form/date sizing (`FORM-SIZE-001`), dashboard values
+   and cascade state, mobile cascade access, request counts, Profile onboarding/photo, roster model,
+   incomplete-profile visibility and Committee closure protection.
+3. **P2/P3 consistency work:** Safety Hub presentation, RevSports filters, Chat affordance,
+   Coaching/Profile links, team ordering, Expense upload feedback and Division match structure.
+4. **Parked redesigns:** access-model controls, Formation Library, personal/entity dashboards and
+   environment navigation remain acknowledged but do not interrupt the repair and acceptance gates.
+
+Before closing a REVIEWED row, record deployed or owner acceptance evidence in `admin_notes`. A code
+inspection alone is not closure evidence. The reversible snapshots and exact reconciliation map are
+kept outside the committed product source under `.codex/feedback-log-20260905/`.
+
 - [ ] Add configurable Division match segments and breaks with a calculated total duration.
 - [ ] Add Committee position hierarchy and appointment history, plus stronger safeguards before
   closing a committee.

@@ -3,6 +3,25 @@
 > This is the supporting defect and parked-item register. Current priority and sequencing come from
 > `docs/consolidated-open-items-plan.md`.
 
+## Feedback log reconciliation — 5 September 2026
+
+**Status:** Dev inbox triaged; implementation and acceptance queue remains
+
+All 88 Dev `app_feedback` rows were retained. The 53 formerly OPEN rows are now REVIEWED and each
+has a structured administration note containing its category, priority, canonical backlog
+reference and triage reason. The existing 35 CLOSED rows were not changed. No Production row or
+system was touched.
+
+Current reviewed distribution: 5 P0, 16 P1, 18 P2, 5 P3 and 9 parked. The P0 queue covers new-user
+and pending-team access isolation, the broken primary-team approval completion, Player MVP shout-out
+privacy and unmatched Player MVP participant visibility. The repeated oversized date-control
+reports are consolidated under `FORM-SIZE-001`, but remain separate source records so screen and
+mobile acceptance evidence can be attached to each before closure.
+
+Use OPEN only for new, untriaged feedback. Move an item to CLOSED only with verified deployed or
+owner evidence, or with an explicit duplicate, superseded or declined reason. Full ordering and
+implementation priority remains in `docs/consolidated-open-items-plan.md`.
+
 ## Dev placeholder identities and unsupported permanent bans
 
 **Logged and repaired:** 4 September 2026
