@@ -28,19 +28,12 @@ import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSortin
 
 type Association = Database["public"]["Tables"]["associations"]["Row"];
 type Season = Database["public"]["Tables"]["seasons"]["Row"];
-
-interface Competition {
-  id: string;
-  association_id: string;
-  season_id: string;
-  name: string;
-  revsports_competition_id: string | null;
-  is_active: boolean | null;
-  created_at: string;
-  updated_at: string;
-}
+type Competition = Database["public"]["Tables"]["competitions"]["Row"];
 
 type CompetitionSortKey = "name" | "association" | "season" | "active";
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "An unexpected error occurred";
 
 const CompetitionsManagement = () => {
   const navigate = useNavigate();
@@ -83,7 +76,7 @@ const CompetitionsManagement = () => {
     setLoading(true);
 
     const [competitionsRes, associationsRes, seasonsRes] = await Promise.all([
-      supabase.from("competitions" as any).select("*").order("name"),
+      supabase.from("competitions").select("*").order("name"),
       supabase.from("associations").select("*").order("name"),
       supabase.from("seasons").select("*").order("name"),
     ]);
@@ -91,7 +84,7 @@ const CompetitionsManagement = () => {
     if (competitionsRes.error) {
       toast({ title: "Error", description: "Failed to load competitions", variant: "destructive" });
     } else {
-      setCompetitions((competitionsRes.data as any) || []);
+      setCompetitions(competitionsRes.data || []);
     }
 
     if (!associationsRes.error) setAssociations(associationsRes.data || []);
@@ -219,8 +212,8 @@ const CompetitionsManagement = () => {
 
         seasonId = newSeason.id;
       }
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message || "An unexpected error occurred", variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Error", description: getErrorMessage(error), variant: "destructive" });
       setSaving(false);
       return;
     }
@@ -234,7 +227,7 @@ const CompetitionsManagement = () => {
 
     if (editingCompetition) {
       const { error } = await supabase
-        .from("competitions" as any)
+        .from("competitions")
         .update(payload)
         .eq("id", editingCompetition.id);
 
@@ -247,7 +240,7 @@ const CompetitionsManagement = () => {
       }
     } else {
       const { error } = await supabase
-        .from("competitions" as any)
+        .from("competitions")
         .insert(payload);
 
       if (error) {
@@ -264,7 +257,7 @@ const CompetitionsManagement = () => {
   const handleDelete = async () => {
     if (!deletingCompetition) return;
     const { error } = await supabase
-      .from("competitions" as any)
+      .from("competitions")
       .delete()
       .eq("id", deletingCompetition.id);
 

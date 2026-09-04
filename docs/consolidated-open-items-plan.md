@@ -47,8 +47,9 @@ artifacts provide evidence. They do not create separate competing work plans.
 - Associations, Competitions, Clubs, Divisions, Teams and Venues now share accessible two-way
   sorting on every meaningful data column. Sorting uses the displayed organisation names and typed
   numeric values before pagination; Logo and Actions remain deliberate exemptions.
-- Focused sorting tests, the 42-file/164-test Vitest suite, TypeScript, Production build and the unchanged
-  349-error/77-warning lint baseline pass. Authenticated deployed verification is still required,
+- Focused sorting tests, the 42-file/164-test Vitest suite, locked development-plan lint,
+  TypeScript and Production build pass. Replacing obsolete competition casts reduced the full lint
+  baseline from 349 errors/77 warnings to 343 errors/77 warnings. Authenticated deployed verification is still required,
   so the site-wide sorting contract remains open while Requests, Users, RevSports Mappings,
   RevSports Unmatched and Hockey Trace are unfinished.
 

@@ -14,9 +14,10 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - Related organisation names sort by their displayed names, numeric durations and pitch counts sort
   numerically, and Division Age Group now uses one shared display/sort formatter so visible age
   bounds cannot compare as equal. The focused formatter/sorter tests pass.
-- The full 42-file/164-test suite, TypeScript, Production build, diff check and unchanged
-  349-error/77-warning lint baseline pass. Authenticated Dev browser verification and deployment
-  are pending for this candidate.
+- The full 42-file/164-test suite, locked development-plan lint, TypeScript, Production build and
+  diff check pass. Replacing obsolete competition casts reduced the full lint baseline from 349
+  errors/77 warnings to 343 errors/77 warnings. Authenticated Dev browser verification and
+  deployment are pending for this candidate.
 - No database migration is included. Main, `prod` and Production remain untouched.
 
 ## 5 September readiness work package 1 — Dev candidate
