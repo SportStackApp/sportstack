@@ -26,8 +26,9 @@ Last updated: 2026-09-04
   Dev Supabase dashboard to eliminate function-inventory noise.
 - Verification passes: focused lint, 35 Vitest files/136 tests, TypeScript and Production build.
   Full lint remains at the accepted 349-error/77-warning baseline.
-- Production and `prod` remain untouched. Big Brain sync is pending because the configured path was
-  present but did not contain a detectable Obsidian vault during this run.
+- Production and `prod` remain untouched. Big Brain sync and validation passed for 67 files at
+  `D:\AI-Workspace\Memory\Big Brain`; the saved `SPORTSTACK_OBSIDIAN_VAULT` user setting now uses
+  that vault.
 
 ## 31 August 2026 — Player MVP Vote Tally Dev/Main readiness run
 
