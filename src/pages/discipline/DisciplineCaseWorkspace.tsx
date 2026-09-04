@@ -1714,7 +1714,7 @@ export default function DisciplineCaseWorkspace() {
                   <Input name="role" placeholder="Recipient role" />
                   <Input name="email" type="email" placeholder="Email" />
                   <Input name="type" placeholder="Notice type" required />
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <Input name="sentDate" type="date" aria-label="Sent date" />
                     <Input name="sentTime" type="time" aria-label="Sent time" />
                   </div>

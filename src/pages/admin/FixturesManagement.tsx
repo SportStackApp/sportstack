@@ -1044,8 +1044,8 @@ const FixturesManagement = () => {
               setAddTeamScope(nextScope);
               setAddForm((form) => ({ ...form, home_team_id: "", away_team_id: "" }));
             })}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="min-w-0 space-y-2">
                 <Label>Home Team *</Label>
                 {renderTeamSelect(
                   addForm.home_team_id,
@@ -1056,7 +1056,7 @@ const FixturesManagement = () => {
                   addTeamScope.divisionId === ALL_CASCADE_VALUE,
                 )}
               </div>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <Label>Away Team</Label>
                 {renderTeamSelect(
                   addForm.away_team_id,
@@ -1068,19 +1068,19 @@ const FixturesManagement = () => {
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="min-w-0 space-y-2">
                 <Label>Date *</Label>
                 <Input type="date" value={addForm.fixture_date} onChange={(event) => setAddForm((form) => ({ ...form, fixture_date: event.target.value }))} />
               </div>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <Label>Time</Label>
                 <Input type="time" value={addForm.game_time} onChange={(event) => setAddForm((form) => ({ ...form, game_time: event.target.value }))} />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Exact finish override</Label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <Input
                   aria-label="Exact finish date"
                   type="date"
@@ -1100,8 +1100,8 @@ const FixturesManagement = () => {
               <Label>Round</Label>
               <Input type="number" value={addForm.round_number} onChange={(event) => setAddForm((form) => ({ ...form, round_number: event.target.value }))} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="min-w-0 space-y-2">
                 <Label>Venue</Label>
                 <Select value={addForm.venue_id || "__none__"} onValueChange={(value) => setAddForm((form) => ({ ...form, venue_id: value === "__none__" ? "" : value, pitch_id: "" }))}>
                   <SelectTrigger><SelectValue placeholder="Select venue" /></SelectTrigger>
@@ -1111,7 +1111,7 @@ const FixturesManagement = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <Label>Pitch</Label>
                 <Select disabled={!addForm.venue_id} value={addForm.pitch_id || "__none__"} onValueChange={(value) => setAddForm((form) => ({ ...form, pitch_id: value === "__none__" ? "" : value }))}>
                   <SelectTrigger><SelectValue placeholder="Select pitch" /></SelectTrigger>

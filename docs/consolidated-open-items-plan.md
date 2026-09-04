@@ -20,6 +20,28 @@ artifacts provide evidence. They do not create separate competing work plans.
 - Dev and Main may be updated through the normal reviewed path. Production remains separately
   approval-gated.
 
+### 5 September readiness work package 1 evidence
+
+- Source and regression coverage now block unassigned and pending normal accounts from protected
+  direct routes while retaining Dashboard/Profile and discipline-only entry. Actual-role browser
+  acceptance remains required before the two access items can close.
+- Primary-team request, approval, decline, cancellation and player confirmation now use scoped
+  database functions. Direct browser status writes are blocked; scoped admins can see only requests
+  they may action; the final membership change is one transaction. Dev rollback, forged-write,
+  scoped-admin visibility and permission checks pass. Browser acceptance remains required before
+  the workflow item can close.
+- The unmatched Player MVP candidate rule now has regression coverage for imported teammates with
+  no linked profile. The shout-out visibility audience remains an owner decision and was not
+  changed by assumption.
+- Line-up, Formation Builder and Template Builder drafts now use expiring account/owner/record-
+  scoped browser storage. Stale formation drafts safely return selected players to the bench;
+  failed loads cannot overwrite a valid draft or carry one team's state into another team.
+- Shared Inputs and Selects now use the 44 px ordinary-control contract. Safety filters use 40 px,
+  and the first confirmed narrow-phone date/time pairs now stack in Fixtures, Committee,
+  Coordination and Discipline. The full 42-control visual audit is still open.
+- The live Dev feedback counts were rechecked: 35 CLOSED and 53 REVIEWED. Sorting across every
+  meaningful table column and the remainder of the persistence register are still open work.
+
 ## Working rules
 
 1. Fix confirmed access, privacy and data-integrity defects before visual improvements.
@@ -49,6 +71,10 @@ Complete these first because incorrect access or hidden data can affect every la
 
 Exit gate: each flow passes with a disposable actual-role Dev account, refresh and direct-link
 checks, and an audit trail where data changes.
+
+Current blocker: automated browser control is signed out and cannot inherit the authenticated
+in-app browser session. These items remain unchecked until the deployed bundle is exercised with
+the appropriate disposable roles.
 
 ### 2. Common form, table and persistence contract
 

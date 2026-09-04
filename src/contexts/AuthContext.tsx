@@ -90,8 +90,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // applied. Safe to call every time - it does nothing if there is
         // nothing pending.
         if (event === "SIGNED_IN" && session?.user) {
-          applyPendingSignup(session.user.id);
-          claimPlaceholderProfile();
+          void applyPendingSignup(session.user.id);
+          void claimPlaceholderProfile();
         }
       }
     );

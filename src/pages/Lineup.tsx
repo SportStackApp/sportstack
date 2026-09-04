@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, Calendar, Clock } from "lucide-react";
 import { LineupView } from "@/components/lineup/LineupView";
+import { lineupEditorInstanceKey } from "@/lib/lineupDraft";
 import { useState, useEffect } from "react";
 import { cn, getTeamDisplayName } from "@/lib/utils";
 import { useTeamContext } from "@/contexts/TeamContext";
@@ -211,6 +212,7 @@ const Lineup = () => {
       </div>
 
       <LineupView
+        key={lineupEditorInstanceKey(game.id, activeLineupTeamId)}
         gameId={game.id}
         fixtureDate={game.fixture_date}
         teamId={activeLineupTeamId}

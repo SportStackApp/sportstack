@@ -2195,7 +2195,7 @@ function FilterSelect({
 }) {
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className="w-full min-w-0 overflow-hidden">
+      <SelectTrigger className="h-10 w-full min-w-0 overflow-hidden px-3 py-2">
         <Filter className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
         <SelectValue placeholder={label} />
       </SelectTrigger>
@@ -2249,11 +2249,11 @@ function AuditFilterBar({
         <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[10rem_10rem_11rem_10.5rem_minmax(0,1fr)_11rem]">
           <div className="space-y-1 sm:max-w-40">
             <Label htmlFor="audit-date-from" className="text-xs text-muted-foreground">From</Label>
-            <Input className="h-9" id="audit-date-from" type="date" value={dateFrom} onChange={(event) => onDateFromChange(event.target.value)} />
+            <Input className="h-10 px-3 py-2" id="audit-date-from" type="date" value={dateFrom} onChange={(event) => onDateFromChange(event.target.value)} />
           </div>
           <div className="space-y-1 sm:max-w-40">
             <Label htmlFor="audit-date-to" className="text-xs text-muted-foreground">To</Label>
-            <Input className="h-9" id="audit-date-to" type="date" value={dateTo} onChange={(event) => onDateToChange(event.target.value)} />
+            <Input className="h-10 px-3 py-2" id="audit-date-to" type="date" value={dateTo} onChange={(event) => onDateToChange(event.target.value)} />
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">User</Label>
@@ -2266,6 +2266,7 @@ function AuditFilterBar({
           <div className="space-y-1">
             <Label htmlFor="audit-record-id" className="text-xs text-muted-foreground">Record ID</Label>
             <Input
+              className="h-10 px-3 py-2"
               id="audit-record-id"
               value={recordId}
               onChange={(event) => onRecordIdChange(event.target.value)}

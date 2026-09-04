@@ -6,6 +6,33 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 5 September readiness work package 1 — Dev candidate
+
+- Direct-route account protection now treats a normal account as assigned only when it has an app
+  role or ACTIVE team membership. Unassigned and pending users retain Dashboard/Profile access but
+  cannot bypass into protected screens; discipline-only access is preserved.
+- Primary-team request, approval, decline, cancellation and confirmation now use scoped
+  `SECURITY DEFINER` functions. Direct own-row status writes are blocked, scoped admins can read
+  requests they may action, and the player's membership plus request completion are atomic. Dev
+  migrations `20260904153312`, `20260904155953` and `20260904160251` passed rollback, forged-write,
+  authorised workflow, scoped-admin visibility and unrelated-admin denial checks.
+- Line-up drafts now recover after navigation/reload and are isolated by account, team and fixture.
+  Formation and template drafts are likewise isolated by account and owner. Drafts expire after
+  seven days, store IDs/coordinates rather than profile details, and clear only after safe save or
+  explicit discard. Missing formations move selected players to the bench. Failed line-up loads
+  cannot overwrite a valid draft or carry one team's editable state into another team.
+- Player MVP unmatched teammate eligibility now has a regression test. The exact audience for
+  named shout-outs remains an owner decision and was not changed.
+- The first form consistency batch aligns ordinary Input/Select controls at 44 px, Safety filters
+  at 40 px, and confirmed narrow-phone date/time pairs in Fixtures, Committee, Coordination and
+  Discipline. The whole-site visual audit, all-column sorting rollout and remaining persistence
+  register are not complete.
+- Live Dev feedback was rechecked at 88 retained rows: 35 CLOSED and 53 REVIEWED. No feedback was
+  falsely closed. Actual-role and responsive browser acceptance is pending because the controlled
+  browser is signed out and cannot reuse the user's in-app session.
+- Production and `prod` remain untouched. Main promotion is not part of this candidate until the
+  deployed Dev acceptance blocker is cleared.
+
 ## 5 September single plan and feedback reconciliation
 
 - `docs/consolidated-open-items-plan.md` is now the only active SportStack priority and sequencing

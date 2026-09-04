@@ -38,6 +38,7 @@ import { MergeProfilesDialog } from "@/components/admin/MergeProfilesDialog";
 import { MembershipTypeBadge } from "@/components/MembershipTypeBadge";
 import type { AppMode } from "@/contexts/AppModeContext";
 import { useTeamContext } from "@/contexts/TeamContext";
+import { approvePrimaryTeamChange, declinePrimaryTeamChange } from "@/lib/primaryTeamChangeRpc";
 
 type AppRole = Database["public"]["Enums"]["user_role_enum"];
 type MembershipType = Database["public"]["Enums"]["membership_type_enum"];
@@ -941,7 +942,7 @@ const UsersManagement = () => {
   };
 
   const handleApprovePrimaryRequest = async (requestId: string) => {
-    const { error } = await supabase.from("primary_change_requests").update({ status: "ADMIN_APPROVED", resolved_by: user?.id }).eq("id", requestId);
+    const { error } = await approvePrimaryTeamChange(requestId);
     if (error) {
       toast({ title: "Error", description: "Failed to approve request.", variant: "destructive" });
     } else {
@@ -951,7 +952,7 @@ const UsersManagement = () => {
   };
 
   const handleDeclinePrimaryRequest = async (requestId: string) => {
-    const { error } = await supabase.from("primary_change_requests").update({ status: "DECLINED", resolved_by: user?.id, resolved_at: new Date().toISOString() }).eq("id", requestId);
+    const { error } = await declinePrimaryTeamChange(requestId);
     if (error) {
       toast({ title: "Error", description: "Failed to decline request.", variant: "destructive" });
     } else {

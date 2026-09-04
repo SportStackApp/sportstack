@@ -12,6 +12,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  approvePrimaryTeamChange,
+  cancelPrimaryTeamChange,
+  declinePrimaryTeamChange,
+} from "@/lib/primaryTeamChangeRpc";
 
 
 interface Request {
@@ -214,10 +219,7 @@ export default function Requests() {
     setProcessingRequestId(request.id);
     try {
       if (request.source === "primary_change") {
-        const { error: primaryError } = await supabase
-          .from("primary_change_requests")
-          .update({ status: "ADMIN_APPROVED", resolved_by: user?.id })
-          .eq("id", request.id);
+        const { error: primaryError } = await approvePrimaryTeamChange(request.id);
 
         if (primaryError) throw primaryError;
 
@@ -297,14 +299,7 @@ export default function Requests() {
     setProcessingRequestId(request.id);
     try {
       if (request.source === "primary_change") {
-        const { error } = await supabase
-          .from("primary_change_requests")
-          .update({
-            status: "DECLINED",
-            resolved_by: user?.id,
-            resolved_at: new Date().toISOString(),
-          })
-          .eq("id", request.id);
+        const { error } = await declinePrimaryTeamChange(request.id);
 
         if (error) throw error;
 
@@ -338,10 +333,7 @@ export default function Requests() {
     setProcessingRequestId(request.id);
     try {
       if (request.source === "primary_change") {
-        const { error } = await supabase
-          .from("primary_change_requests")
-          .update({ status: "CANCELLED" })
-          .eq("id", request.id);
+        const { error } = await cancelPrimaryTeamChange(request.id);
 
         if (error) throw error;
 

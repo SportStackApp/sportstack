@@ -12,6 +12,22 @@ export interface MvpResultCheckState {
   resultCheckRound: number;
 }
 
+export interface MvpCandidateIdentity {
+  id: string;
+  team_side: "home" | "away" | null;
+  profile_id: string | null;
+}
+
+export const filterEligibleMvpCandidates = <T extends MvpCandidateIdentity>(
+  players: T[],
+  voter: { rowId: string; profileId: string; teamSide: "home" | "away" },
+) => players.filter(
+  (player) =>
+    player.team_side === voter.teamSide &&
+    player.id !== voter.rowId &&
+    player.profile_id !== voter.profileId,
+);
+
 type SupabaseLikeError = {
   code?: string | null;
   message?: string | null;

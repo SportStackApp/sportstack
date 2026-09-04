@@ -1,3 +1,10 @@
+import {
+  buildScopedDraftKey,
+  loadScopedDraft,
+  removeScopedDraft,
+  saveScopedDraft,
+} from "./scopedDraftStorage";
+
 export type TemplateQuickPick = {
   id: string;
   code: string;
@@ -8,9 +15,46 @@ export type TemplateQuickPick = {
 
 const PREFIX = "sportstack:formations";
 
-export const formationDraftKey = (draftId: string) => `${PREFIX}:formation-draft:${draftId || "new"}`;
-export const templateDraftKey = (draftId: string) => `${PREFIX}:template-draft:${draftId || "new"}`;
-export const templateQuickPicksKey = (templateId: string) => `${PREFIX}:template-quick-picks:${templateId || "new"}`;
+export interface FormationDraftKeyParts {
+  accountId: string;
+  ownerScope: string;
+  ownerId: string;
+  draftId: string;
+}
+
+const scopedFormationKey = (recordType: string, parts: FormationDraftKeyParts) =>
+  buildScopedDraftKey({
+    accountId: parts.accountId,
+    scopeType: parts.ownerScope,
+    scopeId: parts.ownerId,
+    recordType,
+    recordId: parts.draftId || "new",
+  });
+
+export const formationDraftKey = (parts: FormationDraftKeyParts) =>
+  scopedFormationKey("formation", parts);
+export const templateDraftKey = (parts: FormationDraftKeyParts) =>
+  scopedFormationKey("formation-template", parts);
+export const templateQuickPicksKey = (accountId: string, templateId: string) =>
+  buildScopedDraftKey({
+    accountId,
+    scopeType: "account",
+    scopeId: accountId,
+    recordType: "template-quick-picks",
+    recordId: templateId || "new",
+  });
+
+export const loadDraftJson = <T>(key: string, isValid: (value: unknown) => value is T) =>
+  loadScopedDraft<T>(key, isValid);
+export const saveDraftJson = <T>(key: string, value: T) => saveScopedDraft(key, value);
+export const clearDraftJson = (key: string) => removeScopedDraft(key);
+
+export function clearLegacyFormationState(
+  kind: "formation-draft" | "template-draft" | "template-quick-picks",
+  recordId: string,
+) {
+  clearLocalJson(`${PREFIX}:${kind}:${recordId || "new"}`);
+}
 
 export function loadLocalJson<T>(key: string): T | null {
   if (typeof window === "undefined") return null;
@@ -40,10 +84,15 @@ export function clearLocalJson(key: string) {
   }
 }
 
-export function loadTemplateQuickPicks(templateId: string) {
-  return loadLocalJson<TemplateQuickPick[]>(templateQuickPicksKey(templateId)) || [];
+export function loadTemplateQuickPicks(accountId: string, templateId: string) {
+  clearLegacyFormationState("template-quick-picks", templateId);
+  return loadScopedDraft<TemplateQuickPick[]>(
+    templateQuickPicksKey(accountId, templateId),
+    (value): value is TemplateQuickPick[] => Array.isArray(value)
+      && value.every((item) => typeof item === "object" && item !== null && typeof item.id === "string"),
+  ) || [];
 }
 
-export function saveTemplateQuickPicks(templateId: string, quickPicks: TemplateQuickPick[]) {
-  saveLocalJson(templateQuickPicksKey(templateId), quickPicks);
+export function saveTemplateQuickPicks(accountId: string, templateId: string, quickPicks: TemplateQuickPick[]) {
+  saveScopedDraft(templateQuickPicksKey(accountId, templateId), quickPicks);
 }

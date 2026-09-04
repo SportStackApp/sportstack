@@ -2,6 +2,30 @@
 
 Last updated: 2026-09-05
 
+## 5 September 2026 — readiness work package 1
+
+- Added a fail-closed direct-route assignment gate for unassigned and pending normal accounts,
+  without removing Dashboard/Profile or discipline-only access. Pending-signup processing is
+  de-duplicated when authentication and routing initialise together.
+- Replaced all browser status transitions for primary-team changes with scoped server functions.
+  Dev migrations `20260904153312_make_primary_team_change_atomic.sql`,
+  `20260904155953_harden_primary_team_change_writes.sql` and
+  `20260904160251_scope_primary_team_change_reads.sql` passed rollback, forged-write, authorised
+  workflow, scoped-admin visibility and unrelated-admin denial checks. They are applied to Dev only.
+- Added seven-day, account/owner/record-scoped draft storage for line-ups, formations and templates.
+  Line-ups restore roster nickname choices, assignments, bench order and moved positions; missing
+  formations safely return players to the bench. Failed loads cannot erase a valid draft or carry
+  state between teams. Successful saves and explicit discards clear only the matching draft.
+- Added Player MVP candidate regression coverage proving unmatched imported teammates remain on the
+  ballot. Named shout-out visibility is still awaiting Aaron's audience decision.
+- Applied the first shared form sizing batch: 44 px ordinary Input/Select controls, 40 px Safety
+  filters and narrow-phone stacking for confirmed Fixtures, Committee, Coordination and Discipline
+  date/time pairs. This does not complete the 42-control visual audit or site-wide sorting rollout.
+- Live Dev feedback remains 35 CLOSED and 53 REVIEWED. The controlled automated browser is signed
+  out, so deployed actual-role/responsive acceptance is still required. Do not close the affected
+  P0 feedback or promote this candidate to Main on source evidence alone.
+- Production, `prod`, Production data, functions, secrets and DNS were not changed.
+
 ## 5 September 2026 — single active plan and feedback reconciliation
 
 - Replaced the dated multi-phase backlog with one active plan at
