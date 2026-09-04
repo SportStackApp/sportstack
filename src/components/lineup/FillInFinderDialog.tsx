@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { mergeRosterProfileRows, missingRosterProfileIds, uniqueRosterIds } from "@/lib/lineupPlanner";
+import {
+  mergeRosterProfileRows,
+  missingRosterProfileIds,
+  requiredRosterProfileIds,
+  uniqueRosterIds,
+} from "@/lib/lineupPlanner";
 import { toast } from "sonner";
 
 const supabase = typedSupabase as any;
@@ -61,7 +66,7 @@ export const RosterSelectorDialog = ({
     setMissingSelectedIds([]);
     const savedSelectedIds = uniqueRosterIds(selectedPlayerIds);
 
-    const [membershipsRes, fillInsRes, availabilityRes, profilesRes, selectedProfilesRes] = await Promise.all([
+    const [membershipsRes, fillInsRes, availabilityRes, profilesRes] = await Promise.all([
       supabase
         .from("team_memberships")
         .select("user_id, jersey_number, membership_type, position")
@@ -81,17 +86,29 @@ export const RosterSelectorDialog = ({
         .eq("is_placeholder", false)
         .order("last_name")
         .limit(1000),
-      savedSelectedIds.length
-        ? supabase
-          .from("profiles")
-          .select("id, first_name, last_name, nickname")
-          .in("id", savedSelectedIds)
-        : Promise.resolve({ data: [], error: null }),
     ]);
 
-    const firstError = membershipsRes.error || fillInsRes.error || availabilityRes.error || profilesRes.error || selectedProfilesRes.error;
+    const firstError = membershipsRes.error || fillInsRes.error || availabilityRes.error || profilesRes.error;
     if (firstError) {
       toast.error(`The roster could not be loaded: ${firstError.message}`);
+      setLoading(false);
+      return;
+    }
+
+    const requiredProfileIds = requiredRosterProfileIds(
+      savedSelectedIds,
+      (membershipsRes.data || []).map((row: any) => row.user_id),
+      (fillInsRes.data || []).map((row: any) => row.player_id),
+    );
+    const requiredProfilesRes = requiredProfileIds.length
+      ? await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, nickname")
+        .in("id", requiredProfileIds)
+      : { data: [], error: null };
+
+    if (requiredProfilesRes.error) {
+      toast.error(`The roster could not be loaded: ${requiredProfilesRes.error.message}`);
       setLoading(false);
       return;
     }
@@ -104,7 +121,7 @@ export const RosterSelectorDialog = ({
       if (!lastFillIn.has(row.player_id) && fixture?.fixture_date) lastFillIn.set(row.player_id, fixture.fixture_date);
     });
 
-    const profileRows = mergeRosterProfileRows(profilesRes.data || [], selectedProfilesRes.data || []);
+    const profileRows = mergeRosterProfileRows(profilesRes.data || [], requiredProfilesRes.data || []);
     const rows = profileRows
       .map((profile: any): RosterCandidate => {
         const membership = memberships.get(profile.id) as any;

@@ -1,6 +1,33 @@
 # Codex Handoff
 
-Last updated: 2026-08-31
+Last updated: 2026-09-04
+
+## 4 September 2026 — Pumas placeholder and Dev Auth repair
+
+- Reconciled five registered Pumas placeholders in place in Dev: their existing IDs and all known
+  membership, RevSports-link and line-up references remain attached. The five profiles now use the
+  confirmed identity data and real Auth emails. No email was sent.
+- Restored David Jochinke's confirmed details after the failed admin save had partially written an
+  incorrect date of birth. Pumas now has zero primary placeholders.
+- Two secondary Pumas fill-ins remain legitimate unclaimed Lucas HC profiles in both Dev and
+  Production. The roster picker now includes active members and previous fill-ins regardless of
+  claim status, so these records are not hidden or removed.
+- Normalised 731 Dev-only `banned_until = infinity` records to supported 100-year bans after a
+  successful rollback rehearsal. All remain banned through 2126. This removes the Supabase Auth
+  scan failure from Users and other Auth-admin paths without enabling any account.
+- Added repository source and tests for `update-user-details`; deployed Dev version 7 matches the
+  tracked source and keeps JWT verification enabled. Auth is validated before profile writes and an
+  email change is rolled back after a profile failure. The admin dialog now surfaces response-body
+  errors. The function is now Super Admin-only, matching the caller restriction already enforced by
+  the Users screen.
+- A disposable actual Super Admin smoke passed read, save, re-read and cleanup against the deployed
+  function; no disposable account remains. The locked helper `dev-auth-admin-smoke` returns 410 and
+  requires JWT, but CLI deletion was denied with HTTP 403. It is safe but should be removed from the
+  Dev Supabase dashboard to eliminate function-inventory noise.
+- Verification passes: focused lint, 35 Vitest files/136 tests, TypeScript and Production build.
+  Full lint remains at the accepted 349-error/77-warning baseline.
+- Production and `prod` remain untouched. Big Brain sync is pending because the configured path was
+  present but did not contain a detectable Obsidian vault during this run.
 
 ## 31 August 2026 — Player MVP Vote Tally Dev/Main readiness run
 

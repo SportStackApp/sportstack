@@ -3,6 +3,28 @@
 > This is the supporting defect and parked-item register. Current priority and sequencing come from
 > `docs/consolidated-open-items-plan.md`.
 
+## Dev placeholder identities and unsupported permanent bans
+
+**Logged and repaired:** 4 September 2026
+**Status:** Core repair complete; one Dev helper cleanup remains
+
+Five registered Pumas identities were created through RevSports Review as new placeholders even
+though confirmed real identities existed in Production. They were reconciled in place in Dev with
+no email, replacement profile or lost roster reference. The roster picker now includes active team
+members and previous fill-ins regardless of whether the account has been claimed.
+
+Dev also had 731 intentionally disabled Auth users using `banned_until = infinity`. Supabase Auth
+could not scan that value, causing admin-detail and email lookups to fail and allowing a profile
+write to occur before the Auth failure. All 731 remain disabled using a supported 100-year ban. The
+tracked `update-user-details` function now validates Auth first and rolls back an email change if a
+profile write fails.
+
+Two secondary Pumas fill-ins remain unclaimed Lucas HC placeholders in both environments because no
+real account is available to merge. This is valid identity state, not a reason to hide them from a
+roster. The locked Dev-only smoke helper `dev-auth-admin-smoke` should be removed from the Supabase
+dashboard when an account with Function-delete permission is available; it requires JWT and returns
+410 while inactive.
+
 ## Coach Narrative
 
 **Logged:** 29 August 2026

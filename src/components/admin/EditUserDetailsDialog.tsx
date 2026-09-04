@@ -22,6 +22,7 @@ import { AlertCircle, KeyRound, Loader2, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { AppMode } from "@/contexts/AppModeContext";
+import { getFunctionErrorMessage } from "@/lib/function-error-message";
 
 // Extend the Profile type locally to match what UsersManagement.tsx expects
 interface ProfileWithExtensions {
@@ -139,20 +140,9 @@ export const EditUserDetailsDialog = ({
       setLoading(true);
       try {
         if (!canManageAuthentication) return;
-        // Try calling the function using GET first
-        let res = await supabase.functions.invoke("update-user-details", {
-          method: "GET",
-          headers: {
-            "x-user-id": user.id,
-          },
+        const res = await supabase.functions.invoke("update-user-details", {
+          body: { user_id: user.id, action: "get" },
         });
-
-        // Fall back to POST with action 'get' if GET fails or returns no email
-        if (!res.data || res.error) {
-          res = await supabase.functions.invoke("update-user-details", {
-            body: { user_id: user.id, action: "get" },
-          });
-        }
 
         if (res.data && !res.error) {
           const data = res.data;
@@ -166,6 +156,8 @@ export const EditUserDetailsDialog = ({
           if (data.gender) setGender(data.gender);
           if (data.emergency_contact_name) setEmergencyContactName(data.emergency_contact_name);
           if (data.emergency_contact_phone) setEmergencyContactPhone(data.emergency_contact_phone);
+        } else if (res.error) {
+          setErrorMsg(await getFunctionErrorMessage(res.error, "Could not load authentication details."));
         }
       } catch (err) {
         console.error("Exception fetching user details:", err);
@@ -227,7 +219,7 @@ export const EditUserDetailsDialog = ({
           } as never);
 
       if (error || data?.error) {
-        const errMsg = data?.error || error?.message || "Failed to update user details.";
+        const errMsg = data?.error || await getFunctionErrorMessage(error, "Failed to update user details.");
         setErrorMsg(errMsg);
         setSaving(false);
         return;

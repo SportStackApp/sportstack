@@ -1,10 +1,41 @@
 # SportStack Current State
 
-Last updated: 2026-08-31
+Last updated: 2026-09-04
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
+
+## 4 September Pumas placeholder and Dev Auth repair
+
+- Five registered Pumas players created as Dev placeholders were reconciled in place against their
+  confirmed Production identities. Their Dev profile IDs, five memberships, five RevSports links,
+  eight saved line-up roster rows and eight assignments were retained. No email was sent.
+- David Jochinke's accidental Dev date-of-birth edit was replaced with his confirmed Production
+  details. All five Auth emails, profile details and non-placeholder flags now match their confirmed
+  identities, with no duplicate target email in Dev.
+- Pumas now has zero active primary placeholders. Reuben Pougnault and Harley S remain two active
+  secondary fill-ins because both are unclaimed Lucas HC registrations in Dev and Production; no
+  separate real account or verified email exists to merge. They must remain usable as players.
+- The line-up roster picker now includes all active team members and previous fill-ins even when
+  their account is still unclaimed. The existing saved-roster protection remains in place.
+- The admin detail function is now tracked in the repository and deployed to Dev as version 7 with
+  JWT verification. It validates Auth before writing profile data and restores the old Auth email if
+  the profile save fails. The dialog now displays the Edge Function's actual error rather than only
+  `Edge Function returned a non-2xx status code`. The server now matches the screen by restricting
+  this Auth-management function to actual Super Admins.
+- Dev contained 731 intentionally disabled Auth users with PostgreSQL `infinity` as the ban date,
+  which the current Supabase Auth service could not read. A rolled-back rehearsal passed, then all
+  731 were converted to Supabase's supported 100-year ban. All remain disabled through 2126; none
+  was unbanned. This Dev-only data repair also benefits Users and other Auth-admin screens.
+- A disposable Super Admin account proved the deployed function's read, save, persistence and
+  cleanup path; zero disposable rows remain. The temporary helper is locked, JWT-protected and
+  returns 410, but could not be removed because the local Supabase CLI account received HTTP 403.
+  Remove deployed Dev function `dev-auth-admin-smoke` from the Supabase dashboard when convenient.
+- Verification passes: focused lint, 35 Vitest files/136 tests, TypeScript and the Production build.
+  Full lint remains exactly at the accepted 349-error/77-warning baseline.
+- Production data, Production functions and `prod` were not changed. Dev and Main share this Dev
+  database, so the data correction is visible on both non-production sites.
 
 ## 31 August Vote Tally production-readiness run — Dev/Main candidate tested
 
