@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment, useMemo, useCallback } from "react";
+import { useState, useEffect, Fragment, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useAdminScope } from "@/hooks/useAdminScope";
+import { useAuth } from "@/contexts/AuthContext";
 import { AdminCascadeFilters } from "@/components/admin/AdminCascadeFilters";
 import { SortableTableHead } from "@/components/admin/SortableTableHead";
 import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
@@ -36,6 +37,14 @@ import {
   DEFAULT_ASSOCIATION_TIMEZONE,
   splitZonedDateTime,
 } from "@/lib/timezoneDateTime";
+import {
+  buildFixtureDialogDraftKey,
+  clearFixtureDialogDraft,
+  loadFixtureDialogDraft,
+  retireLegacyFixtureDialogDraft,
+  saveFixtureDialogDraft,
+  type FixtureDialogDraft,
+} from "@/lib/fixtureDialogDraft";
 
 interface FixtureRow {
   id: string;
@@ -159,38 +168,37 @@ const formatStatusLabel = (status: string) =>
     .join(" ");
 const toDbStatus = (status: string) => status.toUpperCase();
 
-const FIXTURE_DIALOG_STORAGE_KEY = "sportstack:fixtures:active-dialog";
-type FixtureDialogState = {
-  type: "add" | "edit" | "details" | "delete";
-  fixtureId?: string;
-};
-
-const rememberFixtureDialog = (dialog: FixtureDialogState) => {
-  window.sessionStorage.setItem(FIXTURE_DIALOG_STORAGE_KEY, JSON.stringify(dialog));
-};
-
-const forgetFixtureDialog = () => {
-  window.sessionStorage.removeItem(FIXTURE_DIALOG_STORAGE_KEY);
-};
-
-const readRememberedFixtureDialog = (): FixtureDialogState | null => {
-  try {
-    const rawDialog = window.sessionStorage.getItem(FIXTURE_DIALOG_STORAGE_KEY);
-    if (!rawDialog) return null;
-    const dialog = JSON.parse(rawDialog) as Partial<FixtureDialogState>;
-    if (!dialog.type || !["add", "edit", "details", "delete"].includes(dialog.type)) return null;
-    return dialog as FixtureDialogState;
-  } catch {
-    forgetFixtureDialog();
-    return null;
-  }
-};
-
 const FixturesManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { selectedTeamId, selectedAssociationId, selectedClubId, selectedDivision } = useTeamContext();
-  const { scopedTeamIds } = useAdminScope();
+  const { actorMode, scopedTeamIds } = useAdminScope();
+  const fixtureDialogDraftKey = useMemo(
+    () => user ? buildFixtureDialogDraftKey({
+      accountId: user.id,
+      roleMode: actorMode,
+      associationId: selectedAssociationId,
+      clubId: selectedClubId,
+      divisionId: selectedDivision,
+      teamId: selectedTeamId,
+    }) : null,
+    [actorMode, selectedAssociationId, selectedClubId, selectedDivision, selectedTeamId, user],
+  );
+  const rememberFixtureDialog = useCallback((dialog: FixtureDialogDraft) => {
+    if (fixtureDialogDraftKey) saveFixtureDialogDraft(fixtureDialogDraftKey, dialog, window.sessionStorage);
+  }, [fixtureDialogDraftKey]);
+  const forgetFixtureDialog = useCallback(() => {
+    if (fixtureDialogDraftKey) clearFixtureDialogDraft(fixtureDialogDraftKey, window.sessionStorage);
+  }, [fixtureDialogDraftKey]);
+  const readRememberedFixtureDialog = useCallback(
+    () => fixtureDialogDraftKey ? loadFixtureDialogDraft(fixtureDialogDraftKey, window.sessionStorage) : null,
+    [fixtureDialogDraftKey],
+  );
+
+  useEffect(() => {
+    retireLegacyFixtureDialogDraft(window.sessionStorage);
+  }, []);
   const [fixtures, setFixtures] = useState<FixtureRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFixture, setSelectedFixture] = useState<FixtureRow | null>(null);
@@ -216,6 +224,20 @@ const FixturesManagement = () => {
   const [rosterPlayers, setRosterPlayers] = useState<RevSportsPlayer[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const previousFixtureDialogDraftKey = useRef(fixtureDialogDraftKey);
+
+  useEffect(() => {
+    if (previousFixtureDialogDraftKey.current && previousFixtureDialogDraftKey.current !== fixtureDialogDraftKey) {
+      setAddDialogOpen(false);
+      setIsEditModalOpen(false);
+      setSelectedFixture(null);
+      setIsDetailsOpen(false);
+      setDetailsFixture(null);
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+    }
+    previousFixtureDialogDraftKey.current = fixtureDialogDraftKey;
+  }, [fixtureDialogDraftKey]);
   const [addForm, setAddForm] = useState<FixtureForm>(emptyForm);
   const [addTeamScope, setAddTeamScope] = useState<FixtureTeamScope>(emptyFixtureTeamScope);
   const [editTeamScope, setEditTeamScope] = useState<FixtureTeamScope>(emptyFixtureTeamScope);
@@ -490,7 +512,7 @@ const FixturesManagement = () => {
     setSelectedFixture(fixture);
     setIsEditModalOpen(true);
     rememberFixtureDialog({ type: "edit", fixtureId: fixture.id });
-  }, [allAssocTeams, allAssociations, clubById]);
+  }, [allAssocTeams, allAssociations, clubById, rememberFixtureDialog]);
 
   const openDetails = useCallback(async (fixture: FixtureRow) => {
     setDetailsFixture(fixture);
@@ -516,7 +538,7 @@ const FixturesManagement = () => {
     } finally {
       setDetailsLoading(false);
     }
-  }, [toast]);
+  }, [rememberFixtureDialog, toast]);
 
   useEffect(() => {
     const restoreRememberedDialog = () => {
@@ -535,9 +557,6 @@ const FixturesManagement = () => {
         openEdit(fixture);
       } else if (rememberedDialog.type === "details" && !isDetailsOpen) {
         void openDetails(fixture);
-      } else if (rememberedDialog.type === "delete" && !deleteDialogOpen) {
-        setDeleteTarget(fixture.id);
-        setDeleteDialogOpen(true);
       }
     };
     const restoreWhenVisible = () => {
@@ -551,7 +570,7 @@ const FixturesManagement = () => {
       window.removeEventListener("focus", restoreRememberedDialog);
       document.removeEventListener("visibilitychange", restoreWhenVisible);
     };
-  }, [deleteDialogOpen, fixtures, isDetailsOpen, isEditModalOpen, openDetails, openEdit]);
+  }, [fixtures, isDetailsOpen, isEditModalOpen, openDetails, openEdit, readRememberedFixtureDialog]);
 
   const handleUpdateFixture = async () => {
     if (!selectedFixture) return;
@@ -1002,7 +1021,7 @@ const FixturesManagement = () => {
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(fixture)} aria-label="Edit fixture" title="Edit fixture"><Pencil className="h-3 w-3" /></Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setDeleteTarget(fixture.id); setDeleteDialogOpen(true); rememberFixtureDialog({ type: "delete", fixtureId: fixture.id }); }} aria-label="Delete fixture" title="Delete fixture"><Trash2 className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setDeleteTarget(fixture.id); setDeleteDialogOpen(true); }} aria-label="Delete fixture" title="Delete fixture"><Trash2 className="h-3 w-3" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>

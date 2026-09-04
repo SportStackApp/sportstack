@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,19 +38,20 @@ import {
   loadUmpireLinkedPlayers,
   type UmpireLinkedPlayerOption,
 } from "@/lib/umpireLinkedPlayers";
+import {
+  buildUmpireBallotDraftKey,
+  clearUmpireBallotDraft,
+  isMeaningfulUmpireBallotDraft,
+  loadUmpireBallotDraft,
+  retireLegacyUmpireBallotDraft,
+  saveUmpireBallotDraft,
+  type UmpireBallotDraft,
+  type UmpireBallotDraftVoteCard,
+} from "@/lib/umpireBallotDraft";
 
 type AppMode = "super_admin" | "association" | "club" | "team_manager" | "coach" | "player";
 
-interface VoteCard {
-  schemeLineKey: string;
-  label: string;
-  points: number;
-  profileId: string | null;
-  playerName: string;
-  playerNumber: string;
-  teamId: string;
-  badgeType?: "gold" | "silver" | "bronze";
-}
+type VoteCard = UmpireBallotDraftVoteCard;
 
 interface SelectedFixtureInfo {
   id: string;
@@ -149,62 +150,78 @@ export default function UmpireVoteSubmit() {
   const [fixturesLoading, setFixturesLoading] = useState(false);
 
   // Step 1 - Resolved fixture detail
-  const [selectedFixture, setSelectedFixture] = useState<SelectedFixtureInfo | null>(null);
+  const [loadedSelectedFixture, setSelectedFixture] = useState<SelectedFixtureInfo | null>(null);
+  const [fixturesLoadedScope, setFixturesLoadedScope] = useState<string | null>(null);
 
   // Step 2 - Vote cards state
   const [voteCards, setVoteCards] = useState<VoteCard[]>([]);
   const [selectedSchemeKey, setSelectedSchemeKey] = useState<UmpireVoteSchemeKey>("classic_3_2_1");
   const [numberOnlyAcknowledged, setNumberOnlyAcknowledged] = useState(false);
+  const selectedAssociationIdRef = useRef(selectedAssociationId);
+  const selectedRoundRef = useRef(selectedRound);
+  const selectedDivisionIdRef = useRef(selectedDivisionId);
+  const selectedFixtureIdRef = useRef(selectedFixtureId);
+
+  useEffect(() => { selectedAssociationIdRef.current = selectedAssociationId; }, [selectedAssociationId]);
+  useEffect(() => { selectedRoundRef.current = selectedRound; }, [selectedRound]);
+  useEffect(() => { selectedDivisionIdRef.current = selectedDivisionId; }, [selectedDivisionId]);
+  useEffect(() => { selectedFixtureIdRef.current = selectedFixtureId; }, [selectedFixtureId]);
 
   // Step 2 - Linked SportStack player options for the selected fixture.
   const [linkedPlayers, setLinkedPlayers] = useState<UmpireLinkedPlayerOption[]>([]);
   const [linkedPlayersLoading, setLinkedPlayersLoading] = useState(false);
   const [linkedPlayersError, setLinkedPlayersError] = useState<string | null>(null);
-  const [draftHydrated, setDraftHydrated] = useState(false);
-  const draftKey = user ? `sportstack:umpire-ballot:${user.id}` : null;
+  const [hydratedDraftKey, setHydratedDraftKey] = useState<string | null>(null);
+  const accountId = user?.id;
+  const draftKey = useMemo(
+    () => accountId ? buildUmpireBallotDraftKey(accountId) : null,
+    [accountId],
+  );
+  const draftHydrated = Boolean(draftKey && hydratedDraftKey === draftKey);
+  const fixtureScopeKey = JSON.stringify([user?.id, selectedAssociationId, selectedRound, selectedDivisionId]);
+  const selectedFixture = draftHydrated && fixturesLoadedScope === fixtureScopeKey
+    && loadedSelectedFixture?.id === selectedFixtureId ? loadedSelectedFixture : null;
 
   useEffect(() => {
-    if (!draftKey) return;
-    try {
-      const saved = window.localStorage.getItem(draftKey);
-      if (saved) {
-        const draft = JSON.parse(saved) as {
-          step?: 1 | 2 | 3;
-          isProxy?: boolean;
-          proxyUmpireName?: string;
-          proxyUmpireProfileId?: string | null;
-          proxyReason?: string;
-          selectedAssociationId?: string;
-          selectedRound?: string;
-          selectedDivisionId?: string;
-          selectedFixtureId?: string;
-          selectedSchemeKey?: UmpireVoteSchemeKey;
-          voteCards?: VoteCard[];
-          numberOnlyAcknowledged?: boolean;
-        };
-        if (draft.step) setStep(draft.step);
-        setIsProxy(Boolean(draft.isProxy));
-        setProxyUmpireName(draft.proxyUmpireName || "");
-        setProxyUmpireProfileId(draft.proxyUmpireProfileId || null);
-        setProxyReason(draft.proxyReason || "");
-        setSelectedAssociationId(draft.selectedAssociationId || "");
-        setSelectedRound(draft.selectedRound || "");
-        setSelectedDivisionId(draft.selectedDivisionId || "");
-        setSelectedFixtureId(draft.selectedFixtureId || "");
-        if (draft.selectedSchemeKey) setSelectedSchemeKey(draft.selectedSchemeKey);
-        if (draft.voteCards) setVoteCards(draft.voteCards);
-        setNumberOnlyAcknowledged(Boolean(draft.numberOnlyAcknowledged));
-      }
-    } catch {
-      window.localStorage.removeItem(draftKey);
-    } finally {
-      setDraftHydrated(true);
+    if (!draftKey || !accountId) return;
+    retireLegacyUmpireBallotDraft(accountId, window.localStorage);
+    const draft = loadUmpireBallotDraft(draftKey, window.sessionStorage);
+    if (draft) {
+      setStep(draft.step);
+      setIsProxy(draft.isProxy);
+      setProxyUmpireName(draft.proxyUmpireName);
+      setProxyUmpireProfileId(draft.proxyUmpireProfileId);
+      setProxyReason(draft.proxyReason);
+      setSelectedAssociationId(draft.selectedAssociationId);
+      setSelectedRound(draft.selectedRound);
+      setSelectedDivisionId(draft.selectedDivisionId);
+      setSelectedFixtureId(draft.selectedFixtureId);
+      setSelectedSchemeKey(draft.selectedSchemeKey);
+      setVoteCards(draft.voteCards);
+      setNumberOnlyAcknowledged(draft.numberOnlyAcknowledged);
+    } else {
+      setStep(1);
+      setIsProxy(false);
+      setProxyUmpireName("");
+      setProxyUmpireProfileId(null);
+      setProxyReason("");
+      setSelectedAssociationId("");
+      setSelectedRound("");
+      setSelectedDivisionId("");
+      setSelectedFixtureId("");
+      setSelectedFixture(null);
+      setSelectedSchemeKey("classic_3_2_1");
+      setVoteCards([]);
+      setNumberOnlyAcknowledged(false);
+      setSubmitSuccess(false);
+      setSubmitError(null);
     }
-  }, [draftKey]);
+    setHydratedDraftKey(draftKey);
+  }, [accountId, draftKey]);
 
   useEffect(() => {
     if (!draftKey || !draftHydrated || submitSuccess) return;
-    window.localStorage.setItem(draftKey, JSON.stringify({
+    const draft: UmpireBallotDraft = {
       step,
       isProxy,
       proxyUmpireName,
@@ -217,7 +234,20 @@ export default function UmpireVoteSubmit() {
       selectedSchemeKey,
       voteCards,
       numberOnlyAcknowledged,
-    }));
+    };
+    const meaningful = isMeaningfulUmpireBallotDraft(draft);
+    if (meaningful) {
+      saveUmpireBallotDraft(draftKey, draft, window.sessionStorage);
+    } else {
+      clearUmpireBallotDraft(draftKey, window.sessionStorage);
+    }
+    if (!meaningful) return;
+    const warnBeforeClosing = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeClosing);
+    return () => window.removeEventListener("beforeunload", warnBeforeClosing);
   }, [
     draftHydrated,
     draftKey,
@@ -254,7 +284,15 @@ export default function UmpireVoteSubmit() {
         .eq("id", selectedFixtureId)
         .maybeSingle();
 
-      if (cancelled || error || !data?.division_id || data.round_number === null) return;
+      if (cancelled || error) return;
+      if (!data?.division_id || data.round_number === null) {
+        setSelectedFixtureId("");
+        setSelectedFixture(null);
+        setVoteCards([]);
+        setStep(1);
+        setNumberOnlyAcknowledged(false);
+        return;
+      }
 
       const divisionRelation = data.divisions as unknown as
         | { association_id: string }
@@ -322,6 +360,7 @@ export default function UmpireVoteSubmit() {
   // Load user's associations
   useEffect(() => {
     if (!isUmpire || !user) return;
+    let cancelled = false;
 
     const fetchUserAssociations = async () => {
       setAssociationsLoading(true);
@@ -338,9 +377,6 @@ export default function UmpireVoteSubmit() {
 
           if (allError) throw allError;
           resolvedAssocs = allData || [];
-          
-          setUserAssociations(resolvedAssocs);
-          // Do NOT auto-select for Super Admin
         } else {
           // Query user's roles for any association_id link
           const { data: rolesData, error: rolesError } = await supabase
@@ -378,14 +414,25 @@ export default function UmpireVoteSubmit() {
             resolvedAssocs = allData || [];
           }
 
-          setUserAssociations(resolvedAssocs);
+        }
 
-          // Auto-select if there is exactly 1 association
-          if (resolvedAssocs.length === 1) {
-            setSelectedAssociationId(resolvedAssocs[0].id);
-          }
+        if (cancelled) return;
+        setUserAssociations(resolvedAssocs);
+        const currentAssociationId = selectedAssociationIdRef.current;
+        if (currentAssociationId && !resolvedAssocs.some((association) => association.id === currentAssociationId)) {
+          setSelectedAssociationId(!isSuperAdmin && resolvedAssocs.length === 1 ? resolvedAssocs[0].id : "");
+          setSelectedRound("");
+          setSelectedDivisionId("");
+          setSelectedFixtureId("");
+          setSelectedFixture(null);
+          setVoteCards([]);
+          setStep(1);
+          setNumberOnlyAcknowledged(false);
+        } else if (!currentAssociationId && !isSuperAdmin && resolvedAssocs.length === 1) {
+          setSelectedAssociationId(resolvedAssocs[0].id);
         }
       } catch (error: unknown) {
+        if (cancelled) return;
         const message = errorMessage(error, "Failed to load associations.");
         console.error("Error fetching associations:", error);
         toast({
@@ -394,20 +441,25 @@ export default function UmpireVoteSubmit() {
           variant: "destructive",
         });
       } finally {
-        setAssociationsLoading(false);
+        if (!cancelled) setAssociationsLoading(false);
       }
     };
 
-    fetchUserAssociations();
+    void fetchUserAssociations();
+    return () => {
+      cancelled = true;
+    };
   }, [isUmpire, roles, toast, user]);
 
   // Step 1 - Load unique rounds filtered by association
   useEffect(() => {
     if (!isUmpire || !selectedAssociationId) {
       setRounds([]);
+      setRoundsLoading(false);
       return;
     }
 
+    let cancelled = false;
     const fetchRounds = async () => {
       setRoundsLoading(true);
       try {
@@ -431,11 +483,24 @@ export default function UmpireVoteSubmit() {
           });
         });
 
-        setRounds(Array.from(dateRanges.entries())
+        const loadedRounds = Array.from(dateRanges.entries())
           .filter(([, range]) => new Date(range.startDate).getTime() <= now)
           .map(([number, range]) => ({ number, ...range }))
-          .sort((a, b) => a.number - b.number));
+          .sort((a, b) => a.number - b.number);
+        if (cancelled) return;
+        setRounds(loadedRounds);
+        const currentRound = selectedRoundRef.current;
+        if (currentRound && !loadedRounds.some((round) => String(round.number) === currentRound)) {
+          setSelectedRound("");
+          setSelectedDivisionId("");
+          setSelectedFixtureId("");
+          setSelectedFixture(null);
+          setVoteCards([]);
+          setStep(1);
+          setNumberOnlyAcknowledged(false);
+        }
       } catch (error: unknown) {
+        if (cancelled) return;
         console.error("Error fetching rounds:", error);
         toast({
           title: "Error",
@@ -443,20 +508,25 @@ export default function UmpireVoteSubmit() {
           variant: "destructive",
         });
       } finally {
-        setRoundsLoading(false);
+        if (!cancelled) setRoundsLoading(false);
       }
     };
 
-    fetchRounds();
-  }, [isUmpire, selectedAssociationId, toast]);
+    void fetchRounds();
+    return () => {
+      cancelled = true;
+    };
+  }, [isUmpire, selectedAssociationId, toast, user?.id]);
 
   // Step 1 - Fetch divisions when round is chosen, filtered by association
   useEffect(() => {
     if (!selectedRound || !selectedAssociationId) {
       setDivisions([]);
+      setDivisionsLoading(false);
       return;
     }
 
+    let cancelled = false;
     const fetchDivisions = async () => {
       setDivisionsLoading(true);
       try {
@@ -478,7 +548,16 @@ export default function UmpireVoteSubmit() {
         );
 
         if (uniqueDivisionIds.length === 0) {
+          if (cancelled) return;
           setDivisions([]);
+          if (selectedDivisionIdRef.current) {
+            setSelectedDivisionId("");
+            setSelectedFixtureId("");
+            setSelectedFixture(null);
+            setVoteCards([]);
+            setStep(1);
+            setNumberOnlyAcknowledged(false);
+          }
           return;
         }
 
@@ -490,11 +569,22 @@ export default function UmpireVoteSubmit() {
 
         if (divError) throw divError;
 
-        setDivisions(((divData || []) as unknown as DivisionOption[]).map((division) => ({
+        if (cancelled) return;
+        const loadedDivisions = ((divData || []) as unknown as DivisionOption[]).map((division) => ({
           ...division,
           umpire_vote_scheme_key: division.umpire_vote_scheme_key || "classic_3_2_1",
-        })));
+        }));
+        setDivisions(loadedDivisions);
+        if (selectedDivisionIdRef.current && !loadedDivisions.some((division) => division.id === selectedDivisionIdRef.current)) {
+          setSelectedDivisionId("");
+          setSelectedFixtureId("");
+          setSelectedFixture(null);
+          setVoteCards([]);
+          setStep(1);
+          setNumberOnlyAcknowledged(false);
+        }
       } catch (error: unknown) {
+        if (cancelled) return;
         console.error("Error fetching divisions:", error);
         toast({
           title: "Error",
@@ -502,20 +592,25 @@ export default function UmpireVoteSubmit() {
           variant: "destructive",
         });
       } finally {
-        setDivisionsLoading(false);
+        if (!cancelled) setDivisionsLoading(false);
       }
     };
 
-    fetchDivisions();
-  }, [selectedAssociationId, selectedRound, toast]);
+    void fetchDivisions();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAssociationId, selectedRound, toast, user?.id]);
 
   // Step 1 - Fetch fixtures & teams when division and round are chosen, filtered by association
   useEffect(() => {
     if (!selectedRound || !selectedDivisionId || !selectedAssociationId) {
       setFixtures([]);
+      setFixturesLoading(false);
       return;
     }
 
+    let cancelled = false;
     const fetchFixturesAndTeams = async () => {
       setFixturesLoading(true);
       try {
@@ -532,7 +627,16 @@ export default function UmpireVoteSubmit() {
         if (fixturesError) throw fixturesError;
 
         if (!fixturesData || fixturesData.length === 0) {
+          if (cancelled) return;
           setFixtures([]);
+          setFixturesLoadedScope(fixtureScopeKey);
+          if (selectedFixtureIdRef.current) {
+            setSelectedFixtureId("");
+            setSelectedFixture(null);
+            setVoteCards([]);
+            setStep(1);
+            setNumberOnlyAcknowledged(false);
+          }
           return;
         }
 
@@ -556,6 +660,7 @@ export default function UmpireVoteSubmit() {
         teamsData?.forEach((team) => {
           newTeamsMap.set(team.id, team.name);
         });
+        if (cancelled) return;
         setTeamsMap(newTeamsMap);
 
         // Map fixtures with home/away team names
@@ -575,7 +680,16 @@ export default function UmpireVoteSubmit() {
         });
 
         setFixtures(enrichedFixtures);
+        setFixturesLoadedScope(fixtureScopeKey);
+        if (selectedFixtureIdRef.current && !enrichedFixtures.some((fixture) => fixture.id === selectedFixtureIdRef.current)) {
+          setSelectedFixtureId("");
+          setSelectedFixture(null);
+          setVoteCards([]);
+          setStep(1);
+          setNumberOnlyAcknowledged(false);
+        }
       } catch (error: unknown) {
+        if (cancelled) return;
         console.error("Error fetching fixtures/teams:", error);
         toast({
           title: "Error",
@@ -583,16 +697,19 @@ export default function UmpireVoteSubmit() {
           variant: "destructive",
         });
       } finally {
-        setFixturesLoading(false);
+        if (!cancelled) setFixturesLoading(false);
       }
     };
 
-    fetchFixturesAndTeams();
-  }, [divisions, selectedAssociationId, selectedDivisionId, selectedRound, toast]);
+    void fetchFixturesAndTeams();
+    return () => {
+      cancelled = true;
+    };
+  }, [divisions, fixtureScopeKey, selectedAssociationId, selectedDivisionId, selectedRound, toast]);
 
   // Step 1 - When a fixture is selected, resolve its details for subsequent steps
   useEffect(() => {
-    if (!selectedFixtureId || fixtures.length === 0) {
+    if (!draftHydrated || fixturesLoadedScope !== fixtureScopeKey || !selectedFixtureId || fixtures.length === 0) {
       setSelectedFixture(null);
       return;
     }
@@ -611,8 +728,19 @@ export default function UmpireVoteSubmit() {
         round_number: matched.round_number,
         fixtureDate: matched.fixtureDate,
       });
+      const validTeamIds = new Set([matched.home_team_id, matched.away_team_id].filter(Boolean));
+      setVoteCards((current) => current.map((card) => (
+        card.teamId && !validTeamIds.has(card.teamId)
+          ? { ...card, profileId: null, playerName: "", playerNumber: "", teamId: "" }
+          : card
+      )));
+    } else {
+      setSelectedFixtureId("");
+      setVoteCards([]);
+      setStep(1);
+      setNumberOnlyAcknowledged(false);
     }
-  }, [selectedFixtureId, fixtures, selectedDivisionId, divisions]);
+  }, [draftHydrated, fixtureScopeKey, fixturesLoadedScope, selectedFixtureId, fixtures, selectedDivisionId, divisions]);
 
   useEffect(() => {
     let cancelled = false;
@@ -634,7 +762,16 @@ export default function UmpireVoteSubmit() {
       awayTeamLabel: selectedFixture.awayTeamName,
     })
       .then((players) => {
-        if (!cancelled) setLinkedPlayers(players);
+        if (cancelled) return;
+        setLinkedPlayers(players);
+        const validLinkedPlayers = new Set(
+          players.map((player) => `${player.profileId}|${player.teamId}`),
+        );
+        setVoteCards((current) => current.map((card) => (
+          card.profileId && !validLinkedPlayers.has(`${card.profileId}|${card.teamId}`)
+            ? { ...card, profileId: null }
+            : card
+        )));
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -735,7 +872,7 @@ export default function UmpireVoteSubmit() {
 
   // Form Reset
   const handleReset = () => {
-    if (draftKey) window.localStorage.removeItem(draftKey);
+    if (draftKey) clearUmpireBallotDraft(draftKey, window.sessionStorage);
     setStep(1);
     setIsProxy(false);
     setProxyUmpireName("");
@@ -801,7 +938,7 @@ export default function UmpireVoteSubmit() {
 
       // Success
       setSubmitSuccess(true);
-      if (draftKey) window.localStorage.removeItem(draftKey);
+      if (draftKey) clearUmpireBallotDraft(draftKey, window.sessionStorage);
       toast({
         title: "Ballot submitted",
         description: "The Umpire Match Voting ballot is ready for administrator review.",
@@ -991,7 +1128,8 @@ export default function UmpireVoteSubmit() {
               <CardHeader>
                 <CardTitle className="text-xl">Match Information</CardTitle>
                 <CardDescription>
-                  Specify who is submitting the vote and select the fixture
+                  Specify who is submitting the vote and select the fixture. Your unfinished ballot
+                  is kept in this tab; keep the tab open until you submit.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">

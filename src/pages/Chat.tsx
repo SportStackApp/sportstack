@@ -51,6 +51,14 @@ import {
   mergeLatestMessages,
   prependOlderMessages,
 } from "@/lib/communicationMessages";
+import {
+  buildChatDraftKey,
+  clearChatDraftIfUnchanged,
+  loadChatDraft,
+  saveChatDraft,
+  takeLegacyChatDraft,
+  type ChatDraft,
+} from "@/lib/chatDraft";
 
 const database = supabase;
 const REACTIONS = ["👍", "❤️", "😊", "🎉"] as const;
@@ -125,6 +133,7 @@ const Chat = () => {
     requestedTab && ["team", "club", "association"].includes(requestedTab) ? requestedTab : "team",
   );
   const { user } = useAuth();
+  const accountId = user?.id ?? null;
   const {
     selectedAssociationId,
     selectedClubId,
@@ -136,17 +145,27 @@ const Chat = () => {
   const { toast } = useToast();
   const { isSuperAdmin, canManageAssociation, canManageClub, canManageTeam } = useAdminScope();
   const [channels, setChannels] = useState<ChannelMap>(defaultChannels);
+  const [resolvedChannelContextKey, setResolvedChannelContextKey] = useState<string | null>(null);
+  const [channelReloadToken, setChannelReloadToken] = useState(0);
   const [unread, setUnread] = useState<UnreadMap>(defaultUnread);
   const [messages, setMessages] = useState<CommunicationMessage[]>([]);
+  const [loadedMessageContextKey, setLoadedMessageContextKey] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [ownPermission, setOwnPermission] = useState<{ can_publish: boolean; can_moderate: boolean } | null>(null);
   const [composer, setComposer] = useState("");
-  const [replyTo, setReplyTo] = useState<CommunicationMessage | null>(null);
+  const [replyToId, setReplyToId] = useState<string | null>(null);
   const [editing, setEditing] = useState<CommunicationMessage | null>(null);
   const [important, setImportant] = useState(false);
-  const [pendingMentions, setPendingMentions] = useState<Member[]>([]);
+  const [pendingMentionIds, setPendingMentionIds] = useState<string[]>([]);
+  const [membersLoadedForTeamId, setMembersLoadedForTeamId] = useState<string | null>(null);
+  const [membersLoadError, setMembersLoadError] = useState<string | null>(null);
+  const [membersReloadToken, setMembersReloadToken] = useState(0);
+  const [replyAuthorId, setReplyAuthorId] = useState<string | null>(null);
+  const [replyValidationPending, setReplyValidationPending] = useState(false);
+  const [replyValidationFailed, setReplyValidationFailed] = useState(false);
+  const [hydratedDraftKey, setHydratedDraftKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [sending, setSending] = useState(false);
@@ -161,16 +180,40 @@ const Chat = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesViewportRef = useRef<HTMLDivElement>(null);
-  const loadedChannelRef = useRef<string | null>(null);
+  const channelRequestIdRef = useRef(0);
+  const messageRequestIdRef = useRef(0);
+  const olderMessagesRequestIdRef = useRef(0);
+  const sendRequestIdRef = useRef(0);
+  const historyRequestIdRef = useRef(0);
+  const activeComposerFingerprintRef = useRef("");
+  const lastPersistedDraftRef = useRef<{ key: string; draft: ChatDraft } | null>(null);
 
-  const channelId = channels[tab];
+  const channelContextKey = accountId
+    ? [accountId, selectedAssociationId || "__none__", selectedClubId || "__none__", selectedTeamId || "__none__"].join("|")
+    : null;
+  const channelId = resolvedChannelContextKey === channelContextKey ? channels[tab] : null;
+  const messageContextKey = accountId && channelId ? `${accountId}|${channelId}` : null;
+  const activeChannelContextRef = useRef(channelContextKey);
+  const activeMessageContextRef = useRef(messageContextKey);
+  const activeDraftKeyRef = useRef<string | null>(null);
+  const loadedMessageContextRef = useRef(loadedMessageContextKey);
+  activeChannelContextRef.current = channelContextKey;
+  activeMessageContextRef.current = messageContextKey;
+  loadedMessageContextRef.current = loadedMessageContextKey;
+  const visibleMessages = useMemo(
+    () => loadedMessageContextKey === messageContextKey ? messages : [],
+    [loadedMessageContextKey, messageContextKey, messages],
+  );
+  const visibleHasOlderMessages = loadedMessageContextKey === messageContextKey && hasOlderMessages;
+  const visibleUnread = resolvedChannelContextKey === channelContextKey ? unread : defaultUnread;
+  const effectiveOwnPermission = loadedMessageContextKey === messageContextKey ? ownPermission : null;
   const canAdminister = isSuperAdmin || (
     tab === "association"
       ? Boolean(selectedAssociationId && canManageAssociation(selectedAssociationId))
       : Boolean(selectedClubId && canManageClub(selectedClubId))
   );
-  const canPublish = tab === "team" || canAdminister || Boolean(ownPermission?.can_publish);
-  const canModerate = canAdminister || Boolean(ownPermission?.can_moderate);
+  const canPublish = tab === "team" || canAdminister || Boolean(effectiveOwnPermission?.can_publish);
+  const canModerate = canAdminister || Boolean(effectiveOwnPermission?.can_moderate);
   const canOpenSettings = tab === "team"
     ? Boolean(selectedTeamId && canManageTeam(selectedTeamId)) || canAdminister
     : canAdminister;
@@ -189,7 +232,17 @@ const Chat = () => {
   }, [requestedTab]);
 
   useEffect(() => {
-    if (!user) return;
+    const requestId = ++channelRequestIdRef.current;
+    setResolvedChannelContextKey(null);
+    setChannels(defaultChannels);
+    setUnread(defaultUnread);
+    if (!accountId || !channelContextKey) return;
+
+    const requestedAccountId = accountId;
+    let cancelled = false;
+    const isCurrentRequest = () => !cancelled
+      && channelRequestIdRef.current === requestId
+      && activeChannelContextRef.current === channelContextKey;
     const loadChannels = async () => {
       setLoadError(false);
       const requests = [
@@ -204,6 +257,7 @@ const Chat = () => {
           : Promise.resolve({ data: null, error: null }),
       ];
       const [teamResult, clubResult, associationResult] = await Promise.all(requests);
+      if (!isCurrentRequest()) return;
       if (teamResult.error || clubResult.error || associationResult.error) {
         setChannels(defaultChannels);
         setUnread(defaultUnread);
@@ -216,6 +270,7 @@ const Chat = () => {
         association: associationResult.data?.id || null,
       };
       setChannels(nextChannels);
+      setResolvedChannelContextKey(channelContextKey);
 
       const ids = Object.values(nextChannels).filter(Boolean) as string[];
       if (ids.length === 0) {
@@ -225,8 +280,9 @@ const Chat = () => {
       const { data: states } = await database
         .from("communication_read_state")
         .select("channel_id, last_read_at")
-        .eq("user_id", user.id)
+        .eq("user_id", requestedAccountId)
         .in("channel_id", ids);
+      if (!isCurrentRequest()) return;
       const nextUnread: UnreadMap = { ...defaultUnread };
       await Promise.all((Object.entries(nextChannels) as Array<[CommunicationTab, string | null]>).map(async ([key, id]) => {
         if (!id) return;
@@ -236,61 +292,80 @@ const Chat = () => {
           .from("communication_messages")
           .select("id", { count: "exact", head: true })
           .eq("channel_id", id)
-          .neq("author_id", user.id)
+          .neq("author_id", requestedAccountId)
           .is("removed_at", null);
         if (state?.last_read_at) query = query.gt("created_at", state.last_read_at);
         const result = await query;
         nextUnread[key] = result.count || 0;
       }));
-      setUnread(nextUnread);
+      if (isCurrentRequest()) setUnread(nextUnread);
     };
     void loadChannels();
-  }, [selectedAssociationId, selectedClubId, selectedTeamId, user]);
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, channelContextKey, channelReloadToken, selectedAssociationId, selectedClubId, selectedTeamId]);
 
-  const markChannelRead = useCallback(async (latestMessage?: CommunicationMessage) => {
-    if (!user || !channelId) return;
+  const markChannelRead = useCallback(async (latestMessage?: CommunicationMessage, expectedContextKey = messageContextKey) => {
+    if (!accountId || !channelId || !expectedContextKey || activeMessageContextRef.current !== expectedContextKey) return;
+    const readAccountId = accountId;
+    const readChannelId = channelId;
+    const readTab = tab;
     await database.from("communication_read_state").upsert(
       {
-        channel_id: channelId,
-        user_id: user.id,
+        channel_id: readChannelId,
+        user_id: readAccountId,
         last_read_message_id: latestMessage?.id || null,
         last_read_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
       { onConflict: "channel_id,user_id" },
     );
-    setUnread((current) => ({ ...current, [tab]: 0 }));
-  }, [channelId, tab, user]);
+    if (activeMessageContextRef.current !== expectedContextKey) return;
+    setUnread((current) => ({ ...current, [readTab]: 0 }));
+  }, [accountId, channelId, messageContextKey, tab]);
 
   const loadMessages = useCallback(async () => {
-    if (!channelId || !user) {
+    const contextKey = messageContextKey;
+    if (contextKey && activeMessageContextRef.current !== contextKey) return;
+    const requestId = ++messageRequestIdRef.current;
+    if (!accountId || !channelId || !contextKey) {
       setMessages([]);
       setReactions([]);
+      setProfiles({});
       setOwnPermission(null);
       setHasOlderMessages(false);
-      loadedChannelRef.current = null;
+      setLoadedMessageContextKey(null);
       setLoading(false);
       return;
     }
+    const requestedAccountId = accountId;
+    const requestedChannelId = channelId;
+    const isCurrentRequest = () => messageRequestIdRef.current === requestId
+      && activeMessageContextRef.current === contextKey;
     setLoading(true);
     setLoadError(false);
     setOwnPermission(null);
     const { data, error } = await database
       .from("communication_messages")
       .select("id, channel_id, message_type, author_id, content, reply_to_id, is_important, edited_at, removed_at, removed_by, moderation_reason, created_at")
-      .eq("channel_id", channelId)
+      .eq("channel_id", requestedChannelId)
       .order("created_at", { ascending: false })
       .limit(MESSAGE_PAGE_SIZE);
+    if (!isCurrentRequest()) return;
     if (error) {
       console.error("Unable to load communications", error);
       setMessages([]);
+      setReactions([]);
+      setProfiles({});
+      setOwnPermission(null);
+      setLoadedMessageContextKey(contextKey);
       setLoadError(true);
       setLoading(false);
       return;
     }
     const loaded = ((data || []) as CommunicationMessage[]).reverse();
-    const isSameChannel = loadedChannelRef.current === channelId;
-    loadedChannelRef.current = channelId;
+    const isSameChannel = loadedMessageContextRef.current === contextKey;
     setMessages((current) => mergeLatestMessages(current, loaded, isSameChannel));
     setHasOlderMessages(hasOlderMessagePage(loaded.length, MESSAGE_PAGE_SIZE));
     const messageIds = loaded.map((message) => message.id);
@@ -305,36 +380,51 @@ const Chat = () => {
       database
         .from("communication_permissions")
         .select("can_publish, can_moderate")
-        .eq("channel_id", channelId)
-        .eq("user_id", user.id)
+        .eq("channel_id", requestedChannelId)
+        .eq("user_id", requestedAccountId)
         .maybeSingle(),
     ]);
+    if (!isCurrentRequest()) return;
     setReactions((reactionResult.data || []) as Reaction[]);
     setProfiles(Object.fromEntries(((profileResult.data || []) as ProfileRow[]).map((profile) => [
       profile.id,
       [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Member",
     ])));
     setOwnPermission(permissionResult.data || null);
+    setLoadedMessageContextKey(contextKey);
+    loadedMessageContextRef.current = contextKey;
     setLoading(false);
-    await markChannelRead(loaded.at(-1));
+    await markChannelRead(loaded.at(-1), contextKey);
+    if (!isCurrentRequest()) return;
     if (!targetMessageId) requestAnimationFrame(() => messagesEndRef.current?.scrollIntoView({ behavior: isSameChannel ? "smooth" : "auto" }));
-  }, [channelId, markChannelRead, targetMessageId, user]);
+  }, [accountId, channelId, markChannelRead, messageContextKey, targetMessageId]);
+
+  useEffect(() => {
+    olderMessagesRequestIdRef.current += 1;
+    setLoadingOlderMessages(false);
+  }, [messageContextKey]);
 
   const loadOlderMessages = useCallback(async () => {
-    const oldest = messages[0];
+    const contextKey = messageContextKey;
+    const oldest = visibleMessages[0];
     const viewport = messagesViewportRef.current;
-    if (!channelId || !oldest || !hasOlderMessages || loadingOlderMessages || !viewport) return;
+    if (!channelId || !contextKey || !oldest || !visibleHasOlderMessages || loadingOlderMessages || !viewport) return;
 
+    const requestId = ++olderMessagesRequestIdRef.current;
+    const requestedChannelId = channelId;
+    const isCurrentRequest = () => olderMessagesRequestIdRef.current === requestId
+      && activeMessageContextRef.current === contextKey;
     setLoadingOlderMessages(true);
     const previousHeight = viewport.scrollHeight;
     const { data, error } = await database
       .from("communication_messages")
       .select("id, channel_id, message_type, author_id, content, reply_to_id, is_important, edited_at, removed_at, removed_by, moderation_reason, created_at")
-      .eq("channel_id", channelId)
+      .eq("channel_id", requestedChannelId)
       .lt("created_at", oldest.created_at)
       .order("created_at", { ascending: false })
       .limit(MESSAGE_PAGE_SIZE);
 
+    if (!isCurrentRequest()) return;
     if (error) {
       setLoadingOlderMessages(false);
       toast({ title: "Older messages not loaded", description: error.message, variant: "destructive" });
@@ -355,6 +445,7 @@ const Chat = () => {
         ? database.from("communication_reactions").select("id, message_id, user_id, emoji").in("message_id", messageIds)
         : Promise.resolve({ data: [] }),
     ]);
+    if (!isCurrentRequest()) return;
     setProfiles((current) => ({
       ...current,
       ...Object.fromEntries(((profileResult.data || []) as ProfileRow[]).map((profile) => [
@@ -364,10 +455,11 @@ const Chat = () => {
     }));
     setReactions((current) => [...((reactionResult.data || []) as Reaction[]), ...current]);
     requestAnimationFrame(() => {
+      if (!isCurrentRequest() || !viewport.isConnected) return;
       viewport.scrollTop = viewport.scrollHeight - previousHeight;
       setLoadingOlderMessages(false);
     });
-  }, [channelId, hasOlderMessages, loadingOlderMessages, messages, toast]);
+  }, [channelId, loadingOlderMessages, messageContextKey, toast, visibleHasOlderMessages, visibleMessages]);
 
   useEffect(() => {
     void loadMessages();
@@ -391,50 +483,139 @@ const Chat = () => {
   }, [channelId, loadMessages]);
 
   useEffect(() => {
-    if (tab !== "team" || !selectedTeamId) {
+    if (!accountId || tab !== "team" || !selectedTeamId) {
       setMembers([]);
+      setMembersLoadedForTeamId(null);
+      setMembersLoadError(null);
+      setPendingMentionIds([]);
       return;
     }
+    setMembers([]);
+    setMembersLoadedForTeamId(null);
+    setMembersLoadError(null);
+    let cancelled = false;
     const loadMembers = async () => {
-      const { data: memberships } = await database
+      const { data: memberships, error: membershipError } = await database
         .from("team_memberships")
         .select("user_id")
         .eq("team_id", selectedTeamId)
         .eq("status", "ACTIVE");
+      if (cancelled) return;
+      if (membershipError) {
+        setMembersLoadError("Team members could not be checked.");
+        return;
+      }
       const ids = [...new Set(((memberships || []) as MembershipRow[]).map((membership) => membership.user_id))];
-      if (ids.length === 0) return setMembers([]);
-      const { data: memberProfiles } = await database
+      if (ids.length === 0) {
+        setMembers([]);
+        setMembersLoadedForTeamId(selectedTeamId);
+        return;
+      }
+      const { data: memberProfiles, error: profilesError } = await database
         .from("profiles")
         .select("id, first_name, last_name")
         .in("id", ids);
-      setMembers(((memberProfiles || []) as ProfileRow[]).map((profile) => ({
+      if (cancelled) return;
+      if (profilesError) {
+        setMembersLoadError("Team members could not be checked.");
+        return;
+      }
+      const loadedMembers = ((memberProfiles || []) as ProfileRow[]).map((profile) => ({
         id: profile.id,
         name: [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Member",
-      })).sort((a: Member, b: Member) => a.name.localeCompare(b.name)));
+      })).sort((a: Member, b: Member) => a.name.localeCompare(b.name));
+      setMembers(loadedMembers);
+      setMembersLoadedForTeamId(selectedTeamId);
+      setMembersLoadError(null);
     };
     void loadMembers();
-  }, [selectedTeamId, tab]);
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, membersReloadToken, selectedTeamId, tab]);
 
   useEffect(() => {
     if (!targetMessageId || loading) return;
     requestAnimationFrame(() => document.getElementById(`communication-${targetMessageId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }));
   }, [loading, messages, targetMessageId]);
 
-  const draftStorageKey = user && channelId ? `communication-draft:${user.id}:${channelId}` : null;
+  const draftStorageKey = useMemo(
+    () => accountId && channelId ? buildChatDraftKey(accountId, channelId) : null,
+    [accountId, channelId],
+  );
+  activeDraftKeyRef.current = draftStorageKey;
+  activeComposerFingerprintRef.current = JSON.stringify({
+    text: composer,
+    replyToId,
+    important,
+    pendingMentionIds,
+    editingId: editing?.id ?? null,
+  });
 
   useEffect(() => {
-    setReplyTo(null);
+    sendRequestIdRef.current += 1;
+    historyRequestIdRef.current += 1;
+    setSending(false);
+    setPublishConfirmOpen(false);
+    setSettingsOpen(false);
+    setModerating(null);
+    setModerationReason("");
+    setHistoryMessage(null);
+    setMessageRevisions([]);
+    setHistoryLoading(false);
+  }, [messageContextKey]);
+
+  useEffect(() => {
+    if (!draftStorageKey || !accountId || !channelId) {
+      setHydratedDraftKey(null);
+      lastPersistedDraftRef.current = null;
+      return;
+    }
+    const savedDraft = loadChatDraft(draftStorageKey, localStorage);
+    const legacyText = takeLegacyChatDraft(accountId, channelId, localStorage);
+    const draft: ChatDraft | null = savedDraft ?? (legacyText ? {
+      text: legacyText,
+      replyMessageId: null,
+      important: false,
+      mentionedUserIds: [],
+    } : null);
+    const restoredReplyId = draft?.replyMessageId ?? null;
+    setReplyToId(restoredReplyId);
+    setReplyAuthorId(null);
+    setReplyValidationPending(Boolean(restoredReplyId));
+    setReplyValidationFailed(false);
     setEditing(null);
-    setImportant(false);
-    setPendingMentions([]);
-    setComposer(draftStorageKey ? localStorage.getItem(draftStorageKey) || "" : "");
-  }, [draftStorageKey]);
+    setImportant(draft?.important ?? false);
+    setPendingMentionIds(draft?.mentionedUserIds ?? []);
+    setComposer(draft?.text ?? "");
+    lastPersistedDraftRef.current = draft ? { key: draftStorageKey, draft } : null;
+    setHydratedDraftKey(draftStorageKey);
+  }, [accountId, channelId, draftStorageKey]);
 
   useEffect(() => {
-    if (!draftStorageKey || editing) return;
-    if (composer) localStorage.setItem(draftStorageKey, composer);
-    else localStorage.removeItem(draftStorageKey);
-  }, [composer, draftStorageKey, editing]);
+    if (!draftStorageKey || hydratedDraftKey !== draftStorageKey || editing) return;
+    const draft: ChatDraft = {
+      text: composer,
+      replyMessageId: replyToId,
+      important,
+      mentionedUserIds: pendingMentionIds,
+    };
+    const meaningful = Boolean(composer || replyToId || important || pendingMentionIds.length > 0);
+    if (meaningful) {
+      if (saveChatDraft(draftStorageKey, draft, localStorage)) {
+        lastPersistedDraftRef.current = {
+          key: draftStorageKey,
+          draft: { ...draft, mentionedUserIds: [...draft.mentionedUserIds] },
+        };
+      }
+    } else {
+      const previous = lastPersistedDraftRef.current;
+      if (previous?.key === draftStorageKey) {
+        clearChatDraftIfUnchanged(draftStorageKey, previous.draft, localStorage);
+      }
+      lastPersistedDraftRef.current = null;
+    }
+  }, [composer, draftStorageKey, editing, hydratedDraftKey, important, pendingMentionIds, replyToId]);
 
   const mentionQuery = useMemo(() => {
     if (tab !== "team") return null;
@@ -444,10 +625,67 @@ const Chat = () => {
   const mentionSuggestions = mentionQuery === null
     ? []
     : members.filter((member) => member.id !== user?.id && member.name.toLowerCase().includes(mentionQuery)).slice(0, 6);
+  const mentionValidationPending = !editing
+    && tab === "team"
+    && pendingMentionIds.length > 0
+    && membersLoadedForTeamId !== selectedTeamId;
   const messagesById = useMemo(
-    () => new Map(messages.map((message) => [message.id, message])),
-    [messages],
+    () => new Map(visibleMessages.map((message) => [message.id, message])),
+    [visibleMessages],
   );
+  const replyValidationBlocked = Boolean(replyToId && !replyAuthorId)
+    || replyValidationPending
+    || replyValidationFailed;
+  useEffect(() => {
+    if (!replyToId) {
+      setReplyAuthorId(null);
+      setReplyValidationPending(false);
+      setReplyValidationFailed(false);
+      return;
+    }
+    const loadedReply = messagesById.get(replyToId);
+    if (loadedReply?.channel_id === channelId && !loadedReply.removed_at) {
+      setReplyAuthorId(loadedReply.author_id);
+      setReplyValidationPending(false);
+      setReplyValidationFailed(false);
+      return;
+    }
+    if (loading || loadedMessageContextKey !== messageContextKey || !channelId) return;
+
+    let cancelled = false;
+    setReplyValidationPending(true);
+    const validateOlderReply = async () => {
+      const { data, error } = await database
+        .from("communication_messages")
+        .select("id, author_id")
+        .eq("id", replyToId)
+        .eq("channel_id", channelId)
+        .is("removed_at", null)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        setReplyValidationFailed(true);
+      } else if (!data) {
+        setReplyToId(null);
+        setReplyAuthorId(null);
+        setReplyValidationFailed(false);
+      } else {
+        setReplyAuthorId(data.author_id);
+        setReplyValidationFailed(false);
+      }
+      setReplyValidationPending(false);
+    };
+    void validateOlderReply();
+    return () => {
+      cancelled = true;
+    };
+  }, [channelId, loadedMessageContextKey, loading, messageContextKey, messagesById, replyToId]);
+
+  useEffect(() => {
+    if (!selectedTeamId || membersLoadedForTeamId !== selectedTeamId) return;
+    const validMemberIds = new Set(members.map((member) => member.id));
+    setPendingMentionIds((current) => current.filter((id) => validMemberIds.has(id)));
+  }, [members, membersLoadedForTeamId, selectedTeamId]);
   const reactionsByMessage = useMemo(() => {
     const grouped = new Map<string, Reaction[]>();
     for (const reaction of reactions) {
@@ -460,19 +698,66 @@ const Chat = () => {
 
   const chooseMention = (member: Member) => {
     setComposer((current) => current.replace(/(?:^|\s)@([^@\n]*)$/, (value) => `${value.startsWith(" ") ? " " : ""}@${member.name} `));
-    setPendingMentions((current) => current.some((item) => item.id === member.id) ? current : [...current, member]);
+    setPendingMentionIds((current) => current.includes(member.id) ? current : [...current, member.id]);
+  };
+
+  const cancelReply = () => {
+    setReplyToId(null);
+    setReplyAuthorId(null);
+    setReplyValidationPending(false);
+    setReplyValidationFailed(false);
   };
 
   const resetComposer = () => {
+    if (editing && draftStorageKey) {
+      const draft = loadChatDraft(draftStorageKey, localStorage);
+      lastPersistedDraftRef.current = draft ? { key: draftStorageKey, draft } : null;
+      setEditing(null);
+      setComposer(draft?.text ?? "");
+      const restoredReplyId = draft?.replyMessageId ?? null;
+      setReplyToId(restoredReplyId);
+      setReplyAuthorId(null);
+      setReplyValidationPending(Boolean(restoredReplyId));
+      setReplyValidationFailed(false);
+      setImportant(draft?.important ?? false);
+      setPendingMentionIds(draft?.mentionedUserIds ?? []);
+      return;
+    }
     setComposer("");
-    setReplyTo(null);
+    setReplyToId(null);
+    setReplyAuthorId(null);
+    setReplyValidationPending(false);
+    setReplyValidationFailed(false);
     setEditing(null);
     setImportant(false);
-    setPendingMentions([]);
-    if (draftStorageKey) localStorage.removeItem(draftStorageKey);
+    setPendingMentionIds([]);
+    const previous = lastPersistedDraftRef.current;
+    if (draftStorageKey && previous?.key === draftStorageKey) {
+      clearChatDraftIfUnchanged(draftStorageKey, previous.draft, localStorage);
+    }
+    lastPersistedDraftRef.current = null;
+  };
+
+  const resetComposerAfterSend = () => {
+    setComposer("");
+    setReplyToId(null);
+    setReplyAuthorId(null);
+    setReplyValidationPending(false);
+    setReplyValidationFailed(false);
+    setEditing(null);
+    setImportant(false);
+    setPendingMentionIds([]);
+    // The submitted draft has already been compare-cleared. Prevent the blank
+    // autosave pass from removing a newer value written by another tab.
+    lastPersistedDraftRef.current = null;
   };
 
   const openEditHistory = async (message: CommunicationMessage) => {
+    if (!messageContextKey) return;
+    const requestId = ++historyRequestIdRef.current;
+    const contextKey = messageContextKey;
+    const isCurrentRequest = () => historyRequestIdRef.current === requestId
+      && activeMessageContextRef.current === contextKey;
     setHistoryMessage(message);
     setHistoryLoading(true);
     const { data, error } = await database
@@ -480,6 +765,7 @@ const Chat = () => {
       .select("id, message_id, revision_number, content, edited_by, edited_at")
       .eq("message_id", message.id)
       .order("revision_number", { ascending: false });
+    if (!isCurrentRequest()) return;
     if (error) {
       toast({ title: "Edit history not loaded", description: error.message, variant: "destructive" });
       setMessageRevisions([]);
@@ -489,6 +775,7 @@ const Chat = () => {
       const editorIds = [...new Set(revisions.map((revision) => revision.edited_by))];
       if (editorIds.length > 0) {
         const { data: editorProfiles } = await database.from("profiles").select("id, first_name, last_name").in("id", editorIds);
+        if (!isCurrentRequest()) return;
         setProfiles((current) => ({
           ...current,
           ...Object.fromEntries(((editorProfiles || []) as ProfileRow[]).map((profile) => [
@@ -498,23 +785,57 @@ const Chat = () => {
         }));
       }
     }
-    setHistoryLoading(false);
+    if (isCurrentRequest()) setHistoryLoading(false);
   };
 
   const sendMessage = async (broadcastConfirmed = false) => {
-    if (!user || !channelId || !composer.trim() || !canPublish || sending) return;
+    if (!accountId || !channelId || !messageContextKey || !draftStorageKey || !composer.trim() || !canPublish || sending || replyValidationBlocked || mentionValidationPending) return;
     if (tab !== "team" && !editing && !broadcastConfirmed) {
       setPublishConfirmOpen(true);
       return;
     }
+
+    const operationId = ++sendRequestIdRef.current;
+    const operationContextKey = messageContextKey;
+    const operationDraftKey = draftStorageKey;
+    const requestedChannelId = channelId;
+    const sendingAccountId = accountId;
+    const messageText = composer.trim();
+    const messageTab = tab;
+    const editTarget = editing;
+    const replyTargetId = replyToId;
+    const messageImportant = important;
+    const mentioned = members.filter((member) => pendingMentionIds.includes(member.id) && composer.includes(`@${member.name}`));
+    const operationDraft: ChatDraft = {
+      text: composer,
+      replyMessageId: replyTargetId,
+      important: messageImportant,
+      mentionedUserIds: [...pendingMentionIds],
+    };
+    const operationComposerFingerprint = activeComposerFingerprintRef.current;
+    const isActiveOperationContext = () => sendRequestIdRef.current === operationId
+      && activeMessageContextRef.current === operationContextKey
+      && activeDraftKeyRef.current === operationDraftKey;
+    const isCurrentOperation = () => isActiveOperationContext()
+      && activeComposerFingerprintRef.current === operationComposerFingerprint;
+
     setSending(true);
-    if (editing) {
+    if (editTarget) {
       const { error } = await database
         .from("communication_messages")
-        .update({ content: composer.trim() })
-        .eq("id", editing.id);
+        .update({ content: messageText })
+        .eq("id", editTarget.id)
+        .eq("channel_id", requestedChannelId);
+      if (!isActiveOperationContext()) return;
       setSending(false);
-      if (error) return toast({ title: "Message not updated", description: error.message, variant: "destructive" });
+      if (error) {
+        toast({ title: "Message not updated", description: error.message, variant: "destructive" });
+        return;
+      }
+      if (!isCurrentOperation()) {
+        await loadMessages();
+        return;
+      }
       resetComposer();
       await loadMessages();
       return;
@@ -523,26 +844,39 @@ const Chat = () => {
     const { data, error } = await database
       .from("communication_messages")
       .insert({
-        channel_id: channelId,
-        message_type: tab === "team" ? "CHAT" : "BROADCAST",
-        author_id: user.id,
-        content: composer.trim(),
-        reply_to_id: tab === "team" ? replyTo?.id || null : null,
-        is_important: tab === "team" ? false : important,
+        channel_id: requestedChannelId,
+        message_type: messageTab === "team" ? "CHAT" : "BROADCAST",
+        author_id: sendingAccountId,
+        content: messageText,
+        reply_to_id: messageTab === "team" ? replyTargetId : null,
+        is_important: messageTab === "team" ? false : messageImportant,
       })
       .select("id")
       .single();
-    if (!error && data?.id && tab === "team") {
-      const mentioned = pendingMentions.filter((member) => composer.includes(`@${member.name}`));
+    if (!error && data?.id && messageTab === "team") {
       if (mentioned.length > 0) {
         await database.from("communication_mentions").insert(
           mentioned.map((member) => ({ message_id: data.id, mentioned_user_id: member.id })),
         );
       }
     }
+    if (error) {
+      if (isActiveOperationContext()) {
+        setSending(false);
+        toast({ title: "Message not sent", description: error.message, variant: "destructive" });
+      }
+      return;
+    }
+
+    const operationIsCurrent = isCurrentOperation();
+    clearChatDraftIfUnchanged(operationDraftKey, operationDraft, localStorage);
+    if (!isActiveOperationContext()) return;
     setSending(false);
-    if (error) return toast({ title: "Message not sent", description: error.message, variant: "destructive" });
-    resetComposer();
+    if (!operationIsCurrent) {
+      await loadMessages();
+      return;
+    }
+    resetComposerAfterSend();
     await loadMessages();
   };
 
@@ -564,7 +898,8 @@ const Chat = () => {
 
   const startEdit = (message: CommunicationMessage) => {
     setEditing(message);
-    setReplyTo(null);
+    setReplyToId(null);
+    setReplyAuthorId(null);
     setComposer(message.content);
   };
 
@@ -627,8 +962,8 @@ const Chat = () => {
           ] as Array<[CommunicationTab, string]>).map(([key, label]) => (
             <TabsTrigger key={key} value={key} className="gap-2 py-2">
               {label}
-              {unread[key] > 0 && (
-                <span className="rounded-full bg-destructive px-1.5 text-xs text-destructive-foreground">{unread[key]}</span>
+              {visibleUnread[key] > 0 && (
+                <span className="rounded-full bg-destructive px-1.5 text-xs text-destructive-foreground">{visibleUnread[key]}</span>
               )}
             </TabsTrigger>
           ))}
@@ -645,14 +980,19 @@ const Chat = () => {
             }}
           >
             {loadingOlderMessages && <p className="text-center text-xs text-muted-foreground">Loading earlier messages…</p>}
-            {!loadingOlderMessages && hasOlderMessages && messages.length > 0 && (
+            {!loadingOlderMessages && visibleHasOlderMessages && visibleMessages.length > 0 && (
               <Button variant="ghost" size="sm" className="mx-auto flex" onClick={() => void loadOlderMessages()}>
                 Load earlier messages
               </Button>
             )}
             {!channelId ? (
-              <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
-                {loadError ? "This communication area could not be loaded. Refresh and try again." : `Select a ${tab} to open this communication area.`}
+              <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                <p>{loadError ? "This communication area could not be loaded. Your saved draft has been kept." : `Select a ${tab} to open this communication area.`}</p>
+                {loadError && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => setChannelReloadToken((current) => current + 1)}>
+                    Try again
+                  </Button>
+                )}
               </div>
             ) : loading ? (
               [1, 2, 3].map((item) => <Skeleton key={item} className="h-20 w-full" />)
@@ -662,11 +1002,11 @@ const Chat = () => {
                 <p>Messages could not be loaded.</p>
                 <Button variant="outline" size="sm" onClick={() => void loadMessages()}>Try again</Button>
               </div>
-            ) : messages.length === 0 ? (
+            ) : visibleMessages.length === 0 ? (
               <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
                 {tab === "team" ? "No team messages yet. Start the conversation." : "No official updates have been published."}
               </div>
-            ) : messages.map((message) => {
+            ) : visibleMessages.map((message) => {
               const own = message.author_id === user?.id;
               const reply = message.reply_to_id ? messagesById.get(message.reply_to_id) : undefined;
               const reactionsForMessage = reactionsByMessage.get(message.id) || [];
@@ -760,7 +1100,7 @@ const Chat = () => {
                           </button>
                         ))}
                         {tab === "team" && (
-                          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => setReplyTo(message)}>
+                          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => setReplyToId(message.id)}>
                             <CornerUpLeft className="h-3 w-3" /> Reply
                           </Button>
                         )}
@@ -775,12 +1115,46 @@ const Chat = () => {
 
           {channelId && canPublish && (
             <div className="relative space-y-2 border-t bg-background p-4">
-              {(replyTo || editing) && (
+              {(replyToId || editing) && (
                 <div className="flex items-start justify-between gap-3 rounded-md bg-muted px-3 py-2 text-xs">
                   <span className="min-w-0 truncate">
-                    {editing ? "Editing your message" : `Replying to ${profiles[replyTo?.author_id || ""] || "Member"}`}
+                    {editing ? "Editing your message" : `Replying to ${profiles[replyAuthorId || ""] || "Member"}`}
                   </span>
-                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={resetComposer}><X className="h-3 w-3" /></Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5"
+                    onClick={editing ? resetComposer : cancelReply}
+                    aria-label={editing ? "Cancel editing" : "Cancel reply"}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+              {replyToId && replyValidationFailed && (
+                <p className="text-xs text-destructive">
+                  This reply could not be checked. Cancel it, or try again after refreshing.
+                </p>
+              )}
+              {mentionValidationPending && (
+                <p className="text-xs text-muted-foreground">
+                  Checking the saved mentions before this message can be sent…
+                </p>
+              )}
+              {tab === "team" && membersLoadError && (
+                <div className="flex items-center justify-between gap-3 text-xs text-destructive">
+                  <span>
+                    {membersLoadError} Saved mentions have been kept and will not be sent until the check succeeds.
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => setMembersReloadToken((current) => current + 1)}
+                  >
+                    Retry
+                  </Button>
                 </div>
               )}
               {mentionSuggestions.length > 0 && (
@@ -820,7 +1194,7 @@ const Chat = () => {
                     <Switch checked={important} onCheckedChange={setImportant} /> Important
                   </label>
                 ) : <span className="text-xs text-muted-foreground">{tab === "team" ? "Enter to send · Shift+Enter for a new line" : "Text only"}</span>}
-                <Button className="gap-2" onClick={() => void sendMessage()} disabled={!composer.trim() || sending}>
+                <Button className="gap-2" onClick={() => void sendMessage()} disabled={!composer.trim() || sending || replyValidationBlocked || mentionValidationPending}>
                   <Send className="h-4 w-4" /> {editing ? "Save" : tab === "team" ? "Send" : "Publish"}
                 </Button>
               </div>
