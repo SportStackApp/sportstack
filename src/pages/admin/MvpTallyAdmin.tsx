@@ -454,7 +454,7 @@ export default function MvpTallyAdmin() {
                       <Button asChild size="sm" variant="outline" disabled={logoBusy}>
                         <label htmlFor="tally-logo-upload" className="cursor-pointer"><Upload className="mr-2 h-4 w-4" />{logoBusy ? "Uploading…" : "Upload logo"}</label>
                       </Button>
-                      <Input
+                      <input
                         id="tally-logo-upload"
                         type="file"
                         className="sr-only"
