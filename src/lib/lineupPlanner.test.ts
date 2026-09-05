@@ -10,6 +10,7 @@ import {
   pitchPositionFromOrientedPointer,
   pitchPositionFromPointer,
   pitchPlayerLabel,
+  requiredRosterProfileIds,
   uniqueRosterIds,
 } from "./lineupPlanner";
 
@@ -33,6 +34,14 @@ describe("line-up planner", () => {
       { id: "real-two", isPlaceholder: false },
       { id: "selected-placeholder", isPlaceholder: true },
     ]);
+  });
+
+  it("loads active and previous fill-in placeholders as roster candidates", () => {
+    expect(requiredRosterProfileIds(
+      ["selected-placeholder"],
+      ["active-real", "active-placeholder"],
+      ["previous-fill-in", "active-placeholder"],
+    )).toEqual(["active-real", "active-placeholder", "previous-fill-in", "selected-placeholder"]);
   });
 
   it("detects unresolved saved selections before roster changes are applied", () => {

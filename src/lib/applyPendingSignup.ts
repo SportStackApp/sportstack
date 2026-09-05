@@ -38,7 +38,9 @@ const db = supabase as unknown as {
 //
 // Safe to call every time someone logs in - if there's no pending
 // row, it does nothing.
-export async function applyPendingSignup(userId: string) {
+const pendingSignupRuns = new Map<string, Promise<void>>();
+
+async function applyPendingSignupOnce(userId: string) {
   // 1. Look for a pending signup for this user
   const { data: pending, error: fetchError } = await db
     .from("pending_signups")
@@ -125,4 +127,17 @@ export async function applyPendingSignup(userId: string) {
       error: deleteError,
     });
   }
+}
+
+// Authentication and route protection can initialise at almost the same time.
+// Share one in-flight run so they cannot create duplicate membership requests.
+export function applyPendingSignup(userId: string) {
+  const existingRun = pendingSignupRuns.get(userId);
+  if (existingRun) return existingRun;
+
+  const run = applyPendingSignupOnce(userId).finally(() => {
+    pendingSignupRuns.delete(userId);
+  });
+  pendingSignupRuns.set(userId, run);
+  return run;
 }

@@ -29,7 +29,7 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
 - [x] R9: focused regression tests and the complete Vitest suite pass
   CHECK: npx vitest run
   EXPECT: Test Files
-  EVIDENCE: 33 files and 128 tests passed locally before the 31 August support-table batch; its Dev Quality runs passed.
+  EVIDENCE: 33 files and 129 tests passed for the 31 August Vote Tally candidate; focused tally tests and Dev Quality run `33393069833` also passed.
 
 - [x] R10: TypeScript validates the complete application
   CHECK: npx tsc --noEmit
@@ -47,17 +47,17 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
 - [ ] R13: at least one complete read-only walk-away cycle has current evidence and no unresolved Blocker or High finding
   EVIDENCE: The 30 August Dev UI cycle found no new Blocker or High application defect, but READY-009 remains an unresolved High operational scraper item.
 
-- [ ] R14: any authorised disposable-data cycle proves create, save, reopen and recoverable cleanup without retained test damage
-  EVIDENCE: pending
+- [x] R14: any authorised disposable-data cycle proves create, save, reopen and recoverable cleanup without retained test damage
+  EVIDENCE: Two labelled Vote Tally presentations were created in Dev, published to one reserved Player, reopened through the deep link, denied to an unrelated Voter, then withdrawn with audit reasons. The required withdrawn audit rows remain retained.
 
-- [ ] R15: the reviewed Dev package is fast-forwarded to Main and passes staging deployment plus signed-in smoke testing
-  EVIDENCE: pending
+- [x] R15: the reviewed Dev package is fast-forwarded to Main and passes staging deployment plus signed-in smoke testing
+  EVIDENCE: Dev and Main served `v2026.08.31+1924404`; the signed-in Main Player route passed Axe, overflow, replay, pause/resume and skip checks before the Main-labelled disposable presentation was withdrawn.
 
 - [ ] R16: the exact frozen Main-to-Production application, migration, function, job and workflow package is independently reconciled against live Production
-  EVIDENCE: pending
+  EVIDENCE: The exact 228-commit/398-path/111-migration/12-Edge-Function-file/three-workflow inventory is frozen. Live Production tally tables/functions and function-version gaps are recorded. Full migration-history mapping, function allow-list and independent rehearsal remain open, so this gate does not pass.
 
 - [ ] R17: Production backup, migration dry-run, rollback and post-release smoke procedures are proven without exposing secrets
-  EVIDENCE: pending
+  EVIDENCE: Required backup, rehearsal, rollback and smoke procedures are documented in the Vote Tally release packet. They have not yet been rehearsed against a Production-derived isolated environment.
 
 - [ ] R18: required Dev, Main and Production-capable workflow checks, including scrapers, are green or have an explicitly accepted operational exception
   EVIDENCE: pending

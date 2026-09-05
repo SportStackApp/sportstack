@@ -1,9 +1,9 @@
 # Production Readiness Form and Persistence Register
 
-Last refreshed: 31/08/2026 from current source and targeted Dev evidence.
+Last refreshed: 05/09/2026 from current source, local regressions and earlier dated Dev evidence.
 
 Persistence key: **URL** survives navigation/refresh and is shareable; **Local** survives browser
-restart; **Session** survives same-browser refresh/navigation; **Saved** survives after explicit
+restart; **Session** survives same-tab refresh/navigation but not guaranteed tab closure; **Saved** survives after explicit
 Save; **Transient** intentionally resets when the page/dialog unmounts.
 
 ## Identity, profile, games and coaching
@@ -18,7 +18,7 @@ Save; **Transient** intentionally resets when the page/dialog unmounts.
 | Profile photo/team/statistics dialogs | Transient drafts; successful actions Saved | Source checked |
 | Games view/season/month | URL | Source checked |
 | Line-up team context | Session | Passed refresh 30/08 |
-| Line-up roster, assignments, nickname and dragged positions | Transient until Save; then Saved | Passed save/refresh 30/08 |
+| Line-up roster, assignments, nickname and dragged positions | Seven-day Local draft per account/team/fixture; explicit Save is backend Saved | Saved behaviour passed 30/08; scoped draft source/regressions deployed 05/09, actual-role acceptance pending |
 | Line-up roster/player search dialogs | Transient | Passed workflow 30/08 |
 | Roster search/position filter | Transient | Source checked; persistence candidate |
 | Squad team selector | URL `?team=` | Passed single-team state 30/08 |
@@ -26,7 +26,7 @@ Save; **Transient** intentionally resets when the page/dialog unmounts.
 | Coaching season filter and dialogs | Transient | Source checked |
 | Coaching ratings/notes | Saved; repeat-click can clear rating | Passed 30/08 |
 | Formation Library tabs/search/filters | Transient | Gap: inconsistent with builders |
-| Formation/Template Builder drafts | Local; successful Save is backend Saved | Source checked |
+| Formation/Template Builder drafts | Seven-day Local draft per account/owner/record; successful Save is backend Saved | Scoped drafts/regressions deployed 05/09; actual-role navigation/refresh acceptance pending |
 | Hockey Trace import/tabs | Transient | Source checked |
 
 ## Communications, committees and coordination
@@ -34,7 +34,7 @@ Save; **Transient** intentionally resets when the page/dialog unmounts.
 | Route/surface | Expected persistence | Latest result |
 |---|---|---|
 | Communications audience tab/message | URL | Desktop tabs passed 31/08 |
-| Communications composer | Local per destination; clears after Send | Source checked; Send not exercised |
+| Communications composer | Local per account/channel; structured text/reply/Important/mentions; compare-clears after Send | Seven actual-component mocked-browser regressions passed 05/09, including delayed send; actual-role deployed acceptance pending |
 | Communication settings/published content | Saved | Source checked |
 | Committee selector, work/admin area and nested tabs | URL | Desktop tabs passed 31/08 |
 | Committee setup wizard | Session until complete/cancel | Source checked |
@@ -47,7 +47,7 @@ Save; **Transient** intentionally resets when the page/dialog unmounts.
 | Route/surface | Expected persistence | Latest result |
 |---|---|---|
 | Public Umpire cascade and ballot | Currently Transient | Gap: no draft recovery |
-| Signed-in Umpire ballot | Local per compatible fixture; clears after Submit | Source checked |
+| Signed-in Umpire ballot | Session per account with independent tab copies; validates hierarchy/fixture/player IDs; Reset/Submit clear this tab only | Actual-helper copied-tab edit/clear/refresh passed 05/09; deployed actual-role acceptance pending |
 | Player MVP current/history tab | URL | Source checked |
 | Player MVP ballot draft | Local per session; clears after Submit | Source checked |
 | Player MVP tally playback frame | Local per presentation | Source checked |
@@ -76,7 +76,7 @@ Save; **Transient** intentionally resets when the page/dialog unmounts.
 | Users filters | URL; paging/selection Transient | Source checked |
 | Add Player draft | Transient; submitted record Saved | Source checked |
 | Bulk/Fixture Import working state | Transient; committed records Saved | Source checked |
-| Fixtures filters/sort | Transient; active dialog identity Session | Gap: context resets behind dialog |
+| Fixtures filters/sort | Filters/sort and Add/Edit field drafts Transient; non-destructive dialog identity Session per account/role-mode/cascade | Destructive target persistence repaired 05/09; filter/sort and field-draft gaps remain; deployed acceptance pending |
 | RevSports Mappings tab/filter/paging | Transient | Gap |
 | RevSports Entity Review tab/search/filters/page size | Session across entity tabs | Passed 30/08 |
 | RevSports Entity Review sort/page | Transient | Gap |
@@ -100,6 +100,9 @@ Save; **Transient** intentionally resets when the page/dialog unmounts.
 
 ## Consistency decisions
 
+- The actual shared Input/Select/Button primitives measured 44 px with no page overflow at
+  390x844, 820x1180 and 1440x900 on 05/09. This is local Chromium evidence only; the full 42-date-
+  control route audit, overrides, Safari and 200% zoom are not complete.
 - Saved backend data must survive refresh and navigation after a successful Save.
 - Unsaved modal drafts may reset unless this register says Local or Session.
 - Related operational filters should use URL or Session persistence when users reasonably move

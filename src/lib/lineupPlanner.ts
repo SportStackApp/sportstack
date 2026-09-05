@@ -79,6 +79,14 @@ export function uniqueRosterIds(ids: readonly string[]): string[] {
   return Array.from(new Set(ids.filter(Boolean)));
 }
 
+export function requiredRosterProfileIds(
+  selectedIds: readonly string[],
+  activeMembershipIds: readonly string[],
+  previousFillInIds: readonly string[],
+): string[] {
+  return uniqueRosterIds([...activeMembershipIds, ...previousFillInIds, ...selectedIds]);
+}
+
 export function mergeRosterProfileRows<T extends { id: string }>(
   eligibleRows: readonly T[],
   selectedRows: readonly T[],

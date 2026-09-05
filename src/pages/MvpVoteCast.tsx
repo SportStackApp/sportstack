@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
+  filterEligibleMvpCandidates,
   getMvpErrorMessage,
   getMvpSessionDisplayState,
   isMvpUpgradeUnavailable,
@@ -466,12 +467,11 @@ export default function MvpVoteCast() {
 
         const typedRows = (allRows as RevsportsPlayer[]) || [];
 
-        const eligible = typedRows.filter(
-          (player) =>
-            player.team_side === voterRow.team_side &&
-            player.id !== voterRow.id &&
-            player.profile_id !== user.id,
-        );
+        const eligible = filterEligibleMvpCandidates(typedRows, {
+          rowId: voterRow.id,
+          profileId: user.id,
+          teamSide: voterRow.team_side,
+        });
 
         const profileIds = Array.from(new Set(eligible.map((player) => player.profile_id).filter(Boolean))) as string[];
         const [profilesResult, membershipsResult] = await Promise.all([

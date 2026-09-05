@@ -375,7 +375,7 @@ export default function MvpTallyAdmin() {
           <div className="mb-8 grid grid-cols-5 gap-1">
             {STEPS.map((label, index) => (
               <div key={label} className="text-center">
-                <div className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${index <= step ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{index < step ? <Check className="h-4 w-4" /> : index + 1}</div>
+                <div className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${index <= step ? "bg-blue-700 text-white" : "bg-muted text-muted-foreground"}`}>{index < step ? <Check className="h-4 w-4" /> : index + 1}</div>
                 <p className="mt-1 hidden text-xs font-medium sm:block">{label}</p>
               </div>
             ))}
@@ -454,7 +454,7 @@ export default function MvpTallyAdmin() {
                       <Button asChild size="sm" variant="outline" disabled={logoBusy}>
                         <label htmlFor="tally-logo-upload" className="cursor-pointer"><Upload className="mr-2 h-4 w-4" />{logoBusy ? "Uploading…" : "Upload logo"}</label>
                       </Button>
-                      <Input
+                      <input
                         id="tally-logo-upload"
                         type="file"
                         className="sr-only"
@@ -474,9 +474,9 @@ export default function MvpTallyAdmin() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Background style</Label>
+                  <Label htmlFor="tally-background-style">Background style</Label>
                   <Select value={theme.backgroundStyle} onValueChange={(value) => { setTheme({ ...theme, backgroundStyle: value as MvpTallyTheme["backgroundStyle"] }); resetPreview(); }}>
-                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="tally-background-style" className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="SPOTLIGHT">Sports spotlight</SelectItem>
                       <SelectItem value="GRADIENT">Colour gradient</SelectItem>
@@ -492,9 +492,9 @@ export default function MvpTallyAdmin() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Default speed</Label>
+                    <Label htmlFor="tally-default-speed">Default speed</Label>
                     <Select value={String(speed)} onValueChange={(value) => { setSpeed(Number(value) as MvpTallySpeed); resetPreview(); }}>
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectTrigger id="tally-default-speed" className="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>{TALLY_SPEEDS.map((option) => <SelectItem key={option} value={String(option)}>{option}×</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
@@ -508,7 +508,7 @@ export default function MvpTallyAdmin() {
                           resetPreview();
                         }}
                       >
-                        <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="w-28" aria-label="Players shown mode"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="LIMIT">Top</SelectItem><SelectItem value="ALL">All</SelectItem></SelectContent>
                       </Select>
                       {theme.leaderboardLimit != null && (
@@ -528,24 +528,27 @@ export default function MvpTallyAdmin() {
               </div>
 
               <div className="grid grid-cols-3 gap-4">
-                {(["primaryColour", "secondaryColour", "accentColour"] as const).map((key) => <div key={key} className="space-y-2"><Label htmlFor={key}>{key === "primaryColour" ? "Primary" : key === "secondaryColour" ? "Secondary" : "Accent"}</Label><Input id={key} type="color" className="h-12 p-1" value={theme[key]} onChange={(event) => { setTheme({ ...theme, [key]: event.target.value }); resetPreview(); }} /><Input value={theme[key]} maxLength={7} onChange={(event) => { setTheme({ ...theme, [key]: event.target.value }); resetPreview(); }} /></div>)}
+                {(["primaryColour", "secondaryColour", "accentColour"] as const).map((key) => {
+                  const colourLabel = key === "primaryColour" ? "Primary" : key === "secondaryColour" ? "Secondary" : "Accent";
+                  return <div key={key} className="space-y-2"><Label htmlFor={key}>{colourLabel}</Label><Input id={key} type="color" className="h-12 p-1" value={theme[key]} onChange={(event) => { setTheme({ ...theme, [key]: event.target.value }); resetPreview(); }} /><Input aria-label={`${colourLabel} hex colour`} value={theme[key]} maxLength={7} onChange={(event) => { setTheme({ ...theme, [key]: event.target.value }); resetPreview(); }} /></div>;
+                })}
               </div>
             </div>
           )}
 
           {step === 3 && (
-            <div className="space-y-4">{unlinkedCount > 0 && <Alert><AlertTitle>Unlinked result entries</AlertTitle><AlertDescription>{unlinkedCount} named result {unlinkedCount === 1 ? "entry is" : "entries are"} not linked to SportStack profiles. They remain in the tally but cannot receive access or notifications.</AlertDescription></Alert>}{preview ? <div className="overflow-hidden rounded-xl border"><MvpTallyPresentation title={title} subtitle={subtitle} teamName={builderData.branding.teamName} theme={theme} snapshot={preview.cards} finalResults={preview.results} commentary={preview.commentary} initialSpeed={speed} preview /></div> : <div className="rounded-xl border border-dashed p-12 text-center"><Eye className="mx-auto h-10 w-10 text-muted-foreground" /><p className="mt-3 font-semibold">A fresh full preview is required</p><p className="mt-1 text-sm text-muted-foreground">SportStack will recheck every round, vote and recipient first.</p><Button className="mt-4" disabled={busy} onClick={() => void buildPreview()}>{busy ? "Building…" : "Build and watch preview"}</Button></div>}</div>
+            <div className="space-y-4">{unlinkedCount > 0 && <Alert><AlertTitle>Unlinked result entries</AlertTitle><AlertDescription>{unlinkedCount} named result {unlinkedCount === 1 ? "entry is" : "entries are"} not linked to SportStack profiles. They remain in the tally but cannot receive access or notifications.</AlertDescription></Alert>}{preview ? <div className="overflow-hidden rounded-xl border"><MvpTallyPresentation title={title} subtitle={subtitle} teamName={builderData.branding.teamName} theme={theme} snapshot={preview.cards} finalResults={preview.results} commentary={preview.commentary} initialSpeed={speed} preview /></div> : <div className="rounded-xl border border-dashed p-12 text-center"><Eye className="mx-auto h-10 w-10 text-muted-foreground" /><p className="mt-3 font-semibold">A fresh full preview is required</p><p className="mt-1 text-sm text-muted-foreground">SportStack will recheck every round, vote and recipient first.</p><Button className="mt-4 bg-blue-700 text-white hover:bg-blue-800" disabled={busy} onClick={() => void buildPreview()}>{busy ? "Building…" : "Build and watch preview"}</Button></div>}</div>
           )}
 
           {step === 4 && (
-            <div className="mx-auto max-w-2xl space-y-5"><Alert><Send className="h-4 w-4" /><AlertTitle>Ready to publish</AlertTitle><AlertDescription>{selectedRoundOptions.length} rounds · {selectedAudienceCount} selected players. Publishing creates in-app notifications. Email is sent only when the team and player settings allow it.</AlertDescription></Alert><div className="rounded-lg border p-4"><Label htmlFor="scheduled-for" className="flex items-center gap-2"><CalendarClock className="h-4 w-4" />Schedule for later (optional)</Label><Input id="scheduled-for" type="datetime-local" className="mt-2" value={scheduledFor} onChange={(event) => setScheduledFor(event.target.value)} /></div><div className="flex flex-col gap-3 sm:flex-row"><Button className="flex-1" disabled={busy} onClick={() => void publish(false)}>Publish now</Button><Button className="flex-1" variant="outline" disabled={busy || !scheduledFor} onClick={() => void publish(true)}>Schedule publication</Button></div></div>
+            <div className="mx-auto max-w-2xl space-y-5"><Alert><Send className="h-4 w-4" /><AlertTitle>Ready to publish</AlertTitle><AlertDescription>{selectedRoundOptions.length} rounds · {selectedAudienceCount} selected players. Publishing creates in-app notifications. Email is sent only when the team and player settings allow it.</AlertDescription></Alert><div className="rounded-lg border p-4"><Label htmlFor="scheduled-for" className="flex items-center gap-2"><CalendarClock className="h-4 w-4" />Schedule for later (optional)</Label><Input id="scheduled-for" type="datetime-local" className="mt-2" value={scheduledFor} onChange={(event) => setScheduledFor(event.target.value)} /></div><div className="flex flex-col gap-3 sm:flex-row"><Button className="flex-1 bg-blue-700 text-white hover:bg-blue-800" disabled={busy} onClick={() => void publish(false)}>Publish now</Button><Button className="flex-1" variant="outline" disabled={busy || !scheduledFor} onClick={() => void publish(true)}>Schedule publication</Button></div></div>
           )}
 
           <div className="mt-8 flex items-center justify-between border-t pt-4">
             <Button variant="outline" disabled={step === 0 || busy} onClick={() => setStep((current) => Math.max(0, current - 1))}><ArrowLeft className="mr-2 h-4 w-4" />Back</Button>
-            {step < 2 && <Button disabled={busy || (step === 0 && selectedSessions.length === 0) || (step === 1 && selectedAudienceCount === 0)} onClick={async () => { if (step === 0 && !(await refreshAudience())) return; setStep((current) => current + 1); }} >Next<ArrowRight className="ml-2 h-4 w-4" /></Button>}
-            {step === 2 && <Button disabled={busy} onClick={() => void buildPreview()}><Palette className="mr-2 h-4 w-4" />Build preview</Button>}
-            {step === 3 && preview && <Button onClick={() => setStep(4)}>Continue to publish<ArrowRight className="ml-2 h-4 w-4" /></Button>}
+            {step < 2 && <Button className="bg-blue-700 text-white hover:bg-blue-800" disabled={busy || (step === 0 && selectedSessions.length === 0) || (step === 1 && selectedAudienceCount === 0)} onClick={async () => { if (step === 0 && !(await refreshAudience())) return; setStep((current) => current + 1); }} >Next<ArrowRight className="ml-2 h-4 w-4" /></Button>}
+            {step === 2 && <Button className="bg-blue-700 text-white hover:bg-blue-800" disabled={busy} onClick={() => void buildPreview()}><Palette className="mr-2 h-4 w-4" />Build preview</Button>}
+            {step === 3 && preview && <Button className="bg-blue-700 text-white hover:bg-blue-800" onClick={() => setStep(4)}>Continue to publish<ArrowRight className="ml-2 h-4 w-4" /></Button>}
             {step === 4 && <span />}
           </div>
           {(step === 1 || step === 2) && (

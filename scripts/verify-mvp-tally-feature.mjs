@@ -9,7 +9,11 @@ const migrationPaths = [
   "supabase/migrations/20260829131126_harden_player_mvp_tally_audience.sql",
   "supabase/migrations/20260829150000_refine_player_mvp_tally_presentations.sql",
   "supabase/migrations/20260829170000_dedupe_mvp_tally_audience.sql",
+  "supabase/migrations/20260905131718_restore_player_mvp_voting_lifecycle_after_production_slice.sql",
 ];
+
+const lifecycleMigrationPath =
+  "supabase/migrations/20260905131718_restore_player_mvp_voting_lifecycle_after_production_slice.sql";
 
 const fail = (message) => {
   console.error(message);
@@ -23,6 +27,9 @@ const run = (command, args) => {
 
 const verifyMigration = () => {
   const sql = migrationPaths.map((path) => readFileSync(path, "utf8")).join("\n");
+  const lifecycleSql = readFileSync(lifecycleMigrationPath, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/^\s*--.*$/gm, " ");
   const required = [
     "create table public.mvp_tally_presentations",
     "create table public.mvp_tally_sessions",
@@ -54,6 +61,21 @@ const verifyMigration = () => {
   }
   if (/grant\s+(insert|update|delete|all)[^;]*mvp_tally_(presentations|sessions|recipients)[^;]*authenticated/i.test(sql)) {
     fail("Authenticated browser role has a direct tally lifecycle write grant.");
+  }
+  for (const marker of [
+    "create or replace function private.close_due_mvp_voting_sessions()",
+    "create or replace function private.enforce_mvp_voting_deadline()",
+    "enforce_mvp_voting_deadline_on_votes",
+    "enforce_mvp_voting_deadline_on_submissions",
+    "close-due-player-mvp-voting",
+    "select private.close_due_mvp_voting_sessions();",
+  ]) {
+    if (!lifecycleSql.toLowerCase().includes(marker.toLowerCase())) {
+      fail(`Missing lifecycle reconciliation marker: ${marker}`);
+    }
+  }
+  if (/public\.notifications|email_queue|send_email|http_request|net\.http/i.test(lifecycleSql)) {
+    fail("Lifecycle reconciliation contains an outbound notification or email path.");
   }
 };
 

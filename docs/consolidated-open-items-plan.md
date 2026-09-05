@@ -1,489 +1,317 @@
-# SportStack Consolidated Open Items Plan
+# SportStack — Single Improvement and Production Readiness Plan
 
-Status: **active single plan**
+**Updated:** 5 September 2026
 
-Audited: **29 August 2026**
+**Active environment:** Development (`dev`)
 
-Audit-start baseline: **`dev` and `main` at `d79067b`; `prod` at `682b8ea`**
+**Purpose:** This is the only active SportStack priority and sequencing plan.
 
-This is the one active implementation and cleanup plan for SportStack. Older development plans,
-handoffs, session notes and module specifications remain useful evidence, but they do not create a
-separate priority unless the item also appears here.
+`docs/current-state.md`, `CODEX_HANDOFF.md`, `notes/known-issues.md`, feedback records and test
+artifacts provide evidence. They do not create separate competing work plans.
 
-## Plain-English position
+## Owner priority — Player MVP presentation for Grampians (5 September)
 
-SportStack does not mainly need another large build. Most major work is already implemented on Dev
-and has also reached Main staging. The main job now is to verify what is there, fix confirmed
-failures, clean up known data and documentation debt, and then make a deliberate Production release
-decision.
+Aaron's immediate outcome is to make the Player MVP tally presentation safely available to the
+Grampians team in Production. This overrides the next general form/sorting repair batch, not the
+release safety gates. Unrelated improvements stay on the backlog.
 
-Current verified position:
+1. Revalidate the Grampians/Pumas builder, closed-round data, preview and full-screen playback on
+   current Dev; test the intended disposable recipient and unrelated-account denial. Keep external
+   email disabled and do not publish to normal players during Dev testing.
+2. Assess the smallest dependency-complete release using the existing tally release packet.
+   Do not cherry-pick only the animation. Identify every required application, database, permission,
+   notification, function and scheduler change. If the package includes other app changes, their
+   safety/compatibility defects remain release blockers; prioritisation does not waive them.
+3. [Complete] Rehearse that exact package against an isolated Production-compatible dependency
+   copy, verify data/job impacts and rollback, then freeze the release commit and allow-list.
+4. [Complete] Refresh encrypted Production Supabase access and run the read-only pinned pre-flight.
+   Production is healthy, only the approved tally migration is pending, and backup tooling is ready;
+   no Production change or backup was created.
+5. [Complete] Nominate the Production smoke identities. Admin Sportstack will run the builder, with
+   Chloe Wilson and Aaron Mullane as recipients; both are active, non-placeholder Pumas members.
+6. [Complete] Aaron accepted the unchanged dependency debt for this narrow release; remediate it in
+   a separately tested package.
+7. [Released; smoke paused] The narrow slice is live at `15223e9` and its release checks passed.
+   The first owner smoke exposed 15 overdue Pumas sessions still stored as `OPEN`; the UI calls them
+   expired/closed, but the tally builder correctly selects only stored `CLOSED` rows. No real
+   presentation has been published.
+8. [Next] Build and rehearse an additive lifecycle repair so passing the voting deadline results in
+   the single `CLOSED` state everywhere. Verify the affected-row count, no post-deadline voting,
+   tally inclusion, existing vote totals, result concerns and rollback on Dev/staging. Obtain new
+   explicit Production approval before applying the migration or reconciling the 15 Pumas rows.
 
-- the working tree is clean;
-- `dev` and `main` were aligned at the audit start; the reviewed catch-up fixes now leave Dev ahead
-  for a later staging decision, while `prod` remains separately behind Main;
-- GitHub has no open issues or pull requests;
-- the latest Dev Quality run passed; the latest Production Supabase Scrapers run failed because
-  three manually targeted games were started without the required round number and is now a
-  readiness repair/retest item;
-- all declared npm dependencies are installed and the reviewed `nanoid` resolution removes the
-  20 August high-severity transitive advisory;
-- the live Dev database still reports 201 duplicate membership groups, 44 people with multiple
-  active Primary memberships and 490 preserved snapshot rows;
-- the live Dev database adviser currently reports 115 security warnings and 181 performance
-  warnings. These are a review queue, not proof that every item is a defect;
-- the GitHub Projects board, if one is in use, is **UNKNOWN — needs confirmation** because the
-  current GitHub token does not have `read:project` access;
-- the Big Brain SportStack focus and general Open Items notes were dated 30 July; this audit refreshed
-  their priority pointer without duplicating the changing implementation detail.
+Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one
+reserved Player. Notification/deep link, unrelated-Voter denial, withdrawal, desktop/tablet/mobile,
+controls, keyboard, reduced motion, Axe, console and failed-request checks passed. Four confirmed
+Dev defects were fixed and deployed through `5338c0a`. At that tested application commit, the
+Production gap is too broad to promote: 243 commits and 114 migration files, with 355 overdue OPEN
+sessions and 96 inherited email-on flags in scope. The narrow manual/in-app-only candidate is now
+frozen at `15223e9b` from the exact Production baseline, and its focused local Supabase rehearsal
+passes. Its exact migration and transactional access suite also pass on the isolated hosted
+`SportStack-staging` project `fdkgcwacuqoswnatvubv`, with a clean rollback and no RLS-disabled
+public tables. The narrow slice is now released to Production, but the owner smoke found the
+overdue-OPEN lifecycle defect above. See
+`docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-05.md`. No Main or
+real-player tally notification was performed during the smoke.
 
-### Production readiness execution programme
+## Current position
 
-- `docs/production-readiness/PLAN.md` is the detailed execution and evidence programme beneath this
-  single priority list. It covers known-defect repair, complete table/form/route registers,
-  consistency rules, missing role/device/workflow cycles, repeatable walk-away testing, Main staging
-  and the separately approved Production release.
-- READY-001 is **passed and closed**. The selector loads already-selected placeholder-linked players
-  as explicit roster candidates and blocks Apply when any saved selection cannot be resolved.
-  Automated checks and the live read-only 13-player/13-assignment preflight passed; Aaron confirmed
-  all 13 remained selected after Apply, Save and refresh.
-- READY-002, READY-003 and READY-007 are repaired and deployed on Dev: pitch and bench players use the
-  same complete fixture-year history, the whole marker drags without snapping, the dotted handle is
-  gone and the selected marker has a clear amber ring. Automated, deployment and signed-out route
-  checks pass; owner click/drag/save/refresh acceptance remains open.
-- READY-005 and READY-006 have a tested Dev repair: an active coaching rating can be cleared without
-  losing its note, and the Cards summary opens exact game/card details. The nullable-rating Dev
-  schema change passed preflight and rollback verification. Deployment checks pass; signed-in owner
-  acceptance remains open.
-- READY-004 has a tested local Dev repair: Profile and Coaching use single combined choices such as
-  **Defender - Left**, while still allowing deliberate area-only, side-only and Goalkeeper choices.
-  Existing ambiguous rows are preserved rather than guessed into pairs. Deployment checks pass;
-  signed-in save/reload acceptance remains open.
-- After that acceptance, the first read-only night cycle audits Admin, Fixtures and RevSports
-  sorting, filtering, persistence and diagnostics.
-- The default walk-away boundary is Dev-only, read-only and report-only. Disposable Dev writes need
-  a named charter; Production remains separately approval-gated.
+- Dev feedback contains 88 retained records: 0 OPEN, 53 REVIEWED and 35 CLOSED.
+- The reviewed feedback queue is 5 P0, 16 P1, 18 P2, 5 P3 and 9 parked items.
+- The whole-site persistence review has 18 findings: 1 High, 13 Medium and 4 Low.
+- The form audit found 42 date controls across 16 files, with 36 px, 40 px and 44 px variants.
+- The latest recorded automated code gates pass, but complete actual-role, responsive and workflow
+  acceptance evidence is still missing.
+- Dev and Main may be updated through the normal reviewed path. Production remains separately
+  approval-gated.
 
-### 30 August walk-away consistency cycle
+### 5 September readiness work package 1 evidence
 
-**Completed on Dev**
+- Source and regression coverage now block unassigned and pending normal accounts from protected
+  direct routes while retaining Dashboard/Profile and discipline-only entry. Actual-role browser
+  acceptance remains required before the two access items can close.
+- Primary-team request, approval, decline, cancellation and player confirmation now use scoped
+  database functions. Direct browser status writes are blocked; scoped admins can see only requests
+  they may action; the final membership change is one transaction. Dev rollback, forged-write,
+  scoped-admin visibility and permission checks pass. Browser acceptance remains required before
+  the workflow item can close.
+- The unmatched Player MVP candidate rule now has regression coverage for imported teammates with
+  no linked profile. The shout-out visibility audience remains an owner decision and was not
+  changed by assumption.
+- Line-up, Formation Builder and Template Builder drafts now use expiring account/owner/record-
+  scoped browser storage. Stale formation drafts safely return selected players to the bench;
+  failed loads cannot overwrite a valid draft or carry one team's state into another team.
+- Shared Inputs and Selects now use the 44 px ordinary-control contract. Safety filters use 40 px,
+  and the first confirmed narrow-phone date/time pairs now stack in Fixtures, Committee,
+  Coordination and Discipline. The full 42-control visual audit is still open.
+- The live Dev feedback counts were rechecked: 35 CLOSED and 53 REVIEWED. Sorting across every
+  meaningful table column and the remainder of the persistence register are still open work.
 
-- The signed-in Dev cycle completed the planned sorting, persistence, role, accessibility and
-  responsive checks across Admin, Fixtures, RevSports Review, Player MVP, Safety Hub, Profile,
-  Coaching and line-up screens. No Blocker or High issue was found.
-- READY-011 to READY-015 record the five findings: line-up team refresh persistence, mobile pitch
-  layout, Club Admin Player MVP analytics routing, formation-control labelling and the blank legacy
-  role label. Commits `99dff2c` and `bdc8867` are deployed on Dev and pass regression, TypeScript,
-  build, Dev Quality, live-bundle, desktop and mobile checks.
-- A final accessibility pass found unnamed icon-only navigation and bench controls. Commit `3a4ffd4`
-  labels those controls; the deployed line-up then returned zero Axe WCAG A/AA violations.
-- Actual-role checks now cover every reserved disposable identity: Association Admin, Club Admin,
-  Team Manager, Coach, Player, Umpire and Voter. Role-specific allowed routes worked and restricted
-  Roles & modules access redirected as expected. No normal account was changed.
+### 5 September readiness work package 2 evidence
 
-**Next**
+- Associations, Competitions, Clubs, Divisions, Teams and Venues now share accessible two-way
+  sorting on every meaningful data column. Sorting uses the displayed organisation names and typed
+  numeric values before pagination; Logo and Actions remain deliberate exemptions.
+- Focused sorting tests, the 42-file/164-test Vitest suite, locked development-plan lint,
+  TypeScript and Production build pass. Replacing obsolete competition casts reduced the full lint
+  baseline from 349 errors/77 warnings to 343 errors/77 warnings. Authenticated deployed verification is still required,
+  so the site-wide sorting contract remains open while Requests, Users, RevSports Mappings,
+  RevSports Unmatched and Hockey Trace are unfinished.
 
-- Refresh the route/table/form registers from observed evidence. Main staging remains after Dev
-  acceptance; Production remains separately approval-gated.
+### 5 September readiness work package 3 evidence
 
-### 29 August admin, line-up and coaching batch
+- Fixture Management no longer persists destructive confirmation targets. Add, Edit and Details
+  identity now uses an expiring session envelope scoped by account, role mode and the active
+  organisation, club, division and team. Unsaved Add/Edit field values are not covered.
+- Signed-in Umpire Match ballot drafts now use native per-tab session storage scoped by account.
+  Actual-helper Chromium tests passed copied-tab edit/clear/refresh isolation. Successful loads
+  revalidate the hierarchy, fixture teams and linked players; failed loads retain work. The legacy
+  account-only draft is discarded. Closing the tab is not durable storage; a leave warning is shown.
+- Chat drafts now preserve reply identity, the Important flag and selected mention IDs as well as
+  text. Failed validation retains them; confirmed stale IDs are removed. Scoped channel/message
+  responses cannot replace another scope's data, and cancelling a reply preserves typed text.
+- A delayed successful send clears only a matching persisted draft; newer drafts survive, including
+  another tab's changes. The visible reset and blank autosave cannot bypass that safeguard.
+- Final code checks pass: 45 Vitest files/180 tests, 153 Python unittests, five Umpire source checks,
+  locked lint, TypeScript and Production-mode build. Independent source review passes; full lint
+  remains at 343 errors/77 warnings. Seven isolated actual-Chat browser checks pass, including the
+  delayed-send regression. Source `464d809` passed Dev Quality `33928475268`, Vercel and exact
+  alias/commit-preview bundle checks. Actual-role acceptance remains required before these
+  persistence findings can close.
+- The actual shared controls measured 44 px without overflow at 390x844, 820x1180 and 1440x900.
+  Whole-route overrides, all 42 date controls, Safari and 200% zoom remain unproven.
 
-**In progress now**
+## Working rules
 
-- Dev implementation is complete for the approved UI feedback batch: editable Quick Actions,
-  navigation cleanup, shared table sorting, persistent/default-unmatched RevSports filters,
-  profile nickname fields, deliberate match-roster selection, nickname-aware pitch labels,
-  fixture-only marker movement/reset, recent player history, multi-team Coaching Squad filtering,
-  simplified position traits and author-private fixture notes.
-- The additive Dev migration is applied and live schema/RLS verification passes. Six stale
-  Hockey Ballarat review records caused by old venue parsing were marked ignored without deletion.
-- Automated gates pass: 28 Vitest files/111 tests, TypeScript, production build and focused lint.
-
-**Next**
-
-- Deploy the Dev commit and run Aaron's signed-in desktop/mobile checks for profile save/reload,
-  roster selection/save/reopen, nickname display, marker reset, player history, coaching notes,
-  Club Admin individual-vote scope and each sortable table.
-- Promote Dev to Main staging only after the owner checks pass.
-
-**Parked for later**
-
-- Coach Narrative: a short post-game questionnaire or dictated notes, AI-written match summary,
-  pros/cons and deliberate player-specific observations saved into the existing private note shape.
-  Speech capture, AI provider, consent, review/edit controls and retention rules still need design.
-- Preferred-name display precedence across the whole app and icon-only mode switching remain parked.
-- Production remains a separate approval-gated release decision.
-
-### 21 August Dev catch-up result
-
-- Dev acceptance and repair commits `a6f2354` through `08b30f9` are deployed on
-  `https://dev.sportstackapp.com.au`; Main and Production were not changed.
-- Player Explorer owner feedback, its Team Manager timeout, contextual scoped-user roles, scope
-  stability, Fixture pop-up persistence and bye labels now pass the affected Dev browser checks.
-- Umpire Match Voting now has the association player picker, two-sheet Excel export, award-ready
-  division leaderboards and sortable submission headers requested during owner testing.
-- Cross-module read-only smokes passed for Communications, Coordination, Committee Management,
-  Safety Hub, Expense Hub and Incident and Discipline. No message, committee, risk, expense or
-  discipline record was created for those smokes.
-- A stale dashboard query against the non-existent `communication_channels.channel_type` column
-  was corrected to use live `scope_type`. A fresh club-dashboard load produced no later occurrence
-  of that error in the Dev PostgreSQL log.
-- Separate credential-based role sessions and the final reserved Umpire Reset action are
-  **Blocked** by the browser security policy. Viewing-as and rolled-back database evidence are
-  recorded but are not described as equivalent to an actual-role browser pass.
-- Tablet/mobile integrated testing remains **Blocked** because the authenticated in-app browser has
-  a fixed viewport. Desktop and the earlier focused responsive checks remain valid.
-
-### 21 August feedback-register reconciliation
-
-- The Dev feedback register was reconciled from **79 Open / 9 Closed** to **53 Open / 35 Closed**.
-  No row was deleted and Production was untouched.
-- Twenty-six stale, completed or test-only items were closed with evidence notes. One duplicate was
-  retained and cross-referenced to its canonical Open item.
-- The duplicate Player navigation entry for **My coordination** was the only confirmed small code
-  defect found in the closure group. It now appears once and has a regression check.
-- Remaining work is grouped below rather than copied into another backlog. The item-by-item audit is
-  in `docs/feedback-register-reconciliation-2026-08-21.md`.
-
-## Focus lock
-
-Until the first three phases below are closed:
-
-- do not start another major module;
-- fix urgent security, data-integrity or production-availability problems immediately;
-- record non-urgent ideas in **Parked for later** instead of interrupting acceptance work;
-- use `docs/owner-test-matrix.md` as test detail, but use this file for priority and status.
+1. Fix confirmed access, privacy and data-integrity defects before visual improvements.
+2. Repair shared root causes across every affected screen instead of applying one-page patches.
+3. Every repair must cover the original reproduction and adjacent regression paths.
+4. A feedback record stays **REVIEWED** until the deployed repair or owner acceptance is recorded.
+5. Use **OPEN** only for new, untriaged feedback. Use **CLOSED** only for a verified fix, explicit
+   duplicate, superseded item or deliberate owner-approved decline.
+6. No destructive database cleanup or Production change occurs without Aaron's separate approval.
 
 ## In progress now
 
-### Phase 1 — Establish one reliable baseline
+### 1. P0 access, workflow and privacy checks
 
-Owner: Codex, with Aaron only for judgement or access that cannot be safely automated.
+Complete these first because incorrect access or hidden data can affect every later test.
 
-- [x] Audit the active repository, branches, GitHub issues and pull requests, workflows, current
-  notes, historical plans, dependency installation, Big Brain project notes and live Dev database.
-- [x] Make this file the single active plan.
-- [x] Update the stale Big Brain SportStack focus and Open Items notes from the repository
-  plan. Keep workstation tasks separate from SportStack application work.
-- [x] Correct the repository's curated vault paths after the approved Big Brain folder restructure.
-- [ ] Decide whether a GitHub Projects board is actually used. If it is, Aaron can grant the active
-  `SportStackApp` GitHub token the `read:project` scope so its items can be reconciled here.
-- [ ] Review the seven tracked root `test_*.js` investigation scripts. Move still-useful checks into
-  the normal test folders and propose removal of obsolete scripts as a separate, reviewed cleanup.
-- [ ] Review the superseded local `chore/domain-structure` branch. Do not merge or cherry-pick commit
-  `3a7d6cc`. Delete the branch only after Aaron confirms it is no longer needed.
+- [ ] `ACCESS-ONBOARD-001` — prove that a brand-new unassigned user receives only the welcome and
+  team-application workflow, with no inherited team context or inaccessible navigation.
+- [ ] `ACCESS-PENDING-001` — prove that a pending team application grants no team data, permissions
+  or team navigation before approval.
+- [ ] `REQUESTS-WORKFLOW-001` — reproduce and repair the primary-team request that disappears after
+  admin approval and player confirmation without applying the change.
+- [ ] `PLAYER-MVP-PRIVACY-001` — prove exactly who can see Player MVP shout-outs and prevent
+  unintended individual disclosure.
+- [ ] `PLAYER-MVP-UNMATCHED-001` — keep required unmatched scraped participants visible without
+  creating false registered identities.
 
-Exit condition: every new task starts from this plan and no older document competes as the current
-priority list.
+Exit gate: each flow passes with a disposable actual-role Dev account, refresh and direct-link
+checks, and an audit trail where data changes.
 
-### Phase 2 — Complete acceptance testing in small batches
+The shared controlled-browser sign-in blocker was cleared on 5 September: Aaron signed into the
+headed test session and protected admin/tally routes load. These items remain unchecked until the
+appropriate disposable actual roles complete their flows; Super Admin is not substitute evidence.
 
-Run these on Development first. Record **Pass**, **Fail**, **Blocked** or **Owner decision** in
-`docs/owner-test-matrix.md`. Do not mark an owner test passed without observed evidence.
+### 2. Common form, table and persistence contract
 
-#### Batch A — access, scope and everyday work
+Apply one consistent rule across the whole application.
 
-- [ ] **BLOCKED — browser credential policy:** retest Super Admin, Association Admin, Club Admin,
-  Team Manager, Coach, Player, Umpire and Coordinator using separate Dev accounts rather than only
-  **Viewing as**. Do not substitute the completed Viewing-as and database checks for this item.
-- [x] Complete Player Explorer acceptance after the 19 August repair:
-  - [x] Super Admin menu access, page loading, conditions, search, result sorting and CSV export
-    passed owner testing on 20 August 2026.
-  - [x] Saving a filter and retaining it after a browser refresh passed owner testing on
-    20 August 2026.
-  - [x] Loading a saved filter restored its original filters and results in owner testing on
-    20 August 2026.
-  - [x] Enabling a daily recurring schedule, showing its next run and returning it to **Manual
-    only** passed Super Admin owner testing on 20 August 2026.
-  - [x] A separate Association Admin Dev account could open Player Explorer, saw the manual scoped
-    search notice and did not see saved or recurring controls in owner testing on 20 August 2026.
-  - [x] A separate Club Admin Dev account passed the same Player Explorer access and saved-search
-    restriction check in owner testing on 20 August 2026.
-  - [x] A separate Team Manager Dev account passed the same Player Explorer access and saved-search
-    restriction check in owner testing on 20 August 2026.
-  - [x] A separate Coach Dev account passed the same Player Explorer access and saved-search
-    restriction check in owner testing on 20 August 2026.
-  - [x] **PASS — Team Manager timeout repaired:** the catalogue now queries only visible appearance
-    source IDs for scoped roles. A deployed Team Manager search returned 30 players, two pages and
-    the complete filtered totals without a timeout on 21 August 2026.
-- [ ] **PARKED — owner deferred 20 August 2026:** retest multi-club Team Manager switching with a
-  real multi-club Dev account.
-- [x] Scoped user lists now show only roles applicable to the selected organisation or team. A
-  deployed Club Admin preview excluded unrelated Grampians/Pumas roles while retaining authorised
-  Lucas HC context on 21 August 2026.
-- [x] Scope cascade reset integrity passed owner recording review on 20 August 2026: changing or
-  clearing a parent Club removed the previous Division and Team selections.
-- [x] Scope switching is visually stable. It keeps the selected Association, Club, Division or
-  Team label visible while the next scope loads, prevents overlapping changes and settles on the
-  latest selection. Fresh DOM checks confirmed the loaded dashboard after rapid scope changes;
-  the browser wrapper's empty large-page snapshot is a test-tool limitation, not an application
-  blank screen.
-- [x] Fixtures Management showed the correct selected Club and Team records in owner testing on
-  20 August 2026.
-- [x] Fixture view, add and edit pop-ups remain recoverable when the browser loses focus or the user
-  switches to another window and returns. The deployed test restored Match Details on page focus;
-  explicit Close removed it.
-- [x] Fixtures Management now shows **Bye** in the Score column for bye rows instead of `-`.
-- [x] Fixture pop-up restoration and bye presentation passed the affected deployed checks. The
-  previously accepted availability-to-line-up workflow was not changed.
-- [ ] **PRIORITY — authenticated evidence needed:** verify that unfinished forms, dialogs and
-  search state remain intact after switching to another Windows application and returning. The
-  public Umpire Match Voting form passed a browser-tab switch on 29 August, but authenticated
-  pages such as Roles & Permissions remain blocked without a signed-in isolated-browser session.
-  Treat any unexplained clearing or disappearing window as a defect, not expected refresh behaviour.
-- [x] A Team Manager could open a scheduled Blaze fixture and see their own availability controls
-  plus the Team Availability list in owner testing on 20 August 2026.
-- [ ] Retest Team Chat history, pagination and drafts, plus Club and Association broadcast author
-  exclusion and notification deep links.
-- [ ] **BLOCKED — fixed authenticated viewport:** complete tablet and mobile integrated checks.
-  Desktop and focused responsive checks already have useful evidence.
+- [ ] `FORM-SIZE-001` — standardise ordinary Input, Select and button controls at 44 px; filter-bar
+  controls at 40 px; and deliberately compact inline/table controls at 32–36 px.
+- [ ] Make every date, time and date-time field inherit its surrounding control size, add safe
+  narrow-grid behaviour and remove page-specific height overrides.
+- [ ] Stack paired date/time controls on narrow phones and verify Admin Users, Profile, Safety Audit,
+  Fixtures, Committee, Coordination, Discipline, Expense Hub, Analytics and Coaching.
+- [ ] Apply two-way ascending/descending sorting to every meaningful table column. Mark action-only
+  columns explicitly non-sortable and retain the current direction indicator.
+- [ ] Apply one persistence contract:
+  - saved data survives refresh and sign-in;
+  - meaningful unsaved work is protected from accidental navigation, focus rechecks and closure;
+  - searches, filters, tabs, pagination and sorting use URL or scoped browser state where useful;
+  - browser state is scoped by account, organisation, team and record so drafts cannot collide;
+  - successful submit, explicit reset and deliberate discard clear the correct state.
+- [ ] Repair the confirmed persistence findings covering line-up, Profile, Roles & Permissions,
+  Formation Library, Fixtures, Safety Hub, Player MVP tally setup/playback, Umpire Match ballot,
+  Chat drafts and shared browser preferences.
+- [ ] Repair mobile Fixture Management overflow and the Association → Club → Division → Team
+  cascade tap/overflow defects.
 
-#### Batch B — voting, coordination and governance
+Exit gate: the route, form and table registers show a result for every protected screen at desktop,
+tablet and mobile sizes, with no unexplained reset or horizontal page overflow.
 
-- [x] **PASS — Dev permission repaired:** Team Manager Player MVP session loading originally failed
-  with `permission denied for function player_mvp_session_allowed_for_current_session`. After
-  additive Dev migration `20260820182455_restore_private_helper_permissions.sql`, owner testing on
-  20 August 2026 confirmed the page loads without the error at the correct Hockey Ballarat → EGC →
-  Division 2 Open → Blue scope. Player MVP Voting and email notifications were both visibly off.
-- [x] Enabling Player MVP Voting for Blue worked in owner testing. The test exposed that the separate
-  email setting inherited the old on-by-default value. Dev migration
-  `20260820203326_default_player_mvp_notifications_off.sql` now defaults new teams to off and moved
-  all 95 inherited Dev values to off while preserving deliberate audited opt-ins. Player MVP Voting
-  remains enabled independently.
-- [x] Refresh persistence passed owner testing on 20 August 2026: Blue retained **Player MVP Voting
-  is on** while **Email notifications are off**.
-- [x] An email-disabled Player MVP round opened successfully for Blue, appeared as **Open** with
-  0/14 completed, and kept reminder/resend email actions disabled. Aaron accepted the remaining
-  ballot and result behaviour without extending this disposable test on 20 August 2026.
-- [x] Umpire Match Voting administration data and submission correction passed owner testing on
-  20 August 2026.
-- [x] Umpire Match Ballot default suggestions showed only linked fixture players in owner testing
-  on 20 August 2026.
-- [x] Keep linked fixture players as the default type-ahead suggestions, but make the magnifying-
-  glass action open a searchable association-wide player list. Scope the expanded search to the
-  selected fixture/voting record's association, show useful team and division context, and never
-  expose players from another association. Selecting an association player should populate the
-  existing vote line normally; retain manual unlisted entry for genuine exceptions.
-- [x] Replace the single combined Umpire Match Voting CSV with one Excel workbook containing
-  separate **Seniors** and **Juniors** sheets. Seniors use separate 3-point, 2-point and 1-point
-  columns. Juniors use four separate scheme columns for the two 2-point and two 1-point choices.
-  Read the existing `vote_scheme_key` and `scheme_line_key` fields; for legacy junior rows without
-  line keys, use clearly labelled A/B vote slots rather than guessing gender. Reuse the existing
-  `xlsx` dependency; no database migration is expected.
-- [x] Make the Umpire Match Results leaderboard award-ready by division. With no division selected,
-  show the combined association top 10. With one or more divisions selected, show a separate full
-  leaderboard for each division and group each player by division as well as identity, so a player
-  who competes in two divisions can appear in both lists with only that division's votes.
-- [x] Make Umpire Match Submissions headers clickable and toggle ascending/descending sorting for
-  Round, Division, Fixture, Submitted for, Submitted by, Source, Votes, Status and Submitted. Show
-  the current sort direction. Keep the displayed round label, but sort Round chronologically using
-  the linked fixture date; for legacy unlinked rows, fall back to numeric round then submitted date.
-- [x] A separate Association Admin Dev account opened Coordination and correctly showed only
-  **My work** because that account was not assigned a Coordinator responsibility.
-- [ ] **BLOCKED — final browser action:** creating the reserved Dev Umpire account correctly reported
-  that it already existed, while Reset failed against the newer Association-only Umpire role rule.
-  Dev migration `20260820213845_fix_dev_umpire_account_scope.sql` now saves one Association-only
-  Umpire role plus the selected active Primary team membership. Dry-run and live transactional SQL
-  tests pass. Browser security policy prevents the final Reset/password action without action-time
-  owner confirmation.
-- [ ] Test one complete Coordination workflow: staffing need, offer, acceptance, coordinator
-  confirmation, replacement and notification.
-- [ ] Test Committee creation, one subcommittee, private upload, meeting, minutes, action, poll and
-  Safety Hub link using disposable Dev records.
-- [ ] Test one disposable Safety Hub record through create, review, link and audit history.
-- [x] Smoke-test Expense Hub with de-identified files only. The deployed read-only page loaded with
-  no error and no file was uploaded. Provider privacy, region and billing
-  decisions remain a later Production gate.
+### 3. P1 product and data repairs
 
-#### Batch C — Incident and Discipline
+- [ ] `DASH-DATA-001`, `DASH-CASCADE-001` and `DASH-KPI-001` — correct entity counts, team KPIs and
+  dashboard changes after cascade navigation.
+- [ ] `REQUESTS-COUNT-001` — make the pending-request badge agree with the visible actionable list.
+- [ ] `PROFILE-ONBOARDING-001` and `PROFILE-PHOTO-001` — make incomplete details obvious, route the
+  reminder through notifications and reproduce the photo-change failure.
+- [ ] `ROSTER-MODEL-001` — verify Primary, Secondary and Fill-in behaviour, statistics, roster search,
+  line-up inclusion and time-limited Fill-in access as one workflow.
+- [ ] `COMMITTEE-CLOSURE-001` — add strong confirmation and preservation behaviour before closing a
+  committee.
+- [ ] Remove the locked Dev-only `dev-auth-admin-smoke` helper when an account with Function-delete
+  permission is available.
 
-- [ ] Run the guided Dev owner acceptance flow one action at a time.
-- [ ] Obtain Hockey Ballarat decisions for every rule-pack item still labelled `REVIEW_REQUIRED`,
-  including local authority mappings, business-day handling and other documented local
-  interpretations.
-- [ ] Confirm whether private binary evidence uploads are required for the accepted release scope.
-- [ ] Keep every exercise clearly simulated; do not create real findings, sanctions or notices.
+Exit gate: the original feedback entries have deployed or owner acceptance evidence and can move
+from REVIEWED to CLOSED.
 
-Exit condition: a concise acceptance report lists passed, failed, blocked and owner-decision items.
+## Next
 
-### Phase 3 — Repair only confirmed failures
+### 4. Complete actual-role and workflow acceptance
 
-- [x] Remove the duplicated **My coordination** entry from Player navigation and protect the Player
-  navigation set with a regression check.
-- [ ] **HIGH PRIORITY ACCESS CHECK:** prove with a disposable Dev account that a Pending team
-  application exposes only its approval workflow and grants no team data, Player permission or
-  team-scoped navigation before approval.
-- [ ] Repair the iPhone/mobile Association -> Club -> Division -> Team cascade tap target and
-  horizontal overflow after an integrated responsive reproduction is available.
-- [ ] Triage the remaining focused UI defects in Requests, RevSports review, roster readability,
-  profile photo changes and Safety Hub presentation as one small-fix batch.
+- [ ] Test separate real Super Admin, Association Admin, Club Admin, Team Manager, Coach, Player,
+  Umpire, Voter and Coordinator accounts. Viewing-as is supporting evidence only.
+- [ ] Complete tablet and mobile integrated testing with a controllable authenticated viewport.
+- [ ] Retest multi-club Team Manager switching through refresh, logout/login and incognito.
+- [ ] Complete Team Chat history, pagination, drafts, broadcast-author exclusion and notification
+  deep-link checks.
+- [ ] Reproduce Chat's partial-send failure: the message can succeed while a separate mention
+  insert fails silently. Source review confirmed missing error handling; test the delivery impact
+  with disposable data before deciding recovery/retry behaviour. This is not closed by draft repair.
+- [ ] Complete one disposable Coordination workflow: need, offer, acceptance, confirmation,
+  replacement and notification.
+- [ ] Complete one disposable Committee workflow: committee, subcommittee, private upload, meeting,
+  minutes, action, poll and Safety Hub link.
+- [ ] Complete one disposable Safety Hub record through create, review, linked records and audit.
+- [ ] Complete the guided Incident and Discipline acceptance flow using simulated data only.
+- [ ] Finish the reserved Dev Umpire account reset and an actual Umpire Match Voting submission.
+- [x] Complete a Player MVP ballot, tally and recipient-access cycle with external email disabled.
+- [ ] Smoke-test Expense Hub using de-identified files only.
 
-- [x] **HIGH PRIORITY — repaired the systemic Dev private-helper permission regression.** Live Dev
-  inspection on 20 August 2026 confirmed that the broad private-schema revoke in
-  `20260817100200_create_coordination_module.sql` removed authenticated execution from helpers used
-  by RLS and session checks. The later Player Explorer repair restored only its five helpers.
-  PostgreSQL/API logs also showed active permission failures for Communications, fixture management
-  and Discipline helpers, with the same grant loss affecting Risk Governance, Umpire Match Voting
-  and MVP audit helpers.
-  - [x] Inventoried the private helpers referenced by authenticated RLS policies, signed-in RPC
-    wrappers and the original explicit grant migrations.
-  - [x] Applied additive Dev migration
-    `20260820182455_restore_private_helper_permissions.sql`, granting `EXECUTE` only to
-    `authenticated` for the 36 required helpers. No table, policy, function body or data row changed.
-  - [x] Kept anonymous execution denied for every private function and removed the inherited
-    anonymous grants from six later Coordination helpers. Only the Coordination helper directly
-    required by authenticated RLS remains browser-executable.
-  - [x] The rollback test, reusable permission regression test and real active Team Manager session
-    check passed. Affected RLS reads ran without permission errors and returned only authorised
-    rows. Owner browser retests remain required across the affected modules.
-- [x] Resolve the `nanoid` security advisory through a reviewed dependency/lockfile update, then
-  rerun `npm audit --omit=dev`, TypeScript and the production build. Do not use an unreviewed broad
-  `npm audit fix`.
-- [x] Complete the confirmed Player Explorer feedback package:
-  - [x] Add a totals row below the results for Games, Goals, Green, Yellow and Red. Totals use
-    all filtered results, not only the current page.
-  - [x] Replace the generic **Use example** action with **Save filter** beside the filter controls.
-  - [x] Retain **Use 7 then 1 example** as the built-in sequence preset.
-  - [x] Preserve the active filter setup and search results when the user navigates away from
-    Player Explorer and returns. Keep that working state until the user clears it or signs out.
-  - [x] Add a clear **Delete saved filter** action with confirmation. Remove the deleted filter
-    from the dropdown and clear its `savedSearch` address parameter if it was active.
-- [x] Repair the confirmed top-right Admin menu overflow. Limit it to the available screen height
-  and let the menu scroll internally so its bottom items remain reachable without shrinking text.
-- [x] Group failures from Phase 2 by root cause so one repair can cover all affected screens.
-- [x] Fix confirmed access-control and data-integrity failures before visual polish.
-- [x] Run focused lint, `npm run lint:dev-plan`, `npx tsc --noEmit`, `npm run build`, relevant
-  Vitest/Python/Supabase checks and the full lint baseline comparison for each repair package. Final
-  results: 87 Vitest tests, 153 Python tests, focused plan lint, TypeScript, build and zero-
-  vulnerability npm audit passed; full lint remained exactly 359 errors and 78 warnings.
-- [x] Re-run the affected owner tests and the short cross-module read-only smoke set on Dev.
-- [ ] Keep Dev and Main aligned only with reviewed, tested commits. Production remains separately
-  approval-gated.
+Exit gate: the acceptance report separates Passed, Failed, Blocked and Owner decision items, and no
+Blocker or High defect remains for staging.
 
-Exit condition: no known blocker remains for the accepted staging scope.
+### 5. P2 and P3 consistency improvements
 
-## Next cleanup work
+- [ ] `SAFETY-UI-001` — improve selected tabs, terminology weight, linked-table headings and wrapping.
+- [ ] `REVSPORTS-UI-001` — use the standard cascade/filter layout and stop Refresh overflow.
+- [ ] `CHAT-COMPOSER-001` and `ROSTER-READABILITY-001` — improve input affordance and small-text
+  readability.
+- [ ] `COACHING-PROFILE-001` — link player position preferences and complete match history.
+- [ ] `MEMBERSHIP-SELF-SERVICE-001` — define safe secondary-team removal with audit and confirmation.
+- [ ] `TEAM-ORDERING-001` — apply one documented ordering rule across every team list.
+- [ ] `EXPENSE-UX-001` — add upload progress and reusable partial/exact exclusions.
+- [ ] `DIVISION-MATCH-STRUCTURE-001` — add optional match segments, breaks and calculated duration.
+- [ ] `COMMITTEE-HIERARCHY-001` — add position hierarchy and appointment history.
+- [ ] Clarify the ambiguous Users feedback entry `USERS-UX-CLARIFY-001` with Aaron or a screenshot.
 
-### Feedback-derived product clean-up
+### 6. Database and data-quality cleanup
 
-- [ ] Add configurable Division match segments and breaks with a calculated total duration.
-- [ ] Add Committee position hierarchy and appointment history, plus stronger safeguards before
-  closing a committee.
-- [ ] Add Expense statement upload progress and reusable partial/exact exclusion rules.
-- [ ] Apply one documented team-ordering rule across club, division and association lists.
-- [ ] Link Coaching Squad player detail to profile position preferences and relevant match history.
-- [ ] Keep the broader dashboard/KPI redesign, environment navigation redesign, Formation Library
-  deletion/asset improvements and full Roles & modules redesign in **Parked for later** until the
-  acceptance and access-control batches are complete.
+- [ ] Review Supabase security and performance advisers individually; do not bulk-revoke working
+  functions or drop indexes based only on adviser counts.
+- [ ] Prepare an exact keep/remove dry run for 201 historical duplicate membership groups and 44
+  people with multiple Primary memberships. Any apply is a separately approved destructive task.
+- [ ] Refresh RevSports readiness reports, resolve the Wimmera season ambiguity and confirm
+  authenticated player-stat collection requirements.
+- [ ] Re-run the line-up promotion dry run and obtain separate approval before inserting anything.
+- [ ] Reconcile live Dev migrations with repository migrations and classify legacy/backup objects.
+- [ ] Confirm the purpose of the separate `umpire_vote_*` rating family before renaming or reuse.
+- [ ] Obtain Hockey Ballarat decisions for Incident and Discipline rules still marked
+  `REVIEW_REQUIRED`, including evidence retention and local authority rules.
 
-### Phase 4 — Database and data-quality cleanup
+Exit gate: each cleanup has a current read-only report, exact scope, rollback path and separate
+approval where records could be changed or removed.
 
-These items must be handled separately so a broad cleanup does not damage valid data.
+### 7. Repository and documentation cleanup
 
-1. **Supabase adviser triage**
-   - Classify the three anonymous `SECURITY DEFINER` Player MVP helper warnings first.
-   - Review the 111 signed-in `SECURITY DEFINER` warnings against each function's internal
-     authorisation checks; do not revoke working application entrypoints in bulk.
-   - Decide whether Dev Auth leaked-password protection should be enabled.
-   - Review 181 performance warnings by real query impact. Do not drop indexes merely because the
-     new module has not accumulated usage yet.
-   - Use the current Supabase database-linter guidance during review:
-     `https://supabase.com/docs/guides/database/database-linter`.
+- [ ] Reduce the legacy lint baseline in small reviewed folders without hiding existing failures.
+- [ ] Review the large main JavaScript chunk, SheetJS loading and stale Browserslist data.
+- [ ] Reduce `docs/current-state.md` and `CODEX_HANDOFF.md` to current summaries with archive links.
+- [ ] Reconcile stale entries in `notes/known-issues.md`; keep it as evidence, not another plan.
+- [ ] Review the root `test_*.js` investigation scripts and the superseded local
+  `chore/domain-structure` branch without merging stale work.
+- [ ] Decide whether GitHub Projects will be used; do not maintain an unused duplicate board.
+- [ ] Keep the generated Big Brain repository mirror read-only and run sync plus validation after
+  committed documentation changes.
 
-2. **Historical team memberships**
-   - Generate an exact per-person keep/remove dry run for the 201 duplicate groups and 44
-     multiple-Primary people.
-   - Confirm the proposed retained row for every person and team.
-   - Take a fresh backup and recheck counts immediately before any apply.
-   - Deleting or changing historical membership rows requires Aaron's separate approval.
+## Release
 
-3. **RevSports and fixture mapping**
-   - Refresh the readiness reports; the committed June reports are historical snapshots.
-   - Resolve the documented Wimmera season ambiguity before proposing any fixture foreign-key
-     backfill.
-   - Confirm authenticated Wimmera player-stat scraping requirements.
-   - Re-run the line-up promotion dry run. Do not apply the proposed line-up inserts without a
-     separately reviewed count and approval.
+### 8. Dev → Main staging
 
-4. **Migration and legacy-object review**
-   - Reconcile live Dev migration names with repository source migrations where timestamps differ.
-   - Review old backup tables, RLS-without-policy tables and the separate `umpire_vote_*` rating
-     family. Mark intended private/archive objects clearly before proposing any removal.
-   - Keep `supabase/pending-migrations/lock_down_mvp_voting_access.sql` parked until its pilot and
-     access review are accepted.
+- [ ] Run focused tests, full Vitest, TypeScript, Production build and lint-baseline comparison.
+- [ ] Review every Dev → Main commit, migration, Edge Function and workflow change.
+- [ ] Fast-forward Main only after Dev checks pass and confirm Main uses the Dev database.
+- [ ] Run signed-out and signed-in Main smoke tests, including the high-risk repaired workflows.
 
-Exit condition: each cleanup has a read-only report, exact scope, rollback path and separate apply
-approval where data could be changed or removed.
+### 9. Main → Production approval packet
 
-### Phase 5 — Documentation and repository tidy-up
+- [ ] Freeze the exact Main commit and reconcile all application, migration, Edge Function, job and
+  workflow differences against live Production.
+- [ ] Prove backup, migration order, deployment order, rollback points and post-release smoke steps.
+- [ ] Complete the existing read-only signed-in Production smoke test.
+- [ ] Present the exact frozen package, unresolved risks and accepted debt to Aaron.
+- [ ] Change `prod` or any Production system only after Aaron explicitly approves that exact package.
+- [ ] Observe the released application and scheduled jobs through the rollback window.
 
-- [ ] Plan the known lint baseline cleanup in small folders; the current baseline is 359 errors and
-  78 warnings and is not caused by this documentation audit.
-- [ ] Review the build's 3.45 MB main JavaScript chunk, the ineffective mixed static/dynamic SheetJS
-  import and the stale Browserslist data as a separate performance/dependency package.
-- [ ] Reduce `docs/current-state.md` to a genuinely current summary and move superseded dated detail
-  to an archive without losing evidence.
-- [ ] Reduce `CODEX_HANDOFF.md` to the latest handoff plus links to archived implementation history.
-- [ ] Reconcile outdated statuses in `notes/known-issues.md` and close items already owner-confirmed.
-- [ ] Archive old session handovers after confirming they add no unique active requirement.
-- [ ] Refresh the Big Brain SportStack notes after the canonical repository cleanup is committed.
-- [ ] Keep the generated Big Brain repository mirror read-only and verify the sync check.
-
-Exit condition: this plan, the current-state summary, the test matrix and the known-issues register
-each have one clear purpose and no conflicting current status.
-
-## Release decision after cleanup
-
-### Phase 6 — Staging and Production gates
-
-- [ ] Smoke-test the aligned Main staging build after the accepted Dev batches.
-- [ ] Complete the existing signed-in Production smoke test as a read-only operational check.
-- [ ] Recheck current branch divergence, Vercel deployment state, Production migration difference,
-  Edge Functions, scheduled jobs, backups and rollback instructions.
-- [ ] Present the exact `main` to `prod` release package and risk report to Aaron.
-- [ ] Promote to `prod` only after Aaron gives explicit approval for that exact package.
-- [ ] Run the post-release signed-in smoke test and monitoring checks.
-
-The domain rollout, `hb.sportstackapp.com.au`, Supabase Auth redirects, Turnstile and DNS remain a
-separate approval-gated release after the normal application release is stable.
+Exit gate: Production matches the approved package and passes signed-out, signed-in, database,
+function, workflow and scheduled-job verification.
 
 ## Parked for later
 
-These are valid ideas but are not current blockers:
+These are retained and reviewed, but they do not interrupt the current readiness sequence.
 
-- full Roles and modules UX redesign and implementation of the approved target access-control model
-  in `docs/access-control-model.md`;
-- email template and broader visual polish;
-- structured profile addresses;
-- mobile formation/pitch rotation improvements;
-- push notification wiring;
-- Coordination open claiming and a broader Events product;
-- Hockey Trace beyond its current experimental disabled state;
-- broader multi-sport or commercial/multi-tenant work;
-- new domain redirects and marketing addresses;
-- new major modules not already accepted into this plan.
+- Full Roles and modules redesign and target access-model implementation.
+- Formation Library deletion, icon, position-library and asset-management redesign.
+- Personal, association, club and team dashboard redesign beyond confirmed data defects.
+- Environment/version navigation redesign.
+- Coach Narrative AI summary, speech capture and player-observation workflow.
+- Structured address lookup and broad Profile redesign.
+- Domain, DNS, Turnstile and `hb.sportstackapp.com.au` rollout.
+- Broad multi-sport, commercial and multi-tenant work.
 
-## Superseded inputs
+## Definition of complete
 
-The following remain evidence or detailed specifications, but their status text does not override
-this plan:
+SportStack is ready for Production approval only when:
 
-- `docs/development-plan.md` — the completed 1 August implementation order;
-- `docs/owner-test-matrix.md` — detailed acceptance evidence and test steps;
-- `notes/known-issues.md` — defect and parked-item evidence;
-- `notes/project-consolidation-notes.md` — April idea list, much of it now implemented or obsolete;
-- `CODEX_HANDOFF.md` and older session notes — dated implementation history;
-- module-specific discovery and implementation plans — accepted scope and technical detail;
-- Big Brain SportStack Focus and Open Items — strategy and operations summaries that now point back to
-  this repository plan.
-
-## Definition of back on track
-
-SportStack is back on track when:
-
-1. the acceptance batches have evidence rather than assumed status;
-2. confirmed blockers are fixed and retested;
-3. data cleanup has exact dry runs and explicit approvals;
-4. Main staging has passed the short smoke set;
-5. Aaron can make one informed Production release decision;
-6. this remains the only active plan.
+- every P0 and P1 defect is fixed and verified;
+- every remaining P2/P3 item is fixed or explicitly deferred by Aaron with impact recorded;
+- all meaningful columns follow the sorting contract;
+- all forms follow the size, persistence and sensitive-data contracts;
+- actual-role desktop/mobile workflows have current evidence;
+- Dev and Main match their recorded commits and required checks pass;
+- the exact Production package, backup and rollback process is proven; and
+- Aaron explicitly approves that frozen package.

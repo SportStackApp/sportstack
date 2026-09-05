@@ -1,7 +1,67 @@
-# SportStack — Known Issues & Parked Tasks
+# SportStack — Evidence and Known-Issue Register
 
-> This is the supporting defect and parked-item register. Current priority and sequencing come from
+> This file preserves defect evidence and historical decisions. It is not a second plan. All current
+> priority, sequencing, next actions and parked work live only in
 > `docs/consolidated-open-items-plan.md`.
+
+## Player MVP overdue sessions are displayed as closed but remain OPEN
+
+**Logged:** 5 September 2026
+**Status:** Confirmed Production defect; real tally publication paused
+
+The Player MVP admin page derives a closed/expired label when an `OPEN` session is past its
+`closes_at` deadline. The tally builder does not use that label: it correctly accepts only database
+rows whose status is actually `CLOSED`. Production Pumas evidence is 15 overdue `OPEN` sessions
+containing 426 votes and one stored `CLOSED` session containing 42 votes, so only one completed
+round appears in the season tally builder.
+
+`EXPIRED` is not a database status. The intended single final state is `CLOSED`. The full Dev
+refinement includes a closure function, write guards and a one-minute job, but all lifecycle changes
+were deliberately excluded from the narrow Production tally release because the pre-flight found
+355 overdue Production sessions would be changed. No real Pumas tally has been published. Repair
+requires a separately tested additive migration, affected-row dry run, rollback evidence and new
+explicit Production approval.
+
+## Feedback log reconciliation — 5 September 2026
+
+**Status:** Dev inbox triaged; implementation and acceptance queue remains
+
+All 88 Dev `app_feedback` rows were retained. The 53 formerly OPEN rows are now REVIEWED and each
+has a structured administration note containing its category, priority, canonical backlog
+reference and triage reason. The existing 35 CLOSED rows were not changed. No Production row or
+system was touched.
+
+Current reviewed distribution: 5 P0, 16 P1, 18 P2, 5 P3 and 9 parked. The P0 queue covers new-user
+and pending-team access isolation, the broken primary-team approval completion, Player MVP shout-out
+privacy and unmatched Player MVP participant visibility. The repeated oversized date-control
+reports are consolidated under `FORM-SIZE-001`, but remain separate source records so screen and
+mobile acceptance evidence can be attached to each before closure.
+
+Use OPEN only for new, untriaged feedback. Move an item to CLOSED only with verified deployed or
+owner evidence, or with an explicit duplicate, superseded or declined reason. Full ordering and
+implementation priority remains in `docs/consolidated-open-items-plan.md`.
+
+## Dev placeholder identities and unsupported permanent bans
+
+**Logged and repaired:** 4 September 2026
+**Status:** Core repair complete; one Dev helper cleanup remains
+
+Five registered Pumas identities were created through RevSports Review as new placeholders even
+though confirmed real identities existed in Production. They were reconciled in place in Dev with
+no email, replacement profile or lost roster reference. The roster picker now includes active team
+members and previous fill-ins regardless of whether the account has been claimed.
+
+Dev also had 731 intentionally disabled Auth users using `banned_until = infinity`. Supabase Auth
+could not scan that value, causing admin-detail and email lookups to fail and allowing a profile
+write to occur before the Auth failure. All 731 remain disabled using a supported 100-year ban. The
+tracked `update-user-details` function now validates Auth first and rolls back an email change if a
+profile write fails.
+
+Two secondary Pumas fill-ins remain unclaimed Lucas HC placeholders in both environments because no
+real account is available to merge. This is valid identity state, not a reason to hide them from a
+roster. The locked Dev-only smoke helper `dev-auth-admin-smoke` should be removed from the Supabase
+dashboard when an account with Function-delete permission is available; it requires JWT and returns
+410 while inactive.
 
 ## Coach Narrative
 

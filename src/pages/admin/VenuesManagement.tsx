@@ -26,6 +26,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import type { Database } from "@/integrations/supabase/types";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
 
 type Venue = Database["public"]["Tables"]["venues"]["Row"];
 type Pitch = Database["public"]["Tables"]["pitches"]["Row"];
@@ -35,6 +37,8 @@ interface VenueWithMeta extends Venue {
   pitchCount: number;
   associationIds: string[];
 }
+
+type VenueSortKey = "name" | "suburb" | "association" | "pitches";
 
 interface VenueDeleteInfo {
   pitchCount: number;
@@ -78,6 +82,7 @@ const VenuesManagement = () => {
   const [filterAssociation, setFilterAssociation] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [sort, setSort] = useState<SortState<VenueSortKey>>({ key: "name", direction: "asc" });
 
   useEffect(() => {
     setCurrentPage(1);
@@ -155,8 +160,19 @@ const VenuesManagement = () => {
 
   const paginatedVenues = useMemo(() => {
     const startIdx = (currentPage - 1) * rowsPerPage;
-    return filteredVenues.slice(startIdx, startIdx + rowsPerPage);
-  }, [filteredVenues, currentPage, rowsPerPage]);
+    const sorted = stableSortRows(filteredVenues, sort, (venue, key) => {
+      if (key === "suburb") return venue.suburb;
+      if (key === "association") {
+        return venue.associationIds
+          .map((associationId) => associations.find((association) => association.id === associationId)?.name ?? "")
+          .sort((left, right) => left.localeCompare(right, "en-AU"))
+          .join(", ");
+      }
+      if (key === "pitches") return venue.pitchCount;
+      return venue.name;
+    });
+    return sorted.slice(startIdx, startIdx + rowsPerPage);
+  }, [associations, currentPage, filteredVenues, rowsPerPage, sort]);
 
   // Scoped associations for dropdown
   const formAssociations = isSuperAdmin
@@ -484,10 +500,10 @@ const VenuesManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Suburb</TableHead>
-                  <TableHead>Association</TableHead>
-                  <TableHead>Pitches</TableHead>
+                  <SortableTableHead label="Name" sortKey="name" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Suburb" sortKey="suburb" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Association" sortKey="association" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Pitches" sortKey="pitches" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
                   {canEdit && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>

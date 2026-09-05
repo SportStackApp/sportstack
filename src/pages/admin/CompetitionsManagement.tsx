@@ -23,20 +23,17 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import type { Database } from "@/integrations/supabase/types";
+import { SortableTableHead } from "@/components/admin/SortableTableHead";
+import { nextSortState, stableSortRows, type SortState } from "@/lib/adminSorting";
 
 type Association = Database["public"]["Tables"]["associations"]["Row"];
 type Season = Database["public"]["Tables"]["seasons"]["Row"];
+type Competition = Database["public"]["Tables"]["competitions"]["Row"];
 
-interface Competition {
-  id: string;
-  association_id: string;
-  season_id: string;
-  name: string;
-  revsports_competition_id: string | null;
-  is_active: boolean | null;
-  created_at: string;
-  updated_at: string;
-}
+type CompetitionSortKey = "name" | "association" | "season" | "active";
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "An unexpected error occurred";
 
 const CompetitionsManagement = () => {
   const navigate = useNavigate();
@@ -52,6 +49,7 @@ const CompetitionsManagement = () => {
   const [filterAssociation, setFilterAssociation] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [sort, setSort] = useState<SortState<CompetitionSortKey>>({ key: "name", direction: "asc" });
 
   useEffect(() => {
     setCurrentPage(1);
@@ -78,7 +76,7 @@ const CompetitionsManagement = () => {
     setLoading(true);
 
     const [competitionsRes, associationsRes, seasonsRes] = await Promise.all([
-      supabase.from("competitions" as any).select("*").order("name"),
+      supabase.from("competitions").select("*").order("name"),
       supabase.from("associations").select("*").order("name"),
       supabase.from("seasons").select("*").order("name"),
     ]);
@@ -86,7 +84,7 @@ const CompetitionsManagement = () => {
     if (competitionsRes.error) {
       toast({ title: "Error", description: "Failed to load competitions", variant: "destructive" });
     } else {
-      setCompetitions((competitionsRes.data as any) || []);
+      setCompetitions(competitionsRes.data || []);
     }
 
     if (!associationsRes.error) setAssociations(associationsRes.data || []);
@@ -112,8 +110,14 @@ const CompetitionsManagement = () => {
 
   const paginatedCompetitions = useMemo(() => {
     const startIdx = (currentPage - 1) * rowsPerPage;
-    return filteredCompetitions.slice(startIdx, startIdx + rowsPerPage);
-  }, [filteredCompetitions, currentPage, rowsPerPage]);
+    const sorted = stableSortRows(filteredCompetitions, sort, (competition, key) => {
+      if (key === "association") return associations.find((association) => association.id === competition.association_id)?.name;
+      if (key === "season") return seasons.find((season) => season.id === competition.season_id)?.year;
+      if (key === "active") return competition.is_active ? 1 : 0;
+      return competition.name;
+    });
+    return sorted.slice(startIdx, startIdx + rowsPerPage);
+  }, [associations, currentPage, filteredCompetitions, rowsPerPage, seasons, sort]);
 
   const canAdd = isSuperAdmin || scopedAssociationIds.length > 0;
   const canDelete = isSuperAdmin || scopedAssociationIds.length > 0;
@@ -208,8 +212,8 @@ const CompetitionsManagement = () => {
 
         seasonId = newSeason.id;
       }
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message || "An unexpected error occurred", variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Error", description: getErrorMessage(error), variant: "destructive" });
       setSaving(false);
       return;
     }
@@ -223,7 +227,7 @@ const CompetitionsManagement = () => {
 
     if (editingCompetition) {
       const { error } = await supabase
-        .from("competitions" as any)
+        .from("competitions")
         .update(payload)
         .eq("id", editingCompetition.id);
 
@@ -236,7 +240,7 @@ const CompetitionsManagement = () => {
       }
     } else {
       const { error } = await supabase
-        .from("competitions" as any)
+        .from("competitions")
         .insert(payload);
 
       if (error) {
@@ -253,7 +257,7 @@ const CompetitionsManagement = () => {
   const handleDelete = async () => {
     if (!deletingCompetition) return;
     const { error } = await supabase
-      .from("competitions" as any)
+      .from("competitions")
       .delete()
       .eq("id", deletingCompetition.id);
 
@@ -393,10 +397,10 @@ const CompetitionsManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Association</TableHead>
-                  <TableHead>Season</TableHead>
-                  <TableHead>Active</TableHead>
+                  <SortableTableHead label="Name" sortKey="name" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Association" sortKey="association" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Season" sortKey="season" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
+                  <SortableTableHead label="Active" sortKey="active" sort={sort} onSort={(key) => setSort(nextSortState(sort, key))} />
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase as typedSupabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,14 +35,16 @@ import {
   normaliseBoundary,
 } from "@/lib/formationPlanner";
 import {
-  clearLocalJson,
-  loadLocalJson,
+  clearDraftJson,
+  clearLegacyFormationState,
+  loadDraftJson,
   loadTemplateQuickPicks,
-  saveLocalJson,
+  saveDraftJson,
   saveTemplateQuickPicks,
   templateDraftKey,
   type TemplateQuickPick,
 } from "@/lib/formationLocalState";
+import { retirePreviousScopedDraftKey } from "@/lib/scopedDraftStorage";
 import { ArrowLeft, ImagePlus, Maximize2, Minus, Plus, RotateCw, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -68,6 +70,23 @@ type TemplateDraft = {
   zoom: number;
   quickPicks: TemplateQuickPick[];
   savedAt: string;
+};
+
+const isTemplateDraft = (value: unknown): value is TemplateDraft => {
+  if (typeof value !== "object" || value === null) return false;
+  const draft = value as Partial<TemplateDraft>;
+  return typeof draft.name === "string"
+    && typeof draft.code === "string"
+    && typeof draft.sport === "string"
+    && typeof draft.description === "string"
+    && OWNER_SCOPES.includes(draft.ownerScope as FormationOwnerScope)
+    && Number.isFinite(draft.gridRows)
+    && Number.isFinite(draft.gridColumns)
+    && typeof draft.showGrid === "boolean"
+    && typeof draft.snapToGrid === "boolean"
+    && Number.isFinite(draft.markerSize)
+    && (draft.orientation === "landscape" || draft.orientation === "portrait")
+    && Array.isArray(draft.quickPicks);
 };
 
 const isExpectedMissingSchemaError = (error?: { message?: string } | null) => {
@@ -160,7 +179,30 @@ export default function TemplateBuilder() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [draftRestored, setDraftRestored] = useState(false);
 
-  const draftKey = useMemo(() => templateDraftKey(searchParams.get("template") || "new"), [searchParams]);
+  const [draftRecordId, setDraftRecordId] = useState(
+    () => searchParams.get("template") || "new",
+  );
+  const draftOwnerId = ownerScope === "ASSOCIATION"
+    ? selectedAssociationId || "unselected"
+    : ownerScope === "CLUB"
+      ? selectedClubId || "unselected"
+      : ownerScope === "TEAM"
+        ? selectedTeamId || "unselected"
+        : "global";
+  const draftKey = useMemo(() => templateDraftKey({
+    accountId: user?.id || "signed-out",
+    ownerScope,
+    ownerId: draftOwnerId,
+    draftId: draftRecordId,
+  }), [draftOwnerId, draftRecordId, ownerScope, user?.id]);
+  const previousDraftKeyRef = useRef(draftKey);
+
+  useEffect(() => {
+    previousDraftKeyRef.current = retirePreviousScopedDraftKey(
+      previousDraftKeyRef.current,
+      draftKey,
+    );
+  }, [draftKey]);
 
   const canUseScope = (scope: FormationOwnerScope) => {
     if (isSuperAdmin) return true;
@@ -219,7 +261,7 @@ export default function TemplateBuilder() {
 
   useEffect(() => {
     if (!hasUnsavedChanges) return;
-    saveLocalJson<TemplateDraft>(draftKey, {
+    saveDraftJson<TemplateDraft>(draftKey, {
       name,
       code,
       sport,
@@ -276,9 +318,9 @@ export default function TemplateBuilder() {
       ...overrides,
     });
 
-  const restoreLocalDraft = () => {
-    if (draftRestored) return false;
-    const draft = loadLocalJson<TemplateDraft>(draftKey);
+  const restoreLocalDraft = (key = draftKey, legacyRecordId = draftRecordId) => {
+    clearLegacyFormationState("template-draft", legacyRecordId);
+    const draft = loadDraftJson<TemplateDraft>(key, isTemplateDraft);
     if (!draft) return false;
     setDraftRestored(true);
     setName(draft.name);
@@ -301,7 +343,7 @@ export default function TemplateBuilder() {
   };
 
   const clearLocalDraft = () => {
-    clearLocalJson(draftKey);
+    clearDraftJson(draftKey);
     setDraftRestored(false);
   };
 
@@ -344,8 +386,9 @@ export default function TemplateBuilder() {
   };
 
   const loadTemplate = (template: FieldTemplateRow) => {
+    setDraftRecordId(template.id);
     const nextBoundary = normaliseBoundary(template);
-    const nextQuickPicks = loadTemplateQuickPicks(template.id);
+    const nextQuickPicks = user?.id ? loadTemplateQuickPicks(user.id, template.id) : [];
     setActiveTemplateId(template.id);
     setName(template.name);
     setCode(template.code || "");
@@ -376,10 +419,25 @@ export default function TemplateBuilder() {
         quickPicks: nextQuickPicks,
       }),
     );
-    restoreLocalDraft();
+    const templateOwnerId = template.owner_scope === "ASSOCIATION"
+      ? template.association_id || "unselected"
+      : template.owner_scope === "CLUB"
+        ? template.club_id || "unselected"
+        : template.owner_scope === "TEAM"
+          ? template.team_id || "unselected"
+          : "global";
+    if (user?.id) {
+      restoreLocalDraft(templateDraftKey({
+        accountId: user.id,
+        ownerScope: template.owner_scope,
+        ownerId: templateOwnerId,
+        draftId: template.id,
+      }), template.id);
+    }
   };
 
   const startNewTemplate = () => {
+    setDraftRecordId("new");
     const nextOwnerScope = preferredOwnerScope();
     setActiveTemplateId(null);
     setName("New surface template");
@@ -415,7 +473,20 @@ export default function TemplateBuilder() {
         quickPicks: [],
       }),
     );
-    restoreLocalDraft();
+    if (user?.id) {
+      restoreLocalDraft(templateDraftKey({
+        accountId: user.id,
+        ownerScope: nextOwnerScope,
+        ownerId: nextOwnerScope === "ASSOCIATION"
+          ? selectedAssociationId || "unselected"
+          : nextOwnerScope === "CLUB"
+            ? selectedClubId || "unselected"
+            : nextOwnerScope === "TEAM"
+              ? selectedTeamId || "unselected"
+              : "global",
+        draftId: "new",
+      }), "new");
+    }
   };
 
   const requestBackToLibrary = () => {
@@ -496,9 +567,10 @@ export default function TemplateBuilder() {
       const saved = res.data as FieldTemplateRow;
       toast.success("Template saved.");
       setActiveTemplateId(saved.id);
-      saveTemplateQuickPicks(saved.id, quickPicks);
+      saveTemplateQuickPicks(user.id, saved.id, quickPicks);
       setLastSavedAt(new Date().toISOString());
       clearLocalDraft();
+      setDraftRecordId(saved.id);
       setSavedSignature(captureSignature({ name: saved.name, code: saved.code || "", sport: saved.sport || "sport", quickPicks }));
       return true;
     } catch (error: any) {

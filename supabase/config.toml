@@ -26,3 +26,6 @@ verify_jwt = true
 
 [functions.expense-document-extract]
 verify_jwt = true
+
+[functions.update-user-details]
+verify_jwt = true

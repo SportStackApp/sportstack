@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase as typedSupabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,13 +38,17 @@ import {
   normaliseBoundary,
 } from "@/lib/formationPlanner";
 import {
-  clearLocalJson,
+  clearDraftJson,
+  clearLegacyFormationState,
   formationDraftKey,
+  loadDraftJson,
   loadLocalJson,
   loadTemplateQuickPicks,
+  saveDraftJson,
   saveLocalJson,
   type TemplateQuickPick,
 } from "@/lib/formationLocalState";
+import { retirePreviousScopedDraftKey } from "@/lib/scopedDraftStorage";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Focus, Maximize2, Minus, PanelLeftClose, PanelRightClose, Plus, RotateCw, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -111,6 +115,22 @@ type FormationDraft = {
   isRotatedView: boolean;
   zoom: number;
   savedAt: string;
+};
+
+const isFormationDraft = (value: unknown): value is FormationDraft => {
+  if (typeof value !== "object" || value === null) return false;
+  const draft = value as Partial<FormationDraft>;
+  return typeof draft.name === "string"
+    && typeof draft.code === "string"
+    && typeof draft.description === "string"
+    && OWNER_SCOPES.includes(draft.ownerScope as FormationOwnerScope)
+    && Number.isFinite(draft.gridRows)
+    && Number.isFinite(draft.gridColumns)
+    && typeof draft.isDefault === "boolean"
+    && typeof draft.selectedFieldTemplateId === "string"
+    && Array.isArray(draft.positions)
+    && typeof draft.showGrid === "boolean"
+    && typeof draft.snapToGrid === "boolean";
 };
 
 const isExpectedMissingSchemaError = (error?: { message?: string } | null) => {
@@ -220,10 +240,30 @@ export default function FormationBuilder() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [draftRestored, setDraftRestored] = useState(false);
 
-  const draftKey = useMemo(
-    () => formationDraftKey(searchParams.get("formation") || searchParams.get("template") || "new"),
-    [searchParams],
+  const [draftRecordId, setDraftRecordId] = useState(
+    () => searchParams.get("formation") || searchParams.get("template") || "new",
   );
+  const draftOwnerId = ownerScope === "ASSOCIATION"
+    ? selectedAssociationId || "unselected"
+    : ownerScope === "CLUB"
+      ? selectedClubId || "unselected"
+      : ownerScope === "TEAM"
+        ? selectedTeamId || "unselected"
+        : "global";
+  const draftKey = useMemo(() => formationDraftKey({
+    accountId: user?.id || "signed-out",
+    ownerScope,
+    ownerId: draftOwnerId,
+    draftId: draftRecordId,
+  }), [draftOwnerId, draftRecordId, ownerScope, user?.id]);
+  const previousDraftKeyRef = useRef(draftKey);
+
+  useEffect(() => {
+    previousDraftKeyRef.current = retirePreviousScopedDraftKey(
+      previousDraftKeyRef.current,
+      draftKey,
+    );
+  }, [draftKey]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -337,12 +377,13 @@ export default function FormationBuilder() {
       setQuickPicks([]);
       return;
     }
-    setQuickPicks(loadTemplateQuickPicks(selectedFieldTemplateId));
-  }, [selectedFieldTemplateId]);
+    if (!user?.id) return;
+    setQuickPicks(loadTemplateQuickPicks(user.id, selectedFieldTemplateId));
+  }, [selectedFieldTemplateId, user?.id]);
 
   useEffect(() => {
     if (!hasUnsavedChanges) return;
-    saveLocalJson<FormationDraft>(draftKey, {
+    saveDraftJson<FormationDraft>(draftKey, {
       name,
       code,
       description,
@@ -404,9 +445,9 @@ export default function FormationBuilder() {
       ...overrides,
     });
 
-  const restoreLocalDraft = () => {
-    if (draftRestored) return false;
-    const draft = loadLocalJson<FormationDraft>(draftKey);
+  const restoreLocalDraft = (key = draftKey, legacyRecordId = draftRecordId) => {
+    clearLegacyFormationState("formation-draft", legacyRecordId);
+    const draft = loadDraftJson<FormationDraft>(key, isFormationDraft);
     if (!draft) return false;
     setDraftRestored(true);
     setName(draft.name);
@@ -433,7 +474,7 @@ export default function FormationBuilder() {
   };
 
   const clearLocalDraft = () => {
-    clearLocalJson(draftKey);
+    clearDraftJson(draftKey);
     setDraftRestored(false);
   };
 
@@ -501,6 +542,7 @@ export default function FormationBuilder() {
   };
 
   const loadFormation = async (formation: FormationRow) => {
+    setDraftRecordId(formation.id);
     const fieldSource = getFormationFieldSource(formation);
     const nextGridRows = Number(fieldSource.grid_rows ?? formation.grid_rows);
     const nextGridColumns = Number(fieldSource.grid_columns ?? formation.grid_columns);
@@ -549,10 +591,26 @@ export default function FormationBuilder() {
         positions: loadedPositions,
       }),
     );
-    restoreLocalDraft();
+    const formationOwnerId = formation.owner_scope === "ASSOCIATION"
+      ? formation.association_id || "unselected"
+      : formation.owner_scope === "CLUB"
+        ? formation.club_id || "unselected"
+        : formation.owner_scope === "TEAM"
+          ? formation.team_id || "unselected"
+          : "global";
+    if (user?.id) {
+      restoreLocalDraft(formationDraftKey({
+        accountId: user.id,
+        ownerScope: formation.owner_scope,
+        ownerId: formationOwnerId,
+        draftId: formation.id,
+      }), formation.id);
+    }
   };
 
   const startNewFormation = (template?: FieldTemplateRow | null) => {
+    const nextDraftRecordId = searchParams.get("template") || "new";
+    setDraftRecordId(nextDraftRecordId);
     const nextOwnerScope = getPreferredOwnerScope();
     const nextBoundary = template ? normaliseBoundary(template) : DEFAULT_BOUNDARY;
     const nextGridRows = Number(template?.grid_rows || 10);
@@ -589,7 +647,20 @@ export default function FormationBuilder() {
         positions: seededPositions,
       }),
     );
-    restoreLocalDraft();
+    if (user?.id) {
+      restoreLocalDraft(formationDraftKey({
+        accountId: user.id,
+        ownerScope: nextOwnerScope,
+        ownerId: nextOwnerScope === "ASSOCIATION"
+          ? selectedAssociationId || "unselected"
+          : nextOwnerScope === "CLUB"
+            ? selectedClubId || "unselected"
+            : nextOwnerScope === "TEAM"
+              ? selectedTeamId || "unselected"
+              : "global",
+        draftId: nextDraftRecordId,
+      }), nextDraftRecordId);
+    }
   };
 
   const requestStartNewFormation = () => {
@@ -785,6 +856,7 @@ export default function FormationBuilder() {
       setActiveFormationId(formation.id);
       setLastSavedAt(new Date().toISOString());
       clearLocalDraft();
+      setDraftRecordId(formation.id);
       await loadData({ allowDraftReplace: true });
       await loadFormation(formation);
       return true;

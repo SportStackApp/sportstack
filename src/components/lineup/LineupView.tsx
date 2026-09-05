@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { RotateCcw, Save, Search, UserMinus, UserPlus, Users } from "lucide-react";
+import { RotateCcw, Save, Search, Undo2, UserMinus, UserPlus, Users } from "lucide-react";
 import { supabase as typedSupabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,15 @@ import { loadPlayerHistory, type PlayerHistoryRecord } from "@/lib/playerHistory
 import { playerHistoryForCalendarYear } from "@/lib/playerHistoryFilters";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { buildScopedDraftKey, loadScopedDraft, removeScopedDraft, saveScopedDraft } from "@/lib/scopedDraftStorage";
+import {
+  isLineupDraft,
+  lineupDraftSignature,
+  normaliseLineupDraft,
+  reconcileLineupDraftFormation,
+  shouldPersistLineupDraft,
+  type LineupDraft,
+} from "@/lib/lineupDraft";
 
 const supabase = typedSupabase as any;
 type LineupPlayer = RosterCandidate & { displayNickname: boolean };
@@ -65,6 +74,7 @@ export const LineupView = ({ gameId, fixtureDate, teamId, teamName, opponentName
   const markerDragRef = useRef<MarkerDrag | null>(null);
   const suppressMarkerClickRef = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formations, setFormations] = useState<FormationRow[]>([]);
   const [icons, setIcons] = useState<FormationIconRow[]>([]);
@@ -81,6 +91,16 @@ export const LineupView = ({ gameId, fixtureDate, teamId, teamName, opponentName
   const [historyPlayerId, setHistoryPlayerId] = useState<string | null>(null);
   const [history, setHistory] = useState<PlayerHistoryRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [savedDraftSignature, setSavedDraftSignature] = useState<string | null>(null);
+  const currentDraftSignatureRef = useRef<string | null>(null);
+
+  const draftKey = useMemo(() => user?.id ? buildScopedDraftKey({
+    accountId: user.id,
+    scopeType: "team",
+    scopeId: teamId,
+    recordType: "fixture-lineup",
+    recordId: gameId,
+  }) : null, [gameId, teamId, user?.id]);
 
   const selectedFormation = formations.find((formation) => formation.id === selectedFormationId) || null;
   const assignedPlayerIds = useMemo(() => new Set([...Object.values(assignments), ...benchIds]), [assignments, benchIds]);
@@ -91,64 +111,192 @@ export const LineupView = ({ gameId, fixtureDate, teamId, teamName, opponentName
   }, [assignedPlayerIds, roster, search]);
   const benchPlayers = benchIds.map((id) => roster.find((player) => player.id === id)).filter(Boolean) as LineupPlayer[];
 
-  const loadLineup = useCallback(async () => {
+  const currentDraft = useMemo<LineupDraft>(() => normaliseLineupDraft({
+    formationId: selectedFormationId,
+    roster: roster.map((player) => ({
+      playerId: player.id,
+      displayNickname: player.displayNickname,
+    })),
+    assignments,
+    benchIds,
+    positionOverrides,
+  }), [assignments, benchIds, positionOverrides, roster, selectedFormationId]);
+  const currentDraftSignature = useMemo(() => lineupDraftSignature(currentDraft), [currentDraft]);
+  const hasUnsavedChanges = savedDraftSignature !== null && currentDraftSignature !== savedDraftSignature;
+  currentDraftSignatureRef.current = currentDraftSignature;
+
+  const loadRosterPlayers = useCallback(async (
+    selections: Array<{ player_id: string; display_nickname: boolean }>,
+  ) => {
+    const playerIds = selections.map((row) => row.player_id);
+    if (!playerIds.length) return [] as LineupPlayer[];
+
+    const [profilesRes, membershipsRes, availabilityRes] = await Promise.all([
+      supabase.from("profiles").select("id, first_name, last_name, nickname").in("id", playerIds),
+      supabase.from("team_memberships").select("user_id, jersey_number, membership_type, position").eq("team_id", teamId).eq("status", "ACTIVE").in("user_id", playerIds),
+      supabase.from("fixture_availability").select("user_id, status").eq("fixture_id", gameId).in("user_id", playerIds),
+    ]);
+    const firstError = profilesRes.error || membershipsRes.error || availabilityRes.error;
+    if (firstError) throw firstError;
+
+    const profileMap = new Map((profilesRes.data || []).map((row: any) => [row.id, row]));
+    const membershipMap = new Map((membershipsRes.data || []).map((row: any) => [row.user_id, row]));
+    const availabilityMap = new Map((availabilityRes.data || []).map((row: any) => [row.user_id, row.status]));
+
+    return selections.flatMap((row) => {
+      const profile = profileMap.get(row.player_id) as any;
+      if (!profile) return [];
+      const membership = membershipMap.get(row.player_id) as any;
+      return [{
+        id: row.player_id,
+        firstName: profile.first_name || null,
+        lastName: profile.last_name || null,
+        nickname: profile.nickname || null,
+        jerseyNumber: membership?.jersey_number ?? null,
+        membershipType: membership?.membership_type || "FILL_IN",
+        rosterPosition: membership?.position || null,
+        availability: availabilityMap.get(row.player_id) || "NO_RESPONSE",
+        isTeamMember: Boolean(membership),
+        lastFillInDate: null,
+        displayNickname: Boolean(row.display_nickname),
+      } as LineupPlayer];
+    });
+  }, [gameId, teamId]);
+
+  const loadLineup = useCallback(async (options?: { ignoreDraft?: boolean }) => {
     setLoading(true);
+    setLoadError(false);
+    setSelectedFormationId("__none__");
+    setRoster([]);
+    setAssignments({});
+    setBenchIds([]);
+    setPositionOverrides({});
+    setSavedDraftSignature(null);
     const [formationsRes, iconsRes, lineupRes] = await Promise.all([
       supabase.from("formations").select("*, field_templates(*)").order("is_default", { ascending: false }).order("name"),
       supabase.from("formation_icons").select("*").order("name"),
       supabase.from("fixture_lineups").select("id, formation_id").eq("fixture_id", gameId).eq("team_id", teamId).maybeSingle(),
     ]);
     const firstError = formationsRes.error || iconsRes.error || lineupRes.error;
-    if (firstError) { toast.error(firstError.message); setLoading(false); return; }
+    if (firstError) {
+      toast.error(firstError.message);
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
 
     const formationRows = (formationsRes.data || []) as FormationRow[];
     const savedLineup = lineupRes.data as FixtureLineup | null;
     setFormations(formationRows);
     setIcons((iconsRes.data || []) as FormationIconRow[]);
-    setSelectedFormationId(savedLineup?.formation_id || formationRows.find((formation) => formation.is_default)?.id || formationRows[0]?.id || "__none__");
-    if (!savedLineup?.id) { setRoster([]); setAssignments({}); setBenchIds([]); setPositionOverrides({}); setLoading(false); return; }
+    const defaultFormationId = savedLineup?.formation_id || formationRows.find((formation) => formation.is_default)?.id || formationRows[0]?.id || "__none__";
+    let savedRosterRows: Array<{ player_id: string; display_nickname: boolean }> = [];
+    const savedAssignments: Record<string, string> = {};
+    const savedBench: string[] = [];
+    let savedOverrides: Record<string, PitchPositionOverride> = {};
 
-    const [rosterRes, assignmentsRes, overridesRes] = await Promise.all([
-      supabase.from("fixture_lineup_roster_selections").select("player_id, sort_order, display_nickname").eq("fixture_lineup_id", savedLineup.id).order("sort_order"),
-      supabase.from("fixture_lineup_assignments").select("player_id, formation_position_id, is_starting, sort_order").eq("fixture_lineup_id", savedLineup.id).order("sort_order"),
-      supabase.from("fixture_lineup_position_overrides").select("formation_position_id, x_percent, y_percent").eq("fixture_lineup_id", savedLineup.id),
-    ]);
-    const childError = rosterRes.error || assignmentsRes.error || overridesRes.error;
-    if (childError) toast.error(childError.message);
-    const rosterRows = rosterRes.data || [];
-    const playerIds = rosterRows.map((row: any) => row.player_id);
-    const [profilesRes, membershipsRes, availabilityRes] = await Promise.all([
-      playerIds.length ? supabase.from("profiles").select("id, first_name, last_name, nickname").in("id", playerIds) : Promise.resolve({ data: [], error: null }),
-      playerIds.length ? supabase.from("team_memberships").select("user_id, jersey_number, membership_type, position").eq("team_id", teamId).eq("status", "ACTIVE").in("user_id", playerIds) : Promise.resolve({ data: [], error: null }),
-      playerIds.length ? supabase.from("fixture_availability").select("user_id, status").eq("fixture_id", gameId).in("user_id", playerIds) : Promise.resolve({ data: [], error: null }),
-    ]);
-    const profileMap = new Map((profilesRes.data || []).map((row: any) => [row.id, row]));
-    const membershipMap = new Map((membershipsRes.data || []).map((row: any) => [row.user_id, row]));
-    const availabilityMap = new Map((availabilityRes.data || []).map((row: any) => [row.user_id, row.status]));
-    setRoster(rosterRows.map((row: any) => {
-      const profile = profileMap.get(row.player_id) as any;
-      const membership = membershipMap.get(row.player_id) as any;
-      return { id: row.player_id, firstName: profile?.first_name || null, lastName: profile?.last_name || null, nickname: profile?.nickname || null,
-        jerseyNumber: membership?.jersey_number ?? null, membershipType: membership?.membership_type || "FILL_IN", rosterPosition: membership?.position || null,
-        availability: availabilityMap.get(row.player_id) || "NO_RESPONSE", isTeamMember: Boolean(membership), lastFillInDate: null, displayNickname: Boolean(row.display_nickname) } as LineupPlayer;
-    }));
-    const nextAssignments: Record<string, string> = {};
-    const nextBench: string[] = [];
-    ((assignmentsRes.data || []) as FixtureLineupAssignment[]).forEach((row) => row.is_starting && row.formation_position_id ? nextAssignments[row.formation_position_id] = row.player_id : nextBench.push(row.player_id));
-    setAssignments(nextAssignments);
-    setBenchIds(nextBench);
-    setPositionOverrides(Object.fromEntries((overridesRes.data || []).map((row: any) => [row.formation_position_id, { xPercent: Number(row.x_percent), yPercent: Number(row.y_percent) }])));
+    if (savedLineup?.id) {
+      const [rosterRes, assignmentsRes, overridesRes] = await Promise.all([
+        supabase.from("fixture_lineup_roster_selections").select("player_id, sort_order, display_nickname").eq("fixture_lineup_id", savedLineup.id).order("sort_order"),
+        supabase.from("fixture_lineup_assignments").select("player_id, formation_position_id, is_starting, sort_order").eq("fixture_lineup_id", savedLineup.id).order("sort_order"),
+        supabase.from("fixture_lineup_position_overrides").select("formation_position_id, x_percent, y_percent").eq("fixture_lineup_id", savedLineup.id),
+      ]);
+      const childError = rosterRes.error || assignmentsRes.error || overridesRes.error;
+      if (childError) {
+        toast.error(childError.message);
+        setLoadError(true);
+        setLoading(false);
+        return;
+      }
+      savedRosterRows = (rosterRes.data || []).map((row: any) => ({
+        player_id: row.player_id,
+        display_nickname: Boolean(row.display_nickname),
+      }));
+      ((assignmentsRes.data || []) as FixtureLineupAssignment[]).forEach((row) => {
+        if (row.is_starting && row.formation_position_id) savedAssignments[row.formation_position_id] = row.player_id;
+        else savedBench.push(row.player_id);
+      });
+      savedOverrides = Object.fromEntries((overridesRes.data || []).map((row: any) => [
+        row.formation_position_id,
+        { xPercent: Number(row.x_percent), yPercent: Number(row.y_percent) },
+      ]));
+    }
+
+    const savedDraft = normaliseLineupDraft({
+      formationId: defaultFormationId,
+      roster: savedRosterRows.map((row) => ({ playerId: row.player_id, displayNickname: row.display_nickname })),
+      assignments: savedAssignments,
+      benchIds: savedBench,
+      positionOverrides: savedOverrides,
+    });
+    const restoredDraft = !options?.ignoreDraft && draftKey
+      ? loadScopedDraft(draftKey, isLineupDraft)
+      : null;
+    const activeDraft = reconcileLineupDraftFormation(
+      restoredDraft ? normaliseLineupDraft(restoredDraft) : savedDraft,
+      formationRows.map((formation) => formation.id),
+      defaultFormationId,
+    );
+
+    try {
+      const loadedRoster = await loadRosterPlayers(activeDraft.roster.map((row) => ({
+        player_id: row.playerId,
+        display_nickname: row.displayNickname,
+      })));
+      const loadedIds = new Set(loadedRoster.map((player) => player.id));
+      const safeDraft = normaliseLineupDraft({
+        ...activeDraft,
+        roster: activeDraft.roster.filter((row) => loadedIds.has(row.playerId)),
+      });
+      setSelectedFormationId(safeDraft.formationId);
+      setRoster(loadedRoster);
+      setAssignments(safeDraft.assignments);
+      setBenchIds(safeDraft.benchIds);
+      setPositionOverrides(safeDraft.positionOverrides);
+      setSavedDraftSignature(lineupDraftSignature(savedDraft));
+      if (restoredDraft) toast.info("Your unsaved line-up was restored.");
+    } catch (error: any) {
+      toast.error(`The selected roster could not be loaded: ${error.message}`);
+      setLoadError(true);
+      setSelectedFormationId(savedDraft.formationId);
+      setRoster([]);
+      setAssignments({});
+      setBenchIds([]);
+      setPositionOverrides({});
+      setSavedDraftSignature(null);
+    }
     setLoading(false);
-  }, [gameId, teamId]);
+  }, [draftKey, gameId, loadRosterPlayers, teamId]);
 
   const loadPositions = useCallback(async (formationId: string) => {
     const { data, error } = await supabase.from("formation_positions").select("*").eq("formation_id", formationId).order("sort_order");
     if (error) toast.error(error.message);
-    setPositions((data || []) as FormationPositionRow[]);
+    const loadedPositions = (data || []) as FormationPositionRow[];
+    const loadedPositionIds = new Set(loadedPositions.map((position) => position.id));
+    setPositions(loadedPositions);
+    setAssignments((current) => Object.fromEntries(
+      Object.entries(current).filter(([positionId]) => loadedPositionIds.has(positionId)),
+    ));
+    setPositionOverrides((current) => Object.fromEntries(
+      Object.entries(current).filter(([positionId]) => loadedPositionIds.has(positionId)),
+    ));
   }, []);
 
   useEffect(() => { void loadLineup(); }, [loadLineup]);
   useEffect(() => { if (selectedFormationId === "__none__") setPositions([]); else void loadPositions(selectedFormationId); }, [loadPositions, selectedFormationId]);
+  useEffect(() => {
+    if (!draftKey || !shouldPersistLineupDraft({ loading, loadError, hasUnsavedChanges })) return;
+    saveScopedDraft(draftKey, currentDraft);
+  }, [currentDraft, draftKey, hasUnsavedChanges, loadError, loading]);
+  useEffect(() => {
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [hasUnsavedChanges]);
   useEffect(() => {
     if (!historyPlayerId) { setHistory([]); return; }
     setHistoryLoading(true);
@@ -202,7 +350,11 @@ export const LineupView = ({ gameId, fixtureDate, teamId, teamName, opponentName
   };
 
   const saveLineup = async () => {
+    if (loadError) return toast.error("Reload this line-up before saving. Its saved data could not be loaded safely.");
     if (!user || selectedFormationId === "__none__") return toast.error("Choose a formation before saving.");
+    const submittedDraft = currentDraft;
+    const submittedSignature = currentDraftSignature;
+    if (draftKey && hasUnsavedChanges) saveScopedDraft(draftKey, submittedDraft);
     setSaving(true);
     try {
       const lineupRes = await supabase.from("fixture_lineups").upsert({ fixture_id: gameId, team_id: teamId, formation_id: selectedFormationId, created_by: user.id }, { onConflict: "fixture_id,team_id" }).select("id").single();
@@ -245,9 +397,21 @@ export const LineupView = ({ gameId, fixtureDate, teamId, teamName, opponentName
       const published = await supabase.from("fixture_lineups").update({ published_at: new Date().toISOString() }).eq("id", lineupId);
       if (published.error) throw published.error;
       await mirrorLegacyLineups();
+      setSavedDraftSignature(submittedSignature);
+      if (draftKey && currentDraftSignatureRef.current === submittedSignature) {
+        removeScopedDraft(draftKey);
+      }
       toast.success("Line-up saved.");
     } catch (error: any) { toast.error(`The line-up could not be saved: ${error.message}`); }
     finally { setSaving(false); }
+  };
+
+  const discardDraft = () => {
+    if (!draftKey) return;
+    removeScopedDraft(draftKey);
+    setSelectedPositionId(null);
+    setHistoryPlayerId(null);
+    void loadLineup({ ignoreDraft: true });
   };
 
   const playerCard = (player: LineupPlayer, action: "add" | "remove") => (
@@ -272,12 +436,18 @@ export const LineupView = ({ gameId, fixtureDate, teamId, teamName, opponentName
       <Card className="overflow-hidden">
         <CardHeader className="pb-3"><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="text-lg">{teamName} Line-up</CardTitle><p className="text-sm text-muted-foreground">vs {opponentName}</p></div><Badge variant="outline" className="gap-1"><Users className="h-3 w-3" /> {Object.keys(assignments).length}/{positions.filter((position) => position.is_starting_slot).length}</Badge></div></CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]">
             <Select value={selectedFormationId} onValueChange={changeFormation} disabled={!isCoach}><SelectTrigger aria-label="Formation"><SelectValue placeholder="Choose formation" /></SelectTrigger><SelectContent><SelectItem value="__none__">Choose a formation</SelectItem>{formations.map((formation) => <SelectItem key={formation.id} value={formation.id}>{formation.name} - {formatOwnerScope(formation.owner_scope)}</SelectItem>)}</SelectContent></Select>
             {isCoach && <Button variant="outline" onClick={() => setRosterDialogOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Select roster</Button>}
             {isCoach && <Button variant="outline" onClick={() => setPositionOverrides({})} disabled={!Object.keys(positionOverrides).length}><RotateCcw className="mr-2 h-4 w-4" /> Reset positions</Button>}
-            {isCoach && <Button onClick={() => void saveLineup()} disabled={saving || selectedFormationId === "__none__"}><Save className="mr-2 h-4 w-4" />{saving ? "Saving..." : "Save"}</Button>}
+            {isCoach && hasUnsavedChanges && <Button variant="outline" onClick={discardDraft}><Undo2 className="mr-2 h-4 w-4" /> Discard draft</Button>}
+            {isCoach && <Button onClick={() => void saveLineup()} disabled={saving || loadError || selectedFormationId === "__none__"}><Save className="mr-2 h-4 w-4" />{saving ? "Saving..." : "Save"}</Button>}
           </div>
+          {loadError && (
+            <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              This line-up could not be loaded safely. Refresh before making or saving changes.
+            </p>
+          )}
           {roster.length === 0 && isCoach && <button type="button" onClick={() => setRosterDialogOpen(true)} className="w-full rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground hover:border-primary hover:text-foreground">Start by selecting the match roster.</button>}
           <div ref={pitchRef}>
             <HockeyPitch backgroundUrl={fieldSource.background_image_url} orientation="responsive">

@@ -1,6 +1,207 @@
 # Codex Handoff
 
-Last updated: 2026-08-31
+Last updated: 2026-09-05
+
+## 5 September — Player MVP presentation is the immediate owner priority
+
+- The narrow Player MVP tally slice is live in Production at `15223e9`. The guarded release created
+  and verified a logical backup, applied only migration `20260905040425`, fast-forwarded `prod` and
+  passed the independent Production bundle/schema verification. No Edge Function, workflow, DNS,
+  secret or external-email change was included.
+- Aaron's first Production smoke found 15 Pumas sessions past their deadline but still stored as
+  `OPEN` (426 votes); only one session is stored as `CLOSED` (42 votes). The admin page derives a
+  closed/expired display from the deadline, while the tally builder requires real `CLOSED` status.
+  `EXPIRED` is not an enum value. No real presentation has been published and smoke is paused.
+- Root cause: the broad Dev refine migration supplies the closure function, vote/submission guards
+  and one-minute cron, but the narrow Production migration intentionally omitted all closure
+  behaviour to avoid changing 355 existing overdue sessions during the tally-only release. Prepare
+  and rehearse a small additive follow-up, then seek separate explicit Production approval.
+- Dev end-to-end tally acceptance is complete through `5338c0a`. One labelled Pumas presentation was
+  published to the reserved Player only, opened from its in-app notification, denied to the reserved
+  Voter, tested at three viewports, then withdrawn with an audit reason. External email stayed
+  `NOT_QUEUED`; both test accounts were signed out and reset.
+- Fixes `40409af`, `6c87ae1`, `1bb7621` and `5338c0a` remove the confirmed tally
+  accessibility/overflow defects, expected-denial 406/console noise and stale unavailable state
+  when a presentation route changes in place. Dev Quality `33938772306`, Vercel, 46 files/181
+  Vitest tests, tally verifier, TypeScript and build pass; full lint is the unchanged 343/77 baseline.
+- Production remains missing the tally schema. At the tested application commit, the broad Dev
+  difference is 243 commits, 114 migrations, 15 Edge Function files and 3 workflows; it would also
+  touch 355 overdue sessions
+  and 96 email flags. Do not promote it as the tally release.
+- The narrow package is frozen at `15223e9b` on
+  `codex/player-mvp-tally-production-slice`, directly from Production `682b8ea`. It uses manual
+  publication, rule-based commentary and in-app notification only, with one consolidated additive
+  migration and no Edge Function or workflow.
+- Docker recovered. A focused local Production-dependency reset and transactional rehearsal passed
+  manager build/preview/publish/withdraw, recipient access, unrelated denial, RLS/grants, one in-app
+  notification, Storage scope, rollback and unchanged sentinel data. Supabase schema lint, focused
+  lint, 2 files/11 tests, TypeScript and the Production build pass. Full baseline lint is 229/50.
+- The isolated hosted `SportStack-staging` Supabase project `fdkgcwacuqoswnatvubv` now has the
+  dependency rehearsal baseline, exact candidate migration and a staging-only scaffold hardening
+  migration. The hosted transactional suite passed and rolled back to zero presentation,
+  notification and helper rows. All public tables have RLS; the tally tables deny direct
+  authenticated writes. Adviser output has no RLS-disabled error: 14 scaffold-only no-policy INFO
+  items, six intentional authenticated `SECURITY DEFINER` tally RPC warnings, and performance INFO
+  only. Production was not touched.
+- The Production smoke identities are Admin Sportstack as manager, with Chloe Wilson and Aaron
+  Mullane as recipients. Both recipients are active, non-placeholder Pumas members. Aaron's personal
+  account has only the Player role, so it cannot run the builder. Aaron accepted the unchanged
+  dependency debt for this narrow release on 5 September; remediation remains separate. The
+  original release gate was satisfied by Aaron's exact approval; the lifecycle repair is a new
+  approval-gated Production package.
+- `scripts/release-player-mvp-tally-production.ps1` is the only release script for this narrow
+  slice; do not use the older Umpire Portal script. It pins the base/candidate commits, 14 changed
+  paths, migration blob and Production project; defaults to read-only Preflight; requires the exact
+  release phrase; creates and verifies roles/schema/data backups before migration; applies only the
+  tally migration; then fast-forwards `prod` and verifies the bundle. Local Git/public-site checks
+  pass and its two negative safety tests stop correctly. Current Production Vercel rollback target
+  is `dpl_BxfnnYSLbrrgkxTsuu5mgxf5vV5S` at `682b8ea`.
+- The tally-specific access file is configured outside the repository with Windows encryption. Its
+  token can see healthy SportStack Production, and `Preflight` passed through access, isolated link,
+  schema drift, migration dry-run and backup-readiness checks. That pre-flight itself made no
+  Production change.
+- The candidate does not change dependencies. `npm audit --omit=dev` on the Production baseline
+  reports 14 existing runtime-tree findings (1 low, 1 moderate, 12 high); `xlsx` has no npm fix.
+  Keep the exposure/upgrade review separate from this narrow release and do not bulk-update blindly.
+
+## 5 September 2026 — readiness work package 3 deployed to Dev
+
+- Replaced Fixture Management's browser-wide active-dialog key with expiring account/role-mode/
+  cascade-scoped session state. Delete confirmations are never restored. This remembers dialog
+  identity only, not unsaved Add/Edit form fields; the legacy key is removed.
+- Replaced the signed-in Umpire Match ballot's account-only raw JSON with a validated expiring draft
+  per account in native sessionStorage. Tabs have independent storage even when a copied tab starts
+  with the same key/value. Actual-helper Chromium checks passed copy/edit/clear/refresh isolation.
+  Successful hierarchy/fixture/player loads validate saved IDs; failed loads retain work. Reset and
+  successful submit clear this tab only; unfinished work has a leave-page warning, not browser-restart
+  durability.
+- Replaced Chat's text-only local draft with a validated account/channel envelope containing text,
+  reply ID, Important and mention IDs. Failed validation keeps saved IDs; confirmed invalid IDs clear.
+  Old replies outside the first message page are checked separately. Scoped channel/message requests
+  reject late results; Cancel Reply keeps text; saved-message editing keeps the new-message draft.
+- Actual shared-control browser measurements passed 44 px and no overflow at phone, tablet and
+  desktop sizes. These are isolated local components, not signed-in route or Safari acceptance.
+- Final code checks pass: 45 Vitest files/180 tests, 153 Python unittests, five Umpire source checks,
+  locked development-plan lint, TypeScript and Production-mode build. Full lint remains existing
+  debt at 343 errors/77 warnings. Independent source review and seven actual-Chat isolated browser
+  checks pass. Source `464d809` passed Dev Quality `33928475268` and Vercel. Dev and its commit
+  preview serve the same `/assets/index-DWsFbnAl.js` bundle (HTTP 200, expected commit present). Actual-role
+  deployed acceptance is still blocked; local mocks do not prove live permissions or delivery.
+  No migration is included; Main, `prod` and Production remain untouched.
+
+Full timing, package and evidence record: `docs/production-readiness/2026-09-05-readiness-run.md`.
+The six-hour run was interrupted; resumed work completed the open batch and verification, not a
+new overnight budget. Remaining work stays in the single consolidated plan.
+The signed-out `/chat` route redirects to Login with the correct return URL and no observed page
+errors. Authenticate a disposable account in the explicitly controlled browser to unblock live tests.
+
+## 5 September 2026 — readiness work package 2 deployed to Dev
+
+- Added accessible two-way sorting to every meaningful data column in Associations, Competitions,
+  Clubs, Divisions, Teams and Venues. Related entities use their displayed names and numeric fields
+  retain numeric ordering; sorting happens before pagination.
+- Logo and Actions are explicit non-sortable columns. Division Age Group uses one formatter for
+  both display and sorting, with a regression covering equal labels with different visible bounds.
+- Focused tests, 42 Vitest files/164 tests, locked development-plan lint, TypeScript and Production
+  build pass. Replacing obsolete competition casts reduced the full lint baseline from 349
+  errors/77 warnings to 343 errors/77 warnings. Independent review found no blocker. Dev Quality
+  run `33895737532` and Vercel passed for commit `7134f49`; authenticated browser verification remains.
+- No migration is included. Main, `prod` and Production were not changed.
+
+## 5 September 2026 — readiness work package 1
+
+- Added a fail-closed direct-route assignment gate for unassigned and pending normal accounts,
+  without removing Dashboard/Profile or discipline-only access. Pending-signup processing is
+  de-duplicated when authentication and routing initialise together.
+- Replaced all browser status transitions for primary-team changes with scoped server functions.
+  Dev migrations `20260904153312_make_primary_team_change_atomic.sql`,
+  `20260904155953_harden_primary_team_change_writes.sql` and
+  `20260904160251_scope_primary_team_change_reads.sql` passed rollback, forged-write, authorised
+  workflow, scoped-admin visibility and unrelated-admin denial checks. They are applied to Dev only.
+- Added seven-day, account/owner/record-scoped draft storage for line-ups, formations and templates.
+  Line-ups restore roster nickname choices, assignments, bench order and moved positions; missing
+  formations safely return players to the bench. Failed loads cannot erase a valid draft or carry
+  state between teams. Successful saves and explicit discards clear only the matching draft.
+- Added Player MVP candidate regression coverage proving unmatched imported teammates remain on the
+  ballot. Named shout-out visibility is still awaiting Aaron's audience decision.
+- Applied the first shared form sizing batch: 44 px ordinary Input/Select controls, 40 px Safety
+  filters and narrow-phone stacking for confirmed Fixtures, Committee, Coordination and Discipline
+  date/time pairs. This does not complete the 42-control visual audit or site-wide sorting rollout.
+- Live Dev feedback remains 35 CLOSED and 53 REVIEWED. The controlled automated browser is signed
+  out, so deployed actual-role/responsive acceptance is still required. Do not close the affected
+  P0 feedback or promote this candidate to Main on source evidence alone.
+- Production, `prod`, Production data, functions, secrets and DNS were not changed.
+- Deployed source `3a52bd9` passed Dev Quality `33893606813`; actual-role acceptance remains open.
+
+## 5 September 2026 — single active plan and feedback reconciliation
+
+- Replaced the dated multi-phase backlog with one active plan at
+  `docs/consolidated-open-items-plan.md`. It now orders P0 access/privacy checks, shared
+  form/table/persistence repairs, P1 product defects, acceptance cycles, lower-priority consistency
+  work, data cleanup, staging and Production approval.
+- Dev feedback retains all 88 records: 0 OPEN, 53 REVIEWED and 35 CLOSED. Every reviewed item has a
+  category, priority, backlog reference and reason; none was falsely closed during reconciliation.
+- `notes/known-issues.md` is evidence only and `docs/production-readiness/PLAN.md` is a detailed
+  release reference only. Neither is a competing priority plan.
+- Production and `prod` remain untouched.
+
+## 4 September 2026 — Pumas placeholder and Dev Auth repair
+
+- Reconciled five registered Pumas placeholders in place in Dev: their existing IDs and all known
+  membership, RevSports-link and line-up references remain attached. The five profiles now use the
+  confirmed identity data and real Auth emails. No email was sent.
+- Restored David Jochinke's confirmed details after the failed admin save had partially written an
+  incorrect date of birth. Pumas now has zero primary placeholders.
+- Two secondary Pumas fill-ins remain legitimate unclaimed Lucas HC profiles in both Dev and
+  Production. The roster picker now includes active members and previous fill-ins regardless of
+  claim status, so these records are not hidden or removed.
+- Normalised 731 Dev-only `banned_until = infinity` records to supported 100-year bans after a
+  successful rollback rehearsal. All remain banned through 2126. This removes the Supabase Auth
+  scan failure from Users and other Auth-admin paths without enabling any account.
+- Added repository source and tests for `update-user-details`; deployed Dev version 7 matches the
+  tracked source and keeps JWT verification enabled. Auth is validated before profile writes and an
+  email change is rolled back after a profile failure. The admin dialog now surfaces response-body
+  errors. The function is now Super Admin-only, matching the caller restriction already enforced by
+  the Users screen.
+- A disposable actual Super Admin smoke passed read, save, re-read and cleanup against the deployed
+  function; no disposable account remains. The locked helper `dev-auth-admin-smoke` returns 410 and
+  requires JWT, but CLI deletion was denied with HTTP 403. It is safe but should be removed from the
+  Dev Supabase dashboard to eliminate function-inventory noise.
+- Verification passes: focused lint, 35 Vitest files/136 tests, TypeScript and Production build.
+  Full lint remains at the accepted 349-error/77-warning baseline.
+- Production and `prod` remain untouched. Big Brain sync and validation passed for 67 files at
+  `D:\AI-Workspace\Memory\Big Brain`; the saved `SPORTSTACK_OBSIDIAN_VAULT` user setting now uses
+  that vault.
+
+## 31 August 2026 — Player MVP Vote Tally Dev/Main readiness run
+
+- Dev and Main now serve `1924404642710bf570e9bde424a09e34be181658`
+  (`v2026.08.31+1924404`). The accessibility repair separates the embedded preview region from the
+  one full-screen `main`, corrects heading hierarchy, names the speed/reduced-motion controls,
+  shortens live announcements and makes a round jump resume playback. Finished playback now uses a
+  disabled Finished control while Replay remains available.
+- Deployed testing passes the embedded preview and full-screen Player route at 1440x900, 820x1180
+  and 390x844 with no horizontal overflow and zero confirmed Axe violations. Pause/resume, replay,
+  skip, speed, round jump, keyboard focus, reduced motion, final persistence, 3-2-1 scoring, ranking
+  and podium behaviour pass.
+- Disposable Dev presentation `096a67db-0cf4-4ea2-80db-eb1f75f5d942` proved notification deep-link
+  access for the intended Player and denial for an unrelated Voter. Main presentation
+  `770a6607-5f4c-4355-a9dd-456f9bee1124` proved the signed-in Main application bundle. Both were
+  withdrawn with audit reasons and remain retained as withdrawn Dev rows.
+- The reserved Player and Voter temporary passwords were rotated again after testing without
+  revealing or retaining the replacement values. Temporary automation auth profiles and all four
+  run-specific browser sessions were removed. No normal account was changed.
+- Automated evidence passes: migration verifier, focused tally tests, focused lint, 33 Vitest
+  files/129 tests, TypeScript, Production build and Dev Quality `33393069833`. Full lint matches the
+  accepted 349-error/77-warning baseline.
+- Production remains untouched. Live read-only reconciliation proves Production lacks the three
+  tally tables, the eight public tally functions and `mvp-tally-commentary`; its dispatcher is v1
+  and reminders v6 compared with Dev v8/v7. Main is 228 commits/398 paths/111 migration files/12
+  Edge Function files/three workflows ahead of `prod`.
+- Do not cherry-pick only the tally. Use
+  `docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-01.md` and its exact
+  inventory appendix. The next safe step is an isolated Production-schema rehearsal and exact
+  migration/function allow-list review, followed by Aaron's separate Production approval.
 
 ## 31 August 2026 — readiness inventory and completed Dev consistency batch
 
