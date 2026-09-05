@@ -1,6 +1,26 @@
 # Codex Handoff
 
-Last updated: 2026-09-05
+Last updated: 2026-09-06
+
+## 6 September — narrow Player MVP lifecycle candidate is ready for owner review
+
+- Production remains unchanged at `15223e9`. Candidate `a1d23c7` is directly based on it and adds
+  only migration `20260905131718_restore_player_mvp_voting_lifecycle_after_production_slice.sql`.
+- The candidate migration and Git blob match the successful Production-derived rehearsal. The
+  frozen-slice verifier, its wrong-root negative control, the guarded release self-test and the
+  read-only live Production pre-flight pass.
+- Current Production still has the reviewed baseline: 647 Player MVP sessions, 355 overdue
+  `OPEN`, 5 `CLOSED`, 40 audit rows, 24 notifications, 328 Player MVP email events, 96 email-enabled
+  teams, one tally presentation and 26 recipients. No lifecycle function, deadline function,
+  lifecycle trigger or closure job exists yet.
+- Structured patch review rates impact high and likelihood low, recommends merge with mandatory
+  human review, and excludes automatic release because the migration changes persistent state and
+  installs privileged triggers and a recurring job. Recovery requires a verified backup and a
+  separately approved coordinated database action.
+- Use only `scripts/release-player-mvp-lifecycle-production.ps1`. It is pinned to the exact base,
+  candidate, migration path, blob and expected counts, and creates a fresh hashed logical backup
+  before the release path can write. Do not run Release without Aaron's exact candidate-specific
+  approval. Full instructions are in the 6 September lifecycle release packet.
 
 ## 5 September — lean readiness candidate is staged, not Production-ready
 

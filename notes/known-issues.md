@@ -7,7 +7,7 @@
 ## Player MVP overdue sessions are displayed as closed but remain OPEN
 
 **Logged:** 5 September 2026
-**Status:** Repaired and verified on Dev/Main; Production repair not yet approved
+**Status:** Repaired and verified on Dev/Main; narrow Production candidate ready for owner review
 
 The Player MVP admin page derives a closed/expired label when an `OPEN` session is past its
 `closes_at` deadline. The tally builder does not use that label: it correctly accepts only database
@@ -29,6 +29,13 @@ event. A Production-derived isolated rehearsal closed the expected 355 overdue r
 rows and left notification, Player MVP email-event and team-email settings unchanged. Production
 remains at `15223e9` and still has the defect. The broad Main package cannot be promoted until its
 historical migration drift is reconciled; see the 5 September readiness packet.
+
+A narrow Production-baseline candidate is now frozen at `a1d23c7`. It contains only the exact
+rehearsed lifecycle migration. Its verifier, negative control, guarded release self-test, read-only
+Production pre-flight and structured patch-risk assessment pass. The assessment requires human
+review because the migration changes persistent state and installs privileged lifecycle objects.
+Production has not changed and release still requires Aaron's fresh exact approval. See the
+6 September Player MVP lifecycle Production release packet.
 
 ## Feedback log reconciliation — 5 September 2026
 
