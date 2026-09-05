@@ -9,6 +9,32 @@
 `docs/current-state.md`, `CODEX_HANDOFF.md`, `notes/known-issues.md`, feedback records and test
 artifacts provide evidence. They do not create separate competing work plans.
 
+## Owner priority — Player MVP presentation for Grampians (5 September)
+
+Aaron's immediate outcome is to make the Player MVP tally presentation safely available to the
+Grampians team in Production. This overrides the next general form/sorting repair batch, not the
+release safety gates. Unrelated improvements stay on the backlog.
+
+1. Revalidate the Grampians/Pumas builder, closed-round data, preview and full-screen playback on
+   current Dev; test the intended disposable recipient and unrelated-account denial. Keep external
+   email disabled and do not publish to normal players during Dev testing.
+2. Assess the smallest dependency-complete release using the existing tally release packet.
+   Do not cherry-pick only the animation. Identify every required application, database, permission,
+   notification, function and scheduler change. If the package includes other app changes, their
+   safety/compatibility defects remain release blockers; prioritisation does not waive them.
+3. Rehearse that exact package against an isolated Production-compatible copy, verify data/job
+   impacts and rollback, then freeze the release commit and allow-list for Aaron's approval.
+4. After separate explicit Production approval, release and verify Grampians manager/recipient
+   access and playback before sending a real team presentation. Confirm its audience and rounds.
+
+Current evidence: the controlled headed browser is now signed in and opens both Roles & permissions
+and the Pumas tally builder. This clears the shared-session sign-in blocker only; separate-role
+acceptance is not automatically passed. Ten tally logic tests and the static migration verifier
+pass. Read-only Production checks still find none of the three tally tables. The 1 September
+release packet remains the dependency/rehearsal reference; its counts and function versions need
+fresh verification before execution. No Production changes or team notifications are authorised
+by this priority request alone.
+
 ## Current position
 
 - Dev feedback contains 88 retained records: 0 OPEN, 53 REVIEWED and 35 CLOSED.
@@ -106,9 +132,9 @@ Complete these first because incorrect access or hidden data can affect every la
 Exit gate: each flow passes with a disposable actual-role Dev account, refresh and direct-link
 checks, and an audit trail where data changes.
 
-Current blocker: automated browser control is signed out and cannot inherit the authenticated
-in-app browser session. These items remain unchecked until the deployed bundle is exercised with
-the appropriate disposable roles.
+The shared controlled-browser sign-in blocker was cleared on 5 September: Aaron signed into the
+headed test session and protected admin/tally routes load. These items remain unchecked until the
+appropriate disposable actual roles complete their flows; Super Admin is not substitute evidence.
 
 ### 2. Common form, table and persistence contract
 

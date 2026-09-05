@@ -6,6 +6,21 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 5 September priority update — Player MVP presentation release
+
+- Aaron prioritised getting the Player MVP tally presentation safely into Production for Grampians.
+  The single consolidated plan now puts its focused acceptance and dependency-complete release
+  preparation ahead of unrelated form/sorting work. No Production deployment was approved here.
+- The headed controlled browser is authenticated and loads Roles & permissions as Super Admin
+  and the Pumas tally builder for team `ff6c98ed-b741-4954-84e1-60705f57de13`. The former shared-session
+  sign-in blocker is cleared; actual Player/manager/denial flows still require their own tests.
+- Ten current tally logic tests and the static migration verifier pass. Read-only Production
+  checks still show `mvp_tally_presentations`, `mvp_tally_sessions` and `mvp_tally_recipients` absent.
+  Main remains `1924404`, Production `682b8ea`; no environment was promoted or database changed.
+- The existing 1 September release packet documents the broader dependencies and mandatory
+  isolated rehearsal. A smaller release must be separately dependency-complete and tested, not
+  a frontend-only cherry-pick. No live presentation or notification was sent in this check.
+
 ## 5 September readiness work package 3 — deployed to Dev
 
 - Fixture destructive confirmations are no longer written to browser storage. Non-destructive

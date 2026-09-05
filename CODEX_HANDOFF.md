@@ -2,6 +2,22 @@
 
 Last updated: 2026-09-05
 
+## 5 September — Player MVP presentation is the immediate owner priority
+
+- Prioritise the Grampians Player MVP tally release over unrelated form/sorting repairs; use the
+  new priority section in `docs/consolidated-open-items-plan.md`, not another competing plan.
+- Controlled headed session `sportstack-owner-signin-0509` is signed into Dev and was verified
+  against protected Roles & permissions and the Pumas tally builder. Leave it open for the next
+  testing pass. Credentials were not inspected/exported; this proves only the current admin session.
+- Ten tally logic tests and static migration checks pass. Production's three tally tables are
+  still absent on a fresh read-only check. No publication, message, database or Production change
+  occurred. Earlier sign-out blockers below are historical; actual-role tests remain open.
+- Next: targeted recipient/denial/playback revalidation, smallest dependency-complete package
+  assessment and isolated rehearsal using the existing release packet. The older full-Main
+  candidate has broad backend/data/job effects; never treat the animation alone as deployable.
+- Production deployment and real Grampians publication require explicit approval of their exact
+  package/audience. This request changes priority, not those safety boundaries.
+
 ## 5 September 2026 — readiness work package 3 deployed to Dev
 
 - Replaced Fixture Management's browser-wide active-dialog key with expiring account/role-mode/
