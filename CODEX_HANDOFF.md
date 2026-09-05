@@ -2,6 +2,38 @@
 
 Last updated: 2026-09-05
 
+## 5 September — lean readiness candidate is staged, not Production-ready
+
+- Dev is deployed at `b8687ec`; Main staging is deployed at `e6fda0f`; Production remains unchanged
+  at `15223e9`. Dev Quality `33969370123` and both recorded Vercel deployments passed.
+- Production commit `15223e9` is now an ancestor of the Dev/Main history without replacing the more
+  complete Dev Player MVP implementation. The later additive lifecycle migration restores the
+  closure function, one-minute job and deadline triggers after either tally migration path.
+- Live Dev has zero overdue open Player MVP sessions, 362 closed sessions, one closure job and two
+  triggers. Re-running the closer processed zero rows. Notifications remained 957 and Player MVP
+  email events remained 34.
+- The Production-derived rehearsal closed exactly 355 overdue sessions, increased audit rows from
+  40 to 395, and left 24 notifications, 328 Player MVP email events and 96 email-on team settings
+  unchanged. Transaction rollback and isolated real-apply tests passed. The local restore had 29
+  managed Auth/Storage compatibility errors and used a local-only Storage scaffold; treat it as
+  application-data lifecycle proof, not a fully faithful hosted restore.
+- The frozen candidate passed 46 Vitest files/181 tests, TypeScript, Production build, tally feature
+  verification and the 343-error/77-warning lint limit. Main passed the focused tally checks.
+- The blank named-final scraper fix remains Dev-only. Main has no change from its prior version in
+  the four affected scraper workflow/script/test paths. The latest four Production scraper runs
+  failed with blank round numbers, so the Production workflow remains red and excluded.
+- Do not merge Main directly to Production. The delta is 259 commits and 434 paths, including 115
+  added migrations, 15 Edge Function files and three workflows. The broad Production-derived
+  sequence is blocked at `20260801013000_harden_field_template_grants.sql` because
+  `public.field_templates` does not exist in Production. Build a curated Production-baseline release
+  branch and an explicit migration map first.
+- Actual Coordinator-role browser acceptance is still blocked because the controlled browser is
+  signed out and the reserved account helper cannot create that direct permission bundle.
+- The current inventory, required exclusions, reconciliation counts and rollback steps are in
+  `docs/production-readiness/SPORTSTACK-PRODUCTION-READINESS-PACKET-2026-09-05.md`. Exact allow-lists
+  are not frozen. Production needs a fresh owner approval only after all relevant packet blockers
+  and readiness gates are resolved or explicitly deferred.
+
 ## 5 September — Player MVP presentation is the immediate owner priority
 
 - The narrow Player MVP tally slice is live in Production at `15223e9`. The guarded release created

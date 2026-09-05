@@ -7,7 +7,7 @@
 ## Player MVP overdue sessions are displayed as closed but remain OPEN
 
 **Logged:** 5 September 2026
-**Status:** Confirmed Production defect; real tally publication paused
+**Status:** Repaired and verified on Dev/Main; Production repair not yet approved
 
 The Player MVP admin page derives a closed/expired label when an `OPEN` session is past its
 `closes_at` deadline. The tally builder does not use that label: it correctly accepts only database
@@ -21,6 +21,14 @@ were deliberately excluded from the narrow Production tally release because the 
 355 overdue Production sessions would be changed. No real Pumas tally has been published. Repair
 requires a separately tested additive migration, affected-row dry run, rollback evidence and new
 explicit Production approval.
+
+Additive migration `20260905131718_restore_player_mvp_voting_lifecycle_after_production_slice.sql`
+is now deployed on Dev and staged in Main. Live Dev has zero overdue open sessions, 362 closed
+sessions, one one-minute closure job and two deadline triggers. It queued no notification or email
+event. A Production-derived isolated rehearsal closed the expected 355 overdue rows, added 355 audit
+rows and left notification, Player MVP email-event and team-email settings unchanged. Production
+remains at `15223e9` and still has the defect. The broad Main package cannot be promoted until its
+historical migration drift is reconciled; see the 5 September readiness packet.
 
 ## Feedback log reconciliation — 5 September 2026
 

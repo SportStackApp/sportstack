@@ -15,6 +15,11 @@ Aaron's immediate outcome is to make the Player MVP tally presentation safely av
 Grampians team in Production. This overrides the next general form/sorting repair batch, not the
 release safety gates. Unrelated improvements stay on the backlog.
 
+**Current release position:** the lifecycle repair is verified on Dev at `b8687ec` and staged on
+Main at `e6fda0f`. Production remains unchanged at `15223e9`. Do not seek Production approval yet:
+the broad Main package is blocked by historical migration drift and the actual Coordinator-role
+browser check is still unavailable.
+
 1. Revalidate the Grampians/Pumas builder, closed-round data, preview and full-screen playback on
    current Dev; test the intended disposable recipient and unrelated-account denial. Keep external
    email disabled and do not publish to normal players during Dev testing.
@@ -35,10 +40,21 @@ release safety gates. Unrelated improvements stay on the backlog.
    The first owner smoke exposed 15 overdue Pumas sessions still stored as `OPEN`; the UI calls them
    expired/closed, but the tally builder correctly selects only stored `CLOSED` rows. No real
    presentation has been published.
-8. [Next] Build and rehearse an additive lifecycle repair so passing the voting deadline results in
-   the single `CLOSED` state everywhere. Verify the affected-row count, no post-deadline voting,
-   tally inclusion, existing vote totals, result concerns and rollback on Dev/staging. Obtain new
-   explicit Production approval before applying the migration or reconciling the 15 Pumas rows.
+8. [Complete on Dev/Main] Additive migration `20260905131718` makes passing the voting deadline use
+   the single `CLOSED` state. Live Dev has zero overdue open sessions, one closure job and two
+   deadline triggers, and the Production-derived rehearsal closed the expected 355 rows without
+   queuing email or notification work.
+9. [Next] Build a curated branch from Production `15223e9`, not a direct Main merge. Reconcile the
+   115 added migration files against live Production and explicitly exclude the Production scraper
+   workflow and Dev-only account helpers. The first proven sequence blocker is migration
+   `20260801013000`, which assumes an absent `public.field_templates` relation. The latest four
+   Production scraper runs are red due to blank round numbers; the Dev fix is not yet eligible for
+   that workflow.
+10. [Blocked] Complete the actual Coordinator permission-bundle browser test when an authenticated
+    disposable Coordinator session is available. Other current role results may be reused only
+    where their relevant code is unchanged.
+11. [After 9 and 10] Freeze the curated Production package, repeat only affected checks, review its
+    rollback packet, then ask Aaron for a fresh exact Production approval.
 
 Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one
 reserved Player. Notification/deep link, unrelated-Voter denial, withdrawal, desktop/tablet/mobile,
@@ -53,6 +69,12 @@ public tables. The narrow slice is now released to Production, but the owner smo
 overdue-OPEN lifecycle defect above. See
 `docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-05.md`. No Main or
 real-player tally notification was performed during the smoke.
+
+The lean follow-up completed the lifecycle repair, Dev database proof, Production-derived rollback
+rehearsal and Dev/Main staging. The current delta from Production to Main is 259 commits and 434
+paths, including 115 added migrations, 15 Edge Function files and three workflows. The new exact
+decision record is
+`docs/production-readiness/SPORTSTACK-PRODUCTION-READINESS-PACKET-2026-09-05.md`.
 
 ## Current position
 
