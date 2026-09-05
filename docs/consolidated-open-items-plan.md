@@ -27,13 +27,15 @@ release safety gates. Unrelated improvements stay on the backlog.
 4. After separate explicit Production approval, release and verify Grampians manager/recipient
    access and playback before sending a real team presentation. Confirm its audience and rounds.
 
-Current evidence: the controlled headed browser is now signed in and opens both Roles & permissions
-and the Pumas tally builder. This clears the shared-session sign-in blocker only; separate-role
-acceptance is not automatically passed. Ten tally logic tests and the static migration verifier
-pass. Read-only Production checks still find none of the three tally tables. The 1 September
-release packet remains the dependency/rehearsal reference; its counts and function versions need
-fresh verification before execution. No Production changes or team notifications are authorised
-by this priority request alone.
+Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one
+reserved Player. Notification/deep link, unrelated-Voter denial, withdrawal, desktop/tablet/mobile,
+controls, keyboard, reduced motion, Axe, console and failed-request checks passed. Four confirmed
+Dev defects were fixed and deployed through `5338c0a`. The current Production gap is too broad to
+promote: 243 commits and 114 migration files, with 355 overdue OPEN sessions and 96 inherited
+email-on flags in scope. The preferred first release is the narrow manual/in-app-only package in
+`docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-05.md`. It is not yet
+built or rehearsed; local Docker is presently the rehearsal blocker. No Main or Production change
+or real-player notification was authorised or performed.
 
 ## Current position
 

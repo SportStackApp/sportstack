@@ -8,18 +8,25 @@ Update this file after every meaningful Codex task, pull request, schema change,
 
 ## 5 September priority update — Player MVP presentation release
 
-- Aaron prioritised getting the Player MVP tally presentation safely into Production for Grampians.
-  The single consolidated plan now puts its focused acceptance and dependency-complete release
-  preparation ahead of unrelated form/sorting work. No Production deployment was approved here.
-- The headed controlled browser is authenticated and loads Roles & permissions as Super Admin
-  and the Pumas tally builder for team `ff6c98ed-b741-4954-84e1-60705f57de13`. The former shared-session
-  sign-in blocker is cleared; actual Player/manager/denial flows still require their own tests.
-- Ten current tally logic tests and the static migration verifier pass. Read-only Production
-  checks still show `mvp_tally_presentations`, `mvp_tally_sessions` and `mvp_tally_recipients` absent.
-  Main remains `1924404`, Production `682b8ea`; no environment was promoted or database changed.
-- The existing 1 September release packet documents the broader dependencies and mandatory
-  isolated rehearsal. A smaller release must be separately dependency-complete and tested, not
-  a frontend-only cherry-pick. No live presentation or notification was sent in this check.
+- Current Dev acceptance passed for one labelled Pumas presentation with 9 closed rounds and one
+  reserved disposable Player. The in-app notification and deep link worked, an unrelated Voter was
+  denied, desktop/tablet/mobile did not overflow, playback controls and reduced motion worked, and
+  preview/full-screen Axe checks found zero confirmed violations. The presentation was withdrawn
+  with an audit reason and the disposable accounts were signed out and reset.
+- Dev fixes `40409af`, `6c87ae1`, `1bb7621` and `5338c0a` label appearance controls, contain the
+  hidden logo input, make expected access denial complete without a 406 request or console error,
+  and clear stale unavailable state when the presentation route changes in place. Dev Quality
+  `33938772306` and Vercel passed at `5338c0a`; 46 Vitest files/181 tests, the tally verifier,
+  TypeScript and build pass. Full lint remains the accepted 343-error/77-warning baseline.
+- Read-only Production reconciliation still finds the three tally tables and eight public tally
+  RPCs absent. A broad Dev promotion would carry 243 commits, 114 migration files and material
+  effects including 355 overdue OPEN sessions and 96 inherited email-on team flags.
+- The preferred first release is a newly engineered Production-baseline slice: manual publish,
+  rule-based commentary and in-app notification only, with no scheduling, email queue, Edge Function,
+  workflow or bulk-data change. It is not built or rehearsed yet.
+- Local Docker's Linux engine did not answer three bounded checks, so the required isolated rehearsal
+  is blocked. Main remains `1924404`, Production `682b8ea`; no Main promotion, Production write or
+  real-player notification occurred. See the 5 September tally release packet for the exact design.
 
 ## 5 September readiness work package 3 — deployed to Dev
 

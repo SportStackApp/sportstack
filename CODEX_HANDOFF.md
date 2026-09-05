@@ -4,19 +4,24 @@ Last updated: 2026-09-05
 
 ## 5 September — Player MVP presentation is the immediate owner priority
 
-- Prioritise the Grampians Player MVP tally release over unrelated form/sorting repairs; use the
-  new priority section in `docs/consolidated-open-items-plan.md`, not another competing plan.
-- Controlled headed session `sportstack-owner-signin-0509` is signed into Dev and was verified
-  against protected Roles & permissions and the Pumas tally builder. Leave it open for the next
-  testing pass. Credentials were not inspected/exported; this proves only the current admin session.
-- Ten tally logic tests and static migration checks pass. Production's three tally tables are
-  still absent on a fresh read-only check. No publication, message, database or Production change
-  occurred. Earlier sign-out blockers below are historical; actual-role tests remain open.
-- Next: targeted recipient/denial/playback revalidation, smallest dependency-complete package
-  assessment and isolated rehearsal using the existing release packet. The older full-Main
-  candidate has broad backend/data/job effects; never treat the animation alone as deployable.
-- Production deployment and real Grampians publication require explicit approval of their exact
-  package/audience. This request changes priority, not those safety boundaries.
+- Dev end-to-end tally acceptance is complete through `5338c0a`. One labelled Pumas presentation was
+  published to the reserved Player only, opened from its in-app notification, denied to the reserved
+  Voter, tested at three viewports, then withdrawn with an audit reason. External email stayed
+  `NOT_QUEUED`; both test accounts were signed out and reset.
+- Fixes `40409af`, `6c87ae1`, `1bb7621` and `5338c0a` remove the confirmed tally
+  accessibility/overflow defects, expected-denial 406/console noise and stale unavailable state
+  when a presentation route changes in place. Dev Quality `33938772306`, Vercel, 46 files/181
+  Vitest tests, tally verifier, TypeScript and build pass; full lint is the unchanged 343/77 baseline.
+- Production remains missing the tally schema. The current broad Dev difference is 243 commits,
+  114 migrations, 15 Edge Function files and 3 workflows; it would also touch 355 overdue sessions
+  and 96 email flags. Do not promote it as the tally release.
+- Build the narrow package described in
+  `docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-05.md` from the
+  Production baseline. It intentionally uses manual publication, rule-based commentary and in-app
+  notification only, with one consolidated additive migration and no Edge Function or workflow.
+- The isolated rehearsal is still mandatory and currently blocked because Docker Desktop's Linux
+  engine did not answer three bounded checks. No Main or Production change occurred. Production
+  still needs a separately frozen package, rehearsal, nominated identities and Aaron's approval.
 
 ## 5 September 2026 — readiness work package 3 deployed to Dev
 
