@@ -76,6 +76,43 @@ def build_round_url(
     return safe_url
 
 
+def resolve_schedule_context_url(
+    *,
+    portal_url: str,
+    competition_id: str,
+    grade_id: str,
+    round_number: str,
+    home_team_url: str,
+) -> tuple[str, str]:
+    """Use the round page when available, otherwise the exact home-team page.
+
+    Named finals do not expose a numeric RevSports round. Their team page still
+    contains the exact fixture card and is constrained to the same portal.
+    """
+
+    if round_number:
+        return (
+            build_round_url(
+                portal_url,
+                competition_id,
+                grade_id,
+                round_number,
+            ),
+            r"/games/\d+/\d+/round/\d+",
+        )
+
+    safe_team_url = validate_source_url(
+        home_team_url,
+        portal_url=portal_url,
+        path_suffix_pattern=r"/games/team/\d+/\d+",
+    )
+    if not safe_team_url:
+        raise RuntimeError(
+            "Fixture has neither a safe numeric round nor a safe home-team page"
+        )
+    return safe_team_url, r"/games/team/\d+/\d+"
+
+
 def parse_revsports_start(game_date: str, game_time: str, timezone_name: str) -> datetime:
     """Convert the local RevSports date/time to an aware UTC timestamp."""
 
@@ -165,7 +202,8 @@ def main() -> None:
     match_url = require_env("TARGET_MATCH_URL")
     competition_id = require_env("TARGET_COMPETITION_ID")
     grade_id = require_env("TARGET_GRADE_ID")
-    round_number = require_env("TARGET_ROUND_NUMBER")
+    round_number = os.getenv("TARGET_ROUND_NUMBER", "").strip()
+    home_team_url = os.getenv("TARGET_HOME_TEAM_URL", "").strip()
     timezone_name = os.getenv("TARGET_TIMEZONE", "Australia/Melbourne").strip()
     try:
         duration_minutes = int(os.getenv("TARGET_DURATION_MINUTES", "90"))
@@ -179,11 +217,12 @@ def main() -> None:
     )
     if not safe_match_url:
         raise RuntimeError("Unsafe targeted match URL")
-    round_url = build_round_url(
-        portal_url,
-        competition_id,
-        grade_id,
-        round_number,
+    schedule_url, schedule_path_pattern = resolve_schedule_context_url(
+        portal_url=portal_url,
+        competition_id=competition_id,
+        grade_id=grade_id,
+        round_number=round_number,
+        home_team_url=home_team_url,
     )
 
     supabase_url = require_env("SUPABASE_URL")
@@ -220,12 +259,12 @@ def main() -> None:
 
     scraper = _load_scraper_module()
     session = scraper.make_session()
-    response = session.get(round_url, timeout=20)
+    response = session.get(schedule_url, timeout=20)
     response.raise_for_status()
     safe_response_url = validate_source_url(
         response.url,
         portal_url=portal_url,
-        path_suffix_pattern=r"/games/\d+/\d+/round/\d+",
+        path_suffix_pattern=schedule_path_pattern,
     )
     if not safe_response_url:
         raise RuntimeError("RevSports round request redirected outside the expected page")

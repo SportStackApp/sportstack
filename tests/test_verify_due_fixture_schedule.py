@@ -48,6 +48,31 @@ class FixtureSchedulePreflightTests(unittest.TestCase):
                 "../../admin",
             )
 
+    def test_named_final_uses_the_safe_home_team_page(self) -> None:
+        team_url = (
+            "https://www.revolutionise.com.au/hockeyballarat/"
+            "games/team/26298/417805"
+        )
+
+        resolved_url, path_pattern = self.preflight.resolve_schedule_context_url(
+            portal_url=self.portal_url,
+            competition_id="26298",
+            grade_id="14930",
+            round_number="",
+            home_team_url=team_url,
+        )
+
+        self.assertEqual(team_url, resolved_url)
+        self.assertEqual(r"/games/team/\d+/\d+", path_pattern)
+        with self.assertRaises(RuntimeError):
+            self.preflight.resolve_schedule_context_url(
+                portal_url=self.portal_url,
+                competition_id="26298",
+                grade_id="14930",
+                round_number="",
+                home_team_url="https://example.com/games/team/26298/417805",
+            )
+
     def test_extracts_the_exact_fixture_start_and_fails_when_missing(self) -> None:
         html = f"""
         <div class="fixture-card">

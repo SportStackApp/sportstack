@@ -226,6 +226,7 @@ jobs:
           TARGET_COMPETITION_ID: ${{ matrix.competition_id }}
           TARGET_GRADE_ID: ${{ matrix.grade_id }}
           TARGET_ROUND_NUMBER: ${{ matrix.round_number }}
+          TARGET_HOME_TEAM_URL: ${{ matrix.home_team_url }}
           TARGET_TIMEZONE: ${{ matrix.timezone }}
           TARGET_DURATION_MINUTES: ${{ matrix.duration_minutes }}
           APPLY_SCHEDULE_UPDATE: "true"

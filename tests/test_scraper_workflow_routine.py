@@ -68,6 +68,7 @@ class ScraperWorkflowRoutineTests(unittest.TestCase):
         self.assertIn("python scripts/verify_due_fixture_schedule.py", text)
         self.assertIn("APPLY_SCHEDULE_UPDATE: \"true\"", text)
         self.assertIn("TARGET_ROUND_NUMBER: ${{ matrix.round_number }}", text)
+        self.assertIn("TARGET_HOME_TEAM_URL: ${{ matrix.home_team_url }}", text)
         self.assertEqual(
             2,
             text.count("if: steps.preflight.outputs.should_scrape == 'true'"),
