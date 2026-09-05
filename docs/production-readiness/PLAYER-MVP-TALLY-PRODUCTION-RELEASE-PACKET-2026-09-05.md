@@ -1,6 +1,6 @@
 # Player MVP tally Production release packet — 5 September 2026
 
-Status: **Dev feature passes; Production package is not yet built or rehearsed**
+Status: **Production-baseline candidate built and rehearsed; explicit Production approval pending**
 
 No Production change was made during this run. In particular, repository history and read-only
 database evidence confirm no `prod` or Production database mutation; no Production deployment,
@@ -11,6 +11,8 @@ Edge Function, secret, DNS or workflow action was taken.
 - Dev application: `5338c0a75c335f89d4b20685937e4702a6d64801`
 - Main/staging application: `1924404642710bf570e9bde424a09e34be181658`
 - Production application: `682b8eaba33f657a2c64dcce571a40e0b2b0ba00`
+- Narrow release candidate: `15223e9b` on
+  `codex/player-mvp-tally-production-slice`, based directly on the Production commit above
 - Dev Quality run: `33938772306` — passed
 - Vercel Dev deployment for `5338c0a` — passed
 - The immutable code deployment
@@ -22,8 +24,9 @@ Edge Function, secret, DNS or workflow action was taken.
   15 Edge Function files and 3 workflow files
 - Main-to-Dev distance: 15 commits and 74 changed paths
 
-The Dev commit is an evidence point, not an approved Production release commit. Main and Dev are
-not aligned, and neither broad branch can be promoted safely for this single feature.
+The Dev commit remains the deployed acceptance evidence. Main and Dev are not aligned, and neither
+broad branch can be promoted safely for this single feature. The narrow candidate is independently
+frozen from the exact Production baseline and has not been merged to or deployed from `prod`.
 
 ## Current Dev acceptance
 
@@ -75,8 +78,8 @@ the full staged migration history for a presentation-only release.
 
 ## Smallest safe release design
 
-There is no existing safe tally-only commit or migration allow-list. The smallest preferred slice
-must be engineered from the Production baseline with these deliberate limits:
+The smallest safe slice has now been engineered from the Production baseline with these deliberate
+limits:
 
 - manual publication only;
 - rule-based commentary only;
@@ -100,11 +103,16 @@ Expected application surface is 10 runtime files:
 9. `src/pages/admin/MvpTallyAdmin.tsx`
 10. `src/pages/admin/MvpVotingAdmin.tsx`
 
-It also needs one new consolidated Production-safe migration that creates the three tables,
+It includes one new consolidated Production-safe migration that creates the three tables,
 required private/public functions, indexes, triggers, grants, RLS and Storage policies without
 scheduling work, changing existing sessions, changing team settings or queueing email. Supabase
-types must be regenerated from the rehearsed schema. Expected Edge Function and workflow count is
-zero.
+access is intentionally isolated behind a generic RPC boundary, so the broad generated client types
+do not need to be replaced from a partial rehearsal schema. Edge Function and workflow count is zero.
+
+The frozen candidate contains 10 runtime files, two focused test files, one static allow-list
+verifier and migration
+`20260905040425_add_manual_player_mvp_tally_presentations.sql`. The verifier rejects scheduling,
+email state, session-closing/deadline functions, cron and direct authenticated lifecycle writes.
 
 Source behaviour must be extracted and reviewed from `882c30c`, the tally-only parts of `1faf79f`,
 `71af047`, `1924404`, `40409af`, `6c87ae1`, `1bb7621` and `5338c0a`; these commits must not be cherry-picked
@@ -121,9 +129,11 @@ release.
 
 ## Mandatory isolated rehearsal
 
-The narrow package must be applied to a fresh Production-derived, non-production environment.
-Before and after the rehearsal, prove that the 355 OPEN sessions and 96 team flags are unchanged.
-Then test:
+The narrow package was applied to a fresh local Supabase environment containing faithful empty
+recreations of the live Production objects it depends on, plus sentinel existing session and
+notification-setting rows. The earlier attempt to replay all historical migrations was abandoned
+safely because it exposed unrelated migration-history drift; live schema metadata, not an unreliable
+full migration replay, was used for the focused baseline. The rehearsal tested:
 
 1. manager create/preview/publish/withdraw access;
 2. recipient-only RLS, unrelated-user denial and withdrawn access denial;
@@ -132,11 +142,16 @@ Then test:
 5. idempotent publication and safe retry behaviour;
 6. desktop, tablet and mobile playback, keyboard use, reduced motion and Axe;
 7. console, failed requests, TypeScript, build, focused lint and the full test suite; and
-8. a complete before/after schema diff and rollback rehearsal.
+8. transaction rollback and before/after sentinel checks.
 
-Docker Desktop was running locally, but its Linux engine did not answer three bounded
-`docker info/version` checks. The isolated rehearsal was therefore **BLOCKED**, not passed. No
-hosted Supabase branch or extra paid project was created.
+The focused reset applied both migrations successfully. The transactional test ended with
+`MANUAL_PLAYER_MVP_TALLY_REHEARSAL_PASS`; local public/private schema lint reported no errors. It
+proved one in-app notification, recipient-only access, unrelated-account denial, manager-only
+write access, withdrawal denial, rules-only commentary, 3-2-1 results, RLS, Storage upload scope and
+unchanged sentinel session/settings. Focused application lint passed, 2 files/11 tests passed,
+TypeScript and the Production build passed. Full Production-baseline lint remains existing debt at
+229 errors and 50 warnings, with zero focused-file findings. No hosted Supabase branch or extra paid
+project was created.
 
 ## Release and rollback sequence after rehearsal
 
@@ -157,14 +172,13 @@ targeted reversal or owner-approved backup/PITR process.
 
 ## Remaining approval blockers
 
-1. Repair or replace the unavailable local Docker rehearsal environment, or approve a separate
-   non-production Supabase rehearsal environment and its cost.
-2. Build and independently review the narrow Production-baseline branch and consolidated migration.
-3. Complete the isolated rehearsal and generate Supabase types from its final schema.
-4. Update `scripts/release-production.ps1` with the exact narrow allow-list and prove it refuses
-   everything else.
-5. Nominate the Production Grampians test manager and recipient and confirm Production email off.
-6. Give separate explicit approval for the exact frozen `prod` change and Production migration.
+1. Capture a fresh authenticated Production backup/PITR manifest and re-run the read-only drift
+   counts immediately before release.
+2. Prepare a release command or script pinned only to `15223e9b` and the single consolidated
+   migration; the existing Umpire release script must not be reused.
+3. Nominate the Production Grampians test manager and recipient and confirm the intended audience
+   before the smoke publication. This slice cannot queue email.
+4. Give separate explicit approval for the exact frozen `prod` change and Production migration.
 
-**Readiness decision: Dev presentation behaviour passes. Production release remains blocked until
-the narrow package is built and rehearsed.**
+**Readiness decision: the narrow manual Player MVP tally candidate is built, locally rehearsed and
+ready for final Production pre-flight. Production itself remains unchanged and approval-gated.**

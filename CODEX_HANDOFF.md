@@ -16,13 +16,17 @@ Last updated: 2026-09-05
   difference is 243 commits, 114 migrations, 15 Edge Function files and 3 workflows; it would also
   touch 355 overdue sessions
   and 96 email flags. Do not promote it as the tally release.
-- Build the narrow package described in
-  `docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-05.md` from the
-  Production baseline. It intentionally uses manual publication, rule-based commentary and in-app
-  notification only, with one consolidated additive migration and no Edge Function or workflow.
-- The isolated rehearsal is still mandatory and currently blocked because Docker Desktop's Linux
-  engine did not answer three bounded checks. No Main or Production change occurred. Production
-  still needs a separately frozen package, rehearsal, nominated identities and Aaron's approval.
+- The narrow package is frozen at `15223e9b` on
+  `codex/player-mvp-tally-production-slice`, directly from Production `682b8ea`. It uses manual
+  publication, rule-based commentary and in-app notification only, with one consolidated additive
+  migration and no Edge Function or workflow.
+- Docker recovered. A focused local Production-dependency reset and transactional rehearsal passed
+  manager build/preview/publish/withdraw, recipient access, unrelated denial, RLS/grants, one in-app
+  notification, Storage scope, rollback and unchanged sentinel data. Supabase schema lint, focused
+  lint, 2 files/11 tests, TypeScript and the Production build pass. Full baseline lint is 229/50.
+- Production remains unchanged. The next gate is a fresh backup/drift pre-flight, a release command
+  pinned to the exact commit and migration, nominated Production smoke identities and Aaron's
+  separate explicit approval.
 
 ## 5 September 2026 — readiness work package 3 deployed to Dev
 

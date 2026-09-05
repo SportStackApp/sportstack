@@ -24,10 +24,17 @@ Update this file after every meaningful Codex task, pull request, schema change,
   email-on team flags. Later documentation-only commits do not change that runtime package.
 - The preferred first release is a newly engineered Production-baseline slice: manual publish,
   rule-based commentary and in-app notification only, with no scheduling, email queue, Edge Function,
-  workflow or bulk-data change. It is not built or rehearsed yet.
-- Local Docker's Linux engine did not answer three bounded checks, so the required isolated rehearsal
-  is blocked. Main remains `1924404`, Production `682b8ea`; no Main promotion, Production write or
-  real-player notification occurred. See the 5 September tally release packet for the exact design.
+  workflow or bulk-data change. It is now frozen at `15223e9b` on
+  `codex/player-mvp-tally-production-slice`, directly from Production `682b8ea`.
+- Docker recovered and the focused Production-dependency rehearsal passed. The additive migration,
+  RLS/grants, manager publish/withdraw, one in-app notification, recipient access, unrelated denial,
+  rollback and unchanged sentinel data all passed; Supabase schema lint found no errors. Focused
+  lint, 2 files/11 tests, TypeScript and the Production build also pass. Full Production-baseline
+  lint remains 229 errors/50 warnings with no focused-file findings.
+- Production remains `682b8ea`; `prod`, Production data, deployments, functions, workflows, DNS and
+  secrets were not touched during this run. Final backup/drift pre-flight, a pinned release command,
+  nominated smoke identities and Aaron's separate exact-package approval remain required. See the
+  5 September tally release packet.
 
 ## 5 September readiness work package 3 — deployed to Dev
 

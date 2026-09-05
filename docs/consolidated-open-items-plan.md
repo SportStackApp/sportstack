@@ -22,8 +22,8 @@ release safety gates. Unrelated improvements stay on the backlog.
    Do not cherry-pick only the animation. Identify every required application, database, permission,
    notification, function and scheduler change. If the package includes other app changes, their
    safety/compatibility defects remain release blockers; prioritisation does not waive them.
-3. Rehearse that exact package against an isolated Production-compatible copy, verify data/job
-   impacts and rollback, then freeze the release commit and allow-list for Aaron's approval.
+3. [Complete] Rehearse that exact package against an isolated Production-compatible dependency
+   copy, verify data/job impacts and rollback, then freeze the release commit and allow-list.
 4. After separate explicit Production approval, release and verify Grampians manager/recipient
    access and playback before sending a real team presentation. Confirm its audience and rounds.
 
@@ -32,10 +32,11 @@ reserved Player. Notification/deep link, unrelated-Voter denial, withdrawal, des
 controls, keyboard, reduced motion, Axe, console and failed-request checks passed. Four confirmed
 Dev defects were fixed and deployed through `5338c0a`. At that tested application commit, the
 Production gap is too broad to promote: 243 commits and 114 migration files, with 355 overdue OPEN
-sessions and 96 inherited email-on flags in scope. The preferred first release is the narrow manual/in-app-only package in
-`docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-05.md`. It is not yet
-built or rehearsed; local Docker is presently the rehearsal blocker. No Main or Production change
-or real-player notification was authorised or performed.
+sessions and 96 inherited email-on flags in scope. The narrow manual/in-app-only candidate is now
+frozen at `15223e9b` from the exact Production baseline, and its focused local Supabase rehearsal
+passes. See
+`docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-05.md`. No Main or
+Production change or real-player notification was authorised or performed.
 
 ## Current position
 
@@ -202,7 +203,7 @@ from REVIEWED to CLOSED.
 - [ ] Complete one disposable Safety Hub record through create, review, linked records and audit.
 - [ ] Complete the guided Incident and Discipline acceptance flow using simulated data only.
 - [ ] Finish the reserved Dev Umpire account reset and an actual Umpire Match Voting submission.
-- [ ] Complete a Player MVP ballot, tally and recipient-access cycle with external email disabled.
+- [x] Complete a Player MVP ballot, tally and recipient-access cycle with external email disabled.
 - [ ] Smoke-test Expense Hub using de-identified files only.
 
 Exit gate: the acceptance report separates Passed, Failed, Blocked and Owner decision items, and no
