@@ -1,6 +1,6 @@
 # SportStack — Single Improvement and Production Readiness Plan
 
-**Updated:** 5 September 2026
+**Updated:** 6 September 2026
 
 **Active environment:** Development (`dev`)
 
@@ -16,9 +16,11 @@ Grampians team in Production. This overrides the next general form/sorting repai
 release safety gates. Unrelated improvements stay on the backlog.
 
 **Current release position:** the lifecycle repair is verified on Dev at `b8687ec` and staged on
-Main at `e6fda0f`. Production remains unchanged at `15223e9`. Do not seek Production approval yet:
-the broad Main package is blocked by historical migration drift and the actual Coordinator-role
-browser check is still unavailable.
+Main at `e6fda0f`. A separate one-migration candidate `a1d23c7`, built directly from Production
+`15223e9`, now passes rehearsal, frozen-slice verification, guarded-script self-test, read-only live
+pre-flight and structured risk review. Production remains unchanged. This narrow repair is ready
+for separate exact owner approval; the broad Main package remains blocked by historical migration
+drift and the actual Coordinator-role browser check is still unavailable.
 
 1. Revalidate the Grampians/Pumas builder, closed-round data, preview and full-screen playback on
    current Dev; test the intended disposable recipient and unrelated-account denial. Keep external
@@ -44,17 +46,22 @@ browser check is still unavailable.
    the single `CLOSED` state. Live Dev has zero overdue open sessions, one closure job and two
    deadline triggers, and the Production-derived rehearsal closed the expected 355 rows without
    queuing email or notification work.
-9. [Next] Build a curated branch from Production `15223e9`, not a direct Main merge. Reconcile the
-   115 added migration files against live Production and explicitly exclude the Production scraper
-   workflow and Dev-only account helpers. The first proven sequence blocker is migration
-   `20260801013000`, which assumes an absent `public.field_templates` relation. The latest four
-   Production scraper runs are red due to blank round numbers; the Dev fix is not yet eligible for
-   that workflow.
+9. [Complete for the lifecycle defect] Candidate `a1d23c7` is one additive migration above
+   Production `15223e9`. It restores only the Player MVP closure function, deadline guards and
+   one-minute closure job. It deliberately excludes the broad Main history, scraper workflow,
+   Edge Functions and account helpers. The release packet is frozen for owner review.
 10. [Blocked] Complete the actual Coordinator permission-bundle browser test when an authenticated
     disposable Coordinator session is available. Other current role results may be reused only
     where their relevant code is unchanged.
-11. [After 9 and 10] Freeze the curated Production package, repeat only affected checks, review its
-    rollback packet, then ask Aaron for a fresh exact Production approval.
+11. [Next for the narrow lifecycle repair] Obtain Aaron's fresh exact approval for candidate
+    `a1d23c7`, then use only the pinned guarded release script. It must re-run pre-flight, create and
+    hash a fresh logical backup, apply the one migration, verify exact state changes and unchanged
+    communication counts, fast-forward `prod`, and verify the deployed bundle.
+12. [Later broad release] Reconcile Main's 115 added migration files against live Production and
+    explicitly exclude the Production scraper workflow and Dev-only account helpers. The first
+    proven sequence blocker is migration `20260801013000`, which assumes an absent
+    `public.field_templates` relation. The latest four Production scraper runs are red due to blank
+    round numbers; the Dev fix is not yet eligible for that workflow.
 
 Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one
 reserved Player. Notification/deep link, unrelated-Voter denial, withdrawal, desktop/tablet/mobile,
