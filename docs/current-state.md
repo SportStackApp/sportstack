@@ -45,8 +45,10 @@ Update this file after every meaningful Codex task, pull request, schema change,
   Production change was created. The smoke identities are now nominated: Admin Sportstack will be
   the manager, and Chloe Wilson plus Aaron Mullane will be the recipients. Production confirms both
   recipients are active, non-placeholder Pumas members; Aaron's personal account is a Player, so the
-  existing Super Admin account must run the builder. Acceptance of the unchanged dependency debt and
-  Aaron's separate exact-package approval remain required. See the 5 September tally release packet.
+  existing Super Admin account must run the builder. Aaron accepted the unchanged dependency debt
+  for this narrow release on 5 September; its remediation remains a separate package. Only Aaron's
+  separate exact-package Production approval remains required. See the 5 September tally release
+  packet.
 - A dedicated fail-closed release script now pins Production `682b8ea`, candidate `15223e9`, the
   14-path allow-list, migration blob `883d3f30` and exact Production project. Its local pre-flight
   verifies the frozen Git package and current public Production bundle, and the wrong-confirmation

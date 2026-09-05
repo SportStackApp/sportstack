@@ -29,8 +29,10 @@ release safety gates. Unrelated improvements stay on the backlog.
    no Production change or backup was created.
 5. [Complete] Nominate the Production smoke identities. Admin Sportstack will run the builder, with
    Chloe Wilson and Aaron Mullane as recipients; both are active, non-placeholder Pumas members.
-6. [In progress] Accept the unchanged dependency debt for this narrow release.
-7. After separate explicit Production approval, release and verify Grampians manager/recipient
+6. [Complete] Aaron accepted the unchanged dependency debt for this narrow release; remediate it in
+   a separately tested package.
+7. [Awaiting exact approval] After separate explicit Production approval, release and verify the
+   Grampians manager/recipient
    access and playback before sending a real team presentation. Confirm its audience and rounds.
 
 Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one

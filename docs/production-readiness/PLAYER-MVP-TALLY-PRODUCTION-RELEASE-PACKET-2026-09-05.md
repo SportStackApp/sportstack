@@ -259,9 +259,11 @@ The Production smoke identities are nominated:
 - both recipients are active, non-placeholder Pumas members. Aaron's personal account has only the
   Player role, so it cannot run the builder. This slice cannot queue external email.
 
-1. Give separate explicit approval for the exact frozen `prod` change and Production migration.
-2. Confirm acceptance of the unchanged Production dependency debt for this narrow release, while
-   keeping its remediation as a separately tested package.
+Aaron accepted the unchanged Production dependency debt for this narrow release on 5 September
+2026. Its remediation remains a separately tested package.
+
+The only remaining blocker is separate explicit approval for the exact frozen `prod` change and
+Production migration.
 
 **Readiness decision: the narrow manual Player MVP tally candidate is built, locally and hosted-
 staging rehearsed, and has passed the final read-only Production pre-flight. Production itself

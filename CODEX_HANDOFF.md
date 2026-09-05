@@ -36,8 +36,9 @@ Last updated: 2026-09-05
   and the logical-backup command is ready. No backup or Production change was made. The remaining
   smoke identities are nominated: Admin Sportstack is the manager, with Chloe Wilson and Aaron
   Mullane as recipients. Both recipients are active, non-placeholder Pumas members. Aaron's personal
-  account has only the Player role, so it cannot run the builder. The remaining gates are acceptance
-  of unchanged dependency debt and Aaron's separate explicit approval.
+  account has only the Player role, so it cannot run the builder. Aaron accepted the unchanged
+  dependency debt for this narrow release on 5 September; remediation remains separate. The only
+  remaining gate is Aaron's separate explicit Production approval.
 - `scripts/release-player-mvp-tally-production.ps1` is the only release script for this narrow
   slice; do not use the older Umpire Portal script. It pins the base/candidate commits, 14 changed
   paths, migration blob and Production project; defaults to read-only Preflight; requires the exact
