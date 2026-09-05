@@ -29,6 +29,7 @@ import VotingPortal from "./pages/VotingPortal";
 import UmpireVoteSubmit from "./pages/umpire/UmpireVoteSubmit";
 import MvpVotes from "./pages/MvpVotes";
 import MvpVoteCast from "./pages/MvpVoteCast";
+import MvpTallyPresentationPage from "./pages/MvpTallyPresentationPage";
 
 
 
@@ -51,6 +52,7 @@ import RevSportsUnmatched from "./pages/admin/RevSportsUnmatched";
 import ErrorLogs from "./pages/admin/ErrorLogs";
 import RevSportsEntityReview from "./pages/admin/RevSportsEntityReview";
 import MvpVotingAdmin from "./pages/admin/MvpVotingAdmin";
+import MvpTallyAdmin from "./pages/admin/MvpTallyAdmin";
 import Analytics from "./pages/admin/Analytics";
 import FeedbackResponses from "./pages/admin/FeedbackResponses";
 import RolesPermissions from "./pages/admin/RolesPermissions";
@@ -129,6 +131,7 @@ const App = () => (
 
                   {/* Protected Routes with App Layout */}
                   <Route element={<ProtectedRoute />}>
+                    <Route path="/mvp-votes/tallies/:id" element={<MvpTallyPresentationPage />} />
                     <Route element={<AppLayout />}>
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/games" element={<Games />} />
@@ -168,6 +171,7 @@ const App = () => (
                       <Route path="/admin/venues" element={<VenuesManagement />} />
                       <Route path="/admin/requests" element={<Requests />} />
                       <Route path="/admin/mvp-voting" element={<MvpVotingAdmin />} />
+                      <Route path="/admin/mvp-voting/tallies" element={<MvpTallyAdmin />} />
                       <Route path="/admin/umpire-voting" element={<UmpireVotingModule />} />
                       <Route path="/admin/safety-risk" element={<SafetyRiskModule />} />
                       <Route path="/admin/analytics" element={<Analytics />} />

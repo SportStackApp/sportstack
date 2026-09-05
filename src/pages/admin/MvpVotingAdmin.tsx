@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { supabase as originalSupabase } from "@/integrations/supabase/client";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useToast } from "@/hooks/use-toast";
@@ -1504,18 +1504,27 @@ export default function MvpVotingAdmin() {
                 Control each team’s voting rounds, reminders and result concerns.
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 self-start"
-              onClick={async () => {
-                await loadReferenceData();
-                await loadSessions();
-              }}
-              disabled={Boolean(actionLoading)}
-            >
-              <RefreshCw className="h-4 w-4" /> Refresh
-            </Button>
+            <div className="flex flex-wrap gap-2 self-start">
+              {selectedTeam && (
+                <Button asChild variant="outline" size="sm" className="gap-2">
+                  <Link to={`/admin/mvp-voting/tallies?team=${selectedTeam.id}`}>
+                    <Trophy className="h-4 w-4" /> Tally presentations
+                  </Link>
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={async () => {
+                  await loadReferenceData();
+                  await loadSessions();
+                }}
+                disabled={Boolean(actionLoading)}
+              >
+                <RefreshCw className="h-4 w-4" /> Refresh
+              </Button>
+            </div>
           </div>
 
           <Card>
