@@ -19,8 +19,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
   `33938772306` and Vercel passed at `5338c0a`; 46 Vitest files/181 tests, the tally verifier,
   TypeScript and build pass. Full lint remains the accepted 343-error/77-warning baseline.
 - Read-only Production reconciliation still finds the three tally tables and eight public tally
-  RPCs absent. A broad Dev promotion would carry 243 commits, 114 migration files and material
-  effects including 355 overdue OPEN sessions and 96 inherited email-on team flags.
+  RPCs absent. At the tested application commit, a broad Dev promotion would carry 243 commits,
+  114 migration files and material effects including 355 overdue OPEN sessions and 96 inherited
+  email-on team flags. Later documentation-only commits do not change that runtime package.
 - The preferred first release is a newly engineered Production-baseline slice: manual publish,
   rule-based commentary and in-app notification only, with no scheduling, email queue, Edge Function,
   workflow or bulk-data change. It is not built or rehearsed yet.

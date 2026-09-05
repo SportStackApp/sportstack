@@ -30,9 +30,9 @@ release safety gates. Unrelated improvements stay on the backlog.
 Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one
 reserved Player. Notification/deep link, unrelated-Voter denial, withdrawal, desktop/tablet/mobile,
 controls, keyboard, reduced motion, Axe, console and failed-request checks passed. Four confirmed
-Dev defects were fixed and deployed through `5338c0a`. The current Production gap is too broad to
-promote: 243 commits and 114 migration files, with 355 overdue OPEN sessions and 96 inherited
-email-on flags in scope. The preferred first release is the narrow manual/in-app-only package in
+Dev defects were fixed and deployed through `5338c0a`. At that tested application commit, the
+Production gap is too broad to promote: 243 commits and 114 migration files, with 355 overdue OPEN
+sessions and 96 inherited email-on flags in scope. The preferred first release is the narrow manual/in-app-only package in
 `docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-05.md`. It is not yet
 built or rehearsed; local Docker is presently the rehearsal blocker. No Main or Production change
 or real-player notification was authorised or performed.

@@ -12,8 +12,9 @@ Last updated: 2026-09-05
   accessibility/overflow defects, expected-denial 406/console noise and stale unavailable state
   when a presentation route changes in place. Dev Quality `33938772306`, Vercel, 46 files/181
   Vitest tests, tally verifier, TypeScript and build pass; full lint is the unchanged 343/77 baseline.
-- Production remains missing the tally schema. The current broad Dev difference is 243 commits,
-  114 migrations, 15 Edge Function files and 3 workflows; it would also touch 355 overdue sessions
+- Production remains missing the tally schema. At the tested application commit, the broad Dev
+  difference is 243 commits, 114 migrations, 15 Edge Function files and 3 workflows; it would also
+  touch 355 overdue sessions
   and 96 email flags. Do not promote it as the tally release.
 - Build the narrow package described in
   `docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-05.md` from the
