@@ -13,9 +13,11 @@ Edge Function, secret, DNS or workflow action was taken.
 - Production application: `682b8eaba33f657a2c64dcce571a40e0b2b0ba00`
 - Dev Quality run: `33938772306` — passed
 - Vercel Dev deployment for `5338c0a` — passed
-- Dev alias and immutable deployment serve the same bundle, and a refreshed Dev screen displays
-  `v2026.09.05+5338c0a`; the immutable deployment is
-  `https://sportstack-i3bbxl3h9-sportstackapps-projects.vercel.app`
+- The immutable code deployment
+  `https://sportstack-i3bbxl3h9-sportstackapps-projects.vercel.app` serves
+  `v2026.09.05+5338c0a`. The Dev alias served the same bundle when this application evidence was
+  frozen; later documentation-only commits may advance the alias build label without changing the
+  tested tally code.
 - Production-to-Dev distance: 243 commits, 435 changed paths, 114 migration files,
   15 Edge Function files and 3 workflow files
 - Main-to-Dev distance: 15 commits and 74 changed paths
