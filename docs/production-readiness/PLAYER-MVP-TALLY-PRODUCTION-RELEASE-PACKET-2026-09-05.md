@@ -159,8 +159,34 @@ proved one in-app notification, recipient-only access, unrelated-account denial,
 write access, withdrawal denial, rules-only commentary, 3-2-1 results, RLS, Storage upload scope and
 unchanged sentinel session/settings. Focused application lint passed, 2 files/11 tests passed,
 TypeScript and the Production build passed. Full Production-baseline lint remains existing debt at
-229 errors and 50 warnings, with zero focused-file findings. No hosted Supabase branch or extra paid
-project was created.
+229 errors and 50 warnings, with zero focused-file findings.
+
+## Hosted staging rehearsal
+
+The owner-provided isolated Supabase project `SportStack-staging` (`fdkgcwacuqoswnatvubv`) was
+confirmed active and empty before use. Three migrations are recorded there:
+
+1. `production_tally_dependencies_baseline` — focused empty Production-compatible dependencies and
+   two sentinel rows for rehearsal only;
+2. `add_manual_player_mvp_tally_presentations` — the exact frozen candidate migration; and
+3. `harden_rehearsal_dependency_scaffold` — hosted-staging-only RLS and privilege hardening for the
+   dependency scaffold, not part of the Production release.
+
+The hosted transaction completed with `HOSTED_MANUAL_PLAYER_MVP_TALLY_REHEARSAL_PASS`. It exercised
+manager build, preview, manual publish and withdrawal; one in-app notification; recipient access;
+unrelated-account denial; duplicate-publish denial; rule commentary; 3-2-1 results; and manager
+Storage scope. The transaction rolled back cleanly: presentations, notifications and temporary
+rehearsal helpers are all zero, while the OPEN-session and association-setting sentinels are
+unchanged.
+
+Post-test checks confirm all public tables have RLS enabled, all three tally tables have RLS, direct
+authenticated writes to the tally presentation table are denied, only the manual one-argument
+publish RPC exists, and no scheduling, email-delivery or background voting-lifecycle state was
+introduced. Security advisers report 14 no-policy INFO items on locked rehearsal-only dependency
+tables and six expected warnings for the authenticated `SECURITY DEFINER` tally RPCs. Those RPCs
+are intentional guarded API endpoints; their manager and recipient authorisation paths passed the
+transactional test. Performance advisers report INFO only (22 scaffold foreign-key indexes and six
+unused indexes in the new empty project).
 
 ## Release and rollback sequence after rehearsal
 
@@ -191,5 +217,6 @@ targeted reversal or owner-approved backup/PITR process.
 5. Confirm acceptance of the unchanged Production dependency debt for this narrow release, while
    keeping its remediation as a separately tested package.
 
-**Readiness decision: the narrow manual Player MVP tally candidate is built, locally rehearsed and
-ready for final Production pre-flight. Production itself remains unchanged and approval-gated.**
+**Readiness decision: the narrow manual Player MVP tally candidate is built, locally and hosted-
+staging rehearsed, and ready for final Production pre-flight. Production itself remains unchanged
+and approval-gated.**

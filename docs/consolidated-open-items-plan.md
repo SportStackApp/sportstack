@@ -34,7 +34,9 @@ Dev defects were fixed and deployed through `5338c0a`. At that tested applicatio
 Production gap is too broad to promote: 243 commits and 114 migration files, with 355 overdue OPEN
 sessions and 96 inherited email-on flags in scope. The narrow manual/in-app-only candidate is now
 frozen at `15223e9b` from the exact Production baseline, and its focused local Supabase rehearsal
-passes. See
+passes. Its exact migration and transactional access suite also pass on the isolated hosted
+`SportStack-staging` project `fdkgcwacuqoswnatvubv`, with a clean rollback and no RLS-disabled
+public tables. See
 `docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-05.md`. No Main or
 Production change or real-player notification was authorised or performed.
 

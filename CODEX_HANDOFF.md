@@ -24,6 +24,13 @@ Last updated: 2026-09-05
   manager build/preview/publish/withdraw, recipient access, unrelated denial, RLS/grants, one in-app
   notification, Storage scope, rollback and unchanged sentinel data. Supabase schema lint, focused
   lint, 2 files/11 tests, TypeScript and the Production build pass. Full baseline lint is 229/50.
+- The isolated hosted `SportStack-staging` Supabase project `fdkgcwacuqoswnatvubv` now has the
+  dependency rehearsal baseline, exact candidate migration and a staging-only scaffold hardening
+  migration. The hosted transactional suite passed and rolled back to zero presentation,
+  notification and helper rows. All public tables have RLS; the tally tables deny direct
+  authenticated writes. Adviser output has no RLS-disabled error: 14 scaffold-only no-policy INFO
+  items, six intentional authenticated `SECURITY DEFINER` tally RPC warnings, and performance INFO
+  only. Production was not touched.
 - Production remains unchanged. The next gate is a fresh backup/drift pre-flight, a release command
   pinned to the exact commit and migration, nominated Production smoke identities and Aaron's
   separate explicit approval.

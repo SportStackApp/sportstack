@@ -31,6 +31,13 @@ Update this file after every meaningful Codex task, pull request, schema change,
   rollback and unchanged sentinel data all passed; Supabase schema lint found no errors. Focused
   lint, 2 files/11 tests, TypeScript and the Production build also pass. Full Production-baseline
   lint remains 229 errors/50 warnings with no focused-file findings.
+- The same dependency baseline and exact candidate migration now also pass on the isolated hosted
+  `SportStack-staging` Supabase project `fdkgcwacuqoswnatvubv`. The transactional test completed with
+  `HOSTED_MANUAL_PLAYER_MVP_TALLY_REHEARSAL_PASS` and rolled back cleanly: zero presentation,
+  notification or rehearsal-helper rows remain. All public tables have RLS enabled; the three tally
+  tables have no direct authenticated write privilege. The six remaining security warnings are the
+  intentional authenticated tally RPCs, whose manager/recipient denial paths passed the test. The
+  rehearsal-only dependency tables are locked down and are not part of the Production package.
 - Production remains `682b8ea`; `prod`, Production data, deployments, functions, workflows, DNS and
   secrets were not touched during this run. Final backup/drift pre-flight, a pinned release command,
   nominated smoke identities and Aaron's separate exact-package approval remain required. See the
