@@ -18,7 +18,7 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
   EVIDENCE: RevSports tab filters/default-Unmatched, Quick Actions and line-up team refresh persistence pass. The complete form/filter/modal register is still pending.
 
 - [ ] R6: actual-role Dev testing covers Super Admin, Association Admin, Club Admin, Team Manager, Coach, Player, Umpire and Coordinator at their real scopes
-  EVIDENCE: Super Admin plus the reserved Association Admin, Club Admin, Team Manager, Coach, Player and Umpire identities have current results. Voter was also tested. Coordinator remains pending.
+  EVIDENCE: Super Admin plus the reserved Association Admin, Club Admin, Team Manager, Coach, Player and Umpire identities have current results. Voter was also tested. Coordinator remains blocked because the controlled browser is signed out and the reserved helper cannot provision the direct permission bundle.
 
 - [ ] R7: the high-risk workflows pass on desktop and mobile, with tablet evidence where the layout needs it
   EVIDENCE: The repaired line-up passes 1569x912 and 390x844 visual, overflow and accessibility checks. Safety Hub also passes 1440x900 and 390x844 with zero Axe WCAG A/AA violations. Remaining high-risk workflows and any necessary tablet layouts are pending.
@@ -29,20 +29,20 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
 - [x] R9: focused regression tests and the complete Vitest suite pass
   CHECK: npx vitest run
   EXPECT: Test Files
-  EVIDENCE: 33 files and 129 tests passed for the 31 August Vote Tally candidate; focused tally tests and Dev Quality run `33393069833` also passed.
+  EVIDENCE: The 5 September frozen Dev candidate passed 46 files and 181 tests; Dev Quality run `33969370123` also passed.
 
 - [x] R10: TypeScript validates the complete application
   CHECK: npx tsc --noEmit
   EXPECT: /(?:^|\n)\s*$/
-  EVIDENCE: npx tsc --noEmit passed before the 31 August support-table commits; their Dev Quality runs passed.
+  EVIDENCE: npx tsc --noEmit passed on the 5 September frozen candidate.
 
 - [x] R11: the Production application build succeeds and build warnings are reviewed
   CHECK: npm run build
   EXPECT: built in
-  EVIDENCE: npm run build passed before the 31 August support-table commits. The known large-bundle/dynamic-import and stale Browserslist warnings remain non-blocking debt.
+  EVIDENCE: npm run build passed on the 5 September frozen candidate. The known large-bundle/dynamic-import and stale Browserslist warnings remain non-blocking debt.
 
 - [x] R12: full lint is measured and no new error exists beyond the documented legacy baseline
-  EVIDENCE: Full lint is 349 errors/77 warnings, one error and one warning lower than the prior baseline. Focused lint over the changed components passed with zero findings.
+  EVIDENCE: Full lint is 343 errors/77 warnings, exactly at and not above the accepted current baseline. The locked baseline verifier passed.
 
 - [ ] R13: at least one complete read-only walk-away cycle has current evidence and no unresolved Blocker or High finding
   EVIDENCE: The 30 August Dev UI cycle found no new Blocker or High application defect, but READY-009 remains an unresolved High operational scraper item.
@@ -50,17 +50,17 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
 - [x] R14: any authorised disposable-data cycle proves create, save, reopen and recoverable cleanup without retained test damage
   EVIDENCE: Two labelled Vote Tally presentations were created in Dev, published to one reserved Player, reopened through the deep link, denied to an unrelated Voter, then withdrawn with audit reasons. The required withdrawn audit rows remain retained.
 
-- [x] R15: the reviewed Dev package is fast-forwarded to Main and passes staging deployment plus signed-in smoke testing
-  EVIDENCE: Dev and Main served `v2026.08.31+1924404`; the signed-in Main Player route passed Axe, overflow, replay, pause/resume and skip checks before the Main-labelled disposable presentation was withdrawn.
+- [x] R15: the reviewed Dev package is integrated into Main and passes staging deployment plus proportionate smoke testing
+  EVIDENCE: Main was integrated by merge commit e6fda0f. The earlier signed-in Main Player presentation result is reused because the playback runtime files are unchanged; it covered Axe, overflow, replay, pause/resume and skip before withdrawal. The new candidate passed focused tally tests and signed-out direct-route checks. Coordinator remains separately open under R6.
 
 - [ ] R16: the exact frozen Main-to-Production application, migration, function, job and workflow package is independently reconciled against live Production
-  EVIDENCE: The exact 228-commit/398-path/111-migration/12-Edge-Function-file/three-workflow inventory is frozen. Live Production tally tables/functions and function-version gaps are recorded. Full migration-history mapping, function allow-list and independent rehearsal remain open, so this gate does not pass.
+  EVIDENCE: Current Prod-to-Main inventory is 259 commits, 434 paths, 115 added migrations, one applied Production-only migration absent from Main, 15 Edge Function files and three workflows. Live Production state is recorded. The migration map and curated function allow-list remain open, so this gate does not pass.
 
 - [ ] R17: Production backup, migration dry-run, rollback and post-release smoke procedures are proven without exposing secrets
-  EVIDENCE: Required backup, rehearsal, rollback and smoke procedures are documented in the Vote Tally release packet. They have not yet been rehearsed against a Production-derived isolated environment.
+  EVIDENCE: The Player MVP lifecycle migration passed a Production-derived transactional rollback and isolated real apply, closing the expected 355 sessions without changing notification/email counts. The broader 115-file sequence is blocked at migration 20260801013000 because Production lacks public.field_templates, so the whole-release rehearsal is not complete.
 
 - [ ] R18: required Dev, Main and Production-capable workflow checks, including scrapers, are green or have an explicitly accepted operational exception
-  EVIDENCE: pending
+  EVIDENCE: The named-final blank-round repair passed 21 focused tests and a public fixture check on Dev, but it is deliberately absent from Main. The latest four Production Supabase Scrapers runs 33932103274, 33945079394, 33955841032 and 33965158128 failed; the latest log confirms blank TARGET_ROUND_NUMBER values. The entire Production scraper workflow remains excluded pending separate review and approval, so this gate stays open.
 
 - [ ] R19: Aaron explicitly approves the exact frozen Production package after reviewing risks, accepted debt and rollback evidence
   EVIDENCE: pending

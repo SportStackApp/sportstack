@@ -6,6 +6,47 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 5 September lean Dev-to-Production readiness result
+
+- The repaired candidate is deployed to Dev at `b8687ec` and Main staging at `e6fda0f`.
+  Dev Quality run `33969370123` passed. Vercel deployments
+  `dpl_5jLMPt2QRJxUaxYGkvhR7vipNn4V` (Dev) and
+  `dpl_4vYVWVeH6Sd5djYSHEyfKmq63nnW` (Main) are READY and their bundles contain
+  the recorded commits.
+- Production is unchanged at `15223e9`. No Production database, function, workflow, secret, DNS or
+  deployment change occurred during this readiness run.
+- Dev now includes additive migration
+  `20260905131718_restore_player_mvp_voting_lifecycle_after_production_slice.sql`. Live Dev has zero
+  overdue `OPEN` Player MVP sessions, 362 `CLOSED` sessions, one one-minute closure job and two
+  deadline triggers. A second closure run processed zero rows. Notification count stayed 957 and
+  Player MVP email-event count stayed 34, proving the migration did not queue unintended email.
+- A Production-derived isolated rehearsal closed the expected 355 overdue sessions and added 355
+  audit rows while leaving 24 notifications, 328 Player MVP email events and 96 team email settings
+  unchanged. Rollback, idempotence, disputed-session protection, deadline enforcement and
+  browser-role denial passed. The restore had 29 managed Auth/Storage compatibility errors and used
+  a local-only Storage scaffold, so this is application-data lifecycle proof rather than a fully
+  faithful hosted restore.
+- The frozen Dev candidate passed 46 Vitest files/181 tests, TypeScript, the Production build, the
+  tally verifier and the accepted 343-error/77-warning lint ceiling. Main passed the focused tally
+  verifier and 13 affected tests. Existing Player MVP playback, accessibility and responsive
+  evidence was reused only because the relevant runtime files are unchanged since `5338c0a`.
+- The named-final blank-round scraper repair is on Dev only. Its four affected workflow/script/test
+  paths were deliberately held out of Main because the Production-capable scraper workflow needs a
+  separate approval. The latest four Production Supabase Scrapers runs failed, with the latest log
+  confirming blank `TARGET_ROUND_NUMBER`; the Production workflow is still red.
+- The broad Main-to-Production package is **not release-ready**. It contains 259 commits, 434 paths,
+  115 added migration files, 15 Edge Function files and three workflow files. A Production-derived
+  sequence check reached a deterministic historical drift blocker at
+  `20260801013000_harden_field_template_grants.sql` because Production has no
+  `public.field_templates` relation. A curated Production-baseline release branch and explicit
+  migration reconciliation map are required before seeking approval.
+- The only remaining application acceptance gap in this lean run is an actual Coordinator sign-in.
+  The controlled browser is signed out and the reserved account helper does not provision the
+  direct Coordinator permission bundle. This remains blocked, not passed.
+- The current release decision, exclusions, expected counts, rollback points and post-release smoke
+  sequence are recorded in
+  `docs/production-readiness/SPORTSTACK-PRODUCTION-READINESS-PACKET-2026-09-05.md`.
+
 ## 5 September priority update — Player MVP presentation release
 
 - The narrow Player MVP tally slice was released to Production at `15223e9` after Aaron's exact
