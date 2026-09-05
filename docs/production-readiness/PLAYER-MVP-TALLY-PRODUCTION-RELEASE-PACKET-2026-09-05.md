@@ -252,10 +252,15 @@ pwsh -NoProfile -File scripts/release-player-mvp-tally-production.ps1 -Mode Pref
 
 ## Remaining approval blockers
 
-1. Nominate the Production Grampians test manager and recipient and confirm the intended audience
-   before the smoke publication. This slice cannot queue email.
-2. Give separate explicit approval for the exact frozen `prod` change and Production migration.
-3. Confirm acceptance of the unchanged Production dependency debt for this narrow release, while
+The Production smoke identities are nominated:
+
+- manager: the existing Admin Sportstack Super Admin account;
+- recipients: Chloe Wilson and Aaron Mullane; and
+- both recipients are active, non-placeholder Pumas members. Aaron's personal account has only the
+  Player role, so it cannot run the builder. This slice cannot queue external email.
+
+1. Give separate explicit approval for the exact frozen `prod` change and Production migration.
+2. Confirm acceptance of the unchanged Production dependency debt for this narrow release, while
    keeping its remediation as a separately tested package.
 
 **Readiness decision: the narrow manual Player MVP tally candidate is built, locally and hosted-

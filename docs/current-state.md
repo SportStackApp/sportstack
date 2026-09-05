@@ -42,9 +42,11 @@ Update this file after every meaningful Codex task, pull request, schema change,
   secrets were not touched during this run. The pinned read-only Production pre-flight passed on
   5 September: the project is visible and healthy, schema drift is limited to the one approved tally
   migration, backup metadata is available and the logical-backup command is ready. No backup or
-  Production change was created. Nominated smoke identities, acceptance of the unchanged dependency
-  debt and Aaron's separate exact-package approval remain required. See the 5 September tally release
-  packet.
+  Production change was created. The smoke identities are now nominated: Admin Sportstack will be
+  the manager, and Chloe Wilson plus Aaron Mullane will be the recipients. Production confirms both
+  recipients are active, non-placeholder Pumas members; Aaron's personal account is a Player, so the
+  existing Super Admin account must run the builder. Acceptance of the unchanged dependency debt and
+  Aaron's separate exact-package approval remain required. See the 5 September tally release packet.
 - A dedicated fail-closed release script now pins Production `682b8ea`, candidate `15223e9`, the
   14-path allow-list, migration blob `883d3f30` and exact Production project. Its local pre-flight
   verifies the frozen Git package and current public Production bundle, and the wrong-confirmation

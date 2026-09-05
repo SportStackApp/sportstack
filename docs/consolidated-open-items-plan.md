@@ -27,9 +27,10 @@ release safety gates. Unrelated improvements stay on the backlog.
 4. [Complete] Refresh encrypted Production Supabase access and run the read-only pinned pre-flight.
    Production is healthy, only the approved tally migration is pending, and backup tooling is ready;
    no Production change or backup was created.
-5. [In progress] Nominate the Grampians manager and recipient and accept the unchanged dependency
-   debt for this narrow release.
-6. After separate explicit Production approval, release and verify Grampians manager/recipient
+5. [Complete] Nominate the Production smoke identities. Admin Sportstack will run the builder, with
+   Chloe Wilson and Aaron Mullane as recipients; both are active, non-placeholder Pumas members.
+6. [In progress] Accept the unchanged dependency debt for this narrow release.
+7. After separate explicit Production approval, release and verify Grampians manager/recipient
    access and playback before sending a real team presentation. Confirm its audience and rounds.
 
 Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one

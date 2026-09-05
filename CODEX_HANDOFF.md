@@ -34,8 +34,10 @@ Last updated: 2026-09-05
 - Production remains unchanged. The pinned read-only backup/drift pre-flight passed on 5 September:
   Production is healthy, only the approved tally migration is pending, backup metadata is available
   and the logical-backup command is ready. No backup or Production change was made. The remaining
-  gates are nominated Production smoke identities, acceptance of unchanged dependency debt and
-  Aaron's separate explicit approval.
+  smoke identities are nominated: Admin Sportstack is the manager, with Chloe Wilson and Aaron
+  Mullane as recipients. Both recipients are active, non-placeholder Pumas members. Aaron's personal
+  account has only the Player role, so it cannot run the builder. The remaining gates are acceptance
+  of unchanged dependency debt and Aaron's separate explicit approval.
 - `scripts/release-player-mvp-tally-production.ps1` is the only release script for this narrow
   slice; do not use the older Umpire Portal script. It pins the base/candidate commits, 14 changed
   paths, migration blob and Production project; defaults to read-only Preflight; requires the exact
