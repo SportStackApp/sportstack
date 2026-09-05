@@ -34,6 +34,17 @@ Last updated: 2026-09-05
 - Production remains unchanged. The next gate is a fresh backup/drift pre-flight, a release command
   pinned to the exact commit and migration, nominated Production smoke identities and Aaron's
   separate explicit approval.
+- `scripts/release-player-mvp-tally-production.ps1` is the only release script for this narrow
+  slice; do not use the older Umpire Portal script. It pins the base/candidate commits, 14 changed
+  paths, migration blob and Production project; defaults to read-only Preflight; requires the exact
+  release phrase; creates and verifies roles/schema/data backups before migration; applies only the
+  tally migration; then fast-forwards `prod` and verifies the bundle. Local Git/public-site checks
+  pass and its two negative safety tests stop correctly. Current Production Vercel rollback target
+  is `dpl_BxfnnYSLbrrgkxTsuu5mgxf5vV5S` at `682b8ea`.
+- The old encrypted Production Supabase token is rejected as unauthorised and the new tally-specific
+  access file has not been configured. Aaron must securely provide a current SportStack Supabase
+  Owner/Admin token through the script's `ConfigureAccess` mode; never paste it into chat. Then run
+  read-only `Preflight`. Production remains untouched meanwhile.
 - The candidate does not change dependencies. `npm audit --omit=dev` on the Production baseline
   reports 14 existing runtime-tree findings (1 low, 1 moderate, 12 high); `xlsx` has no npm fix.
   Keep the exposure/upgrade review separate from this narrow release and do not bulk-update blindly.

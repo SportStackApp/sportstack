@@ -42,6 +42,14 @@ Update this file after every meaningful Codex task, pull request, schema change,
   secrets were not touched during this run. Final backup/drift pre-flight, a pinned release command,
   nominated smoke identities and Aaron's separate exact-package approval remain required. See the
   5 September tally release packet.
+- A dedicated fail-closed release script now pins Production `682b8ea`, candidate `15223e9`, the
+  14-path allow-list, migration blob `883d3f30` and exact Production project. Its local pre-flight
+  verifies the frozen Git package and current public Production bundle, and the wrong-confirmation
+  and wrong-candidate tests both stop safely. The candidate Vercel preview is READY and serves the
+  expected tally bundle against Dev; public Production remains READY at rollback deployment
+  `dpl_BxfnnYSLbrrgkxTsuu5mgxf5vV5S`, serves `682b8ea` against Production and has no tally bundle.
+  Database drift/backup pre-flight is blocked only because the old encrypted Production Supabase
+  token has expired; the separate tally access file is intentionally not configured yet.
 - The candidate changes no dependencies. The Production baseline's fresh runtime audit still has
   14 existing findings (1 low, 1 moderate, 12 high), including `xlsx` with no npm fix. This is
   separately recorded debt, not introduced by the tally, and needs an exposure/upgrade review.

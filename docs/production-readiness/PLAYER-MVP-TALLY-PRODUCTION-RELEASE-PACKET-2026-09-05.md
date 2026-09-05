@@ -28,6 +28,13 @@ The Dev commit remains the deployed acceptance evidence. Main and Dev are not al
 broad branch can be promoted safely for this single feature. The narrow candidate is independently
 frozen from the exact Production baseline and has not been merged to or deployed from `prod`.
 
+Vercel reports the candidate preview deployment `dpl_6hYjdHD8yPJ7cr7xzEqvh7ugKVuZ` READY. Its
+public bundle returns HTTP 200, contains `15223e9` and the manual tally UI, and is connected only to
+the Dev project as expected for a preview. Current Production deployment
+`dpl_BxfnnYSLbrrgkxTsuu5mgxf5vV5S` is READY at `682b8ea`; the Production domain returns HTTP 200,
+contains only the Production project reference and does not contain the tally bundle. This is the
+captured application rollback target.
+
 ## Current Dev acceptance
 
 The labelled presentation `fbaef8ee-724b-458f-896e-f24939feceee` was tested against Pumas with
@@ -205,16 +212,48 @@ objects dormant and roll the application back to the captured Vercel deployment;
 during an incident. If any existing row or job changes, stop writes and use only the rehearsed
 targeted reversal or owner-approved backup/PITR process.
 
+## Pinned release command
+
+Use only `scripts/release-player-mvp-tally-production.ps1` for this package. The older
+`scripts/release-production.ps1` is Umpire-Portal-specific and must not be reused. The tally script
+pins:
+
+- Production base `682b8eaba33f657a2c64dcce571a40e0b2b0ba00`;
+- release commit `15223e9f72f36307c1e09d96a1b1bdb9472f6d72`;
+- the exact 14-path allow-list;
+- migration `20260905040425_add_manual_player_mvp_tally_presentations.sql` and Git blob
+  `883d3f30cfc5aabec02826aa31896eb45262f310`; and
+- Production Supabase project `svierarfcolhcfjpmwck`.
+
+Its `Preflight` mode is read-only. It verifies Git identity/account, frozen remote refs, migration
+content, the static slice verifier, public Production bundle, scoped Supabase access, dependency
+drift, remote migration history, a one-migration dry-run and backup command availability. `Release`
+requires the exact phrase `RELEASE PLAYER MVP TALLY TO PRODUCTION`, creates and hashes separate
+roles/schema/data dumps, applies only the approved migration, rechecks drift, fast-forwards `prod`
+without rewriting history and verifies the deployed bundle. Its manifest records the Vercel
+rollback deployment above. Wrong-confirmation and wrong-candidate tests both stop safely.
+PowerShell parsing and release-order assertions pass. Repository TypeScript and Production build
+also pass; full lint remains exactly the accepted 343-error/77-warning baseline and has no finding
+for the new PowerShell file.
+
+The current tally-specific encrypted access file is not configured. The earlier general release
+token is expired and was rejected as unauthorised. Configure a fresh token only through the secure
+PowerShell prompt—never through chat—then run the read-only pre-flight:
+
+```powershell
+pwsh -NoProfile -File scripts/release-player-mvp-tally-production.ps1 -Mode ConfigureAccess
+pwsh -NoProfile -File scripts/release-player-mvp-tally-production.ps1 -Mode Preflight
+```
+
 ## Remaining approval blockers
 
-1. Capture a fresh authenticated Production backup/PITR manifest and re-run the read-only drift
-   counts immediately before release.
-2. Prepare a release command or script pinned only to `15223e9b` and the single consolidated
-   migration; the existing Umpire release script must not be reused.
-3. Nominate the Production Grampians test manager and recipient and confirm the intended audience
+1. Configure a current Production Supabase Owner/Admin token in the new encrypted access file, run
+   the pinned read-only pre-flight, then create its verified logical backup immediately before the
+   migration. The old token has expired.
+2. Nominate the Production Grampians test manager and recipient and confirm the intended audience
    before the smoke publication. This slice cannot queue email.
-4. Give separate explicit approval for the exact frozen `prod` change and Production migration.
-5. Confirm acceptance of the unchanged Production dependency debt for this narrow release, while
+3. Give separate explicit approval for the exact frozen `prod` change and Production migration.
+4. Confirm acceptance of the unchanged Production dependency debt for this narrow release, while
    keeping its remediation as a separately tested package.
 
 **Readiness decision: the narrow manual Player MVP tally candidate is built, locally and hosted-

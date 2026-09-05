@@ -24,7 +24,10 @@ release safety gates. Unrelated improvements stay on the backlog.
    safety/compatibility defects remain release blockers; prioritisation does not waive them.
 3. [Complete] Rehearse that exact package against an isolated Production-compatible dependency
    copy, verify data/job impacts and rollback, then freeze the release commit and allow-list.
-4. After separate explicit Production approval, release and verify Grampians manager/recipient
+4. [In progress] Refresh encrypted Production Supabase access, run the read-only pinned pre-flight,
+   and nominate the Grampians manager and recipient. The release script and Vercel rollback target
+   are ready; the Production token is the only technical access blocker.
+5. After separate explicit Production approval, release and verify Grampians manager/recipient
    access and playback before sending a real team presentation. Confirm its audience and rounds.
 
 Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one
