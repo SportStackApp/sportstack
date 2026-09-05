@@ -35,8 +35,8 @@ export async function listMvpTallyPresentations(teamId?: string) {
 }
 
 export async function getMvpTallyPresentation(id: string) {
-  const { data, error } = await client.from("mvp_tally_presentations").select("*").eq("id", id).single();
-  return unwrap<MvpTallyPresentationRecord>(data, error);
+  const { data, error } = await client.from("mvp_tally_presentations").select("*").eq("id", id).maybeSingle();
+  return unwrap<MvpTallyPresentationRecord | null>(data, error);
 }
 
 export async function getMvpTallyDraftDetails(id: string) {

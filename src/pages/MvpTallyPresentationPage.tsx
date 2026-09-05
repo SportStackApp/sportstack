@@ -21,7 +21,10 @@ export default function MvpTallyPresentationPage() {
       setLoading(true);
       try {
         const item = await getMvpTallyPresentation(id);
-        if (!item.card_snapshot || !item.result_snapshot || item.status === "WITHDRAWN") throw new Error("Unavailable");
+        if (!item || !item.card_snapshot || !item.result_snapshot || item.status === "WITHDRAWN") {
+          if (active) setUnavailable(true);
+          return;
+        }
         const { data: team } = await supabase.from("teams").select("name").eq("id", item.team_id).maybeSingle();
         if (active) {
           setPresentation(item);
