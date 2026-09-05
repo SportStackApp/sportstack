@@ -39,17 +39,20 @@ Update this file after every meaningful Codex task, pull request, schema change,
   intentional authenticated tally RPCs, whose manager/recipient denial paths passed the test. The
   rehearsal-only dependency tables are locked down and are not part of the Production package.
 - Production remains `682b8ea`; `prod`, Production data, deployments, functions, workflows, DNS and
-  secrets were not touched during this run. Final backup/drift pre-flight, a pinned release command,
-  nominated smoke identities and Aaron's separate exact-package approval remain required. See the
-  5 September tally release packet.
+  secrets were not touched during this run. The pinned read-only Production pre-flight passed on
+  5 September: the project is visible and healthy, schema drift is limited to the one approved tally
+  migration, backup metadata is available and the logical-backup command is ready. No backup or
+  Production change was created. Nominated smoke identities, acceptance of the unchanged dependency
+  debt and Aaron's separate exact-package approval remain required. See the 5 September tally release
+  packet.
 - A dedicated fail-closed release script now pins Production `682b8ea`, candidate `15223e9`, the
   14-path allow-list, migration blob `883d3f30` and exact Production project. Its local pre-flight
   verifies the frozen Git package and current public Production bundle, and the wrong-confirmation
   and wrong-candidate tests both stop safely. The candidate Vercel preview is READY and serves the
   expected tally bundle against Dev; public Production remains READY at rollback deployment
   `dpl_BxfnnYSLbrrgkxTsuu5mgxf5vV5S`, serves `682b8ea` against Production and has no tally bundle.
-  Database drift/backup pre-flight is blocked only because the old encrypted Production Supabase
-  token has expired; the separate tally access file is intentionally not configured yet.
+  The separate tally access file is now configured with a current Windows-encrypted token outside the
+  repository, and the complete read-only Production pre-flight passes.
 - The candidate changes no dependencies. The Production baseline's fresh runtime audit still has
   14 existing findings (1 low, 1 moderate, 12 high), including `xlsx` with no npm fix. This is
   separately recorded debt, not introduced by the tally, and needs an exposure/upgrade review.

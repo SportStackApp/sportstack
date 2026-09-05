@@ -31,9 +31,11 @@ Last updated: 2026-09-05
   authenticated writes. Adviser output has no RLS-disabled error: 14 scaffold-only no-policy INFO
   items, six intentional authenticated `SECURITY DEFINER` tally RPC warnings, and performance INFO
   only. Production was not touched.
-- Production remains unchanged. The next gate is a fresh backup/drift pre-flight, a release command
-  pinned to the exact commit and migration, nominated Production smoke identities and Aaron's
-  separate explicit approval.
+- Production remains unchanged. The pinned read-only backup/drift pre-flight passed on 5 September:
+  Production is healthy, only the approved tally migration is pending, backup metadata is available
+  and the logical-backup command is ready. No backup or Production change was made. The remaining
+  gates are nominated Production smoke identities, acceptance of unchanged dependency debt and
+  Aaron's separate explicit approval.
 - `scripts/release-player-mvp-tally-production.ps1` is the only release script for this narrow
   slice; do not use the older Umpire Portal script. It pins the base/candidate commits, 14 changed
   paths, migration blob and Production project; defaults to read-only Preflight; requires the exact
@@ -41,10 +43,9 @@ Last updated: 2026-09-05
   tally migration; then fast-forwards `prod` and verifies the bundle. Local Git/public-site checks
   pass and its two negative safety tests stop correctly. Current Production Vercel rollback target
   is `dpl_BxfnnYSLbrrgkxTsuu5mgxf5vV5S` at `682b8ea`.
-- The old encrypted Production Supabase token is rejected as unauthorised and the new tally-specific
-  access file has not been configured. Aaron must securely provide a current SportStack Supabase
-  Owner/Admin token through the script's `ConfigureAccess` mode; never paste it into chat. Then run
-  read-only `Preflight`. Production remains untouched meanwhile.
+- The tally-specific access file is configured outside the repository with Windows encryption. Its
+  token can see healthy SportStack Production, and `Preflight` passed through access, isolated link,
+  schema drift, migration dry-run and backup-readiness checks. Production remains untouched.
 - The candidate does not change dependencies. `npm audit --omit=dev` on the Production baseline
   reports 14 existing runtime-tree findings (1 low, 1 moderate, 12 high); `xlsx` has no npm fix.
   Keep the exposure/upgrade review separate from this narrow release and do not bulk-update blindly.

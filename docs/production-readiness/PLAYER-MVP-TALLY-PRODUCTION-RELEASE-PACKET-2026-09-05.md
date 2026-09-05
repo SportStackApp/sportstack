@@ -236,9 +236,14 @@ PowerShell parsing and release-order assertions pass. Repository TypeScript and 
 also pass; full lint remains exactly the accepted 343-error/77-warning baseline and has no finding
 for the new PowerShell file.
 
-The current tally-specific encrypted access file is not configured. The earlier general release
-token is expired and was rejected as unauthorised. Configure a fresh token only through the secure
-PowerShell prompt—never through chat—then run the read-only pre-flight:
+The tally-specific access file is now configured outside the repository with Windows encryption.
+The replacement token can see healthy SportStack Production. The pinned read-only pre-flight passed
+on 5 September 2026: the frozen Git package and public rollback baseline matched, Production schema
+drift was limited to the one approved pending tally migration, the migration dry-run passed, backup
+metadata was available and the logical-backup command was ready. No backup was created and no
+Production state changed.
+
+The secure configuration and repeatable pre-flight commands are:
 
 ```powershell
 pwsh -NoProfile -File scripts/release-player-mvp-tally-production.ps1 -Mode ConfigureAccess
@@ -247,15 +252,12 @@ pwsh -NoProfile -File scripts/release-player-mvp-tally-production.ps1 -Mode Pref
 
 ## Remaining approval blockers
 
-1. Configure a current Production Supabase Owner/Admin token in the new encrypted access file, run
-   the pinned read-only pre-flight, then create its verified logical backup immediately before the
-   migration. The old token has expired.
-2. Nominate the Production Grampians test manager and recipient and confirm the intended audience
+1. Nominate the Production Grampians test manager and recipient and confirm the intended audience
    before the smoke publication. This slice cannot queue email.
-3. Give separate explicit approval for the exact frozen `prod` change and Production migration.
-4. Confirm acceptance of the unchanged Production dependency debt for this narrow release, while
+2. Give separate explicit approval for the exact frozen `prod` change and Production migration.
+3. Confirm acceptance of the unchanged Production dependency debt for this narrow release, while
    keeping its remediation as a separately tested package.
 
 **Readiness decision: the narrow manual Player MVP tally candidate is built, locally and hosted-
-staging rehearsed, and ready for final Production pre-flight. Production itself remains unchanged
-and approval-gated.**
+staging rehearsed, and has passed the final read-only Production pre-flight. Production itself
+remains unchanged and approval-gated.**
