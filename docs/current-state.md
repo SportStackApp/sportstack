@@ -35,6 +35,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
   secrets were not touched during this run. Final backup/drift pre-flight, a pinned release command,
   nominated smoke identities and Aaron's separate exact-package approval remain required. See the
   5 September tally release packet.
+- The candidate changes no dependencies. The Production baseline's fresh runtime audit still has
+  14 existing findings (1 low, 1 moderate, 12 high), including `xlsx` with no npm fix. This is
+  separately recorded debt, not introduced by the tally, and needs an exposure/upgrade review.
 
 ## 5 September readiness work package 3 — deployed to Dev
 

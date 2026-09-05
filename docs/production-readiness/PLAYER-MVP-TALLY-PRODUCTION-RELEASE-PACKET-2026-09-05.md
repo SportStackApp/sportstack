@@ -118,6 +118,15 @@ Source behaviour must be extracted and reviewed from `882c30c`, the tally-only p
 `71af047`, `1924404`, `40409af`, `6c87ae1`, `1bb7621` and `5338c0a`; these commits must not be cherry-picked
 whole without reviewing their non-tally changes.
 
+## Accepted pre-existing dependency debt
+
+The narrow candidate does not change `package.json` or `package-lock.json`. A fresh
+`npm audit --omit=dev` on the Production baseline nevertheless reports 14 existing runtime-tree
+findings: 1 low, 1 moderate and 12 high. Most have dependency updates available; `xlsx` reports no
+npm fix. This is not caused or expanded by the tally slice, but it must remain visible as accepted
+Production debt and receive a separate exposure-and-upgrade review. Do not run an automatic bulk
+dependency fix as part of this release.
+
 ## Full-behaviour alternative
 
 Keeping scheduling, AI commentary and tally email delivery expands the package to at least
@@ -179,6 +188,8 @@ targeted reversal or owner-approved backup/PITR process.
 3. Nominate the Production Grampians test manager and recipient and confirm the intended audience
    before the smoke publication. This slice cannot queue email.
 4. Give separate explicit approval for the exact frozen `prod` change and Production migration.
+5. Confirm acceptance of the unchanged Production dependency debt for this narrow release, while
+   keeping its remediation as a separately tested package.
 
 **Readiness decision: the narrow manual Player MVP tally candidate is built, locally rehearsed and
 ready for final Production pre-flight. Production itself remains unchanged and approval-gated.**

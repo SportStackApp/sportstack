@@ -27,6 +27,9 @@ Last updated: 2026-09-05
 - Production remains unchanged. The next gate is a fresh backup/drift pre-flight, a release command
   pinned to the exact commit and migration, nominated Production smoke identities and Aaron's
   separate explicit approval.
+- The candidate does not change dependencies. `npm audit --omit=dev` on the Production baseline
+  reports 14 existing runtime-tree findings (1 low, 1 moderate, 12 high); `xlsx` has no npm fix.
+  Keep the exposure/upgrade review separate from this narrow release and do not bulk-update blindly.
 
 ## 5 September 2026 — readiness work package 3 deployed to Dev
 
