@@ -1,10 +1,17 @@
 # Player MVP tally Production release packet — 5 September 2026
 
-Status: **Production-baseline candidate built and rehearsed; explicit Production approval pending**
+Status: **Released at `15223e9`; owner smoke paused on overdue-session lifecycle defect**
 
-No Production change was made during this run. In particular, repository history and read-only
-database evidence confirm no `prod` or Production database mutation; no Production deployment,
-Edge Function, secret, DNS or workflow action was taken.
+Aaron supplied the exact approval phrase and the guarded release completed on 5 September 2026.
+The script created and verified a logical Production backup, applied only the approved additive
+tally migration, fast-forwarded `prod` to `15223e9` and passed independent Production verification.
+No Edge Function, secret, DNS, workflow or external-email change was included.
+
+The first owner smoke then exposed a lifecycle defect before any real presentation was published.
+Pumas has 15 sessions past their deadline but still stored as `OPEN` (426 votes), and one stored as
+`CLOSED` (42 votes). The admin UI presents overdue `OPEN` sessions as closed/expired while the tally
+builder selects only true `CLOSED` rows, so only one round appears. Publication is paused until a
+separate additive repair is rehearsed and explicitly approved for Production.
 
 ## Frozen evidence point
 
@@ -20,20 +27,18 @@ Edge Function, secret, DNS or workflow action was taken.
   `v2026.09.05+5338c0a`. The Dev alias served the same bundle when this application evidence was
   frozen; later documentation-only commits may advance the alias build label without changing the
   tested tally code.
-- Production-to-Dev distance: 243 commits, 435 changed paths, 114 migration files,
+- Pre-release Production-to-Dev distance: 243 commits, 435 changed paths, 114 migration files,
   15 Edge Function files and 3 workflow files
 - Main-to-Dev distance: 15 commits and 74 changed paths
 
-The Dev commit remains the deployed acceptance evidence. Main and Dev are not aligned, and neither
-broad branch can be promoted safely for this single feature. The narrow candidate is independently
-frozen from the exact Production baseline and has not been merged to or deployed from `prod`.
+The Dev commit remains the full acceptance evidence. Main and Dev are not aligned, and neither broad
+branch was promoted. The narrow candidate was independently frozen from the exact Production
+baseline and is now the Production commit.
 
-Vercel reports the candidate preview deployment `dpl_6hYjdHD8yPJ7cr7xzEqvh7ugKVuZ` READY. Its
-public bundle returns HTTP 200, contains `15223e9` and the manual tally UI, and is connected only to
-the Dev project as expected for a preview. Current Production deployment
-`dpl_BxfnnYSLbrrgkxTsuu5mgxf5vV5S` is READY at `682b8ea`; the Production domain returns HTTP 200,
-contains only the Production project reference and does not contain the tally bundle. This is the
-captured application rollback target.
+Vercel reported candidate preview deployment `dpl_6hYjdHD8yPJ7cr7xzEqvh7ugKVuZ` READY before
+release. Production now returns HTTP 200, contains `15223e9`, serves the manual tally UI and points
+only to the Production Supabase project. Deployment `dpl_BxfnnYSLbrrgkxTsuu5mgxf5vV5S` at
+`682b8ea` is the captured application rollback target.
 
 ## Current Dev acceptance
 
@@ -262,9 +267,10 @@ The Production smoke identities are nominated:
 Aaron accepted the unchanged Production dependency debt for this narrow release on 5 September
 2026. Its remediation remains a separately tested package.
 
-The only remaining blocker is separate explicit approval for the exact frozen `prod` change and
-Production migration.
+The original release approval gate is complete. The new blocker is a separately reviewed and
+approved lifecycle package that converts overdue `OPEN` sessions to the single `CLOSED` state and
+prevents post-deadline writes. The real Pumas presentation remains paused until that repair passes.
 
-**Readiness decision: the narrow manual Player MVP tally candidate is built, locally and hosted-
-staging rehearsed, and has passed the final read-only Production pre-flight. Production itself
-remains unchanged and approval-gated.**
+**Readiness decision: the narrow manual Player MVP tally is live and technically verified, but the
+real Pumas presentation is not ready to publish because 15 completed rounds remain stored as
+`OPEN`. Repair and re-smoke before team release.**

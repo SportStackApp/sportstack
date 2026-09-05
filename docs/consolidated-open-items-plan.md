@@ -31,9 +31,14 @@ release safety gates. Unrelated improvements stay on the backlog.
    Chloe Wilson and Aaron Mullane as recipients; both are active, non-placeholder Pumas members.
 6. [Complete] Aaron accepted the unchanged dependency debt for this narrow release; remediate it in
    a separately tested package.
-7. [Awaiting exact approval] After separate explicit Production approval, release and verify the
-   Grampians manager/recipient
-   access and playback before sending a real team presentation. Confirm its audience and rounds.
+7. [Released; smoke paused] The narrow slice is live at `15223e9` and its release checks passed.
+   The first owner smoke exposed 15 overdue Pumas sessions still stored as `OPEN`; the UI calls them
+   expired/closed, but the tally builder correctly selects only stored `CLOSED` rows. No real
+   presentation has been published.
+8. [Next] Build and rehearse an additive lifecycle repair so passing the voting deadline results in
+   the single `CLOSED` state everywhere. Verify the affected-row count, no post-deadline voting,
+   tally inclusion, existing vote totals, result concerns and rollback on Dev/staging. Obtain new
+   explicit Production approval before applying the migration or reconciling the 15 Pumas rows.
 
 Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one
 reserved Player. Notification/deep link, unrelated-Voter denial, withdrawal, desktop/tablet/mobile,
@@ -44,9 +49,10 @@ sessions and 96 inherited email-on flags in scope. The narrow manual/in-app-only
 frozen at `15223e9b` from the exact Production baseline, and its focused local Supabase rehearsal
 passes. Its exact migration and transactional access suite also pass on the isolated hosted
 `SportStack-staging` project `fdkgcwacuqoswnatvubv`, with a clean rollback and no RLS-disabled
-public tables. See
+public tables. The narrow slice is now released to Production, but the owner smoke found the
+overdue-OPEN lifecycle defect above. See
 `docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-05.md`. No Main or
-Production change or real-player notification was authorised or performed.
+real-player tally notification was performed during the smoke.
 
 ## Current position
 

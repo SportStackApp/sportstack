@@ -4,6 +4,18 @@ Last updated: 2026-09-05
 
 ## 5 September — Player MVP presentation is the immediate owner priority
 
+- The narrow Player MVP tally slice is live in Production at `15223e9`. The guarded release created
+  and verified a logical backup, applied only migration `20260905040425`, fast-forwarded `prod` and
+  passed the independent Production bundle/schema verification. No Edge Function, workflow, DNS,
+  secret or external-email change was included.
+- Aaron's first Production smoke found 15 Pumas sessions past their deadline but still stored as
+  `OPEN` (426 votes); only one session is stored as `CLOSED` (42 votes). The admin page derives a
+  closed/expired display from the deadline, while the tally builder requires real `CLOSED` status.
+  `EXPIRED` is not an enum value. No real presentation has been published and smoke is paused.
+- Root cause: the broad Dev refine migration supplies the closure function, vote/submission guards
+  and one-minute cron, but the narrow Production migration intentionally omitted all closure
+  behaviour to avoid changing 355 existing overdue sessions during the tally-only release. Prepare
+  and rehearse a small additive follow-up, then seek separate explicit Production approval.
 - Dev end-to-end tally acceptance is complete through `5338c0a`. One labelled Pumas presentation was
   published to the reserved Player only, opened from its in-app notification, denied to the reserved
   Voter, tested at three viewports, then withdrawn with an audit reason. External email stayed
@@ -31,14 +43,12 @@ Last updated: 2026-09-05
   authenticated writes. Adviser output has no RLS-disabled error: 14 scaffold-only no-policy INFO
   items, six intentional authenticated `SECURITY DEFINER` tally RPC warnings, and performance INFO
   only. Production was not touched.
-- Production remains unchanged. The pinned read-only backup/drift pre-flight passed on 5 September:
-  Production is healthy, only the approved tally migration is pending, backup metadata is available
-  and the logical-backup command is ready. No backup or Production change was made. The remaining
-  smoke identities are nominated: Admin Sportstack is the manager, with Chloe Wilson and Aaron
+- The Production smoke identities are Admin Sportstack as manager, with Chloe Wilson and Aaron
   Mullane as recipients. Both recipients are active, non-placeholder Pumas members. Aaron's personal
   account has only the Player role, so it cannot run the builder. Aaron accepted the unchanged
-  dependency debt for this narrow release on 5 September; remediation remains separate. The only
-  remaining gate is Aaron's separate explicit Production approval.
+  dependency debt for this narrow release on 5 September; remediation remains separate. The
+  original release gate was satisfied by Aaron's exact approval; the lifecycle repair is a new
+  approval-gated Production package.
 - `scripts/release-player-mvp-tally-production.ps1` is the only release script for this narrow
   slice; do not use the older Umpire Portal script. It pins the base/candidate commits, 14 changed
   paths, migration blob and Production project; defaults to read-only Preflight; requires the exact
@@ -48,7 +58,8 @@ Last updated: 2026-09-05
   is `dpl_BxfnnYSLbrrgkxTsuu5mgxf5vV5S` at `682b8ea`.
 - The tally-specific access file is configured outside the repository with Windows encryption. Its
   token can see healthy SportStack Production, and `Preflight` passed through access, isolated link,
-  schema drift, migration dry-run and backup-readiness checks. Production remains untouched.
+  schema drift, migration dry-run and backup-readiness checks. That pre-flight itself made no
+  Production change.
 - The candidate does not change dependencies. `npm audit --omit=dev` on the Production baseline
   reports 14 existing runtime-tree findings (1 low, 1 moderate, 12 high); `xlsx` has no npm fix.
   Keep the exposure/upgrade review separate from this narrow release and do not bulk-update blindly.

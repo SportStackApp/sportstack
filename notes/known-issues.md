@@ -4,6 +4,24 @@
 > priority, sequencing, next actions and parked work live only in
 > `docs/consolidated-open-items-plan.md`.
 
+## Player MVP overdue sessions are displayed as closed but remain OPEN
+
+**Logged:** 5 September 2026
+**Status:** Confirmed Production defect; real tally publication paused
+
+The Player MVP admin page derives a closed/expired label when an `OPEN` session is past its
+`closes_at` deadline. The tally builder does not use that label: it correctly accepts only database
+rows whose status is actually `CLOSED`. Production Pumas evidence is 15 overdue `OPEN` sessions
+containing 426 votes and one stored `CLOSED` session containing 42 votes, so only one completed
+round appears in the season tally builder.
+
+`EXPIRED` is not a database status. The intended single final state is `CLOSED`. The full Dev
+refinement includes a closure function, write guards and a one-minute job, but all lifecycle changes
+were deliberately excluded from the narrow Production tally release because the pre-flight found
+355 overdue Production sessions would be changed. No real Pumas tally has been published. Repair
+requires a separately tested additive migration, affected-row dry run, rollback evidence and new
+explicit Production approval.
+
 ## Feedback log reconciliation — 5 September 2026
 
 **Status:** Dev inbox triaged; implementation and acceptance queue remains

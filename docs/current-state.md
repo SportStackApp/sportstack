@@ -8,6 +8,22 @@ Update this file after every meaningful Codex task, pull request, schema change,
 
 ## 5 September priority update — Player MVP presentation release
 
+- The narrow Player MVP tally slice was released to Production at `15223e9` after Aaron's exact
+  approval. A verified logical backup was created at
+  `C:\Users\mulla\AppData\Local\SportStack\backups\prod\2026-09-05-221222-pre-player-mvp-tally-15223e9`;
+  the single additive tally migration, Production bundle and independent release verification
+  passed. Production advisers reported no error-level security or performance findings.
+- Aaron's first Production smoke found a voting-lifecycle mismatch before any real presentation was
+  published. The UI labels overdue `OPEN` sessions as closed/expired, but the tally builder accepts
+  only sessions stored as `CLOSED`. Pumas currently has 15 overdue `OPEN` sessions with 426 votes and
+  one stored `CLOSED` session with 42 votes, so only one of 16 completed rounds is selectable.
+  `EXPIRED` is not a database status and must not remain a separate user-facing state.
+- The full Dev migration contains `private.close_due_mvp_voting_sessions()`, deadline-enforcement
+  triggers and a one-minute closure job. They were deliberately omitted from the narrow Production
+  slice to avoid the pre-flight's 355-row bulk lifecycle change. The Production pre-release backup
+  contains no matching closure function or job, and the released migration adds none. Publication
+  is paused pending a small additive, rehearsed follow-up that makes overdue sessions truly
+  `CLOSED`; Production repair still requires separate explicit approval.
 - Current Dev acceptance passed for one labelled Pumas presentation with 9 closed rounds and one
   reserved disposable Player. The in-app notification and deep link worked, an unrelated Voter was
   denied, desktop/tablet/mobile did not overflow, playback controls and reduced motion worked, and
@@ -38,23 +54,20 @@ Update this file after every meaningful Codex task, pull request, schema change,
   tables have no direct authenticated write privilege. The six remaining security warnings are the
   intentional authenticated tally RPCs, whose manager/recipient denial paths passed the test. The
   rehearsal-only dependency tables are locked down and are not part of the Production package.
-- Production remains `682b8ea`; `prod`, Production data, deployments, functions, workflows, DNS and
-  secrets were not touched during this run. The pinned read-only Production pre-flight passed on
-  5 September: the project is visible and healthy, schema drift is limited to the one approved tally
-  migration, backup metadata is available and the logical-backup command is ready. No backup or
-  Production change was created. The smoke identities are now nominated: Admin Sportstack will be
-  the manager, and Chloe Wilson plus Aaron Mullane will be the recipients. Production confirms both
+- Production now runs the narrow tally release `15223e9`; no Edge Function, workflow, DNS, secret or
+  external-email change was included. The smoke identities are Admin Sportstack as manager and
+  Chloe Wilson plus Aaron Mullane as recipients. Production confirms both
   recipients are active, non-placeholder Pumas members; Aaron's personal account is a Player, so the
   existing Super Admin account must run the builder. Aaron accepted the unchanged dependency debt
-  for this narrow release on 5 September; its remediation remains a separate package. Only Aaron's
-  separate exact-package Production approval remains required. See the 5 September tally release
-  packet.
+  for this narrow release on 5 September; its remediation remains a separate package. The original
+  approval gate is complete; the follow-up lifecycle repair needs its own approval. See the
+  5 September tally release packet.
 - A dedicated fail-closed release script now pins Production `682b8ea`, candidate `15223e9`, the
   14-path allow-list, migration blob `883d3f30` and exact Production project. Its local pre-flight
   verifies the frozen Git package and current public Production bundle, and the wrong-confirmation
   and wrong-candidate tests both stop safely. The candidate Vercel preview is READY and serves the
-  expected tally bundle against Dev; public Production remains READY at rollback deployment
-  `dpl_BxfnnYSLbrrgkxTsuu5mgxf5vV5S`, serves `682b8ea` against Production and has no tally bundle.
+  expected tally bundle against Dev. Production now serves the tally release; deployment
+  `dpl_BxfnnYSLbrrgkxTsuu5mgxf5vV5S` at `682b8ea` remains the captured rollback target.
   The separate tally access file is now configured with a current Windows-encrypted token outside the
   repository, and the complete read-only Production pre-flight passes.
 - The candidate changes no dependencies. The Production baseline's fresh runtime audit still has
