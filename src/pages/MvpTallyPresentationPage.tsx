@@ -19,6 +19,9 @@ export default function MvpTallyPresentationPage() {
     let active = true;
     const load = async () => {
       setLoading(true);
+      setUnavailable(false);
+      setPresentation(null);
+      setTeamName("Player MVP");
       try {
         const item = await getMvpTallyPresentation(id);
         if (!item || !item.card_snapshot || !item.result_snapshot || item.status === "WITHDRAWN") {
