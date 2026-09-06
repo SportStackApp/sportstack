@@ -85,7 +85,7 @@ migration versions and the same 19 Edge Functions. Production remains at 159 mig
 11 Edge Functions. The Production migration list is byte-for-byte unchanged from the pre-apply
 snapshot.
 
-Dev Quality run `34019337864` passed for the final audit commit
+Dev Quality run `34019337864` passed for the final B1a implementation/audit commit
 `d70fc28731d394b792661cf34ca5f9fc8a48f3e8`. GitHub deployment `6290411884` also completed
 successfully at `https://sportstack-ihfr8erlw-sportstackapps-projects.vercel.app`. That exact
 deployment and `https://dev.sportstackapp.com.au` returned identical app-shell hashes, confirming
