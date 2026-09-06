@@ -25,6 +25,12 @@ Update this file after every meaningful Codex task, pull request, schema change,
   unchanged pending Aaron's decision.
 - Static checks, focused lint, 46 Vitest files/181 tests, TypeScript and Production build pass. Full
   lint remains at the established 346-error/77-warning baseline.
+- Code commits `99367e4` and `4104617` are on `dev`. Dev Quality run `34034923963` passed and
+  Vercel deployment `dpl_GmvpBYE62GJKWDwxStjk8zmVHLv7` is READY on
+  `dev.sportstackapp.com.au`; the deployed roles route returned HTTP 200 with the application root.
+- Final immutable-range security scan `a939dc44-ad09-4ee3-be34-7f5dd82412bf` completed with zero
+  reportable findings. Its coverage remains partial only for the two owner-confirmation Primary
+  semantics below.
 - B1c's owner walkthrough is still **CONFIRMATION REQUIRED**. B1 now needs the complete B1d
   allow-listed application in a fresh hosted Production-compatible rehearsal environment,
   regenerated types and actual-role smoke/denial checks. Main and Production are unchanged.

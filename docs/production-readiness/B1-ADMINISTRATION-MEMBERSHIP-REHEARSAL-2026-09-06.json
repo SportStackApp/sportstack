@@ -33,11 +33,23 @@
     "development_fixture_users_remaining": 0,
     "database_error_lint": "pass",
     "security_reportable_findings": 0,
+    "final_security_scan_id": "a939dc44-ad09-4ee3-be34-7f5dd82412bf",
     "vitest": "46 files, 181 tests passed",
     "typescript": "pass",
     "production_build": "pass",
     "focused_lint": "pass",
     "full_lint": "baseline: 346 errors, 77 warnings"
+  },
+  "development_delivery": {
+    "code_commits": [
+      "99367e45d4eb4b2f78c515adb249d1f0be82d83b",
+      "410461794336d6e7195e6c053e4409adf54fedc8"
+    ],
+    "dev_quality_run": 34034923963,
+    "vercel_deployment_id": "dpl_GmvpBYE62GJKWDwxStjk8zmVHLv7",
+    "vercel_state": "READY",
+    "alias": "dev.sportstackapp.com.au",
+    "route_shell_http_status": 200
   },
   "final_environment_audit": {
     "created_at": "2026-09-06T22:55:46.8876697+10:00",

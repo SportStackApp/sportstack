@@ -90,6 +90,12 @@ Final local checks pass:
 Full lint remains at the established baseline of 346 errors and 77 warnings, with no B1e
 regression.
 
+The exact code commits are `99367e4` and `4104617`. Dev Quality run `34034923963` passed. Vercel
+deployment `dpl_GmvpBYE62GJKWDwxStjk8zmVHLv7` is READY for commit `4104617` and aliases
+`dev.sportstackapp.com.au`; an unauthenticated route-shell request returned HTTP 200 with the
+application root. Final security scan `a939dc44-ad09-4ee3-be34-7f5dd82412bf` completed with zero
+reportable findings and only the two Primary semantics below deferred.
+
 ## Remaining release gates
 
 - B1c owner walkthrough remains **CONFIRMATION REQUIRED**; it was not converted into a pass.

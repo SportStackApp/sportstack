@@ -19,8 +19,10 @@ Last updated: 2026-09-06
   apply/repeat/runtime/rollback checks pass.
 - Local quality passes: static verification, focused lint, 46/181 Vitest, TypeScript and Production
   build. Full lint remains at the 346-error/77-warning baseline.
-- Next: commit/push this exact package to Dev, verify Dev Quality/deployment, then build the B1d
-  allow-listed application in a fresh hosted Production-compatible rehearsal environment.
+- Code commits `99367e4` and `4104617` are on `dev`. Dev Quality `34034923963` passed; Vercel
+  deployment `dpl_GmvpBYE62GJKWDwxStjk8zmVHLv7` is READY and the deployed roles route returned
+  HTTP 200. Final scan `a939dc44-ad09-4ee3-be34-7f5dd82412bf` has zero reportable findings.
+- Next: build the B1d allow-listed application in a fresh hosted Production-compatible rehearsal environment.
   Evidence: `docs/production-readiness/B1-ADMINISTRATION-MEMBERSHIP-REHEARSAL-2026-09-06.md`.
 
 ## 6 September — B1d application allow-list frozen with blockers
