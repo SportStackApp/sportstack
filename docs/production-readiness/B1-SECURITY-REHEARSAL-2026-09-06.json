@@ -1,0 +1,68 @@
+{
+  "evidence_version": 1,
+  "recorded_at": "2026-09-06",
+  "source_commit": "79ecba3f856f37f1d8726774245bfc845e8cbe4f",
+  "migration": {
+    "version": "20260906075102",
+    "path": "supabase/migrations/20260906075102_b1_security_compatibility.sql",
+    "sha256": "45960fb9e3b8661d22fac956ec4ae7cc0aab3afe9ec239e94fd6a6816465c74d",
+    "mode": "additive_compatibility_bridge"
+  },
+  "production_backup": {
+    "sha256": "0e4e677d86ec3fc5efe1c40d3077c68b040e45d53575a6023f33712a0e15738e",
+    "bytes": 58342020,
+    "contains_personal_information": true,
+    "committed": false
+  },
+  "local_rehearsal": {
+    "database": "fresh_production_derived_copy_plus_b1a",
+    "network_exposure": "none",
+    "first_apply": "passed",
+    "repeat_apply": "passed",
+    "rollback": "passed",
+    "runtime": "passed",
+    "cross_user_scope_probe": "denied",
+    "legitimate_super_admin_path": "passed",
+    "protected_counts": {
+      "profiles": {
+        "before": 757,
+        "after_first_apply": 757,
+        "after_repeat_apply": 757
+      },
+      "team_memberships": {
+        "before": 1260,
+        "after_first_apply": 1260,
+        "after_repeat_apply": 1260
+      },
+      "primary_change_requests": {
+        "before": 6,
+        "after_first_apply": 6,
+        "after_repeat_apply": 6
+      }
+    },
+    "managed_service_limitation": "The logical backup does not faithfully reproduce hosted Auth and Storage; a local-only scaffold was used."
+  },
+  "development": {
+    "project_ref": "icqegnpjbizccjebjfhb",
+    "rollback_compatibility_check": "passed",
+    "check_result": "B1_SECURITY_DEV_COMPATIBILITY_OK",
+    "database_applied": false,
+    "application_status": "pending"
+  },
+  "security_review": {
+    "scan_id": "a74bf4c6-9855-496d-ba7d-509615c61722",
+    "coverage": "complete",
+    "pre_remediation_findings": {
+      "low": 1,
+      "medium": 0,
+      "high": 0,
+      "critical": 0
+    },
+    "finding_id": "csf_c7dab753a8bcbb6e6caf7112",
+    "finding_status": "fixed_and_runtime_verified"
+  },
+  "production": {
+    "project_ref": "svierarfcolhcfjpmwck",
+    "changed": false
+  }
+}

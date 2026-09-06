@@ -6,6 +6,24 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 6 September B1 security compatibility rehearsal
+
+- Additive migration `20260906075102_b1_security_compatibility.sql` curates the B1 security
+  functions, initial permission catalogue, RLS policies, integrity triggers and minimum grants on
+  top of B1a. Its static verifier covers 38 functions, 11 policies, five authenticated-readable
+  tables and 18 authenticated-executable functions; no anonymous B1 access is granted.
+- The exact migration passed first apply, repeat apply, runtime permission checks and rollback in
+  an isolated Production-derived database. Protected counts remained 757 profiles, 1,260
+  memberships and six primary-team requests. A live Development rollback-only compatibility check
+  also passed and made no persistent database change.
+- A complete security review found one low-severity cross-user administrator-scope probe. The
+  candidate now binds authenticated calls to the signed-in user's ID, retains an explicit trusted
+  service-role path and passes the isolated denial and legitimate Super Admin runtime tests.
+- Development database application and deployment are still pending the frozen commit and final
+  checks. B1c membership workflows, B1d application allow-list and a complete hosted
+  Production-compatible rehearsal remain open. Production is unchanged.
+- Evidence: `docs/production-readiness/B1-SECURITY-REHEARSAL-2026-09-06.md`.
+
 ## 6 September B1 foundation reconciliation
 
 - A corrected read-only Dev/Production structural comparison now covers B1 tables, columns,

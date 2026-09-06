@@ -2,6 +2,22 @@
 
 Last updated: 2026-09-06
 
+## 6 September — B1b security bridge rehearsed
+
+- New additive migration `20260906075102_b1_security_compatibility.sql` installs the curated B1
+  security functions, permission seed, RLS policies, integrity triggers and minimum grants after
+  B1a. Static verification covers 38 functions and 11 policies and confirms no anonymous B1
+  access.
+- The exact migration passed first apply, repeat apply, runtime permission checks and rollback
+  against an isolated Production-derived database. Profiles remained 757, memberships 1,260 and
+  primary-team requests six. A live Development rollback-only compatibility check also passed.
+- The security review's only finding was a low-severity cross-user scope-status probe. The bridge
+  now binds authenticated callers to their own user ID while retaining an explicit service-role
+  path. Both the denial path and legitimate Super Admin path pass at runtime.
+- Development application is pending the frozen commit and final checks. B1c membership workflow,
+  B1d application allow-list and the complete hosted rehearsal remain required. Production was not
+  changed. Evidence: `docs/production-readiness/B1-SECURITY-REHEARSAL-2026-09-06.md`.
+
 ## 6 September — B1a dormant foundation rehearsed
 
 - Read-only live comparison confirmed Production lacks 12 B1-owned tables, one private sequence and
