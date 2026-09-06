@@ -5,26 +5,26 @@ Last updated: 2026-09-07
 ## 7 September — hosted B1 rehearsal passed
 
 - `SportStack-staging` was reset under exact owner approval, rebuilt from the Production schema-only
-  backup and all six B1 migrations, then tested with actual Auth roles. Candidate `5994385` passed
-  apply, repeat, rollback, allow/deny, quality and hosted application smoke checks.
+  backup and the first six B1 migrations, then tested with actual Auth roles. The seventh additive
+  simple-role boundary migration was subsequently applied and tested on staging and Dev. Candidate
+  `a076174` passes the focused boundary, tracked Python, TypeScript, build and deployment checks.
 - Staging was cleaned to zero Auth users and zero test application rows. Main and Production were
   unchanged.
-- B1c owner walkthrough, cross-organisation Primary-team semantics and account-wide Player/Voter
-  role semantics remain **CONFIRMATION REQUIRED**. A fresh Production pre-flight and new exact
-  Production approval are also required.
+- B1c owner walkthrough and cross-organisation Primary-team semantics remain **CONFIRMATION
+  REQUIRED**. Aaron confirmed that account-wide Player/Voter role changes are Super Admin only;
+  the database and lower-admin UI now enforce that rule while preserving team-scoped Players.
+  A fresh Production pre-flight and new exact Production approval are also required.
 - Evidence: `docs/production-readiness/B1-HOSTED-REHEARSAL-2026-09-07.md`.
-- Independent immutable-patch review completed for `a1d23c7..5994385` with patch SHA-256
-  `41f618fff298ff287a2bffd44ed5d789fa90036c64c2d5a3214368184d13d0f3`. Recommendation is
+- Independent immutable-patch review completed for `a1d23c7..a076174` with patch SHA-256
+  `c58dc1ed7020f0cf67806f33bc58b6450bd9b4be2f9bf44bc30e54c2db0293af`. Recommendation is
   `hold_for_evidence`, not release. The exact Vercel preview is READY/HTTP 200.
 - Production read-only database pre-flight is currently unavailable through the Supabase connector
   due to account permission. Do not infer current migration or row counts. Restore access and take
   a fresh verified backup immediately before any approved release. Packet:
   `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
-- A separate read-only review raised four hypotheses. Migration `20260906130000` already defeats the
-  request-approval race; two hypotheses match the open Primary-team decision. The remaining policy
-  question is whether scoped administrators may change the account-wide `PLAYER` or `VOTER` flags
-  through the legacy role-save function. No Production fix should be guessed before Aaron confirms
-  that rule.
+- A separate review raised four hypotheses. Migration `20260906130000` defeats the request-approval
+  race; two hypotheses match the open Primary-team decision. The remaining simple-role issue was
+  fixed by `20260907101500`; a fresh independent post-fix review found no confirmed issue.
 
 ## 6 September — B1e administration bridge deployed to Development
 

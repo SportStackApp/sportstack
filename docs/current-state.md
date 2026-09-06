@@ -9,19 +9,24 @@ Update this file after every meaningful Codex task, pull request, schema change,
 ## 7 September B1 hosted rehearsal complete
 
 - The disposable hosted staging project was reset with Aaron's exact approval and rebuilt from the
-  Production schema backup plus all six additive B1 migrations. Apply, repeat, rollback and
+  Production schema backup plus the first six additive B1 migrations. Apply, repeat, rollback and
   actual-role allow/deny checks passed; all disposable users and application data were removed.
-- The exact Production-based application candidate is frozen locally at `5994385`. Generated hosted
-  types, 19 Vitest tests, TypeScript, Production build, focused lint and hosted browser smoke pass.
+- A seventh additive migration, `20260907101500`, was then applied to staging and Dev. It enforces
+  Aaron's confirmed rule that only Super Admin may add or remove account-wide Player/Voter roles,
+  while preserving team-scoped Player membership. Lower-admin denial, unchanged-save and Super
+  Admin add/remove runtime tests pass with test data rolled back.
+- The exact Production-based application candidate is frozen at `a076174`. The original 19 Vitest
+  tests plus 87 tracked Python tests, four focused boundary tests, TypeScript, Production build,
+  focused lint and hosted application checks pass.
 - Main and Production remain unchanged. Production is not authorised. Evidence:
   `docs/production-readiness/B1-HOSTED-REHEARSAL-2026-09-07.md`.
 - Independent review is now complete with `hold_for_evidence`: high impact, moderate regression
   likelihood, partial protection, managed recovery and moderate confidence. Exact Vercel preview
-  `dpl_GCghG7Hi2fHm6mF8UgqMxtDPzmbi` is READY and returns HTTP 200. The current Supabase connector
+  candidate deployment `GYqrVj6kNfD9y4qWsbp9JGByZYAR` succeeded. The current Supabase connector
   cannot perform the fresh Production read-only pre-flight, so owner confirmation, Primary-team
-  semantics, account-wide Player/Voter role semantics, restored Production access/backup and exact
-  approval remain open. A separate source review confirmed that migration `20260906130000` closes
-  its request-approval race hypothesis; it found no new confirmed vulnerability. Packet:
+  semantics, restored Production access/backup and exact approval remain open. The account-wide
+  Player/Voter policy is resolved and enforced. A fresh independent post-fix review found no
+  confirmed issue. Packet:
   `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
 
 ## 6 September B1e administration and membership compatibility

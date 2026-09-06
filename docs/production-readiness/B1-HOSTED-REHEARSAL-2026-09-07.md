@@ -6,10 +6,23 @@ The disposable `SportStack-staging` project (`fdkgcwacuqoswnatvubv`) was reset u
 approval and rebuilt from the Production schema backup plus the six additive B1 migrations. Apply,
 repeat, rollback and actual-role allow/deny checks passed. Main and Production were not changed.
 
-The exact application candidate is frozen locally at commit
-`5994385f403d4a8188de49e14762ac6097f018fa`. Generated hosted types, 19 Vitest tests, TypeScript,
-Production build and focused lint pass. Full lint contains the inherited Production baseline of 229
-errors and 50 warnings. No workflow or B1 Edge Function is included.
+The original application candidate was frozen at commit `5994385f403d4a8188de49e14762ac6097f018fa`.
+Generated hosted types, 19 Vitest tests, TypeScript, Production build and focused lint passed. Full
+lint contains the inherited Production baseline of 229 errors and 50 warnings. No workflow or B1
+Edge Function is included.
+
+## Follow-up role-boundary hardening
+
+Aaron confirmed that only Super Admin may add or remove account-wide Player/Voter roles. The
+seventh additive migration, `20260907101500_b1_restrict_account_wide_simple_roles.sql`, was applied
+on top of the rehearsed six-migration staging database. Actual-role tests proved lower-admin
+add/remove denial, unchanged lower-admin saves, Super Admin add/remove, preserved team-scoped Player
+membership and restricted internal-function grants. The transaction rolled back all test data.
+
+The final candidate is `a076174f317a4fbdc66c50e312b7257624ad33b0`, with binary patch SHA-256
+`c58dc1ed7020f0cf67806f33bc58b6450bd9b4be2f9bf44bc30e54c2db0293af`. Focused boundary tests,
+87 tracked Python tests, TypeScript, Production build and the candidate Vercel deployment pass. A
+fresh independent post-fix review found no confirmed issue.
 
 ## Hosted smoke test
 
@@ -36,4 +49,4 @@ order and rollback points. Application rollback is to Production commit `a1d23c7
 recovery uses the fresh backup because migration history must not be rewritten.
 
 Still required: the B1c owner walkthrough, Aaron's decision on cross-organisation Primary-team
-semantics, independent review, and a new exact Production approval.
+semantics, fresh Production pre-flight and backup, and a new exact Production approval.

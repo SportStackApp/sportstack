@@ -67,11 +67,12 @@ browser check is still unavailable.
      required B1e general Users/Requests bridge now passes Production-derived apply, repeat,
      actual-role runtime and rollback plus hosted Dev apply, repeat, rollback-only runtime and
      database lint. Its session-bound follow-up is additive. The complete Production-compatible
-     hosted rehearsal now passes with frozen local candidate `5994385`; the B1c owner walkthrough,
-     Primary-team semantics, account-wide Player/Voter role semantics, fresh Production
+      hosted rehearsal now passes, and the seventh additive simple-role boundary is verified on
+      staging and Dev with frozen candidate `a076174`; the B1c owner walkthrough, Primary-team semantics, fresh Production
      pre-flight/backup and exact Production approval remain open. Independent review is complete
      with `hold_for_evidence`; its request-approval race hypothesis is already closed by the sixth
-     migration, while the remaining hypotheses are explicit owner-policy gates. The latest six
+      migration. Aaron confirmed account-wide Player/Voter changes are Super Admin only; that rule
+      is now enforced and independently reviewed. The latest six
      Production scraper schedules are green, but the named-final blank-round fix remains Dev-only
      and the workflow remains a separate approval package.
 

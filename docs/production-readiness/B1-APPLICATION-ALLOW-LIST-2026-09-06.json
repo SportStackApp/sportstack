@@ -4,21 +4,21 @@
   "status": "INDEPENDENT_REVIEW_COMPLETE_HOLD_FOR_OWNER_EVIDENCE",
   "recordedAt": "2026-09-07",
   "environmentPins": {
-    "devApplicationCommit": "cbadc776627030501f33c9b55a4079be1d8aef76",
+    "devApplicationCommit": "35ded5a238ac59f9a99291d1b9053f2e89f83f3a",
     "mainCommit": "af21ae3c06a2d66d2eb9c4edf64bb2c185869927",
     "productionBaseCommit": "a1d23c741b79de02c32763a879597192a1c1ebd5",
     "historicalCleanB1Snapshot": "77422f1188eade9f45f36382462dca7849a1081a",
     "primaryTeamRpcSnapshot": "3a52bd94c55b103509e599700b47b2cbf5577f5e",
-    "hostedCandidateCommit": "5994385f403d4a8188de49e14762ac6097f018fa",
+    "hostedCandidateCommit": "a076174f317a4fbdc66c50e312b7257624ad33b0",
     "hostedProjectRef": "fdkgcwacuqoswnatvubv"
   },
   "patchIdentity": {
     "base": "a1d23c741b79de02c32763a879597192a1c1ebd5",
-    "head": "5994385f403d4a8188de49e14762ac6097f018fa",
-    "changedFiles": 26,
-    "sha256": "41f618fff298ff287a2bffd44ed5d789fa90036c64c2d5a3214368184d13d0f3",
-    "vercelDeployment": "dpl_GCghG7Hi2fHm6mF8UgqMxtDPzmbi",
-    "vercelBundle": "index-DnPhkItZ.js"
+    "head": "a076174f317a4fbdc66c50e312b7257624ad33b0",
+    "changedFiles": 28,
+    "sha256": "c58dc1ed7020f0cf67806f33bc58b6450bd9b4be2f9bf44bc30e54c2db0293af",
+    "vercelDeployment": "GYqrVj6kNfD9y4qWsbp9JGByZYAR",
+    "vercelBundle": "verified by successful candidate deployment"
   },
   "independentReview": {
     "recommendation": "HOLD_FOR_EVIDENCE",
@@ -63,6 +63,11 @@
       "stage": "B1e request lock",
       "path": "supabase/migrations/20260906130000_b1_request_approval_scope_lock.sql",
       "sha256": "67c1c8aa5fb663fbaaa422ba1ee79b7de1d1b08beff7bb54e9ca8b133d12bd66"
+    },
+    {
+      "stage": "B1e simple-role boundary",
+      "path": "supabase/migrations/20260907101500_b1_restrict_account_wide_simple_roles.sql",
+      "sha256": "d93e7c51e566e9769b17c5074554c1216514801dc20367c810bd1b220c8809ed"
     }
   ],
   "exactSourceFiles": [
@@ -141,6 +146,10 @@
   ],
   "verificationOnlyFiles": [
     {
+      "path": "tests/test_b1_simple_role_boundary.py",
+      "reason": "Static regression coverage for the Super-only account-wide PLAYER/VOTER boundary and lower-admin UI."
+    },
+    {
       "path": "tests/test_session_permission_context.py",
       "reason": "Dev-side static verification; not deployed because it requires later Dev-only migration history."
     },
@@ -201,9 +210,12 @@
     },
     {
       "path": "src/pages/admin/UsersManagement.tsx",
+      "sourceCommit": "a076174f317a4fbdc66c50e312b7257624ad33b0",
+      "blob": "4ce27be984a8c63c28b40c8e277fa358893e755c",
       "allowedChanges": [
         "Replace only primary-team approval and decline mutations with the B1c RPC wrapper.",
-        "Retain all other Production user, role and membership behaviour until B1e is reconciled."
+        "Retain all other Production user, role and membership behaviour until B1e is reconciled.",
+        "Hide account-wide PLAYER and VOTER controls from Association and Club administrators; retain team-scoped Player membership."
       ],
       "forbiddenFeatures": ["admin_save_user_access", "admin_list_coordination_responsibilities", "coordination role controls", "bulk Dev page replacement"]
     }
@@ -271,8 +283,8 @@
     },
     {
       "id": "B1-SIMPLE-ROLE-SEMANTICS-CONFIRMATION",
-      "status": "OPEN",
-      "requirement": "Confirm whether scoped administrators may add or remove account-wide PLAYER or VOTER roles; otherwise restrict the legacy role-save function and retest."
+      "status": "RESOLVED",
+      "requirement": "Aaron confirmed Super Admin only. Database and UI restrictions pass staging and Dev runtime tests; team-scoped Player membership remains supported."
     },
     {
       "id": "B1-PRODUCTION-PREFLIGHT",
