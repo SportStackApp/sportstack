@@ -19,8 +19,14 @@ const hardeningPath = resolve(
   "supabase/migrations/20260906123500_b1_administration_session_binding_hardening.sql",
 );
 const hardening = readFileSync(hardeningPath, "utf8");
+const scopeLockPath = resolve(
+  root,
+  "supabase/migrations/20260906130000_b1_request_approval_scope_lock.sql",
+);
+const scopeLock = readFileSync(scopeLockPath, "utf8");
 const lower = migration.toLowerCase().replaceAll("\r\n", "\n");
 const hardeningLower = hardening.toLowerCase().replaceAll("\r\n", "\n");
+const scopeLockLower = scopeLock.toLowerCase().replaceAll("\r\n", "\n");
 const executable = lower.replace(/^\s*--.*$/gm, "");
 const failures = [];
 
@@ -157,6 +163,21 @@ for (const internalFunction of [
 
 if (hardeningLower.includes("svierarfcolhcfjpmwck")) {
   failures.push("session-binding hardening must not select Production");
+}
+
+for (const required of [
+  "create or replace function public.approve_membership_request(",
+  "for update of request_row",
+  "public.approve_membership_request_unbound(",
+  "to authenticated, service_role",
+]) {
+  if (!scopeLockLower.includes(required)) {
+    failures.push(`missing request approval scope lock: ${required}`);
+  }
+}
+
+if (scopeLockLower.includes("svierarfcolhcfjpmwck")) {
+  failures.push("request approval scope lock must not select Production");
 }
 
 const approvalDefinition = definitions.find(

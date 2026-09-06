@@ -4,9 +4,9 @@ Last updated: 2026-09-06
 
 ## 6 September — B1e administration bridge deployed to Development
 
-- Development records `20260906114318_b1_administration_membership_compatibility.sql` and the
-  later additive `20260906123500_b1_administration_session_binding_hardening.sql`. Do not rewrite
-  either migration.
+- Development records `20260906114318_b1_administration_membership_compatibility.sql`,
+  `20260906123500_b1_administration_session_binding_hardening.sql` and
+  `20260906130000_b1_request_approval_scope_lock.sql`. Do not rewrite these migrations.
 - The bridge supplies B1d's general Users/Requests functions, removes anonymous execution,
   restricts internal helpers to service access, preserves the Production browser's six-argument
   role-save call and accepts `FILL_IN`.
@@ -14,6 +14,9 @@ Last updated: 2026-09-06
   protected-count, zero-fixture-leak and database lint checks pass. Production is unchanged.
 - The final B1e security review has zero reportable findings. Keep cross-organisation Primary-team
   demotion semantics and the unperformed B1c owner walkthrough marked **CONFIRMATION REQUIRED**.
+- A later independent review found a request-approval check/use race. The third additive migration
+  now locks the request while authorising and approving it; isolated and Development
+  apply/repeat/runtime/rollback checks pass.
 - Local quality passes: static verification, focused lint, 46/181 Vitest, TypeScript and Production
   build. Full lint remains at the 346-error/77-warning baseline.
 - Next: commit/push this exact package to Dev, verify Dev Quality/deployment, then build the B1d

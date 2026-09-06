@@ -15,6 +15,11 @@
       "version": "20260906123500",
       "name": "b1_administration_session_binding_hardening",
       "sha256": "E30F947446F48D6D18AA7054DEE762BAC9F3492EE90FD7573133917C1008E682"
+    },
+    {
+      "version": "20260906130000",
+      "name": "b1_request_approval_scope_lock",
+      "sha256": "67C1C8AA5FB663FBAAA422BA1EE79B7DE1D1B08BEFF7BB54E9CA8B133D12BD66"
     }
   ],
   "checks": {
@@ -35,10 +40,10 @@
     "full_lint": "baseline: 346 errors, 77 warnings"
   },
   "final_environment_audit": {
-    "created_at": "2026-09-06T22:42:08.4252211+10:00",
-    "development_migration_count": 148,
+    "created_at": "2026-09-06T22:55:46.8876697+10:00",
+    "development_migration_count": 149,
     "development_edge_function_count": 19,
-    "development_schema_sha256": "6878e89d037b38ea5a8049ae1c439417823b7ec793370323cb0b4a2cfcc12e78",
+    "development_schema_sha256": "8c8b5a9fb56dee16f80a84ed4e3cffe8ad0ea3e1d1f0a92916fadfed6cc17a31",
     "production_migration_count": 159,
     "production_edge_function_count": 11,
     "production_schema_sha256": "a8a570fafd21145bf13f66cd6291856ef8ed852f04e736a07382b742790dc488"

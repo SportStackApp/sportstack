@@ -5,7 +5,8 @@
 B1e is applied on Development only. It supplies the general Users and Requests database functions
 that B1d needs, preserves the legacy six-argument role-save call, removes anonymous execution and
 accepts `FILL_IN` consistently. A later additive migration binds the affected browser functions to
-the active mode and scope stored for the current Auth session.
+the active mode and scope stored for the current Auth session. A third additive migration locks a
+request before its scope is authorised, preventing that scope from changing during approval.
 
 Production was inspected read-only and was not changed. Main was not changed.
 
@@ -23,6 +24,10 @@ Production was inspected read-only and was not changed. Main was not changed.
   - The renamed implementations are service-only.
   - Profile listing, profile editing, role saving and request approval cannot use a dormant role
     while another mode is active for the session.
+- `20260906130000_b1_request_approval_scope_lock.sql`
+  - SHA-256 `67C1C8AA5FB663FBAAA422BA1EE79B7DE1D1B08BEFF7BB54E9CA8B133D12BD66`
+  - Locks the membership request row before deriving and authorising its organisation scope.
+  - Preserves authenticated browser and service-role access with zero anonymous access.
 
 The reusable Dev apply script is hard-coded to project `icqegnpjbizccjebjfhb`. Migration names,
 versions, success markers and optional runtime-check paths are constrained before they reach file
@@ -37,7 +42,7 @@ An isolated Production-derived PostgreSQL 17 database with no published host por
   administrator and anonymous allow/deny checks;
 - `FILL_IN` create, change, approval and cancellation behaviour;
 - session-mode denial for profile list, profile update, role save and request approval;
-- transactional rollback of both B1e migrations.
+- transactional rollback of all three B1e migrations.
 
 The logical Production backup does not include a faithful hosted Auth service, so the rehearsal
 used a local-only `auth.sessions` compatibility table. This limitation is why a fresh hosted
@@ -48,11 +53,11 @@ lint and the rollback-only runtime suite. The suite confirmed its 13 fixture Aut
 after rollback.
 
 The final read-only environment audit at
-`outputs/b1-environment-audit-2026-09-06-v10/manifest.json` records:
+`outputs/b1-environment-audit-2026-09-06-v11/manifest.json` records:
 
 | Environment | Migration versions | Edge Functions | Schema SHA-256 |
 |---|---:|---:|---|
-| Development | 148 | 19 | `6878e89d037b38ea5a8049ae1c439417823b7ec793370323cb0b4a2cfcc12e78` |
+| Development | 149 | 19 | `8c8b5a9fb56dee16f80a84ed4e3cffe8ad0ea3e1d1f0a92916fadfed6cc17a31` |
 | Production | 159 | 11 | `a8a570fafd21145bf13f66cd6291856ef8ed852f04e736a07382b742790dc488` |
 
 Production's schema hash is unchanged from the pre-apply audit.
@@ -62,7 +67,9 @@ Production's schema hash is unchanged from the pre-apply audit.
 The frozen B1e security review completed with zero reportable findings. It identified four real
 active-mode consistency defects; they do not give an attacker authority the account does not
 already hold, but the additive session-binding migration closes them as a safety and consistency
-measure. Focused negative runtime checks pass.
+measure. A later independent pass found a request-approval check/use race; the third migration
+closes it by holding a row lock across the permission check and approval. Focused negative runtime
+checks pass.
 
 Two related Primary-team semantics remain **CONFIRMATION REQUIRED**:
 

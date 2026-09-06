@@ -8,14 +8,16 @@ Update this file after every meaningful Codex task, pull request, schema change,
 
 ## 6 September B1e administration and membership compatibility
 
-- Development records additive migrations `20260906114318` and `20260906123500`. The first supplies
+- Development records additive migrations `20260906114318`, `20260906123500` and
+  `20260906130000`. The first supplies
   the B1d Users/Requests functions, hardened legacy role-save compatibility, `FILL_IN` handling,
   two integrity triggers and minimum grants. The second binds profile listing/editing, role saving
   and request approval to the current Auth session's active mode and scope without rewriting the
-  already-applied migration.
+  already-applied migration. The third locks a membership request while its scope is authorised and
+  approved, closing the final independent review's check/use race.
 - Exact Production-derived apply, repeat, actual-role runtime and rollback tests pass. Hosted Dev
   apply, repeat, rollback-only runtime, zero-fixture-leak, protected-count and database lint checks
-  also pass. The final audit records 148 Dev migration versions; Production remains unchanged at
+  also pass. The final audit records 149 Dev migration versions; Production remains unchanged at
   159 versions and the same schema hash.
 - The security review has zero reportable findings. Two global Primary-team semantics are
   **CONFIRMATION REQUIRED**: cross-organisation demotion by a scoped administrator and whether a
