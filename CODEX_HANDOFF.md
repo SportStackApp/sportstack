@@ -16,10 +16,11 @@ Last updated: 2026-09-06
 - The Production bundle contains `a1d23c7`, retains the Player MVP tally and references only the
   Production Supabase project. Separate Verify mode passes and database advisers return no
   error-level finding.
-- Aaron confirmed past-deadline sessions show only as **Closed** and all expected Pumas rounds are
-  present in the tally builder. The remaining owner smoke is to preview without publishing and
-  confirm totals and round order. Do not publish a real presentation until that passes. The
-  zero-ballot explanation and semi-final/grand-final labelling requests are queued as P2 follow-ups.
+- Aaron confirmed past-deadline sessions show only as **Closed**, all expected Pumas rounds are
+  present and the Production builder preview otherwise behaves as expected. No real-player
+  presentation has been published. The next-fix queue now prioritises the builder draft resetting
+  after leaving its tab, SportStack-name display and the Annabelle Fill-in identity investigation;
+  the zero-ballot, finals labels and presentation-polish requests are also recorded.
 
 ## 5 September — lean readiness candidate is staged, not Production-ready
 
