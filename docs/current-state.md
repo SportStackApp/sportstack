@@ -6,27 +6,23 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
-## 6 September Player MVP lifecycle Production candidate
+## 6 September Player MVP lifecycle Production release
 
-- A narrow follow-up branch was built directly from the current Production commit `15223e9`.
-  Candidate `a1d23c7` is exactly one commit and one additive migration above Production; it contains
-  no application, Edge Function, workflow, Auth, Storage, secret or dependency change.
-- The migration blob is the exact content used in the Production-derived rehearsal. That rehearsal
-  closed 355 overdue `OPEN` sessions, added 355 audit rows, created the closure job and deadline
-  guards, and left notifications, Player MVP email events and team email settings unchanged.
-- The read-only Production pre-flight passes against the current live state: 647 sessions, 355
-  overdue `OPEN`, 5 `CLOSED`, 41 audit rows, 24 notifications and 341 Player MVP email events. The
-  lifecycle functions, triggers, closure job and migration version are still absent, as expected.
-  The audit baseline increased from 40 to 41 when a legitimate future-dated Pumas session
-  automatically opened; it closes on 9 September Melbourne time and is not part of the overdue set.
-  That normal opening sent 13 configured voting emails, moving the email-event baseline from 328 to
-  341; the migration still requires that count to remain unchanged during release.
-- The frozen-patch safety assessment recommends proceeding only with human review because this is
-  a high-impact persistent database change. Its exact-head checks, negative control, guarded-script
-  self-test and rehearsal all pass. A fresh hashed logical backup is mandatory before application.
-- Production remains unchanged. The candidate is ready to be offered for Aaron's separate exact
-  approval; preparation and pre-flight are not release authority. See
-  `docs/production-readiness/PLAYER-MVP-LIFECYCLE-PRODUCTION-RELEASE-PACKET-2026-09-06.md`.
+- Aaron approved the refreshed exact package and Production was fast-forwarded from `15223e9` to
+  `a1d23c7`. The release contains exactly one additive migration and no application, Edge Function,
+  workflow, Auth, Storage, secret or dependency change.
+- A fresh roles, schema and data backup was created and hash-verified at
+  `C:\Users\mulla\AppData\Local\SportStack\backups\prod\2026-09-06-105953-pre-player-mvp-lifecycle-a1d23c7`
+  before the migration ran.
+- All 355 overdue `OPEN` Player MVP sessions were reconciled to `CLOSED`. Production now has zero
+  overdue `OPEN`, 360 `CLOSED`, 396 audit rows, one one-minute closure job and two deadline-write
+  triggers. Notifications remained 24 and Player MVP email events remained 341 during release.
+- The public Production bundle contains `a1d23c7`, the Player MVP tally remains present and the
+  bundle references only the Production Supabase project. The frozen verifier, negative control,
+  release self-test, database after-state and separate Verify mode all pass.
+- Production database advisers returned no error-level finding. A manual owner smoke test is still
+  required before publishing a real player presentation. See the 6 September lifecycle release
+  packet for release, rollback and test evidence.
 
 ## 5 September lean Dev-to-Production readiness result
 

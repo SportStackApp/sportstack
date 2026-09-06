@@ -15,12 +15,11 @@ Aaron's immediate outcome is to make the Player MVP tally presentation safely av
 Grampians team in Production. This overrides the next general form/sorting repair batch, not the
 release safety gates. Unrelated improvements stay on the backlog.
 
-**Current release position:** the lifecycle repair is verified on Dev at `b8687ec` and staged on
-Main at `e6fda0f`. A separate one-migration candidate `a1d23c7`, built directly from Production
-`15223e9`, now passes rehearsal, frozen-slice verification, guarded-script self-test, read-only live
-pre-flight and structured risk review. Production remains unchanged. This narrow repair is ready
-for separate exact owner approval; the broad Main package remains blocked by historical migration
-drift and the actual Coordinator-role browser check is still unavailable.
+**Current release position:** the one-migration lifecycle repair is live in Production at
+`a1d23c7`. Its backup, migration reconciliation, database objects, public bundle and separate
+verification passed. The next action is the owner smoke test before any real Player MVP presentation
+is published. The broad Main package remains blocked by historical migration drift and the actual
+Coordinator-role browser check is still unavailable.
 
 1. Revalidate the Grampians/Pumas builder, closed-round data, preview and full-screen playback on
    current Dev; test the intended disposable recipient and unrelated-account denial. Keep external
@@ -42,21 +41,18 @@ drift and the actual Coordinator-role browser check is still unavailable.
    The first owner smoke exposed 15 overdue Pumas sessions still stored as `OPEN`; the UI calls them
    expired/closed, but the tally builder correctly selects only stored `CLOSED` rows. No real
    presentation has been published.
-8. [Complete on Dev/Main] Additive migration `20260905131718` makes passing the voting deadline use
-   the single `CLOSED` state. Live Dev has zero overdue open sessions, one closure job and two
-   deadline triggers, and the Production-derived rehearsal closed the expected 355 rows without
-   queuing email or notification work.
-9. [Complete for the lifecycle defect] Candidate `a1d23c7` is one additive migration above
-   Production `15223e9`. It restores only the Player MVP closure function, deadline guards and
-   one-minute closure job. It deliberately excludes the broad Main history, scraper workflow,
-   Edge Functions and account helpers. The release packet is frozen for owner review.
+8. [Released] Additive migration `20260905131718` makes passing the voting deadline use the single
+   `CLOSED` state. Production now has zero overdue open sessions, 360 closed sessions, one closure
+   job and two deadline triggers. The release changed no notification or email-event count.
+9. [Complete] Production is at `a1d23c7`. The verified backup, exact 355-session reconciliation,
+   396-row audit result, separate deployed-bundle verification and database adviser check passed.
+   The broad Main history, scraper workflow, Edge Functions and account helpers remain excluded.
 10. [Blocked] Complete the actual Coordinator permission-bundle browser test when an authenticated
     disposable Coordinator session is available. Other current role results may be reused only
     where their relevant code is unchanged.
-11. [Next for the narrow lifecycle repair] Obtain Aaron's fresh exact approval for candidate
-    `a1d23c7`, then use only the pinned guarded release script. It must re-run pre-flight, create and
-    hash a fresh logical backup, apply the one migration, verify exact state changes and unchanged
-    communication counts, fast-forward `prod`, and verify the deployed bundle.
+11. [Next] Aaron completes the Production owner smoke: verify past-deadline sessions show only as
+    **Closed**, all expected Pumas rounds appear in the tally builder, preview without publishing,
+    and confirm vote totals and round order. Publish to real players only after this passes.
 12. [Later broad release] Reconcile Main's 115 added migration files against live Production and
     explicitly exclude the Production scraper workflow and Dev-only account helpers. The first
     proven sequence blocker is migration `20260801013000`, which assumes an absent
@@ -66,22 +62,16 @@ drift and the actual Coordinator-role browser check is still unavailable.
 Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one
 reserved Player. Notification/deep link, unrelated-Voter denial, withdrawal, desktop/tablet/mobile,
 controls, keyboard, reduced motion, Axe, console and failed-request checks passed. Four confirmed
-Dev defects were fixed and deployed through `5338c0a`. At that tested application commit, the
-Production gap is too broad to promote: 243 commits and 114 migration files, with 355 overdue OPEN
-sessions and 96 inherited email-on flags in scope. The narrow manual/in-app-only candidate is now
-frozen at `15223e9b` from the exact Production baseline, and its focused local Supabase rehearsal
-passes. Its exact migration and transactional access suite also pass on the isolated hosted
-`SportStack-staging` project `fdkgcwacuqoswnatvubv`, with a clean rollback and no RLS-disabled
-public tables. The narrow slice is now released to Production, but the owner smoke found the
-overdue-OPEN lifecycle defect above. See
-`docs/production-readiness/PLAYER-MVP-TALLY-PRODUCTION-RELEASE-PACKET-2026-09-05.md`. No Main or
-real-player tally notification was performed during the smoke.
+Dev defects were fixed and deployed through `5338c0a`. The first narrow tally release at `15223e9`
+passed its technical checks, then owner smoke exposed the overdue-OPEN lifecycle defect. The exact
+follow-up migration was rehearsed, backed up and released at `a1d23c7`; all 355 overdue sessions are
+now closed and no communication count changed during release. No real-player tally presentation
+has been published. See the 5 September tally packet and 6 September lifecycle packet.
 
-The lean follow-up completed the lifecycle repair, Dev database proof, Production-derived rollback
-rehearsal and Dev/Main staging. The current delta from Production to Main is 259 commits and 434
-paths, including 115 added migrations, 15 Edge Function files and three workflows. The new exact
-decision record is
-`docs/production-readiness/SPORTSTACK-PRODUCTION-READINESS-PACKET-2026-09-05.md`.
+The broad Main-to-Production delta remains separately blocked: 259 commits and 434 paths, including
+115 added migrations, 15 Edge Function files and three workflows. Its migration reconciliation,
+Coordinator acceptance and scraper workflow decision remain later work; the narrow lifecycle
+release does not waive those gates.
 
 ## Current position
 

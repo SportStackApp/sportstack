@@ -846,6 +846,14 @@ try {
         if ($productionGitState -ne $ReleaseCommit -or $migrationState.State -ne "Applied") {
             throw "Production does not match the complete approved release."
         }
+        Write-Step "Check Production database advisers"
+        Invoke-WithSupabaseToken -Token $token -Action {
+            Invoke-NativeCommand -Command "supabase" -Arguments @(
+                "db", "advisors", "--linked", "--workdir", $isolated.Root,
+                "--type", "all", "--level", "warn", "--fail-on", "error"
+            ) -Quiet | Out-Null
+        }
+        Write-Host "No error-level Production database adviser finding was returned." -ForegroundColor Green
         Test-ProductionWebsite
         Write-Host "`nPRODUCTION VERIFICATION PASSED at $($ReleaseCommit.Substring(0, 7))." -ForegroundColor Green
         return

@@ -2,29 +2,23 @@
 
 Last updated: 2026-09-06
 
-## 6 September — narrow Player MVP lifecycle candidate is ready for owner review
+## 6 September — Player MVP lifecycle repair released to Production
 
-- Production remains unchanged at `15223e9`. Candidate `a1d23c7` is directly based on it and adds
-  only migration `20260905131718_restore_player_mvp_voting_lifecycle_after_production_slice.sql`.
-- The candidate migration and Git blob match the successful Production-derived rehearsal. The
-  frozen-slice verifier, its wrong-root negative control, the guarded release self-test and the
-  read-only live Production pre-flight pass.
-- Current Production still has the reviewed baseline: 647 Player MVP sessions, 355 overdue
-  `OPEN`, 5 `CLOSED`, 41 audit rows, 24 notifications, 341 Player MVP email events, 96 email-enabled
-  teams, one tally presentation and 26 recipients. No lifecycle function, deadline function,
-  lifecycle trigger or closure job exists yet.
-- The baseline's 41st audit row is a legitimate `AUTO_OPEN` for a Pumas session opened on
-  6 September Melbourne time and closing on 9 September. It is not overdue, so the release impact
-  remains 355 closures and the expected after-state is now 396 audit rows. Its normal opening sent
-  13 configured emails, advancing the email-event baseline from 328 to 341 before the release.
-- Structured patch review rates impact high and likelihood low, recommends merge with mandatory
-  human review, and excludes automatic release because the migration changes persistent state and
-  installs privileged triggers and a recurring job. Recovery requires a verified backup and a
-  separately approved coordinated database action.
-- Use only `scripts/release-player-mvp-lifecycle-production.ps1`. It is pinned to the exact base,
-  candidate, migration path, blob and expected counts, and creates a fresh hashed logical backup
-  before the release path can write. Do not run Release without Aaron's exact candidate-specific
-  approval. Full instructions are in the 6 September lifecycle release packet.
+- Production is now at `a1d23c7`. Aaron approved the refreshed exact package after a legitimate
+  new Pumas `AUTO_OPEN` row and its 13 configured opening emails were inspected and incorporated
+  into the guarded baseline.
+- The release created and hash-verified roles, schema and data backups at
+  `C:\Users\mulla\AppData\Local\SportStack\backups\prod\2026-09-06-105953-pre-player-mvp-lifecycle-a1d23c7`,
+  then applied only migration `20260905131718` and fast-forwarded `prod` without rewriting history.
+- Production now has zero overdue `OPEN` sessions, 360 `CLOSED` sessions, 396 audit rows, one
+  closure job and two deadline triggers. Notifications remained 24 and Player MVP email events
+  remained 341 during release.
+- The Production bundle contains `a1d23c7`, retains the Player MVP tally and references only the
+  Production Supabase project. Separate Verify mode passes and database advisers return no
+  error-level finding.
+- The post-release owner smoke remains: confirm past-deadline sessions show only as **Closed**, all
+  expected Pumas rounds appear in the tally builder, preview without publishing, and confirm totals
+  and round order. Do not publish a real presentation until that smoke passes.
 
 ## 5 September — lean readiness candidate is staged, not Production-ready
 
