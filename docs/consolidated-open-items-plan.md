@@ -70,10 +70,15 @@ follow-up migration was rehearsed, backed up and released at `a1d23c7`; all 355 
 now closed and no communication count changed during release. No real-player tally presentation
 has been published. See the 5 September tally packet and 6 September lifecycle packet.
 
-The broad Main-to-Production delta remains separately blocked: 259 commits and 434 paths, including
+The broad Main-to-Production delta remains separately blocked: 266 commits and 438 paths, including
 115 added migrations, 15 Edge Function files and three workflows. Its migration reconciliation,
 Coordinator acceptance and scraper workflow decision remain later work; the narrow lifecycle
 release does not waive those gates.
+
+**Dev-to-Main alignment update:** the reviewed release tools and current evidence were promoted to
+Main through source Dev commit `2d7ed63` (promotion base `a5417f2`). Application source, migrations
+and Edge Functions now match. Only the Production scraper workflow, its named-finals schedule
+helper and two focused tests remain deliberately Dev-only pending separate workflow approval.
 
 ## Current position
 

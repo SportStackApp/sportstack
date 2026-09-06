@@ -6,6 +6,15 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 6 September Dev-to-Main eligible alignment
+
+- Main received the five reviewed release/documentation commits through source Dev commit
+  `2d7ed63`; the promotion base is Main commit `a5417f2`. TypeScript and the Production build pass.
+- Dev and Main have identical application source, migrations and Edge Functions. The only deliberate
+  snapshot differences are the Production scraper workflow, its named-finals schedule helper and
+  the two focused tests. Those four files remain on Dev pending separate Production-workflow review.
+- Production was not changed by this alignment.
+
 ## 6 September Player MVP lifecycle Production release
 
 - Aaron approved the refreshed exact package and Production was fast-forwarded from `15223e9` to

@@ -2,6 +2,16 @@
 
 Last updated: 2026-09-06
 
+## 6 September — eligible Dev material promoted to Main
+
+- Main now contains the reviewed Player MVP lifecycle release tools, release evidence and current
+  backlog documentation through source Dev commit `2d7ed63`; promotion base `a5417f2` passed
+  TypeScript and the Production build.
+- Application source, migrations and Edge Functions are identical between Dev and Main. Four
+  scraper-related files remain deliberately Dev-only: the Production scraper workflow, the
+  named-finals schedule helper and two focused tests. They require a separate workflow review.
+- Production was untouched.
+
 ## 6 September — Player MVP lifecycle repair released to Production
 
 - Production is now at `a1d23c7`. Aaron approved the refreshed exact package after a legitimate
