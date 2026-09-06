@@ -10,9 +10,13 @@ Last updated: 2026-09-06
   frozen-slice verifier, its wrong-root negative control, the guarded release self-test and the
   read-only live Production pre-flight pass.
 - Current Production still has the reviewed baseline: 647 Player MVP sessions, 355 overdue
-  `OPEN`, 5 `CLOSED`, 40 audit rows, 24 notifications, 328 Player MVP email events, 96 email-enabled
+  `OPEN`, 5 `CLOSED`, 41 audit rows, 24 notifications, 341 Player MVP email events, 96 email-enabled
   teams, one tally presentation and 26 recipients. No lifecycle function, deadline function,
   lifecycle trigger or closure job exists yet.
+- The baseline's 41st audit row is a legitimate `AUTO_OPEN` for a Pumas session opened on
+  6 September Melbourne time and closing on 9 September. It is not overdue, so the release impact
+  remains 355 closures and the expected after-state is now 396 audit rows. Its normal opening sent
+  13 configured emails, advancing the email-event baseline from 328 to 341 before the release.
 - Structured patch review rates impact high and likelihood low, recommends merge with mandatory
   human review, and excludes automatic release because the migration changes persistent state and
   installs privileged triggers and a recurring job. Recovery requires a verified backup and a
