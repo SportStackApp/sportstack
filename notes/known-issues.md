@@ -7,7 +7,7 @@
 ## Player MVP overdue sessions are displayed as closed but remain OPEN
 
 **Logged:** 5 September 2026
-**Status:** Repaired and verified on Dev/Main; narrow Production candidate ready for owner review
+**Status:** Repaired in Production at `a1d23c7`; owner smoke pending
 
 The Player MVP admin page derives a closed/expired label when an `OPEN` session is past its
 `closes_at` deadline. The tally builder does not use that label: it correctly accepts only database
@@ -16,26 +16,29 @@ containing 426 votes and one stored `CLOSED` session containing 42 votes, so onl
 round appears in the season tally builder.
 
 `EXPIRED` is not a database status. The intended single final state is `CLOSED`. The full Dev
-refinement includes a closure function, write guards and a one-minute job, but all lifecycle changes
-were deliberately excluded from the narrow Production tally release because the pre-flight found
-355 overdue Production sessions would be changed. No real Pumas tally has been published. Repair
-requires a separately tested additive migration, affected-row dry run, rollback evidence and new
-explicit Production approval.
+refinement included a closure function, write guards and a one-minute job, but those lifecycle
+changes were deliberately excluded from the first narrow Production tally release because the
+pre-flight found 355 overdue Production sessions would change. That finding led to the separately
+rehearsed and approved lifecycle release described below.
 
 Additive migration `20260905131718_restore_player_mvp_voting_lifecycle_after_production_slice.sql`
 is now deployed on Dev and staged in Main. Live Dev has zero overdue open sessions, 362 closed
 sessions, one one-minute closure job and two deadline triggers. It queued no notification or email
 event. A Production-derived isolated rehearsal closed the expected 355 overdue rows, added 355 audit
-rows and left notification, Player MVP email-event and team-email settings unchanged. Production
-remains at `15223e9` and still has the defect. The broad Main package cannot be promoted until its
-historical migration drift is reconciled; see the 5 September readiness packet.
+rows and left notification, Player MVP email-event and team-email settings unchanged. The broad
+Main package still cannot be promoted until its historical migration drift is reconciled; see the
+5 September readiness packet.
 
 A narrow Production-baseline candidate is now frozen at `a1d23c7`. It contains only the exact
 rehearsed lifecycle migration. Its verifier, negative control, guarded release self-test, read-only
 Production pre-flight and structured patch-risk assessment pass. The assessment requires human
 review because the migration changes persistent state and installs privileged lifecycle objects.
-Production has not changed and release still requires Aaron's fresh exact approval. See the
-6 September Player MVP lifecycle Production release packet.
+Aaron approved the refreshed baseline and the repair was released to Production at `a1d23c7` on
+6 September. The guarded release created and verified a fresh logical backup, closed the expected
+355 overdue sessions, produced the expected 396 audit rows, installed one closure job and two
+deadline triggers, and left notification/email-event counts unchanged. Separate Production bundle,
+database and adviser verification passed. Owner smoke is still required before a real presentation.
+See the 6 September Player MVP lifecycle Production release packet.
 
 ## Feedback log reconciliation — 5 September 2026
 

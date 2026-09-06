@@ -2,12 +2,29 @@
 
 ## Decision
 
-**Status: revalidated after safe live-data drift; fresh exact approval is required. The earlier
-approved attempt stopped before any Production change.**
+**Status: released and independently re-verified at `a1d23c7`; owner smoke pending before any real
+player presentation.**
 
 This is a one-migration follow-up to the Player MVP tally release already running in Production.
 It fixes the confirmed lifecycle defect where sessions past their voting deadline remain stored as
 `OPEN`, while the tally builder correctly accepts only stored `CLOSED` sessions.
+
+## Release result
+
+- Aaron gave the refreshed exact approval for `a1d23c7`.
+- The guard re-confirmed the frozen commit, current Production bundle, project and live baseline.
+- A fresh roles, schema and data backup was created and hash-verified at
+  `C:\Users\mulla\AppData\Local\SportStack\backups\prod\2026-09-06-105953-pre-player-mvp-lifecycle-a1d23c7`.
+- Only migration `20260905131718` was applied.
+- The exact 355 overdue sessions changed to `CLOSED`; Production now has zero overdue `OPEN`, 360
+  `CLOSED` and 396 audit rows.
+- One closure job and two deadline triggers exist.
+- Notifications remained 24 and Player MVP email-event rows remained 341 during release.
+- `prod` was fast-forwarded from `15223e9` to `a1d23c7` without rewriting history.
+- The public bundle contains `a1d23c7`, retains the Player MVP tally and references only the
+  Production Supabase project.
+- Separate Verify mode passes. Production database advisers returned no error-level finding.
+- Manual owner smoke is still required before a real player presentation is published.
 
 ## Exact package
 
@@ -43,9 +60,9 @@ Supabase guidance was checked: the migration uses `cron.schedule()`/`cron.unsche
 writing directly to `cron.job`, keeps `SECURITY DEFINER` functions in the private schema, sets an
 empty search path and revokes browser-role execution.
 
-## Current read-only Production pre-flight
+## Final pre-release Production pre-flight
 
-The guarded pre-flight passed on 6 September without creating a backup or changing Production:
+The guarded final pre-flight passed on 6 September before the release:
 
 - Git, public bundle and Supabase project match Production `15223e9`;
 - Production Supabase is healthy;
@@ -63,7 +80,7 @@ The guarded pre-flight passed on 6 September without creating a backup or changi
 - 341 Player MVP email-event rows;
 - 96 teams with Player MVP email enabled;
 - one tally presentation and 26 tally recipients;
-- no lifecycle function, deadline function, lifecycle trigger or closure job currently exists.
+- no lifecycle function, deadline function, lifecycle trigger or closure job existed before release.
 
 The guard detected the audit count moving from 40 to 41 before release and stopped before creating
 a backup or applying the migration. Read-only inspection confirmed the new row is a legitimate
@@ -139,8 +156,7 @@ Read-only pre-flight:
 pwsh -NoProfile -File scripts/release-player-mvp-lifecycle-production.ps1 -Mode Preflight
 ```
 
-The future release command is intentionally recorded but must not run without Aaron's fresh exact
-approval:
+The exact command Aaron approved and the guard executed was:
 
 ```powershell
 pwsh -NoProfile -File scripts/release-player-mvp-lifecycle-production.ps1 `
@@ -148,10 +164,10 @@ pwsh -NoProfile -File scripts/release-player-mvp-lifecycle-production.ps1 `
   -Confirmation "RELEASE PLAYER MVP LIFECYCLE a1d23c7 TO PRODUCTION"
 ```
 
-The confirmation phrase is approval for this candidate only. A different commit, migration blob,
-Production base or pre-flight result requires a new review and approval.
+That confirmation was consumed by this completed release. A different commit, migration blob,
+Production base or future Production change requires a new review and approval.
 
-## Release order
+## Completed release order
 
 1. Re-fetch Production and candidate refs and rerun the read-only pre-flight.
 2. Confirm Production still reports the exact pending counts and no lifecycle objects.
@@ -204,5 +220,5 @@ Production base or pre-flight result requires a new review and approval.
 
 ## Approval boundary
 
-Preparation, self-tests, read-only pre-flight and rehearsal evidence do not authorise Production.
-Aaron's fresh exact approval is required before any Production database change or `prod` push.
+Aaron gave the exact candidate-specific approval recorded above. It authorised only this completed
+release. Any later Production database change or `prod` push requires new explicit approval.

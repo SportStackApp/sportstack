@@ -35,7 +35,11 @@ assert(
   git("rev-parse", `origin/${candidateBranch}`) === candidateCommit,
   "Remote candidate branch is not at the frozen commit.",
 );
-assert(git("rev-parse", "origin/prod") === productionCommit, "Production branch moved; re-review required.");
+const productionHead = git("rev-parse", "origin/prod");
+assert(
+  [productionCommit, candidateCommit].includes(productionHead),
+  "Production branch moved outside the reviewed before-or-after commits; re-review required.",
+);
 assert(git("rev-parse", `${candidateCommit}^`) === productionCommit, "Candidate is not one commit above Production.");
 assert(git("rev-list", "--count", `${productionCommit}..${candidateCommit}`) === "1", "Candidate is not a one-commit slice.");
 
