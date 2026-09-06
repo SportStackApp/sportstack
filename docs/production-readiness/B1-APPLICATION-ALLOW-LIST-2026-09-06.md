@@ -80,6 +80,11 @@ Production build and focused lint. Full lint remains at the existing 346-error/7
 with zero fatal errors. These checks validate the allow-list and current Dev evidence; they do not
 replace the B1e or hosted-rehearsal gates.
 
+Allow-list commit `0f703c7` passed Dev Quality run `34030314009`. Vercel deployment `6292379283`
+completed successfully, and its deployment URL and `https://dev.sportstackapp.com.au` returned the
+same app-shell hash and `index-6P17Mea3.js` bundle. This was a documentation and verification-tool
+deployment; the pinned application source remains `916b5b9`.
+
 ## Next release sequence
 
 1. Build B1e from live Dev/Production schema comparison without rewriting migration history.

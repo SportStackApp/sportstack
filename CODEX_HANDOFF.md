@@ -18,6 +18,9 @@ Last updated: 2026-09-06
   environment, regenerate types and repeat role denial/application smoke checks. Main and
   Production remain unchanged. Evidence:
   `docs/production-readiness/B1-APPLICATION-ALLOW-LIST-2026-09-06.md`.
+- Commit `0f703c7` passed Dev Quality `34030314009`. Vercel deployment `6292379283` succeeded and
+  matches the Dev alias app shell and `index-6P17Mea3.js` bundle. This commit changes readiness
+  evidence and its verifier only; the frozen Dev application source remains `916b5b9`.
 
 ## 6 September — B1c membership workflow deployed to Development
 

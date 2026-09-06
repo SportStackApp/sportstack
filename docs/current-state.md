@@ -28,6 +28,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - The B1d manifest verifier and focused regressions pass. The full current Dev suite also passes:
   46 Vitest files/181 tests, TypeScript, Production build and focused lint. Full lint remains at the
   established 346-error/77-warning baseline with zero fatal errors.
+- Allow-list commit `0f703c7` passed Dev Quality run `34030314009`; deployment `6292379283` and the
+  Dev alias serve the same app-shell hash and `index-6P17Mea3.js` bundle. The commit changes only
+  readiness documentation and its verifier; the pinned Dev application source remains `916b5b9`.
 
 ## 6 September B1c membership workflow compatibility
 
