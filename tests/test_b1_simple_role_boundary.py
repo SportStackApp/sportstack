@@ -48,22 +48,17 @@ class AccountWideSimpleRoleBoundaryTests(unittest.TestCase):
         self.assertIn("from public, anon, authenticated", self.sql)
 
     def test_lower_admin_role_lists_exclude_player_and_voter(self) -> None:
-        self.assertIn(
-            'return ["COACH", "TEAM_MANAGER", "CLUB_ADMIN"].includes(role);',
-            self.users_page,
-        )
-        self.assertIn(
-            'return ["COACH", "TEAM_MANAGER"].includes(role);',
-            self.users_page,
-        )
-        self.assertNotIn(
-            'return ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN"]',
-            self.users_page,
-        )
-        self.assertNotIn(
-            'return ["PLAYER", "COACH", "TEAM_MANAGER"]',
-            self.users_page,
-        )
+        role_gate = self.users_page.split(
+            "const canAssignRole = (role: AppRole): boolean => {", 1
+        )[1].split("const handleSaveRoles", 1)[0]
+        lower_admin_lists = [
+            line for line in role_gate.splitlines() if "return [" in line
+        ]
+
+        self.assertEqual(2, len(lower_admin_lists))
+        for role_list in lower_admin_lists:
+            self.assertNotIn('"PLAYER"', role_list)
+            self.assertNotIn('"VOTER"', role_list)
 
 
 if __name__ == "__main__":
