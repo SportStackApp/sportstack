@@ -102,11 +102,15 @@ its current account context points to a different project.
 3. **B1d application allow-list:** freeze only the roles, users, module-control, permission-context
    and membership screens/hooks that depend on B1. No Edge Function is included unless its deployed
    Production source is reconciled first.
-4. Restore the complete B1 package into a fresh Production-compatible hosted staging environment;
+4. **B1e administration and membership compatibility:** reconcile the general Users/Requests
+   functions exposed by B1d, including Production's legacy `admin_save_user_roles` function and
+   grants. This requirement was discovered during the B1d dependency trace; it must use a new
+   additive migration and actual-role denial tests.
+5. Restore the complete B1 package into a fresh Production-compatible hosted staging environment;
    repeat the permission-denial and application smoke tests before requesting Production approval.
 
 ## Release boundary
 
-B1a is not a Production release packet by itself. Production must remain unchanged until B1b–B1d,
+B1a is not a Production release packet by itself. Production must remain unchanged until B1b–B1e,
 the hosted rehearsal and an independent review pass, followed by Aaron's explicit approval of the
 exact frozen package.

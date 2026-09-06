@@ -6,6 +6,29 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 6 September B1d application allow-list
+
+- The B1 application boundary is frozen in
+  `docs/production-readiness/B1-APPLICATION-ALLOW-LIST-2026-09-06.json`. Exact source files are
+  pinned by commit and blob; shared application files are patch-only. The package excludes every
+  Edge Function and workflow plus Coordination, incident/discipline, Expense Hub and the
+  Development account provisioner.
+- B1a–B1c cover the permission context, five-module controls and atomic primary-team lifecycle.
+  They do not cover the current Dev Users/Requests functions for general role and membership
+  administration. A new additive B1e compatibility bridge is required before the full Users-page
+  application can enter the hosted candidate. Production's existing general membership behaviour
+  must be retained until that bridge passes rehearsal and actual-role denial tests.
+- **B1c owner walkthrough: CONFIRMATION REQUIRED.** Aaron explicitly said the live manual test had
+  not been performed. His instruction to continue is recorded as deferral, not as a pass. The
+  request, approval, decline, cancellation and player-confirmation flow must be observed before
+  Production approval.
+- B1d remains blocked pending B1e, a fresh Production-compatible hosted rehearsal, regenerated
+  Supabase types, complete quality/application checks and independent review. Main and Production
+  are unchanged.
+- The B1d manifest verifier and focused regressions pass. The full current Dev suite also passes:
+  46 Vitest files/181 tests, TypeScript, Production build and focused lint. Full lint remains at the
+  established 346-error/77-warning baseline with zero fatal errors.
+
 ## 6 September B1c membership workflow compatibility
 
 - Additive migration `20260906095820_b1_membership_workflow_compatibility.sql` is applied and

@@ -2,6 +2,23 @@
 
 Last updated: 2026-09-06
 
+## 6 September — B1d application allow-list frozen with blockers
+
+- The B1d machine-readable allow-list pins the safe session-mode, module-control, route-gate and
+  primary-team browser sources by immutable commit/blob and limits shared screens to named patches.
+  It excludes Edge Functions, workflows, Dev account provisioning, Coordination,
+  incident/discipline and Expense Hub.
+- Current Dev's full Users and Requests pages depend on general administration functions not yet
+  supplied by B1a–B1c. Do not copy those pages wholesale. Retain Production's existing general
+  membership paths and patch only the B1c primary-team handlers until a new additive B1e
+  administration/membership bridge is curated and rehearsed.
+- The B1c owner walkthrough is **CONFIRMATION REQUIRED**. Aaron said it was not manually tested; the
+  decision to proceed does not make it a pass.
+- Next: build B1e, then construct the exact allow-listed app on a fresh Production-compatible hosted
+  environment, regenerate types and repeat role denial/application smoke checks. Main and
+  Production remain unchanged. Evidence:
+  `docs/production-readiness/B1-APPLICATION-ALLOW-LIST-2026-09-06.md`.
+
 ## 6 September — B1c membership workflow deployed to Development
 
 - Migration `20260906095820_b1_membership_workflow_compatibility.sql` is applied and recorded on

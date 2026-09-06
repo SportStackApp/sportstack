@@ -1,0 +1,253 @@
+{
+  "schemaVersion": 1,
+  "package": "B1d application allow-list",
+  "status": "BLOCKED_PENDING_B1E_AND_HOSTED_REHEARSAL",
+  "recordedAt": "2026-09-06",
+  "environmentPins": {
+    "devApplicationCommit": "916b5b9a4eada44f405678bfaafafefd4fd6cabc",
+    "mainCommit": "af21ae3c06a2d66d2eb9c4edf64bb2c185869927",
+    "productionBaseCommit": "a1d23c741b79de02c32763a879597192a1c1ebd5",
+    "historicalCleanB1Snapshot": "77422f1188eade9f45f36382462dca7849a1081a",
+    "primaryTeamRpcSnapshot": "3a52bd94c55b103509e599700b47b2cbf5577f5e"
+  },
+  "ownerConfirmation": {
+    "status": "CONFIRMATION_REQUIRED",
+    "scope": "B1c primary-team membership request, approval, decline, cancellation and player confirmation walkthrough",
+    "note": "Aaron explicitly said the walkthrough had not been performed. It must not be recorded as passed and must be completed before Production approval."
+  },
+  "databasePackage": [
+    {
+      "stage": "B1a",
+      "path": "supabase/migrations/20260906063905_b1_foundation_compatibility.sql",
+      "sha256": "97991bc7dcf62ba1c3cedd77c1d2a32025176a2d9377abcebcef543a3793dc62"
+    },
+    {
+      "stage": "B1b",
+      "path": "supabase/migrations/20260906075102_b1_security_compatibility.sql",
+      "sha256": "45960fb9e3b8661d22fac956ec4ae7cc0aab3afe9ec239e94fd6a6816465c74d"
+    },
+    {
+      "stage": "B1c",
+      "path": "supabase/migrations/20260906095820_b1_membership_workflow_compatibility.sql",
+      "sha256": "42d3488eefd2b65fee27be1e5ccf1d09baae2b5102c6df6ee06cfab3801658c2"
+    }
+  ],
+  "exactSourceFiles": [
+    {
+      "path": "src/components/admin/AdvancedPermissionControls.tsx",
+      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
+      "blob": "dd0f03ffd3c9269af07eef22be546388067bba1d",
+      "reason": "B1 permission groups, sets, assignments and overrides UI."
+    },
+    {
+      "path": "src/components/admin/ModuleControlsCard.tsx",
+      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
+      "blob": "264108a3c9d1f5e6b0a0699b29c99446a61fade8",
+      "reason": "B1 module inheritance and override UI for the five B1 modules only."
+    },
+    {
+      "path": "src/components/auth/ModuleGate.tsx",
+      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
+      "blob": "031609e4f280ec211222b920efd7c8f197244690",
+      "reason": "Fail-closed B1 module route boundary."
+    },
+    {
+      "path": "src/components/auth/ModeRouteGate.tsx",
+      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
+      "blob": "24f469fe9cedf1d37534eb7442474c289123a131",
+      "reason": "Fail-closed session-mode route boundary."
+    },
+    {
+      "path": "src/contexts/AppModeContext.tsx",
+      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
+      "blob": "e1e5d2bbd81f5eabfc3fd1ccfbdd1d1e2e03330f",
+      "reason": "Server-confirmed session mode and organisation scope."
+    },
+    {
+      "path": "src/hooks/useAdminScope.ts",
+      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
+      "blob": "ef770a4e1918dc9624cebd39f0399f38d7eea4b5",
+      "reason": "Mode-aware administrator scope calculation."
+    },
+    {
+      "path": "src/hooks/useModuleAvailability.ts",
+      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
+      "blob": "09aa1693989528de39d6d1986b74797e3da0e3b4",
+      "reason": "Fail-closed module availability for the five B1 modules."
+    },
+    {
+      "path": "src/lib/activeScopeOptions.ts",
+      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
+      "blob": "5dce38211389e3549f1c8d94ac342f738bcef87e",
+      "reason": "Restricts scope selector options to the active administrator mode."
+    },
+    {
+      "path": "src/lib/activeScopeOptions.test.ts",
+      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
+      "blob": "954cb4bf484571a1a121fba57a64c3ced029730b",
+      "reason": "Focused scope-option regression coverage."
+    },
+    {
+      "path": "src/lib/rolePermissions.ts",
+      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
+      "blob": "9296fa1935526ea0cf6066d365d39f6a45dea58e",
+      "reason": "B1-era plain-language role summaries without later module roles."
+    },
+    {
+      "path": "tests/test_session_permission_context.py",
+      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
+      "blob": "c3c800967b2281c91300791f5425d8a6c57148f8",
+      "reason": "Static regression coverage for the B1 session and application boundary."
+    },
+    {
+      "path": "tests/test_voting_module_enforcement.py",
+      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
+      "blob": "8009daab60e938c42cf5cd7a6ed556d8fb61832e",
+      "reason": "Static regression coverage for B1 voting-module gates."
+    },
+    {
+      "path": "src/lib/primaryTeamChangeRpc.ts",
+      "sourceCommit": "3a52bd94c55b103509e599700b47b2cbf5577f5e",
+      "blob": "bd1006f0aa714b7c687cf76da2c5fa001b689b69",
+      "reason": "Typed browser wrapper for the B1c atomic lifecycle functions."
+    },
+    {
+      "path": "src/lib/primaryTeamChangeRpc.test.ts",
+      "sourceCommit": "3a52bd94c55b103509e599700b47b2cbf5577f5e",
+      "blob": "568e420c3023ed1718e8a2a7f926e9b5058be202",
+      "reason": "Focused regression coverage for every browser-used B1c lifecycle function."
+    }
+  ],
+  "patchOnlyFiles": [
+    {
+      "path": "src/App.tsx",
+      "allowedChanges": [
+        "Place TeamProvider outside AppModeProvider so server mode can use the selected scope.",
+        "Add ModeRouteGate and ModuleGate only to routes already present at the Production base.",
+        "Add only the B1-era ADMIN_MODES, ASSOCIATION_ADMIN_MODES, SUPER_ADMIN_MODES, MVP_ADMIN_MODES and UMPIRE_BALLOT_MODES constants."
+      ],
+      "forbiddenFeatures": ["coordination", "incident-discipline", "expense-hub", "public-umpire-match-voting", "new route creation"]
+    },
+    {
+      "path": "src/components/layout/AppLayout.tsx",
+      "allowedChanges": [
+        "Use the server-confirmed active mode for navigation and scope selectors.",
+        "Filter existing Production navigation by the five B1 module keys.",
+        "Fail closed and show the existing mode synchronisation error."
+      ],
+      "forbiddenFeatures": ["coordination navigation", "incident or discipline navigation", "Expense Hub navigation", "unrelated layout redesign"]
+    },
+    {
+      "path": "src/contexts/TeamContext.tsx",
+      "allowedChanges": [
+        "Add selectionHydrated to prevent the permission context racing local scope restoration.",
+        "Delay invalid-scope clearing until the existing scope data has loaded."
+      ],
+      "forbiddenFeatures": ["competition sorting", "team sorting", "unrelated cascade redesign"]
+    },
+    {
+      "path": "src/pages/admin/RolesPermissions.tsx",
+      "allowedChanges": [
+        "Render ModuleControlsCard and AdvancedPermissionControls for Super, Association and Club administrators.",
+        "Use the existing B1 useAdminScope result for page access."
+      ],
+      "forbiddenFeatures": ["DevTestAccountProvisioner", "provision-dev-test-account", "new Edge Function"]
+    },
+    {
+      "path": "src/pages/Profile.tsx",
+      "allowedChanges": [
+        "Replace only direct primary_change_requests mutations and multi-step membership confirmation with the B1c RPC wrapper."
+      ],
+      "forbiddenFeatures": ["unrelated profile fields", "preferred-name or nickname work", "position or coaching changes"]
+    },
+    {
+      "path": "src/pages/admin/Requests.tsx",
+      "allowedChanges": [
+        "Replace only primary-team approval, decline and cancellation mutations with the B1c RPC wrapper.",
+        "Retain the Production general request approval behaviour until B1e is reconciled."
+      ],
+      "forbiddenFeatures": ["general membership workflow replacement", "coordination", "incident or discipline"]
+    },
+    {
+      "path": "src/pages/admin/UsersManagement.tsx",
+      "allowedChanges": [
+        "Replace only primary-team approval and decline mutations with the B1c RPC wrapper.",
+        "Retain all other Production user, role and membership behaviour until B1e is reconciled."
+      ],
+      "forbiddenFeatures": ["admin_save_user_access", "admin_list_coordination_responsibilities", "coordination role controls", "bulk Dev page replacement"]
+    }
+  ],
+  "generatedAtRehearsal": [
+    {
+      "path": "src/integrations/supabase/types.ts",
+      "rule": "Regenerate from the hosted rehearsal database after every approved B1 migration. Do not copy Dev's broad generated file and do not hand-edit it."
+    }
+  ],
+  "requiredB1bRpcNames": [
+    "clear_module_feature_flag",
+    "get_active_permission_mode",
+    "list_permission_management_records_for_mode",
+    "permission_visible_profiles_for_mode",
+    "resolve_effective_permission_for_mode",
+    "resolve_module_enabled",
+    "save_permission_assignment",
+    "save_permission_group",
+    "save_permission_override",
+    "save_permission_set",
+    "set_active_permission_context",
+    "set_module_feature_flag"
+  ],
+  "requiredB1cRpcNames": [
+    "approve_primary_team_change",
+    "cancel_primary_team_change",
+    "confirm_primary_team_change",
+    "decline_primary_team_change",
+    "request_primary_team_change"
+  ],
+  "deferredDatabaseDependencies": [
+    "approve_membership_request",
+    "admin_cancel_team_invite",
+    "admin_create_team_invite",
+    "admin_manage_team_membership",
+    "admin_membership_integrity_report",
+    "admin_save_user_roles",
+    "admin_save_user_roles_unchecked",
+    "admin_update_profile_details",
+    "admin_visible_profile_ids",
+    "guard_team_membership_integrity"
+  ],
+  "excludedPaths": [
+    { "path": "src/components/admin/DevTestAccountProvisioner.tsx", "reason": "Development-only account helper." },
+    { "path": "supabase/functions/provision-dev-test-account", "reason": "Development-only Edge Function; no Edge Function is approved in B1d." },
+    { "path": "src/pages/CoordinationModule.tsx", "reason": "B3 Coordination package." },
+    { "path": "src/pages/discipline", "reason": "Later incident and discipline package." },
+    { "path": "src/features/expense-hub", "reason": "Unrelated Expense Hub package." },
+    { "path": ".github/workflows", "reason": "Scraper and scheduled workflow changes are a separate approval package." },
+    { "path": "supabase/functions", "reason": "No Edge Function source is reconciled or included by this allow-list." }
+  ],
+  "edgeFunctions": [],
+  "workflows": [],
+  "releaseBlockers": [
+    {
+      "id": "B1C-OWNER-CONFIRMATION",
+      "status": "OPEN",
+      "requirement": "Complete and observe the B1c owner walkthrough; do not infer a pass."
+    },
+    {
+      "id": "B1E-ADMIN-MEMBERSHIP-COMPATIBILITY",
+      "status": "OPEN",
+      "requirement": "Build an additive compatibility bridge for the deferred general Users/Requests functions, including removal of Production's legacy PUBLIC/anon admin_save_user_roles execution, then rehearse its data and denial paths."
+    },
+    {
+      "id": "B1-HOSTED-REHEARSAL",
+      "status": "OPEN",
+      "requirement": "Apply the complete package in a fresh Production-compatible hosted environment, regenerate types, build the exact app candidate and repeat actual-role allow/deny and membership smoke tests."
+    },
+    {
+      "id": "B1-INDEPENDENT-REVIEW",
+      "status": "OPEN",
+      "requirement": "Independently review the frozen hosted candidate and release/rollback evidence before asking Aaron for Production approval."
+    }
+  ],
+  "productionChangesAuthorised": false
+}
