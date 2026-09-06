@@ -6,6 +6,28 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 6 September B1e administration and membership compatibility
+
+- Development records additive migrations `20260906114318` and `20260906123500`. The first supplies
+  the B1d Users/Requests functions, hardened legacy role-save compatibility, `FILL_IN` handling,
+  two integrity triggers and minimum grants. The second binds profile listing/editing, role saving
+  and request approval to the current Auth session's active mode and scope without rewriting the
+  already-applied migration.
+- Exact Production-derived apply, repeat, actual-role runtime and rollback tests pass. Hosted Dev
+  apply, repeat, rollback-only runtime, zero-fixture-leak, protected-count and database lint checks
+  also pass. The final audit records 148 Dev migration versions; Production remains unchanged at
+  159 versions and the same schema hash.
+- The security review has zero reportable findings. Two global Primary-team semantics are
+  **CONFIRMATION REQUIRED**: cross-organisation demotion by a scoped administrator and whether a
+  person's pending Primary request supplies consent for that demotion. Current behaviour is
+  unchanged pending Aaron's decision.
+- Static checks, focused lint, 46 Vitest files/181 tests, TypeScript and Production build pass. Full
+  lint remains at the established 346-error/77-warning baseline.
+- B1c's owner walkthrough is still **CONFIRMATION REQUIRED**. B1 now needs the complete B1d
+  allow-listed application in a fresh hosted Production-compatible rehearsal environment,
+  regenerated types and actual-role smoke/denial checks. Main and Production are unchanged.
+- Evidence: `docs/production-readiness/B1-ADMINISTRATION-MEMBERSHIP-REHEARSAL-2026-09-06.md`.
+
 ## 6 September B1d application allow-list
 
 - The B1 application boundary is frozen in

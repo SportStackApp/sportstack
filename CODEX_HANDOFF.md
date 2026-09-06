@@ -2,6 +2,24 @@
 
 Last updated: 2026-09-06
 
+## 6 September — B1e administration bridge deployed to Development
+
+- Development records `20260906114318_b1_administration_membership_compatibility.sql` and the
+  later additive `20260906123500_b1_administration_session_binding_hardening.sql`. Do not rewrite
+  either migration.
+- The bridge supplies B1d's general Users/Requests functions, removes anonymous execution,
+  restricts internal helpers to service access, preserves the Production browser's six-argument
+  role-save call and accepts `FILL_IN`.
+- Production-derived apply/repeat/runtime/rollback and hosted Dev apply/repeat/runtime rollback,
+  protected-count, zero-fixture-leak and database lint checks pass. Production is unchanged.
+- The final B1e security review has zero reportable findings. Keep cross-organisation Primary-team
+  demotion semantics and the unperformed B1c owner walkthrough marked **CONFIRMATION REQUIRED**.
+- Local quality passes: static verification, focused lint, 46/181 Vitest, TypeScript and Production
+  build. Full lint remains at the 346-error/77-warning baseline.
+- Next: commit/push this exact package to Dev, verify Dev Quality/deployment, then build the B1d
+  allow-listed application in a fresh hosted Production-compatible rehearsal environment.
+  Evidence: `docs/production-readiness/B1-ADMINISTRATION-MEMBERSHIP-REHEARSAL-2026-09-06.md`.
+
 ## 6 September — B1d application allow-list frozen with blockers
 
 - The B1d machine-readable allow-list pins the safe session-mode, module-control, route-gate and

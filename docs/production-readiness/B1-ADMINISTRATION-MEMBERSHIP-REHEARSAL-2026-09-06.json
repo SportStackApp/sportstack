@@ -1,0 +1,52 @@
+{
+  "document": "B1 administration and membership rehearsal",
+  "date": "2026-09-06",
+  "status": "development_applied_hosted_rehearsal_pending",
+  "production_changed": false,
+  "main_changed": false,
+  "development_project_ref": "icqegnpjbizccjebjfhb",
+  "migrations": [
+    {
+      "version": "20260906114318",
+      "name": "b1_administration_membership_compatibility",
+      "sha256": "8C50800FB8B3674F883B6F1E3DDE1F1ED498111CB15EC4607BDC793A4DFA83FF"
+    },
+    {
+      "version": "20260906123500",
+      "name": "b1_administration_session_binding_hardening",
+      "sha256": "E30F947446F48D6D18AA7054DEE762BAC9F3492EE90FD7573133917C1008E682"
+    }
+  ],
+  "checks": {
+    "isolated_first_apply": "pass",
+    "isolated_repeat_apply": "pass",
+    "isolated_runtime_roles": "pass",
+    "isolated_transactional_rollback": "pass",
+    "development_apply": "pass",
+    "development_repeat": "pass",
+    "development_runtime_rollback": "pass",
+    "development_fixture_users_remaining": 0,
+    "database_error_lint": "pass",
+    "security_reportable_findings": 0,
+    "vitest": "46 files, 181 tests passed",
+    "typescript": "pass",
+    "production_build": "pass",
+    "focused_lint": "pass",
+    "full_lint": "baseline: 346 errors, 77 warnings"
+  },
+  "final_environment_audit": {
+    "created_at": "2026-09-06T22:42:08.4252211+10:00",
+    "development_migration_count": 148,
+    "development_edge_function_count": 19,
+    "development_schema_sha256": "6878e89d037b38ea5a8049ae1c439417823b7ec793370323cb0b4a2cfcc12e78",
+    "production_migration_count": 159,
+    "production_edge_function_count": 11,
+    "production_schema_sha256": "a8a570fafd21145bf13f66cd6291856ef8ed852f04e736a07382b742790dc488"
+  },
+  "confirmation_required": [
+    "B1c owner walkthrough",
+    "Cross-organisation effect of making a membership Primary",
+    "Whether a pending Primary request authorises demotion of a previous Primary"
+  ],
+  "next_gate": "Fresh hosted Production-compatible B1 rehearsal"
+}

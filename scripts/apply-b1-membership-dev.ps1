@@ -1,25 +1,66 @@
 <#
 .SYNOPSIS
-Apply the exact B1c compatibility migration to the pinned Development project.
+Apply one exact B1 compatibility migration to the pinned Development project.
 
 .DESCRIPTION
 Uses the existing Windows-encrypted Supabase access token without printing it.
-The target is hard-coded to SportStack Dev. Protected row counts are checked
-before and after, and the migration version is recorded only after the SQL
-completes successfully.
+The target is hard-coded to SportStack Dev. The B1c defaults remain backward
+compatible, while another B1 migration can be selected through parameters.
+Protected row counts are checked before and after, and the migration version
+is recorded only after the SQL completes successfully.
 #>
 
 [CmdletBinding()]
-param()
+param(
+    [string]$MigrationVersion = "20260906095820",
+    [string]$MigrationName = "b1_membership_workflow_compatibility",
+    [string]$SuccessMarker = "B1_MEMBERSHIP_DEV_APPLY_OK",
+    [string]$RuntimeVerificationPath
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepositoryRoot = Split-Path $PSScriptRoot -Parent
-$MigrationVersion = "20260906095820"
-$MigrationPath = Join-Path $RepositoryRoot "supabase\migrations\${MigrationVersion}_b1_membership_workflow_compatibility.sql"
+$MigrationsRoot = [IO.Path]::GetFullPath((Join-Path $RepositoryRoot "supabase\migrations"))
 $CredentialPath = Join-Path $env:LOCALAPPDATA "SportStack\release\player-mvp-tally-production-access.json"
 $DevelopmentProjectRef = "icqegnpjbizccjebjfhb"
+
+if ($MigrationVersion -notmatch '^[0-9]{14}$') {
+    throw "MigrationVersion must contain exactly 14 digits."
+}
+if ($MigrationName -notmatch '^[a-z0-9_]+$') {
+    throw "MigrationName may contain only lower-case letters, digits and underscores."
+}
+if ($SuccessMarker -notmatch '^[A-Z0-9_]+$') {
+    throw "SuccessMarker may contain only upper-case letters, digits and underscores."
+}
+
+$MigrationPath = [IO.Path]::GetFullPath((
+    Join-Path $MigrationsRoot "${MigrationVersion}_${MigrationName}.sql"
+))
+$RequiredMigrationPrefix = $MigrationsRoot + [IO.Path]::DirectorySeparatorChar
+if (-not $MigrationPath.StartsWith($RequiredMigrationPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "The selected migration must remain inside the repository migrations folder."
+}
+
+$ResolvedRuntimeVerificationPath = $null
+if (-not [string]::IsNullOrWhiteSpace($RuntimeVerificationPath)) {
+    $VerificationRoot = [IO.Path]::GetFullPath((Join-Path $RepositoryRoot "scripts\sql"))
+    $ResolvedRuntimeVerificationPath = [IO.Path]::GetFullPath((
+        Join-Path $RepositoryRoot $RuntimeVerificationPath
+    ))
+    $RequiredVerificationPrefix = $VerificationRoot + [IO.Path]::DirectorySeparatorChar
+    if (-not $ResolvedRuntimeVerificationPath.StartsWith(
+        $RequiredVerificationPrefix,
+        [StringComparison]::OrdinalIgnoreCase
+    )) {
+        throw "RuntimeVerificationPath must remain inside scripts/sql."
+    }
+    if (-not (Test-Path -LiteralPath $ResolvedRuntimeVerificationPath)) {
+        throw "The selected runtime verification SQL is missing."
+    }
+}
 
 function ConvertTo-PlainText {
     param([Security.SecureString]$SecureValue)
@@ -80,7 +121,7 @@ select json_build_object(
 }
 
 if (-not (Test-Path -LiteralPath $MigrationPath)) {
-    throw "The B1c migration is missing."
+    throw "The selected B1 migration is missing."
 }
 if (-not (Test-Path -LiteralPath $CredentialPath)) {
     throw "Encrypted Supabase access is not configured."
@@ -120,7 +161,7 @@ try {
     $after = Get-ProtectedCounts -Workdir $temporaryRoot
 
     if (($before | ConvertTo-Json -Compress) -ne ($after | ConvertTo-Json -Compress)) {
-        throw "Protected Development row counts changed during the B1c migration."
+        throw "Protected Development row counts changed during the selected B1 migration."
     }
 
     $historySql = "select count(*)::int as recorded from supabase_migrations.schema_migrations where version = '$MigrationVersion';"
@@ -134,7 +175,7 @@ try {
     }
     $historyJson = $historyMatch.Groups[1].Value | ConvertFrom-Json
     if ($historyJson.rows[0].recorded -ne 1) {
-        throw "The B1c Development migration version was not recorded exactly once."
+        throw "The selected B1 Development migration version was not recorded exactly once."
     }
 
     Invoke-Supabase -Arguments @(
@@ -142,7 +183,31 @@ try {
         "--level", "error", "--fail-on", "error"
     ) | Out-Null
 
-    Write-Host "B1_MEMBERSHIP_DEV_APPLY_OK" -ForegroundColor Green
+    if ($null -ne $ResolvedRuntimeVerificationPath) {
+        $verificationOutput = Invoke-Supabase -Arguments @(
+            "db", "query", "--linked", "--workdir", $temporaryRoot,
+            "--file", $ResolvedRuntimeVerificationPath
+        )
+        if ($verificationOutput -notmatch 'B1_ADMIN_MEMBERSHIP_RUNTIME_OK') {
+            throw "The Development runtime verification marker was not returned."
+        }
+
+        $rollbackOutput = Invoke-Supabase -Arguments @(
+            "db", "query", "--linked", "--workdir", $temporaryRoot,
+            "select count(*)::int as leaked from auth.users where email like 'b1e-%@example.invalid';",
+            "--output-format", "json"
+        )
+        $rollbackMatch = [regex]::Match($rollbackOutput, '(?s)(\{.*\})\s*$')
+        if (-not $rollbackMatch.Success) {
+            throw "The Development rollback query did not return JSON."
+        }
+        $rollbackJson = $rollbackMatch.Groups[1].Value | ConvertFrom-Json
+        if ($rollbackJson.rows[0].leaked -ne 0) {
+            throw "The rollback-only Development runtime check left fixture users behind."
+        }
+    }
+
+    Write-Host $SuccessMarker -ForegroundColor Green
 }
 finally {
     $env:SUPABASE_ACCESS_TOKEN = $previousToken

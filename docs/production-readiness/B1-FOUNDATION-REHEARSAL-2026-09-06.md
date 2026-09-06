@@ -94,18 +94,13 @@ its current account context points to a different project.
 
 ## Remaining B1 sub-batches
 
-1. **B1b security layer:** curate the current final functions, catalogue seed, RLS policies,
-   triggers and minimum grants. Remove anonymous execution where the final design requires it.
-2. **B1c membership workflow:** reconcile the existing Production `primary_change_requests`
-   policies and deploy the final atomic request/approve/decline/cancel functions only after data
-   preconditions and actual-role denial tests pass.
-3. **B1d application allow-list:** freeze only the roles, users, module-control, permission-context
-   and membership screens/hooks that depend on B1. No Edge Function is included unless its deployed
-   Production source is reconciled first.
-4. **B1e administration and membership compatibility:** reconcile the general Users/Requests
-   functions exposed by B1d, including Production's legacy `admin_save_user_roles` function and
-   grants. This requirement was discovered during the B1d dependency trace; it must use a new
-   additive migration and actual-role denial tests.
+1. **B1b security layer — complete on Dev.**
+2. **B1c membership workflow — complete on Dev; owner walkthrough confirmation still required.**
+3. **B1d application allow-list — boundary frozen.**
+4. **B1e administration and membership compatibility — complete on Dev.** The general
+   Users/Requests functions and later additive session-binding hardening pass isolated and hosted
+   Dev checks. Cross-organisation Primary-team semantics remain a confirmation item, not an
+   assumed change.
 5. Restore the complete B1 package into a fresh Production-compatible hosted staging environment;
    repeat the permission-denial and application smoke tests before requesting Production approval.
 
