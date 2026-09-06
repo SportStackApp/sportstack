@@ -9,8 +9,9 @@ Last updated: 2026-09-07
   apply, repeat, rollback, allow/deny, quality and hosted application smoke checks.
 - Staging was cleaned to zero Auth users and zero test application rows. Main and Production were
   unchanged.
-- B1c owner walkthrough and cross-organisation Primary-team semantics remain **CONFIRMATION
-  REQUIRED**. A fresh Production pre-flight and new exact Production approval are also required.
+- B1c owner walkthrough, cross-organisation Primary-team semantics and account-wide Player/Voter
+  role semantics remain **CONFIRMATION REQUIRED**. A fresh Production pre-flight and new exact
+  Production approval are also required.
 - Evidence: `docs/production-readiness/B1-HOSTED-REHEARSAL-2026-09-07.md`.
 - Independent immutable-patch review completed for `a1d23c7..5994385` with patch SHA-256
   `41f618fff298ff287a2bffd44ed5d789fa90036c64c2d5a3214368184d13d0f3`. Recommendation is
@@ -19,6 +20,11 @@ Last updated: 2026-09-07
   due to account permission. Do not infer current migration or row counts. Restore access and take
   a fresh verified backup immediately before any approved release. Packet:
   `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
+- A separate read-only review raised four hypotheses. Migration `20260906130000` already defeats the
+  request-approval race; two hypotheses match the open Primary-team decision. The remaining policy
+  question is whether scoped administrators may change the account-wide `PLAYER` or `VOTER` flags
+  through the legacy role-save function. No Production fix should be guessed before Aaron confirms
+  that rule.
 
 ## 6 September — B1e administration bridge deployed to Development
 

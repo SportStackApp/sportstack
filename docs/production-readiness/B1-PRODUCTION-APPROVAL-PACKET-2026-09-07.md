@@ -6,8 +6,8 @@
 
 The independent immutable-patch review is complete. The candidate is technically reproducible and
 the hosted rehearsal passed, but Production approval is blocked until Aaron completes the B1c
-walkthrough, confirms the two Primary-team semantics, and Production access supports a fresh
-read-only drift check and verified backup.
+walkthrough, confirms the Primary-team semantics and account-wide Player/Voter role semantics, and
+Production access supports a fresh read-only drift check and verified backup.
 
 ## Exact package identity
 
@@ -117,11 +117,25 @@ allow/deny checks, request row locking and a successful hosted Production-shaped
 decision-critical unknown is whether the rehearsed cross-organisation Primary-team demotion and
 consent behaviour matches Aaron's intended policy.
 
+A separate read-only source review raised four hypotheses:
+
+- The request-approval check/use race does not survive the complete six-migration package. Migration
+  `20260906130000` locks the request row before deriving and authorising its scope, then the delegated
+  implementation locks the same row in the same transaction.
+- The two cross-scope Primary-team hypotheses are the existing open Primary-team policy decision,
+  not new evidence of a different defect.
+- The legacy role-save function still lets a scoped administrator request account-wide `PLAYER` or
+  `VOTER` changes. The frozen browser shows `PLAYER`, but not `VOTER`, to scoped administrators;
+  direct function calls remain server-authorised for both. Whether that legacy account-wide action
+  is intended, or must be restricted to Super Admin, requires owner confirmation before release.
+
 ## Approval gates
 
 - [ ] B1c owner walkthrough observed and recorded.
 - [ ] Cross-organisation Primary-team demotion policy confirmed.
 - [ ] Pending Primary request as consent confirmed or rejected.
+- [ ] Account-wide Player/Voter role changes by scoped administrators confirmed or restricted and
+      retested.
 - [ ] Fresh Production drift check and verified backup complete.
 - [ ] Exact package approval received.
 

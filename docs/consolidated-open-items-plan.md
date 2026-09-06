@@ -68,10 +68,12 @@ browser check is still unavailable.
      actual-role runtime and rollback plus hosted Dev apply, repeat, rollback-only runtime and
      database lint. Its session-bound follow-up is additive. The complete Production-compatible
      hosted rehearsal now passes with frozen local candidate `5994385`; the B1c owner walkthrough,
-     Primary-team semantics, fresh Production pre-flight/backup and exact Production approval remain
-     open. Independent review is complete with `hold_for_evidence`. The latest six Production
-     scraper schedules are green, but the named-final blank-round fix remains Dev-only and the
-     workflow remains a separate approval package.
+     Primary-team semantics, account-wide Player/Voter role semantics, fresh Production
+     pre-flight/backup and exact Production approval remain open. Independent review is complete
+     with `hold_for_evidence`; its request-approval race hypothesis is already closed by the sixth
+     migration, while the remaining hypotheses are explicit owner-policy gates. The latest six
+     Production scraper schedules are green, but the named-final blank-round fix remains Dev-only
+     and the workflow remains a separate approval package.
 
 Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one
 reserved Player. Notification/deep link, unrelated-Voter denial, withdrawal, desktop/tablet/mobile,

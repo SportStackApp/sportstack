@@ -270,6 +270,11 @@
       "requirement": "Confirm cross-organisation Primary-team demotion and consent semantics; current behaviour is unchanged."
     },
     {
+      "id": "B1-SIMPLE-ROLE-SEMANTICS-CONFIRMATION",
+      "status": "OPEN",
+      "requirement": "Confirm whether scoped administrators may add or remove account-wide PLAYER or VOTER roles; otherwise restrict the legacy role-save function and retest."
+    },
+    {
       "id": "B1-PRODUCTION-PREFLIGHT",
       "status": "OPEN",
       "requirement": "Restore read-only Production access, confirm no drift and create a fresh verified backup immediately before release."

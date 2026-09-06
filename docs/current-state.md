@@ -19,7 +19,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
   likelihood, partial protection, managed recovery and moderate confidence. Exact Vercel preview
   `dpl_GCghG7Hi2fHm6mF8UgqMxtDPzmbi` is READY and returns HTTP 200. The current Supabase connector
   cannot perform the fresh Production read-only pre-flight, so owner confirmation, Primary-team
-  semantics, restored Production access/backup and exact approval remain open. Packet:
+  semantics, account-wide Player/Voter role semantics, restored Production access/backup and exact
+  approval remain open. A separate source review confirmed that migration `20260906130000` closes
+  its request-approval race hypothesis; it found no new confirmed vulnerability. Packet:
   `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
 
 ## 6 September B1e administration and membership compatibility
@@ -35,9 +37,11 @@ Update this file after every meaningful Codex task, pull request, schema change,
   apply, repeat, rollback-only runtime, zero-fixture-leak, protected-count and database lint checks
   also pass. The final audit records 149 Dev migration versions; Production remains unchanged at
   159 versions and the same schema hash.
-- The security review has zero reportable findings. Two global Primary-team semantics are
+- The security review has zero confirmed reportable findings. Two global Primary-team semantics are
   **CONFIRMATION REQUIRED**: cross-organisation demotion by a scoped administrator and whether a
-  person's pending Primary request supplies consent for that demotion. Current behaviour is
+  person's pending Primary request supplies consent for that demotion. A later separate review also
+  requires confirmation of whether scoped administrators may change account-wide `PLAYER` or
+  `VOTER` roles through the legacy role-save function. Current behaviour is
   unchanged pending Aaron's decision.
 - Static checks, focused lint, 46 Vitest files/181 tests, TypeScript and Production build pass. Full
   lint remains at the established 346-error/77-warning baseline.
