@@ -20,6 +20,8 @@ Update this file after every meaningful Codex task, pull request, schema change,
   B1a structures had zero browser grants and zero policies. The corrected Development repeat
   comparison matched all 10,382 public/private catalogue entries. Development now records migration
   `20260906063905`; Production's migration list remains unchanged.
+- Final Dev commit `d70fc287` passed Dev Quality run `34019337864`. GitHub deployment `6290411884`
+  succeeded, and its deployment URL and the Dev alias returned identical app-shell hashes.
 - The logical backup does not provide a faithful hosted Auth/Storage restore, so the complete B1
   package still needs a hosted Production-compatible rehearsal. B1b security functions/policies,
   B1c membership workflow and B1d application allow-list remain open. Production is unchanged.

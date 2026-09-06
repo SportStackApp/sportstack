@@ -2,7 +2,7 @@
 
 ## Outcome
 
-The first B1 sub-batch is ready for Development deployment and further review. It is a dormant,
+The first B1 sub-batch is deployed to Development and ready for further review. It is a dormant,
 additive foundation only. It creates the missing tables and private session structure required by
 the later access/identity package, but deliberately adds no browser access, functions, policies,
 triggers or application data.
@@ -13,7 +13,7 @@ Production was inspected read-only and was not changed.
 
 | Environment | Git commit | Supabase project | Recorded migrations | Edge Functions |
 |---|---|---|---:|---:|
-| Development | `72ca323268c9fbf50399b7e2f4f15632f2e7250c` | `icqegnpjbizccjebjfhb` | 144 | 19 |
+| Development | `d70fc28731d394b792661cf34ca5f9fc8a48f3e8` | `icqegnpjbizccjebjfhb` | 144 | 19 |
 | Main/staging | `af21ae3c06a2d66d2eb9c4edf64bb2c185869927` | shares Development | n/a | n/a |
 | Production | `a1d23c741b79de02c32763a879597192a1c1ebd5` | `svierarfcolhcfjpmwck` | 159 | 11 |
 
@@ -84,6 +84,13 @@ The migration version is now recorded on Development. A fresh hosted comparison 
 migration versions and the same 19 Edge Functions. Production remains at 159 migration versions and
 11 Edge Functions. The Production migration list is byte-for-byte unchanged from the pre-apply
 snapshot.
+
+Dev Quality run `34019337864` passed for the final audit commit
+`d70fc28731d394b792661cf34ca5f9fc8a48f3e8`. GitHub deployment `6290411884` also completed
+successfully at `https://sportstack-ihfr8erlw-sportstackapps-projects.vercel.app`. That exact
+deployment and `https://dev.sportstackapp.com.au` returned identical app-shell hashes, confirming
+the Dev alias serves the tested commit. The local Vercel CLI remains deliberately unlinked because
+its current account context points to a different project.
 
 ## Remaining B1 sub-batches
 
