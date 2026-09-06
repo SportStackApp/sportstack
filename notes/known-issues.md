@@ -40,6 +40,22 @@ deadline triggers, and left notification/email-event counts unchanged. Separate 
 database and adviser verification passed. Owner smoke is still required before a real presentation.
 See the 6 September Player MVP lifecycle Production release packet.
 
+## Player MVP presentation gaps — zero-vote reason and finals labels
+
+**Logged:** 6 September 2026
+**Status:** Added to the next-fix queue; not a blocker for the current lifecycle release
+
+Production owner testing confirmed all expected Pumas rounds are present and past-deadline rounds
+show only as `CLOSED`. Round 12 received no ballots for a known reason. The next improvement should
+allow an administrator to enter a short explanation for a closed zero-ballot round and include that
+round in the presentation as a caption-only step before continuing. It must not create vote totals,
+change rankings or silently omit the round.
+
+The semi-final and grand final fixtures are present but have blank round numbers. Investigate the
+RevSports source value, scraper output, import mapping, storage and UI label/ordering together.
+Prefer a real stage label such as **Semi-final** or **Grand final** when supplied by the source; do
+not assign made-up round numbers merely to fill the blank.
+
 ## Feedback log reconciliation — 5 September 2026
 
 **Status:** Dev inbox triaged; implementation and acceptance queue remains

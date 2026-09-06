@@ -197,8 +197,10 @@ Production base or future Production change requires a new review and approval.
 
 ## Post-release smoke test
 
-1. Confirm the Player MVP admin page shows past-deadline sessions only as **Closed**.
-2. Confirm all expected closed Pumas rounds are available to the tally builder.
+1. [Passed — Aaron, 6 September] Confirm the Player MVP admin page shows past-deadline sessions only
+   as **Closed**.
+2. [Passed — Aaron, 6 September] Confirm all expected closed Pumas rounds are available to the tally
+   builder.
 3. Preview a tally without publishing it to real players.
 4. Confirm current vote totals and round order are unchanged.
 5. Confirm no new notification or Player MVP email-event row was queued by the migration.

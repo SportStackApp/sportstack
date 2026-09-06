@@ -16,9 +16,10 @@ Last updated: 2026-09-06
 - The Production bundle contains `a1d23c7`, retains the Player MVP tally and references only the
   Production Supabase project. Separate Verify mode passes and database advisers return no
   error-level finding.
-- The post-release owner smoke remains: confirm past-deadline sessions show only as **Closed**, all
-  expected Pumas rounds appear in the tally builder, preview without publishing, and confirm totals
-  and round order. Do not publish a real presentation until that smoke passes.
+- Aaron confirmed past-deadline sessions show only as **Closed** and all expected Pumas rounds are
+  present in the tally builder. The remaining owner smoke is to preview without publishing and
+  confirm totals and round order. Do not publish a real presentation until that passes. The
+  zero-ballot explanation and semi-final/grand-final labelling requests are queued as P2 follow-ups.
 
 ## 5 September — lean readiness candidate is staged, not Production-ready
 

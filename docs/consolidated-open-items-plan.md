@@ -50,9 +50,9 @@ Coordinator-role browser check is still unavailable.
 10. [Blocked] Complete the actual Coordinator permission-bundle browser test when an authenticated
     disposable Coordinator session is available. Other current role results may be reused only
     where their relevant code is unchanged.
-11. [Next] Aaron completes the Production owner smoke: verify past-deadline sessions show only as
-    **Closed**, all expected Pumas rounds appear in the tally builder, preview without publishing,
-    and confirm vote totals and round order. Publish to real players only after this passes.
+11. [Part complete] Aaron confirmed past-deadline sessions show only as **Closed** and all expected
+    Pumas rounds are present in the tally builder. Next, preview without publishing and confirm vote
+    totals and round order. Publish to real players only after this passes.
 12. [Later broad release] Reconcile Main's 115 added migration files against live Production and
     explicitly exclude the Production scraper workflow and Dev-only account helpers. The first
     proven sequence blocker is migration `20260801013000`, which assumes an absent
@@ -251,6 +251,12 @@ Blocker or High defect remains for staging.
 - [ ] `CHAT-COMPOSER-001` and `ROSTER-READABILITY-001` — improve input affordance and small-text
   readability.
 - [ ] `COACHING-PROFILE-001` — link player position preferences and complete match history.
+- [ ] `PLAYER-MVP-ZERO-VOTE-ROUND-001` — let an administrator record a short reason when a closed
+  round received no ballots. Keep that round in the tally presentation as a caption-only step, then
+  continue to the next scoring round without changing rankings or inventing votes.
+- [ ] `PLAYER-MVP-FINALS-ROUND-LABEL-001` — investigate why the semi-final and grand final scrape
+  and display without round numbers. Preserve their named stage and correct chronological order;
+  do not invent numeric rounds until the RevSports source and importer behaviour are confirmed.
 - [ ] `MEMBERSHIP-SELF-SERVICE-001` — define safe secondary-team removal with audit and confirmation.
 - [ ] `TEAM-ORDERING-001` — apply one documented ordering rule across every team list.
 - [ ] `EXPENSE-UX-001` — add upload progress and reusable partial/exact exclusions.
