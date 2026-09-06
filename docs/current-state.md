@@ -6,6 +6,25 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 6 September B1 foundation reconciliation
+
+- A corrected read-only Dev/Production structural comparison now covers B1 tables, columns,
+  constraints, indexes, functions, triggers, RLS policies and grants. Production is missing 12
+  B1-owned tables and one private sequence; the existing Production primary-team policies and
+  `is_super_admin()` privileges are preserved for later reconciliation.
+- Additive migration `20260906063905_b1_foundation_compatibility.sql` creates only the dormant B1a
+  structures. It contains no application data, functions, policies, triggers or browser grants and
+  excludes Coordination, discipline, Umpire Match Voting, Player MVP notification and scraper work.
+- A Production-derived isolated rehearsal passed first apply, repeat apply and transactional
+  rollback. Profiles remained 757, memberships 1,260 and primary-team requests six; newly created
+  B1a structures had zero browser grants and zero policies. The Development-schema before/after
+  comparison matched all 737 B1-owned rows.
+- The logical backup does not provide a faithful hosted Auth/Storage restore, so the complete B1
+  package still needs a hosted Production-compatible rehearsal. B1b security functions/policies,
+  B1c membership workflow and B1d application allow-list remain open. Production is unchanged.
+- Evidence: `docs/production-readiness/B1-FOUNDATION-REHEARSAL-2026-09-06.md` and
+  `docs/production-readiness/B1-SCHEMA-DRIFT-MAP-2026-09-06.csv`.
+
 ## 6 September Main-to-Production reconciliation — Stage 1
 
 - A read-only Production audit and complete 115-row migration register now exist. Production was

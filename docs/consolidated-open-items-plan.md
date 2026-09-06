@@ -55,12 +55,14 @@ browser check is still unavailable.
     expected Pumas rounds are present, and the builder preview otherwise behaves as expected. The
     high-priority draft-persistence and identity defects plus the presentation enhancements below
     remain queued. Publishing a real presentation remains a separate owner action.
-12. [Stage 1 complete; rehearsal open] The 115 changed migration paths are now mapped: 114 are
-    Main-only and one is the Production-only tally baseline. Production history and Main migration
-    files share only eight version names, so no historical file is approved for direct apply. Build
-    and rehearse a new additive B1 foundation/access compatibility bridge. The latest six Production
-    scraper schedules are green, but the named-final blank-round fix remains Dev-only and the
-    workflow remains a separate approval package.
+12. [Stage 1 complete; B1a rehearsed] The 115 changed migration paths are now mapped: 114 are
+     Main-only and one is the Production-only tally baseline. Production history and Main migration
+     files share only eight version names, so no historical file is approved for direct apply. Build
+     and rehearse new additive B1 foundation/access compatibility bridges. The dormant B1a structure
+     migration now passes Production-copy apply, repeat, rollback and Dev no-op checks. B1b security,
+     B1c membership workflows, B1d application allow-list and hosted rehearsal remain open. The latest six Production
+     scraper schedules are green, but the named-final blank-round fix remains Dev-only and the
+     workflow remains a separate approval package.
 
 Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one
 reserved Player. Notification/deep link, unrelated-Voter denial, withdrawal, desktop/tablet/mobile,

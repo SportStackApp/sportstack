@@ -165,6 +165,15 @@ safe work is:
 Production must remain unchanged until that later exact package has passed rehearsal and Aaron has
 explicitly approved it.
 
+### B1a update
+
+The object-by-object comparison is now complete and the dormant B1a foundation migration
+`20260906063905_b1_foundation_compatibility.sql` has passed Production-copy apply, repeat apply,
+transactional rollback and Dev-schema no-op checks. It creates 12 missing tables and one private
+sequence with RLS enabled and no browser access. It deliberately does not add the 54 missing B1
+functions, 12 policies, five triggers or catalogue/application data. Those remain in B1b/B1c, with
+the application allow-list in B1d. See `B1-FOUNDATION-REHEARSAL-2026-09-06.md`.
+
 ## Verification
 
 - the read-only Production verifier passed against Git `a1d23c7`, the public bundle and the pinned
