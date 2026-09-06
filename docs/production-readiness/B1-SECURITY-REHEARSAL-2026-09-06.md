@@ -19,6 +19,10 @@ The frozen candidate also passes 46 Vitest files/181 tests, TypeScript, the Prod
 focused lint. Full lint remains the existing 346-error/77-warning repository baseline, with no
 finding in the new B1b scripts.
 
+Dev Quality run `34024930224` passed at `4647165c22cd6889778b860bc6d89e57e4bb08ad`.
+GitHub deployment `6291396626` completed successfully, and its Vercel URL and the public Dev alias
+returned the same app-shell hash.
+
 ## Exact candidate
 
 - Migration: `20260906075102_b1_security_compatibility.sql`

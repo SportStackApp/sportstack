@@ -70,6 +70,14 @@ requireValue(
     evidence.quality.focused_eslint === "passed",
   "Frozen candidate quality evidence is incomplete",
 );
+requireValue(
+  evidence.development_deployment.dev_quality_result === "passed" &&
+    evidence.development_deployment.deployment_result === "success" &&
+    evidence.development_deployment.alias_matches_deployment === true &&
+    evidence.development_deployment.deployment_shell_sha256 ===
+      evidence.development_deployment.dev_alias_shell_sha256,
+  "Development quality or deployment evidence is incomplete",
+);
 
 const protectedCounts = evidence.local_rehearsal.protected_counts;
 for (const [name, counts] of Object.entries(protectedCounts)) {

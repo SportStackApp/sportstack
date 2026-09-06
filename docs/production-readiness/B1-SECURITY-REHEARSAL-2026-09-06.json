@@ -89,6 +89,17 @@
     "full_lint_warnings": 77,
     "full_lint_result": "existing_baseline_debt_no_regression"
   },
+  "development_deployment": {
+    "commit": "4647165c22cd6889778b860bc6d89e57e4bb08ad",
+    "dev_quality_run": 34024930224,
+    "dev_quality_result": "passed",
+    "deployment_id": 6291396626,
+    "deployment_result": "success",
+    "deployment_url": "https://sportstack-bv4o3ts9e-sportstackapps-projects.vercel.app",
+    "deployment_shell_sha256": "65c561b28afab6e1acd79fb18c3be9ad408aaa582d2be95190fda880c3dd59ae",
+    "dev_alias_shell_sha256": "65c561b28afab6e1acd79fb18c3be9ad408aaa582d2be95190fda880c3dd59ae",
+    "alias_matches_deployment": true
+  },
   "production": {
     "project_ref": "svierarfcolhcfjpmwck",
     "changed": false
