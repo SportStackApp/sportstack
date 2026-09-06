@@ -4,6 +4,7 @@
   "batch": "B1c primary-team membership workflow compatibility",
   "source_branch": "fix/player-mvp-readiness-reconcile",
   "source_base_commit": "bb963a8202c3cef68661dbd040bc049a45f5bc22",
+  "implementation_commit": "59b3eb9d78d639b16a24f2bdd84fa4dafc9d98ae",
   "migration": {
     "version": "20260906095820",
     "path": "supabase/migrations/20260906095820_b1_membership_workflow_compatibility.sql",
@@ -34,7 +35,14 @@
     "workflow_functions": 6,
     "request_policies": 2,
     "anonymous_table_access": false,
-    "authenticated_table_access": "SELECT only"
+    "authenticated_table_access": "SELECT only",
+    "dev_quality_run": 34028705230,
+    "dev_quality": "pass",
+    "github_deployment": 6292080249,
+    "deployment": "pass",
+    "deployed_bundle": "index-DTMheynR.js",
+    "dev_alias_matches_deployment": true,
+    "app_shell_sha256": "bdd6321bf1eb26c1d395e18709a46a4b5d2fd8382c17fc01736b92b184a0a45f"
   },
   "production_read_only_check": {
     "project_ref": "svierarfcolhcfjpmwck",

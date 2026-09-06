@@ -52,6 +52,10 @@ Development now records migration `20260906095820`. The hosted runtime test pass
 back transaction and the database error-level lint passed. Development has six hardened functions,
 two SELECT policies, no anonymous request-table access and authenticated SELECT only.
 
+Implementation commit `59b3eb9` passed Dev Quality run `34028705230`. GitHub deployment
+`6292080249` completed successfully. Its deployment URL and `https://dev.sportstackapp.com.au`
+returned the same app-shell hash and `index-DTMheynR.js` bundle.
+
 Production remains on its existing baseline: zero B1c functions and four historical request
 policies. Its canonical aggregate inventory is unchanged from before the Dev apply. Production has
 six requests, including one `ADMIN_APPROVED` request; the current data has no pending or invalid-
@@ -73,6 +77,7 @@ or mutation access was gained, and the migration was still hardened before Dev.
 - TypeScript: pass.
 - Production build: pass.
 - Full lint: 346 errors and 77 warnings, exactly matching the existing baseline; no new lint debt.
+- Dev Quality and deployment: pass.
 
 Machine-readable evidence is in `B1-MEMBERSHIP-REHEARSAL-2026-09-06.json`.
 

@@ -22,7 +22,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
   request identifiers.
 - Development has six B1c functions, two SELECT policies, no anonymous request-table access and
   authenticated SELECT only. The full 46-file/181-test suite, TypeScript, Production build and
-  focused lint pass. Full lint remains exactly 346 errors/77 warnings.
+  focused lint pass. Full lint remains exactly 346 errors/77 warnings. Implementation commit
+  `59b3eb9` passed Dev Quality run `34028705230`; deployment `6292080249` succeeded and its
+  deployment URL and the Dev alias returned the same app shell and `index-DTMheynR.js` bundle.
 - Production's canonical aggregate inventory is unchanged and Production was not modified. B1d
   application allow-list reconciliation and the complete hosted B1 rehearsal remain open. Evidence:
   `docs/production-readiness/B1-MEMBERSHIP-REHEARSAL-2026-09-06.md`.

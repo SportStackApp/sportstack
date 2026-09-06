@@ -16,6 +16,9 @@ Last updated: 2026-09-06
   identifiers to logs.
 - Full verification passes: static migration checks, focused lint, 46 Vitest files/181 tests,
   TypeScript and Production build. Full lint stays at its existing 346-error/77-warning baseline.
+- Implementation commit `59b3eb9` passed Dev Quality run `34028705230`. GitHub deployment
+  `6292080249` completed successfully, and its deployment URL and the Dev alias returned the same
+  app shell and `index-DTMheynR.js` bundle.
 - Production was inspected read-only and its canonical B1c inventory is unchanged. B1d application
   allow-list reconciliation and a complete hosted B1 rehearsal are next. Evidence:
   `docs/production-readiness/B1-MEMBERSHIP-REHEARSAL-2026-09-06.md`.
