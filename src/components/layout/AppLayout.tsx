@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn, getTeamDisplayName } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -68,7 +68,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAppMode, MODE_LABELS, type AppMode } from "@/contexts/AppModeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAdminScope } from "@/hooks/useAdminScope";
+import { useModuleAvailability } from "@/hooks/useModuleAvailability";
 import { APP_ENVIRONMENT, APP_ENVIRONMENT_CLASS, APP_VERSION } from "@/lib/appVersion";
+import { filterClubsForActiveMode } from "@/lib/activeScopeOptions";
 import { isProfileReviewRequired } from "@/lib/profileCompletion";
 
 interface NavItem {
@@ -94,7 +97,7 @@ const ADMIN_DROPDOWN_SECTIONS: NavSection[] = [
       { path: "/admin/requests", label: "Requests", icon: ClipboardList },
       { path: "/admin/fixtures", label: "Fixtures", icon: Calendar },
       { path: "/admin/venues", label: "Venues", icon: MapPin },
-      { path: "/admin/roles-permissions", label: "Roles & permissions", icon: Shield },
+      { path: "/admin/roles-permissions", label: "Roles & modules", icon: Shield },
     ],
   },
   {
@@ -179,6 +182,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/admin/venues", label: "Venues", icon: MapPin },
         { path: "/admin/users", label: "Users", icon: UserCog },
         { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+        { path: "/admin/roles-permissions", label: "Roles & modules", icon: Shield },
       ],
     },
   ],
@@ -214,6 +218,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/admin/venues", label: "Venues", icon: MapPin },
         { path: "/admin/users", label: "Users", icon: UserCog },
         { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+        { path: "/admin/roles-permissions", label: "Roles & modules", icon: Shield },
       ],
     },
   ],
@@ -244,10 +249,11 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
         { path: "/admin/divisions", label: "Divisions", icon: LayoutGrid },
         { path: "/admin/users", label: "Users", icon: UserCog },
         { path: "/admin/requests", label: "Requests", icon: ClipboardList },
+        { path: "/admin/roles-permissions", label: "Roles & modules", icon: Shield },
       ],
     },
   ],
-  team: [
+  team_manager: [
     {
       heading: "Core",
       items: [
@@ -273,6 +279,26 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       ],
     },
   ],
+  coach: [
+    {
+      heading: "Core",
+      items: [
+        { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/mvp-votes", label: "MVP Votes", icon: Vote },
+        { path: "/games", label: "Fixtures", icon: Calendar },
+        { path: "/chat", label: "Communications", icon: MessageCircle },
+      ],
+    },
+    {
+      heading: "Coaching",
+      items: [
+        { path: "/roster", label: "Roster", icon: Users },
+        { path: "/coaching", label: "Coaching", icon: ClipboardCheck },
+        { path: "/coaching/formations", label: "Formations", icon: LayoutGrid },
+        { path: "/coaching/trace", label: "Trace Lab", icon: Radar },
+      ],
+    },
+  ],
   player: [
     {
       heading: "Core",
@@ -286,11 +312,49 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
   ],
 };
 
+const ASSOCIATION_ADMIN_DROPDOWN_PATHS = new Set([
+  "/admin",
+  "/admin/competitions",
+  "/admin/divisions",
+  "/admin/clubs",
+  "/admin/teams",
+  "/admin/venues",
+  "/admin/users",
+  "/admin/requests",
+  "/admin/feedback",
+  "/admin/mvp-voting",
+  "/admin/umpire-voting",
+  "/admin/analytics",
+  "/admin/safety-risk",
+  "/admin/roles-permissions",
+]);
+
+const CLUB_ADMIN_DROPDOWN_PATHS = new Set([
+  "/admin",
+  "/admin/divisions",
+  "/admin/teams",
+  "/admin/fixtures",
+  "/admin/users",
+  "/admin/requests",
+  "/admin/mvp-voting",
+  "/admin/safety-risk",
+  "/admin/roles-permissions",
+]);
+
+const NAV_MODULE_KEYS = [
+  "player_mvp",
+  "umpire_match_voting",
+  "committee",
+  "safety_risk",
+  "hockey_trace",
+] as const;
+
 const MOBILE_NAV: Record<AppMode, NavItem[]> = {
   super_admin: NAV_SETS.super_admin[0].items.slice(0, 4),
   association: NAV_SETS.association[0].items.slice(0, 4),
   club: NAV_SETS.club[0].items.slice(0, 4),
-  team: NAV_SETS.team[0].items.slice(0, 4),
+  team_manager: NAV_SETS.team_manager[0].items.slice(0, 4),
+  coach: NAV_SETS.coach[0].items.slice(0, 4),
   player: NAV_SETS.player[0].items.slice(0, 4),
 };
 
@@ -411,7 +475,7 @@ const AppLayout = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { mode, setMode, availableModes, canSwitchMode, modeLabel, roles, viewingAs, setViewingAs, isViewingAsOverridden, setIsViewingAsOverridden } = useAppMode();
+  const { mode, activeMode, setMode, availableModes, canSwitchMode, modeLabel, roles, viewingAs, setViewingAs, isViewingAsOverridden, setIsViewingAsOverridden, modeChanging, modeSyncError } = useAppMode();
   const {
     associations,
     selectedAssociationId,
@@ -426,13 +490,18 @@ const AppLayout = () => {
     clubs,
     teams,
     teamDivisions,
-    filteredClubs,
     filteredTeams,
     filteredDivisions,
     selectedAssociation,
     selectedClub,
     selectedTeam,
   } = useTeamContext();
+  const {
+    loading: adminScopeLoading,
+    scopedAssociationIds,
+    scopedClubIds,
+  } = useAdminScope();
+  const { enabled: moduleEnabled } = useModuleAvailability([...NAV_MODULE_KEYS]);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAssociationPopoverOpen, setIsAssociationPopoverOpen] = useState(false);
@@ -454,6 +523,15 @@ const AppLayout = () => {
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackScreenshots, setFeedbackScreenshots] = useState<File[]>([]);
   const [isFeedbackSubmitting, setIsFeedbackSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!modeSyncError) return;
+    toast({
+      title: "Mode was not changed",
+      description: modeSyncError,
+      variant: "destructive",
+    });
+  }, [modeSyncError, toast]);
 
   const isVoterOnly = roles.length === 1 && roles[0] === "VOTER";
   const isBrandNewUser = roles.length === 0;
@@ -594,7 +672,7 @@ const AppLayout = () => {
   // Fetch pending request count for admin badge
   useEffect(() => {
     if (!user) return;
-    const isAdmin = mode === "super_admin" || mode === "association" || mode === "club";
+    const isAdmin = activeMode === "super_admin" || activeMode === "association" || activeMode === "club";
     if (!isAdmin) { setPendingRequestCount(0); return; }
     const fetchCount = async () => {
       const requestCountClient = supabase as unknown as RequestCountClient;
@@ -611,7 +689,7 @@ const AppLayout = () => {
       setPendingRequestCount((membershipRequests.count || 0) + (primaryRequests.count || 0));
     };
     fetchCount();
-  }, [user, mode]);
+  }, [user, activeMode]);
 
   // Fetch user avatar
   useEffect(() => {
@@ -647,7 +725,7 @@ const AppLayout = () => {
       setVoterTeamMemberships([]);
     };
 
-    if (mode !== "player" || !user) {
+    if (activeMode !== "player" || !user) {
       clearPlayerHeaderContext();
       return;
     }
@@ -784,7 +862,7 @@ const AppLayout = () => {
     };
   }, [
     fillInRefreshTick,
-    mode,
+    activeMode,
     user,
     selectedTeamId,
     setSelectedScope,
@@ -795,17 +873,18 @@ const AppLayout = () => {
   useEffect(() => {
     if (mode !== "super_admin") return;
     if (isViewingAsOverridden) return;
+    if (modeChanging) return;
+    if (modeSyncError) return;
 
-    if (selectedTeamId) {
-      setViewingAs("team");
-    } else if (selectedClubId) {
-      setViewingAs("club");
-    } else if (selectedAssociationId) {
-      setViewingAs("association");
-    } else {
-      setViewingAs("super_admin");
-    }
-  }, [selectedAssociationId, selectedClubId, selectedTeamId, isViewingAsOverridden, mode, setViewingAs]);
+    const cascadeMode: AppMode = selectedTeamId
+      ? "team_manager"
+      : selectedClubId
+        ? "club"
+        : selectedAssociationId
+          ? "association"
+          : "super_admin";
+    if (viewingAs !== cascadeMode) void setViewingAs(cascadeMode);
+  }, [selectedAssociationId, selectedClubId, selectedTeamId, isViewingAsOverridden, mode, modeChanging, modeSyncError, setViewingAs, viewingAs]);
 
   const handleAssociationChange = (associationId: string) => {
     setSelectedAssociationId(associationId);
@@ -813,17 +892,38 @@ const AppLayout = () => {
     navigate(`/associations/${associationId}`);
   };
 
-  const baseSections = NAV_SETS[mode === "super_admin" ? viewingAs : mode];
-  // Show selectors based on mode
-  const showAssociationSelector = mode === "super_admin";
-  const showClubSelector = mode === "super_admin" || mode === "association" || mode === "club";
-  const showAdminDropdown = mode === "super_admin" || mode === "association" || mode === "club";
+  const baseSections = NAV_SETS[activeMode];
+  // Viewing as is an actual data/action restriction, not only a navigation skin.
+  const showAssociationSelector = activeMode === "super_admin";
+  const showClubSelector = activeMode === "super_admin" || activeMode === "association" || activeMode === "club";
+  const showAdminDropdown = activeMode === "super_admin" || activeMode === "association" || activeMode === "club";
+  const authorisedClubs = useMemo(() => filterClubsForActiveMode(
+    clubs,
+    activeMode,
+    scopedAssociationIds,
+    scopedClubIds,
+  ), [activeMode, clubs, scopedAssociationIds, scopedClubIds]);
+  const cascadeClubs = useMemo(
+    () => authorisedClubs.filter((club) => club.association_id === selectedAssociationId),
+    [authorisedClubs, selectedAssociationId],
+  );
+  const isModulePathEnabled = (path: string) => {
+    if (path === "/mvp-votes" || path === "/admin/mvp-voting") return moduleEnabled.player_mvp;
+    if (path === "/umpire/vote" || path === "/admin/umpire-voting") return moduleEnabled.umpire_match_voting;
+    if (path === "/admin/analytics") return moduleEnabled.player_mvp || moduleEnabled.umpire_match_voting;
+    if (path === "/admin/safety-risk") return moduleEnabled.safety_risk;
+    if (path === "/coaching/trace") return moduleEnabled.hockey_trace;
+    return true;
+  };
 
   const visibleSections = baseSections.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
       if (isVoterOnly && !["/dashboard", "/mvp-votes"].includes(item.path)) return false;
       if (isBrandNewUser && item.path !== "/dashboard") return false;
+      if (!isModulePathEnabled(item.path)) return false;
+      if (item.path === "/mvp-votes" && !roles.some((role) => role === "PLAYER" || role === "VOTER" || role === "SUPER_ADMIN")) return false;
+      if (item.path === "/umpire/vote" && activeMode === "player" && !roles.includes("UMPIRE")) return false;
       if (selectedAssociationId && item.path === "/admin/associations") return false;
       if (selectedClubId && item.path === "/admin/clubs") return false;
       if (selectedTeamId && item.path === "/admin/teams") return false;
@@ -831,7 +931,7 @@ const AppLayout = () => {
       return true;
     }),
   })).filter((section) => section.items.length > 0);
-  const mobileNavItems = isBrandNewUser ? MOBILE_NAV.player.filter((item) => item.path === "/dashboard") : MOBILE_NAV[mode];
+  const mobileNavItems = isBrandNewUser ? MOBILE_NAV.player.filter((item) => item.path === "/dashboard") : MOBILE_NAV[activeMode];
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleNotificationClick = async (notification: Notification) => {
@@ -868,11 +968,9 @@ const AppLayout = () => {
     ...section,
     items: section.items.filter((item) => {
       if (!showAdminDropdown) return false;
-      if (item.path === "/admin/error-logs" && mode !== "super_admin") return false;
-      if (item.path === "/admin/roles-permissions" && mode !== "super_admin") return false;
-      if (item.path === "/admin/feedback" && mode === "club") return false;
-      if (section.heading === "Data Quality" && mode !== "super_admin") return false;
-      if (section.heading === "Voting" && mode === "club") return false;
+      if (!isModulePathEnabled(item.path)) return false;
+      if (activeMode === "association" && !ASSOCIATION_ADMIN_DROPDOWN_PATHS.has(item.path)) return false;
+      if (activeMode === "club" && !CLUB_ADMIN_DROPDOWN_PATHS.has(item.path)) return false;
       return true;
     }),
   })).filter((section) => section.items.length > 0);
@@ -896,22 +994,47 @@ const AppLayout = () => {
   const cascadeClearClass =
     "h-7 w-7 shrink-0 rounded-full text-primary-foreground/60 hover:text-primary-foreground hover:bg-primary-foreground/10";
   const cascadeSummaryParts = [
-    selectedAssociation?.abbreviation || selectedAssociation?.name || (mode === "player" ? playerAssociationAbbr || playerAssociationName : ""),
-    selectedClub?.name || (mode === "player" ? playerClubName : ""),
+    selectedAssociation?.abbreviation || selectedAssociation?.name || (activeMode === "player" ? playerAssociationAbbr || playerAssociationName : ""),
+    selectedClub?.name || (activeMode === "player" ? playerClubName : ""),
     selectedDivisionObj?.name,
-    selectedTeam ? getTeamDisplayName(selectedTeam) : mode === "player" ? playerTeamName : "",
+    selectedTeam ? getTeamDisplayName(selectedTeam) : activeMode === "player" ? playerTeamName : "",
   ].filter(Boolean);
   const cascadeSummary = cascadeSummaryParts.length > 0 ? cascadeSummaryParts.join(" > ") : "Select scope";
-  const selectedPlayerMembership = mode === "player"
+  const selectedPlayerMembership = activeMode === "player"
     ? voterTeamMemberships.find((membership) => membership.teamId === selectedTeamId) || voterTeamMemberships[0]
     : undefined;
   const playerCanBrowseParentEntities = selectedPlayerMembership?.membershipType !== "FILL_IN";
 
   useEffect(() => {
+    if (adminScopeLoading || activeMode !== "club") return;
+    if (selectedClubId && authorisedClubs.some((club) => club.id === selectedClubId)) return;
+
+    const fallbackClub = authorisedClubs[0];
+    if (!fallbackClub) return;
+    setSelectedScope({
+      associationId: fallbackClub.association_id,
+      clubId: fallbackClub.id,
+      divisionId: "",
+      teamId: "",
+    });
+    if (location.pathname.startsWith("/clubs/")) {
+      navigate(`/clubs/${fallbackClub.id}`, { replace: true });
+    }
+  }, [
+    activeMode,
+    adminScopeLoading,
+    authorisedClubs,
+    location.pathname,
+    navigate,
+    selectedClubId,
+    setSelectedScope,
+  ]);
+
+  useEffect(() => {
     // Player entity dashboards use their route ID and must not clear the
     // active membership context shown in the header. Clearing it here made
     // the player-primary effect immediately restore Pumas, creating a loop.
-    if (mode === "player") return;
+    if (activeMode === "player") return;
 
     const associationMatch = location.pathname.match(/^\/associations\/([^/]+)/);
     const clubMatch = location.pathname.match(/^\/clubs\/([^/]+)/);
@@ -932,7 +1055,21 @@ const AppLayout = () => {
 
     if (clubMatch) {
       const clubId = clubMatch[1];
-      const club = clubs.find((item) => item.id === clubId);
+      if (adminScopeLoading) return;
+      const club = authorisedClubs.find((item) => item.id === clubId);
+      if (!club) {
+        const fallbackClub = activeMode === "club" ? authorisedClubs[0] : undefined;
+        if (fallbackClub) {
+          setSelectedScope({
+            associationId: fallbackClub.association_id,
+            clubId: fallbackClub.id,
+            divisionId: "",
+            teamId: "",
+          });
+          navigate(`/clubs/${fallbackClub.id}`, { replace: true });
+        }
+        return;
+      }
       if (club && selectedAssociationId !== club.association_id) setSelectedAssociationId(club.association_id);
       if (club && selectedClubId !== club.id) setSelectedClubId(club.id);
       if (selectedDivision) setSelectedDivision("");
@@ -949,7 +1086,10 @@ const AppLayout = () => {
     }
   }, [
     location.pathname,
-    mode,
+    activeMode,
+    adminScopeLoading,
+    authorisedClubs,
+    navigate,
     clubs,
     teams,
     teamDivisions,
@@ -960,6 +1100,7 @@ const AppLayout = () => {
     setSelectedAssociationId,
     setSelectedClubId,
     setSelectedDivision,
+    setSelectedScope,
     setSelectedTeamId,
   ]);
 
@@ -1109,21 +1250,23 @@ const AppLayout = () => {
           <p className="text-xs font-medium text-primary-foreground/75 mb-1 px-1">Viewing as</p>
           <select
             value={viewingAs}
+            disabled={modeChanging}
             onChange={(e) => {
               const selected = e.target.value as AppMode;
-              if (selected === "super_admin") {
-                setIsViewingAsOverridden(false);
-                setViewingAs("super_admin");
-              } else {
-                setViewingAs(selected);
-              }
+              setIsViewingAsOverridden(true);
+              void setViewingAs(selected).then((changed) => {
+                if (!changed) {
+                  setIsViewingAsOverridden(false);
+                }
+              });
             }}
             className="w-full rounded-md border border-border bg-background text-foreground text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="super_admin">⭐ Super Admin</option>
             {selectedAssociationId && <option value="association">Association Admin</option>}
             {selectedClubId && <option value="club">Club Admin</option>}
-            {selectedTeamId && <option value="team">Team Manager</option>}
+            {selectedTeamId && <option value="team_manager">Team Manager</option>}
+            {selectedTeamId && <option value="coach">Coach</option>}
             {selectedTeamId && <option value="player">Player</option>}
           </select>
         </div>
@@ -1286,7 +1429,7 @@ const AppLayout = () => {
                   </div>
                 )}
 
-                {showClubSelector && selectedAssociationId && filteredClubs.length > 0 && (
+                {showClubSelector && selectedAssociationId && cascadeClubs.length > 0 && (
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Club</Label>
                     <Select
@@ -1300,7 +1443,7 @@ const AppLayout = () => {
                         <SelectValue placeholder="Select club" />
                       </SelectTrigger>
                       <SelectContent className="bg-background border-border">
-                        {filteredClubs.map((club) => (
+                        {cascadeClubs.map((club) => (
                           <SelectItem key={club.id} value={club.id}>
                             {club.name}
                           </SelectItem>
@@ -1394,7 +1537,7 @@ const AppLayout = () => {
                           setSelectedDivision("");
                           setSelectedTeamId("");
                           setIsAssociationPopoverOpen(false);
-                          navigate(mode === "super_admin" || mode === "association" || mode === "club" ? "/admin" : "/dashboard");
+                          navigate(activeMode === "super_admin" || activeMode === "association" || activeMode === "club" ? "/admin" : "/dashboard");
                         }}
                         className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left transition-colors hover:bg-muted text-foreground"
                       >
@@ -1433,7 +1576,7 @@ const AppLayout = () => {
                     setSelectedClubId("");
                     setSelectedDivision("");
                     setSelectedTeamId("");
-                    navigate(mode === "super_admin" || mode === "association" || mode === "club" ? "/admin" : "/dashboard");
+                    navigate(activeMode === "super_admin" || activeMode === "association" || activeMode === "club" ? "/admin" : "/dashboard");
                   }}>
                     <X className="h-3 w-3" />
                   </Button>
@@ -1445,24 +1588,24 @@ const AppLayout = () => {
                 <button
                   type="button"
                   className="w-10 h-10 shrink-0 rounded-lg overflow-hidden border-2 border-primary-foreground/20 disabled:cursor-default"
-                  title={(mode === "player" ? playerAssociationName || playerClubName : selectedAssociation?.name) || "SportStack"}
-                  disabled={mode !== "player" || !playerCanBrowseParentEntities || !selectedPlayerMembership}
+                  title={(activeMode === "player" ? playerAssociationName || playerClubName : selectedAssociation?.name) || "SportStack"}
+                  disabled={activeMode !== "player" || !playerCanBrowseParentEntities || !selectedPlayerMembership}
                   onClick={() => selectedPlayerMembership && navigate(`/associations/${selectedPlayerMembership.associationId}`)}
                 >
                   <Avatar className="w-full h-full rounded-none">
                     <AvatarImage
-                      src={(mode === "player" ? playerLogoUrl : selectedAssociation?.logo_url) || "/favicon.ico"}
-                      alt={(mode === "player" ? playerAssociationName || playerClubName : selectedAssociation?.name) || "SportStack"}
+                      src={(activeMode === "player" ? playerLogoUrl : selectedAssociation?.logo_url) || "/favicon.ico"}
+                      alt={(activeMode === "player" ? playerAssociationName || playerClubName : selectedAssociation?.name) || "SportStack"}
                       className="object-cover"
                     />
                     <AvatarFallback className="rounded-none bg-accent text-accent-foreground text-xs font-semibold">
-                      {mode === "player"
+                      {activeMode === "player"
                         ? playerAssociationAbbr || playerAssociationName.substring(0, 2).toUpperCase() || "SS"
                         : selectedAssociation ? (selectedAssociation.abbreviation || selectedAssociation.name.substring(0, 2).toUpperCase()) : "SS"}
                     </AvatarFallback>
                   </Avatar>
                 </button>
-                {mode === "player" && playerCanBrowseParentEntities && selectedPlayerMembership && (
+                {activeMode === "player" && playerCanBrowseParentEntities && selectedPlayerMembership && (
                   <button
                     type="button"
                     className={staticCascadeClass}
@@ -1472,7 +1615,7 @@ const AppLayout = () => {
                     {selectedPlayerMembership.clubName}
                   </button>
                 )}
-                {mode === "player" && voterTeamMemberships.length > 1 ? (
+                {activeMode === "player" && voterTeamMemberships.length > 1 ? (
                   <div className="flex min-w-0 items-center gap-1">
                     {playerCanBrowseParentEntities && selectedPlayerMembership?.divisionId && (
                       <button
@@ -1499,7 +1642,7 @@ const AppLayout = () => {
                   </div>
                 ) : (
                   <>
-                    {mode === "player" && playerCanBrowseParentEntities && selectedDivisionObj && (
+                    {activeMode === "player" && playerCanBrowseParentEntities && selectedDivisionObj && (
                       <button
                         type="button"
                         className={staticCascadeClass}
@@ -1509,7 +1652,7 @@ const AppLayout = () => {
                         {selectedDivisionObj.name}
                       </button>
                     )}
-                    {mode === "player" && selectedPlayerMembership && (
+                    {activeMode === "player" && selectedPlayerMembership && (
                       <div
                         className={staticCascadeClass}
                         title={selectedPlayerMembership.teamName}
@@ -1523,11 +1666,11 @@ const AppLayout = () => {
             )}
 
             {/* Club Selector */}
-            {showClubSelector && selectedAssociationId && filteredClubs.length > 0 && (
+            {showClubSelector && selectedAssociationId && cascadeClubs.length > 0 && (
               <div className="flex items-center gap-1">
-                {filteredClubs.length === 1 ? (
-                  <div className={staticCascadeClass} title={selectedClub?.name || filteredClubs[0].name}>
-                    {selectedClub?.name || filteredClubs[0].name}
+                {cascadeClubs.length === 1 ? (
+                  <div className={staticCascadeClass} title={selectedClub?.name || cascadeClubs[0].name}>
+                    {selectedClub?.name || cascadeClubs[0].name}
                   </div>
                 ) : (
                   <Select key={selectedAssociationId} value={selectedClubId || undefined} onValueChange={(v) => {
@@ -1538,7 +1681,7 @@ const AppLayout = () => {
                       <SelectValue placeholder="Select Club" />
                     </SelectTrigger>
                     <SelectContent className="bg-background border-border">
-                      {filteredClubs.map((club) => (
+                      {cascadeClubs.map((club) => (
                         <SelectItem key={club.id} value={club.id}>
                           {club.name}
                         </SelectItem>
@@ -1546,7 +1689,7 @@ const AppLayout = () => {
                     </SelectContent>
                   </Select>
                 )}
-                {selectedClubId && filteredClubs.length > 1 && (
+                {selectedClubId && cascadeClubs.length > 1 && (
                   <Button variant="ghost" size="icon" className={cascadeClearClass} title="Clear club" onClick={() => {
                     setSelectedClubId("");
                     setSelectedDivision("");

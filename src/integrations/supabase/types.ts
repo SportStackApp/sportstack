@@ -12,8 +12,196 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
+      administration_audit_log: {
+        Row: {
+          action: string
+          actor_id: string
+          actor_mode: string
+          association_id: string | null
+          club_id: string | null
+          created_at: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          record_id: string | null
+          record_type: string
+          target_user_id: string | null
+          team_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          actor_mode: string
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          record_type: string
+          target_user_id?: string | null
+          team_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          actor_mode?: string
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          record_type?: string
+          target_user_id?: string | null
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "administration_audit_log_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "administration_audit_log_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "administration_audit_log_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "administration_audit_log_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      administration_integrity_snapshot_batches: {
+        Row: {
+          captured_at: string
+          captured_by: string | null
+          duplicate_user_team_groups: number
+          id: string
+          multiple_primary_users: number
+          notes: string
+        }
+        Insert: {
+          captured_at?: string
+          captured_by?: string | null
+          duplicate_user_team_groups?: number
+          id?: string
+          multiple_primary_users?: number
+          notes: string
+        }
+        Update: {
+          captured_at?: string
+          captured_by?: string | null
+          duplicate_user_team_groups?: number
+          id?: string
+          multiple_primary_users?: number
+          notes?: string
+        }
+        Relationships: []
+      }
+      administration_membership_integrity_snapshot: {
+        Row: {
+          batch_id: string
+          captured_at: string
+          created_at: string | null
+          id: string
+          invited_by: string | null
+          issue_type: string
+          jersey_number: number | null
+          membership_id: string
+          membership_type: string
+          position: string | null
+          status: string
+          team_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          batch_id: string
+          captured_at?: string
+          created_at?: string | null
+          id?: string
+          invited_by?: string | null
+          issue_type: string
+          jersey_number?: number | null
+          membership_id: string
+          membership_type: string
+          position?: string | null
+          status: string
+          team_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          batch_id?: string
+          captured_at?: string
+          created_at?: string | null
+          id?: string
+          invited_by?: string | null
+          issue_type?: string
+          jersey_number?: number | null
+          membership_id?: string
+          membership_type?: string
+          position?: string | null
+          status?: string
+          team_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "administration_membership_integrity_snapshot_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "administration_integrity_snapshot_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_feedback: {
         Row: {
           admin_notes: string | null
@@ -1733,6 +1921,100 @@ export type Database = {
           },
         ]
       }
+      module_feature_flags: {
+        Row: {
+          association_id: string | null
+          club_id: string | null
+          created_at: string
+          created_by: string | null
+          division_id: string | null
+          enabled: boolean
+          id: string
+          module_key: string
+          notes: string | null
+          scope_id: string
+          scope_type: string
+          team_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          division_id?: string | null
+          enabled: boolean
+          id?: string
+          module_key: string
+          notes?: string | null
+          scope_id: string
+          scope_type: string
+          team_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          association_id?: string | null
+          club_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          division_id?: string | null
+          enabled?: boolean
+          id?: string
+          module_key?: string
+          notes?: string | null
+          scope_id?: string
+          scope_type?: string
+          team_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_feature_flags_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_feature_flags_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_feature_flags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_feature_flags_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_feature_flags_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_feature_flags_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mvp_result_checks: {
         Row: {
           comment: string | null
@@ -1774,6 +2056,199 @@ export type Database = {
             columns: ["voter_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mvp_tally_presentations: {
+        Row: {
+          card_snapshot: Json | null
+          commentary_snapshot: Json | null
+          created_at: string
+          created_by: string
+          id: string
+          playback_speed: number
+          previewed_at: string | null
+          published_at: string | null
+          published_by: string | null
+          replaces_presentation_id: string | null
+          result_snapshot: Json | null
+          source_fingerprint: string | null
+          status: string
+          subtitle: string | null
+          team_id: string
+          theme: Json
+          title: string
+          updated_at: string
+          updated_by: string
+          validation_error: string | null
+          withdrawal_reason: string | null
+          withdrawn_at: string | null
+          withdrawn_by: string | null
+        }
+        Insert: {
+          card_snapshot?: Json | null
+          commentary_snapshot?: Json | null
+          created_at?: string
+          created_by: string
+          id?: string
+          playback_speed?: number
+          previewed_at?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          replaces_presentation_id?: string | null
+          result_snapshot?: Json | null
+          source_fingerprint?: string | null
+          status?: string
+          subtitle?: string | null
+          team_id: string
+          theme?: Json
+          title: string
+          updated_at?: string
+          updated_by: string
+          validation_error?: string | null
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
+        }
+        Update: {
+          card_snapshot?: Json | null
+          commentary_snapshot?: Json | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          playback_speed?: number
+          previewed_at?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          replaces_presentation_id?: string | null
+          result_snapshot?: Json | null
+          source_fingerprint?: string | null
+          status?: string
+          subtitle?: string | null
+          team_id?: string
+          theme?: Json
+          title?: string
+          updated_at?: string
+          updated_by?: string
+          validation_error?: string | null
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mvp_tally_presentations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_replaces_presentation_id_fkey"
+            columns: ["replaces_presentation_id"]
+            isOneToOne: false
+            referencedRelation: "mvp_tally_presentations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_presentations_withdrawn_by_fkey"
+            columns: ["withdrawn_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mvp_tally_recipients: {
+        Row: {
+          audience_group: string
+          created_at: string
+          id: string
+          presentation_id: string
+          profile_id: string
+        }
+        Insert: {
+          audience_group: string
+          created_at?: string
+          id?: string
+          presentation_id: string
+          profile_id: string
+        }
+        Update: {
+          audience_group?: string
+          created_at?: string
+          id?: string
+          presentation_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mvp_tally_recipients_presentation_id_fkey"
+            columns: ["presentation_id"]
+            isOneToOne: false
+            referencedRelation: "mvp_tally_presentations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_recipients_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mvp_tally_sessions: {
+        Row: {
+          display_order: number
+          presentation_id: string
+          session_id: string
+        }
+        Insert: {
+          display_order: number
+          presentation_id: string
+          session_id: string
+        }
+        Update: {
+          display_order?: number
+          presentation_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mvp_tally_sessions_presentation_id_fkey"
+            columns: ["presentation_id"]
+            isOneToOne: false
+            referencedRelation: "mvp_tally_presentations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_tally_sessions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "mvp_voting_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -2501,6 +2976,354 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permission_assignments: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          permission_set_id: string
+          scope_id: string
+          scope_type: string
+          subject_key: string
+          subject_type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          permission_set_id: string
+          scope_id: string
+          scope_type: string
+          subject_key: string
+          subject_type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          permission_set_id?: string
+          scope_id?: string
+          scope_type?: string
+          subject_key?: string
+          subject_type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_assignments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_assignments_permission_set_id_fkey"
+            columns: ["permission_set_id"]
+            isOneToOne: false
+            referencedRelation: "permission_sets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_assignments_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permission_catalogue: {
+        Row: {
+          category: string
+          created_at: string
+          default_allowed: boolean
+          description: string
+          label: string
+          module_key: string
+          permission_key: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          default_allowed?: boolean
+          description: string
+          label: string
+          module_key: string
+          permission_key: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          default_allowed?: boolean
+          description?: string
+          label?: string
+          module_key?: string
+          permission_key?: string
+        }
+        Relationships: []
+      }
+      permission_group_members: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          group_id: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          group_id: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          group_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_group_members_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "permission_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permission_groups: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          scope_id: string
+          scope_type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          scope_id: string
+          scope_type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          scope_id?: string
+          scope_type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_groups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_groups_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permission_overrides: {
+        Row: {
+          active: boolean
+          allowed: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          permission_key: string
+          reason: string | null
+          scope_id: string
+          scope_type: string
+          subject_key: string
+          subject_type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          allowed: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          permission_key: string
+          reason?: string | null
+          scope_id: string
+          scope_type: string
+          subject_key: string
+          subject_type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          allowed?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          permission_key?: string
+          reason?: string | null
+          scope_id?: string
+          scope_type?: string
+          subject_key?: string
+          subject_type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_overrides_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_overrides_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "permission_catalogue"
+            referencedColumns: ["permission_key"]
+          },
+          {
+            foreignKeyName: "permission_overrides_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permission_set_permissions: {
+        Row: {
+          allowed: boolean
+          permission_key: string
+          permission_set_id: string
+        }
+        Insert: {
+          allowed: boolean
+          permission_key: string
+          permission_set_id: string
+        }
+        Update: {
+          allowed?: boolean
+          permission_key?: string
+          permission_set_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_set_permissions_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "permission_catalogue"
+            referencedColumns: ["permission_key"]
+          },
+          {
+            foreignKeyName: "permission_set_permissions_permission_set_id_fkey"
+            columns: ["permission_set_id"]
+            isOneToOne: false
+            referencedRelation: "permission_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permission_sets: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          owner_scope_id: string
+          owner_scope_type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          owner_scope_id: string
+          owner_scope_type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          owner_scope_id?: string
+          owner_scope_type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_sets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_sets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -6322,6 +7145,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_cancel_team_invite: {
+        Args: { p_actor_mode?: string; p_request_id: string }
+        Returns: undefined
+      }
+      admin_create_team_invite: {
+        Args: {
+          p_actor_mode?: string
+          p_membership_type: string
+          p_target_user_id: string
+          p_team_id: string
+        }
+        Returns: string
+      }
+      admin_manage_team_membership: {
+        Args: {
+          p_action: string
+          p_actor_mode?: string
+          p_membership_id: string
+          p_membership_type?: string
+        }
+        Returns: Json
+      }
+      admin_membership_integrity_report: {
+        Args: never
+        Returns: {
+          issue_type: string
+          membership_ids: string[]
+          row_count: number
+          team_id: string
+          user_id: string
+        }[]
+      }
       admin_merge_profiles: {
         Args: {
           p_conflict_resolutions: Json
@@ -6331,8 +7186,33 @@ export type Database = {
         }
         Returns: undefined
       }
-      admin_save_user_roles: {
+      admin_save_user_roles:
+        | {
+            Args: {
+              p_association_admin_associations?: string[]
+              p_club_admin_scopes?: Json
+              p_coach_scopes?: Json
+              p_manager_scopes?: Json
+              p_roles: string[]
+              p_user_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_actor_mode: string
+              p_association_admin_associations: string[]
+              p_club_admin_scopes: Json
+              p_coach_scopes: Json
+              p_manager_scopes: Json
+              p_roles: string[]
+              p_user_id: string
+            }
+            Returns: undefined
+          }
+      admin_save_user_roles_unchecked: {
         Args: {
+          p_actor_mode?: string
           p_association_admin_associations?: string[]
           p_club_admin_scopes?: Json
           p_coach_scopes?: Json
@@ -6341,6 +7221,81 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      admin_update_profile_details: {
+        Args: { p_actor_mode?: string; p_details: Json; p_user_id: string }
+        Returns: Json
+      }
+      admin_update_profile_details_unbound: {
+        Args: { p_actor_mode?: string; p_details: Json; p_user_id: string }
+        Returns: Json
+      }
+      admin_visible_profile_ids: {
+        Args: {
+          p_actor_mode?: string
+          p_association_id?: string
+          p_club_id?: string
+          p_team_id?: string
+        }
+        Returns: {
+          profile_id: string
+        }[]
+      }
+      admin_visible_profile_ids_unbound: {
+        Args: {
+          p_actor_mode?: string
+          p_association_id?: string
+          p_club_id?: string
+          p_team_id?: string
+        }
+        Returns: {
+          profile_id: string
+        }[]
+      }
+      administration_effective_mode: {
+        Args: { p_requested_mode?: string }
+        Returns: string
+      }
+      administration_scope_allows: {
+        Args: {
+          p_association_id?: string
+          p_club_id?: string
+          p_requested_mode: string
+          p_team_id?: string
+        }
+        Returns: boolean
+      }
+      administration_target_profile_in_scope: {
+        Args: { p_actor_mode?: string; p_user_id: string }
+        Returns: boolean
+      }
+      administration_target_profile_in_scope_unbound: {
+        Args: { p_actor_mode?: string; p_user_id: string }
+        Returns: boolean
+      }
+      approve_membership_request: {
+        Args: { p_assign_team?: boolean; p_request_id: string }
+        Returns: Json
+      }
+      approve_membership_request_unbound: {
+        Args: { p_assign_team?: boolean; p_request_id: string }
+        Returns: Json
+      }
+      approve_primary_team_change: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      can_manage_module_scope: {
+        Args: { p_scope_id: string; p_scope_type: string; p_user_id: string }
+        Returns: boolean
+      }
+      can_review_primary_team_change: {
+        Args: { p_to_team_id: string }
+        Returns: boolean
+      }
+      cancel_primary_team_change: {
+        Args: { p_request_id: string }
+        Returns: Json
       }
       claim_placeholder_profile: {
         Args: { p_real_profile_id: string }
@@ -6361,6 +7316,10 @@ export type Database = {
           subject: string
           work_type: string
         }[]
+      }
+      clear_module_feature_flag: {
+        Args: { p_module_key: string; p_scope_id: string; p_scope_type: string }
+        Returns: boolean
       }
       close_legacy_mvp_sessions_for_cutover: {
         Args: { p_reason: string }
@@ -6383,6 +7342,15 @@ export type Database = {
         Args: { p_project_url: string }
         Returns: undefined
       }
+      confirm_primary_team_change: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      decline_primary_team_change: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      get_active_permission_mode: { Args: never; Returns: Json }
       get_mvp_result_check_state: {
         Args: { p_session_id: string }
         Returns: Json
@@ -6397,10 +7365,164 @@ export type Database = {
           vote_count: number
         }[]
       }
+      get_mvp_tally_builder_data: {
+        Args: { p_session_ids?: string[]; p_team_id: string }
+        Returns: Json
+      }
+      has_effective_permission: {
+        Args: {
+          p_association_id?: string
+          p_club_id?: string
+          p_division_id?: string
+          p_permission_key: string
+          p_team_id?: string
+        }
+        Returns: boolean
+      }
       is_super_admin: { Args: never; Returns: boolean }
+      list_permission_management_records_for_mode: {
+        Args: {
+          p_actor_mode?: string
+          p_scope_id: string
+          p_scope_type: string
+        }
+        Returns: Json
+      }
       open_mvp_voting_session: {
         Args: { p_closes_at?: string; p_fixture_id: string; p_team_id: string }
         Returns: Json
+      }
+      permission_mode_scope_allows: {
+        Args: { p_actor_mode: string; p_scope_id: string; p_scope_type: string }
+        Returns: boolean
+      }
+      permission_save_assignment_unchecked: {
+        Args: {
+          p_active?: boolean
+          p_actor_mode?: string
+          p_assignment_id: string
+          p_permission_set_id: string
+          p_scope_id: string
+          p_scope_type: string
+          p_subject_key: string
+          p_subject_type: string
+        }
+        Returns: string
+      }
+      permission_save_group_unchecked: {
+        Args: {
+          p_active?: boolean
+          p_actor_mode?: string
+          p_description: string
+          p_group_id: string
+          p_member_ids?: string[]
+          p_name: string
+          p_scope_id: string
+          p_scope_type: string
+        }
+        Returns: string
+      }
+      permission_save_override_unchecked: {
+        Args: {
+          p_active?: boolean
+          p_actor_mode?: string
+          p_allowed: boolean
+          p_permission_key: string
+          p_reason?: string
+          p_scope_id: string
+          p_scope_type: string
+          p_subject_key: string
+          p_subject_type: string
+        }
+        Returns: string
+      }
+      permission_save_set_unchecked: {
+        Args: {
+          p_active?: boolean
+          p_actor_mode?: string
+          p_description: string
+          p_name: string
+          p_permission_set_id: string
+          p_permissions: Json
+          p_scope_id: string
+          p_scope_type: string
+        }
+        Returns: string
+      }
+      permission_scope_contains: {
+        Args: {
+          p_assignment_scope_id: string
+          p_assignment_scope_type: string
+          p_owner_scope_id: string
+          p_owner_scope_type: string
+        }
+        Returns: boolean
+      }
+      permission_scope_details: {
+        Args: { p_scope_id: string; p_scope_type: string }
+        Returns: {
+          association_id: string
+          club_id: string
+          division_id: string
+          team_id: string
+        }[]
+      }
+      permission_subject_manageable: {
+        Args: {
+          p_actor_mode: string
+          p_subject_key: string
+          p_subject_type: string
+        }
+        Returns: boolean
+      }
+      permission_subject_matches: {
+        Args: {
+          p_association_id: string
+          p_club_id: string
+          p_subject_key: string
+          p_subject_type: string
+          p_team_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      permission_subject_matches_for_mode: {
+        Args: {
+          p_effective_mode: string
+          p_rule_scope_id: string
+          p_rule_scope_type: string
+          p_subject_key: string
+          p_subject_type: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      permission_user_in_scope: {
+        Args: { p_scope_id: string; p_scope_type: string; p_user_id: string }
+        Returns: boolean
+      }
+      permission_visible_profiles: {
+        Args: { p_scope_id: string; p_scope_type: string }
+        Returns: {
+          display_name: string
+          profile_id: string
+        }[]
+      }
+      permission_visible_profiles_for_mode: {
+        Args: {
+          p_actor_mode?: string
+          p_scope_id: string
+          p_scope_type: string
+        }
+        Returns: {
+          display_name: string
+          profile_id: string
+        }[]
+      }
+      preview_mvp_tally: { Args: { p_presentation_id: string }; Returns: Json }
+      publish_mvp_tally: {
+        Args: { p_presentation_id: string }
+        Returns: string
       }
       record_mvp_result_check: {
         Args: { p_comment?: string; p_response: string; p_session_id: string }
@@ -6414,12 +7536,159 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: Json
       }
+      request_primary_team_change: {
+        Args: { p_to_team_id: string }
+        Returns: Json
+      }
+      resolve_effective_permission: {
+        Args: {
+          p_association_id?: string
+          p_club_id?: string
+          p_division_id?: string
+          p_permission_key: string
+          p_team_id?: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
+      resolve_effective_permission_for_mode: {
+        Args: {
+          p_actor_mode: string
+          p_association_id?: string
+          p_club_id?: string
+          p_division_id?: string
+          p_permission_key: string
+          p_team_id?: string
+        }
+        Returns: Json
+      }
+      resolve_effective_permission_for_mode_unchecked: {
+        Args: {
+          p_actor_mode: string
+          p_association_id?: string
+          p_club_id?: string
+          p_division_id?: string
+          p_permission_key: string
+          p_team_id?: string
+        }
+        Returns: Json
+      }
+      resolve_module_enabled: {
+        Args: {
+          p_association_id?: string
+          p_club_id?: string
+          p_division_id?: string
+          p_module_key: string
+          p_team_id?: string
+        }
+        Returns: boolean
+      }
       resolve_mvp_result_dispute: {
         Args: { p_closes_at?: string; p_session_id: string }
         Returns: Json
       }
       review_umpire_vote_submission: {
         Args: { p_action: string; p_lines?: Json; p_submission_id: string }
+        Returns: Json
+      }
+      save_mvp_tally_commentary: {
+        Args: {
+          p_commentary: Json
+          p_presentation_id: string
+          p_source_fingerprint: string
+        }
+        Returns: undefined
+      }
+      save_mvp_tally_draft: {
+        Args: {
+          p_playback_speed: number
+          p_presentation_id: string
+          p_recipients: Json
+          p_replaces_presentation_id?: string
+          p_session_ids: string[]
+          p_subtitle: string
+          p_team_id: string
+          p_theme: Json
+          p_title: string
+        }
+        Returns: string
+      }
+      save_permission_assignment: {
+        Args: {
+          p_active?: boolean
+          p_actor_mode?: string
+          p_assignment_id: string
+          p_permission_set_id: string
+          p_scope_id: string
+          p_scope_type: string
+          p_subject_key: string
+          p_subject_type: string
+        }
+        Returns: string
+      }
+      save_permission_group: {
+        Args: {
+          p_active?: boolean
+          p_actor_mode?: string
+          p_description: string
+          p_group_id: string
+          p_member_ids?: string[]
+          p_name: string
+          p_scope_id: string
+          p_scope_type: string
+        }
+        Returns: string
+      }
+      save_permission_override: {
+        Args: {
+          p_active?: boolean
+          p_actor_mode?: string
+          p_allowed: boolean
+          p_permission_key: string
+          p_reason?: string
+          p_scope_id: string
+          p_scope_type: string
+          p_subject_key: string
+          p_subject_type: string
+        }
+        Returns: string
+      }
+      save_permission_set: {
+        Args: {
+          p_active?: boolean
+          p_actor_mode?: string
+          p_description: string
+          p_name: string
+          p_permission_set_id: string
+          p_permissions: Json
+          p_scope_id: string
+          p_scope_type: string
+        }
+        Returns: string
+      }
+      set_active_permission_context: {
+        Args: {
+          p_active_mode: string
+          p_association_id?: string
+          p_club_id?: string
+          p_division_id?: string
+          p_root_mode: string
+          p_team_id?: string
+        }
+        Returns: Json
+      }
+      set_active_permission_mode: {
+        Args: { p_active_mode: string; p_root_mode: string }
+        Returns: Json
+      }
+      set_module_feature_flag: {
+        Args: {
+          p_enabled: boolean
+          p_module_key: string
+          p_notes?: string
+          p_scope_id: string
+          p_scope_type: string
+        }
         Returns: Json
       }
       set_team_mvp_enabled: {
@@ -6451,6 +7720,10 @@ export type Database = {
           p_voter_profile_id: string
         }
         Returns: Json
+      }
+      withdraw_mvp_tally: {
+        Args: { p_presentation_id: string; p_reason: string }
+        Returns: undefined
       }
     }
     Enums: {
@@ -6520,12 +7793,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6549,11 +7822,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6574,11 +7847,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6599,11 +7872,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6616,11 +7889,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6630,6 +7903,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       action_status_enum: [
@@ -6692,4 +7968,3 @@ export const Constants = {
     },
   },
 } as const
-

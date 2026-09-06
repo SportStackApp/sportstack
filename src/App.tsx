@@ -56,6 +56,8 @@ import MvpTallyAdmin from "./pages/admin/MvpTallyAdmin";
 import Analytics from "./pages/admin/Analytics";
 import FeedbackResponses from "./pages/admin/FeedbackResponses";
 import RolesPermissions from "./pages/admin/RolesPermissions";
+import { ModuleGate } from "./components/auth/ModuleGate";
+import { ModeRouteGate } from "./components/auth/ModeRouteGate";
 import ModuleLayoutPreview from "./pages/admin/ModuleLayoutPreview";
 import SafetyRiskModule from "./pages/admin/SafetyRiskModule";
 import UmpireVotingModule from "./pages/admin/UmpireVotingModule";
@@ -80,6 +82,12 @@ import { TeamProvider } from "./contexts/TeamContext";
 import { AppModeProvider } from "./contexts/AppModeContext";
 
 const queryClient = new QueryClient();
+
+const ADMIN_MODES = ["super_admin", "association", "club"] as const;
+const ASSOCIATION_ADMIN_MODES = ["super_admin", "association"] as const;
+const SUPER_ADMIN_MODES = ["super_admin"] as const;
+const MVP_ADMIN_MODES = ["super_admin", "association", "club", "team_manager"] as const;
+const UMPIRE_BALLOT_MODES = ["super_admin", "association", "player"] as const;
 
 const RetiredMvpTokenRoute = () => (
   <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-12">
@@ -113,8 +121,8 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <TestRoleProvider>
-          <AppModeProvider>
-            <TeamProvider>
+          <TeamProvider>
+            <AppModeProvider>
               <Toaster />
               <Sonner />
               <BrowserRouter>
@@ -142,41 +150,41 @@ const App = () => (
                       <Route path="/coaching/formations" element={<FormationLibrary />} />
                       <Route path="/coaching/formations/builder" element={<FormationBuilder />} />
                       <Route path="/coaching/formations/templates/builder" element={<TemplateBuilder />} />
-                      <Route path="/coaching/trace" element={<HockeyTraceLab />} />
+                      <Route path="/coaching/trace" element={<ModuleGate moduleKey="hockey_trace" moduleLabel="Hockey Trace Lab"><HockeyTraceLab /></ModuleGate>} />
                       <Route path="/coaching/:playerId" element={<CoachingPlayerProfile />} />
                       <Route path="/chat" element={<Chat />} />
-                      <Route path="/umpire/vote" element={<UmpireVoteSubmit />} />
+                      <Route path="/umpire/vote" element={<ModeRouteGate allowedModes={UMPIRE_BALLOT_MODES} requiredRoleForPlayerMode="UMPIRE"><ModuleGate moduleKey="umpire_match_voting" moduleLabel="Umpire Match Voting"><UmpireVoteSubmit /></ModuleGate></ModeRouteGate>} />
                       <Route path="/voting" element={<VotingPortal />} />
-                      <Route path="/mvp-votes" element={<MvpVotes />} />
-                      <Route path="/mvp-votes/:sessionId" element={<MvpVoteCastRoute />} />
+                      <Route path="/mvp-votes" element={<ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpVotes /></ModuleGate>} />
+                      <Route path="/mvp-votes/:sessionId" element={<ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpVoteCastRoute /></ModuleGate>} />
                       <Route path="/profile" element={<Profile />} />
                       
                       {/* Admin Routes */}
-                      <Route path="/admin" element={<AdminDashboard />} />
-                      <Route path="/admin/associations" element={<AssociationsManagement />} />
-                      <Route path="/admin/competitions" element={<CompetitionsManagement />} />
-                      <Route path="/admin/clubs" element={<ClubsManagement />} />
-                      <Route path="/admin/teams" element={<TeamsManagement />} />
-                      <Route path="/admin/divisions" element={<DivisionsManagement />} />
-                      <Route path="/admin/users" element={<UsersManagement />} />
-                      <Route path="/admin/add-player" element={<AddPlayer />} />
-                      <Route path="/admin/bulk-import" element={<BulkImport />} />
-                      <Route path="/admin/revsports-mappings" element={<RevSportsMappings />} />
-                      <Route path="/admin/revsports-unmatched" element={<RevSportsUnmatched />} />
-                      <Route path="/admin/error-logs" element={<ErrorLogs />} />
-                      <Route path="/admin/feedback" element={<FeedbackResponses />} />
-                      <Route path="/admin/revsports-entities" element={<RevSportsEntityReview />} />
-                      <Route path="/admin/fixtures" element={<FixturesManagement />} />
-                      <Route path="/admin/fixture-import" element={<FixtureImport />} />
-                      <Route path="/admin/venues" element={<VenuesManagement />} />
-                      <Route path="/admin/requests" element={<Requests />} />
-                      <Route path="/admin/mvp-voting" element={<MvpVotingAdmin />} />
-                      <Route path="/admin/mvp-voting/tallies" element={<MvpTallyAdmin />} />
-                      <Route path="/admin/umpire-voting" element={<UmpireVotingModule />} />
-                      <Route path="/admin/safety-risk" element={<SafetyRiskModule />} />
-                      <Route path="/admin/analytics" element={<Analytics />} />
-                      <Route path="/admin/roles-permissions" element={<RolesPermissions />} />
-                      <Route path="/admin/module-preview" element={<ModuleLayoutPreview />} />
+                      <Route path="/admin" element={<ModeRouteGate allowedModes={ADMIN_MODES}><AdminDashboard /></ModeRouteGate>} />
+                      <Route path="/admin/associations" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><AssociationsManagement /></ModeRouteGate>} />
+                      <Route path="/admin/competitions" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><CompetitionsManagement /></ModeRouteGate>} />
+                      <Route path="/admin/clubs" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><ClubsManagement /></ModeRouteGate>} />
+                      <Route path="/admin/teams" element={<ModeRouteGate allowedModes={ADMIN_MODES}><TeamsManagement /></ModeRouteGate>} />
+                      <Route path="/admin/divisions" element={<ModeRouteGate allowedModes={ADMIN_MODES}><DivisionsManagement /></ModeRouteGate>} />
+                      <Route path="/admin/users" element={<ModeRouteGate allowedModes={ADMIN_MODES}><UsersManagement /></ModeRouteGate>} />
+                      <Route path="/admin/add-player" element={<ModeRouteGate allowedModes={ADMIN_MODES}><AddPlayer /></ModeRouteGate>} />
+                      <Route path="/admin/bulk-import" element={<ModeRouteGate allowedModes={ADMIN_MODES}><BulkImport /></ModeRouteGate>} />
+                      <Route path="/admin/revsports-mappings" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><RevSportsMappings /></ModeRouteGate>} />
+                      <Route path="/admin/revsports-unmatched" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><RevSportsUnmatched /></ModeRouteGate>} />
+                      <Route path="/admin/error-logs" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><ErrorLogs /></ModeRouteGate>} />
+                      <Route path="/admin/feedback" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><FeedbackResponses /></ModeRouteGate>} />
+                      <Route path="/admin/revsports-entities" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><RevSportsEntityReview /></ModeRouteGate>} />
+                      <Route path="/admin/fixtures" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><FixturesManagement /></ModeRouteGate>} />
+                      <Route path="/admin/fixture-import" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><FixtureImport /></ModeRouteGate>} />
+                      <Route path="/admin/venues" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><VenuesManagement /></ModeRouteGate>} />
+                      <Route path="/admin/requests" element={<ModeRouteGate allowedModes={ADMIN_MODES}><Requests /></ModeRouteGate>} />
+                      <Route path="/admin/mvp-voting" element={<ModeRouteGate allowedModes={MVP_ADMIN_MODES}><ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpVotingAdmin /></ModuleGate></ModeRouteGate>} />
+                      <Route path="/admin/mvp-voting/tallies" element={<ModeRouteGate allowedModes={MVP_ADMIN_MODES}><ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpTallyAdmin /></ModuleGate></ModeRouteGate>} />
+                      <Route path="/admin/umpire-voting" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><ModuleGate moduleKey="umpire_match_voting" moduleLabel="Umpire Match Voting"><UmpireVotingModule /></ModuleGate></ModeRouteGate>} />
+                      <Route path="/admin/safety-risk" element={<ModeRouteGate allowedModes={ADMIN_MODES}><ModuleGate moduleKey="safety_risk" moduleLabel="Risk & Quality Improvement"><SafetyRiskModule /></ModuleGate></ModeRouteGate>} />
+                      <Route path="/admin/analytics" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><Analytics /></ModeRouteGate>} />
+                      <Route path="/admin/roles-permissions" element={<ModeRouteGate allowedModes={ADMIN_MODES}><RolesPermissions /></ModeRouteGate>} />
+                      <Route path="/admin/module-preview" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><ModuleLayoutPreview /></ModeRouteGate>} />
 
                       {/* Entity Dashboards */}
                       <Route path="/associations/:id" element={<AssociationDashboard />} />
@@ -191,8 +199,8 @@ const App = () => (
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
-            </TeamProvider>
-          </AppModeProvider>
+            </AppModeProvider>
+          </TeamProvider>
         </TestRoleProvider>
       </AuthProvider>
     </TooltipProvider>

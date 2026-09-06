@@ -1,23 +1,18 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Lock, Shield } from "lucide-react";
+import { ArrowLeft, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AdvancedPermissionControls } from "@/components/admin/AdvancedPermissionControls";
+import { ModuleControlsCard } from "@/components/admin/ModuleControlsCard";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { ROLE_PERMISSION_SUMMARIES } from "@/lib/rolePermissions";
 
 const RolesPermissions = () => {
   const navigate = useNavigate();
-  const { loading, isSuperAdmin } = useAdminScope();
-
-  useEffect(() => {
-    if (!loading && !isSuperAdmin) {
-      navigate("/admin");
-    }
-  }, [loading, isSuperAdmin, navigate]);
+  const { loading, isSuperAdmin, scopedAssociationIds, scopedClubIds } = useAdminScope();
+  const canManageModules = isSuperAdmin || scopedAssociationIds.length > 0 || scopedClubIds.length > 0;
 
   if (loading) {
     return (
@@ -28,6 +23,20 @@ const RolesPermissions = () => {
     );
   }
 
+  if (!canManageModules) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Roles & modules</CardTitle>
+          <CardDescription>This page is available to Super, Association and Club administrators.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={() => navigate("/admin")}>Back to Admin</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -35,30 +44,13 @@ const RolesPermissions = () => {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Roles & permissions</h1>
-          <p className="text-muted-foreground">Current role abilities and future custom-role controls.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Roles, permissions & modules</h1>
+          <p className="text-muted-foreground">Control modules and reusable permissions by organisation, role, group or user.</p>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5" />
-            Custom role switches
-          </CardTitle>
-          <CardDescription>
-            These switches are display-only for now. Live permission toggles need a separate security change.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-3">
-          {["View", "Create", "Edit", "Delete", "Approve", "Export"].map((label) => (
-            <div key={label} className="flex items-center justify-between rounded-lg border p-3">
-              <span className="text-sm font-medium">{label}</span>
-              <Switch checked disabled />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <ModuleControlsCard />
+      <AdvancedPermissionControls />
 
       <div className="grid gap-4 lg:grid-cols-2">
         {ROLE_PERMISSION_SUMMARIES.map((role) => (

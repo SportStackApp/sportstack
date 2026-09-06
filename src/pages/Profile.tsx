@@ -31,6 +31,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { isProfileReviewRequired } from "@/lib/profileCompletion";
 import type { Database } from "@/integrations/supabase/types";
 import { loadPlayerHistory, type PlayerHistoryRecord } from "@/lib/playerHistory";
+import {
+  cancelPrimaryTeamChange,
+  confirmPrimaryTeamChange,
+  requestPrimaryTeamChange,
+} from "@/lib/primaryTeamChangeRpc";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 type MembershipType = Database["public"]["Enums"]["membership_type"];
@@ -485,10 +490,6 @@ const Profile = () => {
   const handleSetPrimaryTeam = async (teamId: string) => {
     if (!user) return;
 
-    const primaryMembership = memberships.find(
-      (m) => m.membership_type === "PRIMARY" && m.status === "ACTIVE"
-    );
-
     // Get team info first for notifications
     const { data: teamData } = await supabase
       .from("teams")
@@ -496,13 +497,8 @@ const Profile = () => {
       .eq("id", teamId)
       .single();
 
-    // Always insert a primary_change_request - works with or without existing primary
-    const { error } = await supabase.from("primary_change_requests").insert({
-      user_id: user.id,
-      from_team_id: primaryMembership?.team_id || null,
-      to_team_id: teamId,
-      status: "PENDING",
-    });
+    // The server records the current primary team and creates one pending request.
+    const { error } = await requestPrimaryTeamChange(teamId);
 
     if (error) {
       toast({
@@ -544,10 +540,7 @@ const Profile = () => {
   const handleCancelChangeRequest = async () => {
     if (!user || !pendingChangeRequest) return;
 
-    const { error } = await supabase
-      .from("primary_change_requests")
-      .update({ status: "CANCELLED" })
-      .eq("id", pendingChangeRequest.id);
+    const { error } = await cancelPrimaryTeamChange(pendingChangeRequest.id);
 
     if (error) {
       toast({
@@ -567,53 +560,14 @@ const Profile = () => {
   const handleConfirmChange = async () => {
     if (!user || !pendingChangeRequest || pendingChangeRequest.status !== "ADMIN_APPROVED") return;
 
-    // Downgrade old PRIMARY to SECONDARY
-    if (pendingChangeRequest.from_team_id) {
-      const { error: downgradeError } = await supabase
-        .from("team_memberships")
-        .update({ membership_type: "SECONDARY" })
-        .eq("user_id", user.id)
-        .eq("team_id", pendingChangeRequest.from_team_id)
-        .eq("membership_type", "PRIMARY");
+    const { error } = await confirmPrimaryTeamChange(pendingChangeRequest.id);
 
-      if (downgradeError) {
-        toast({ title: "Error", description: "Failed to update your old primary team.", variant: "destructive" });
-        return;
-      }
-    }
-
-    const { data: existingTargetMembership } = await supabase
-      .from("team_memberships")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("team_id", pendingChangeRequest.to_team_id)
-      .maybeSingle();
-
-    const { error: upgradeError } = existingTargetMembership
-      ? await supabase
-      .from("team_memberships")
-          .update({ membership_type: "PRIMARY", status: "ACTIVE" })
-      .eq("user_id", user.id)
-          .eq("team_id", pendingChangeRequest.to_team_id)
-      : await supabase.from("team_memberships").insert({
-          user_id: user.id,
-          team_id: pendingChangeRequest.to_team_id,
-          membership_type: "PRIMARY" as MembershipType,
-          status: "ACTIVE",
-        });
-
-    if (upgradeError) {
-      toast({ title: "Error", description: "Failed to confirm change.", variant: "destructive" });
-      return;
-    }
-
-    const { error: completionError } = await supabase
-      .from("primary_change_requests")
-      .update({ status: "COMPLETED", resolved_at: new Date().toISOString() })
-      .eq("id", pendingChangeRequest.id);
-
-    if (completionError) {
-      toast({ title: "Error", description: "Your team changed, but the request could not be closed.", variant: "destructive" });
+    if (error) {
+      toast({
+        title: "Primary team not changed",
+        description: "The change could not be completed. No partial team change was saved.",
+        variant: "destructive",
+      });
       return;
     }
 

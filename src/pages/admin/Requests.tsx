@@ -13,6 +13,11 @@ import {
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ensurePlayerRoleForTeam } from "@/lib/playerRoles";
+import {
+  approvePrimaryTeamChange,
+  cancelPrimaryTeamChange,
+  declinePrimaryTeamChange,
+} from "@/lib/primaryTeamChangeRpc";
 
 
 interface Request {
@@ -186,10 +191,7 @@ export default function Requests() {
   const handleApprove = async (request: Request) => {
     try {
       if (request.source === "primary_change") {
-        const { error: primaryError } = await supabase
-          .from("primary_change_requests")
-          .update({ status: "ADMIN_APPROVED", resolved_by: user?.id })
-          .eq("id", request.id);
+        const { error: primaryError } = await approvePrimaryTeamChange(request.id);
 
         if (primaryError) throw primaryError;
 
@@ -305,14 +307,7 @@ export default function Requests() {
   const handleDecline = async (request: Request) => {
     try {
       if (request.source === "primary_change") {
-        const { error } = await supabase
-          .from("primary_change_requests")
-          .update({
-            status: "DECLINED",
-            resolved_by: user?.id,
-            resolved_at: new Date().toISOString(),
-          })
-          .eq("id", request.id);
+        const { error } = await declinePrimaryTeamChange(request.id);
 
         if (error) throw error;
 
@@ -342,10 +337,7 @@ export default function Requests() {
   const handleCancel = async (request: Request) => {
     try {
       if (request.source === "primary_change") {
-        const { error } = await supabase
-          .from("primary_change_requests")
-          .update({ status: "CANCELLED" })
-          .eq("id", request.id);
+        const { error } = await cancelPrimaryTeamChange(request.id);
 
         if (error) throw error;
 
