@@ -32,17 +32,17 @@ exception to the normal Dev → Main → Production path.
 
 Apply only in this order and stop on the first discrepancy:
 
-1. `20260906063905_b1_foundation_compatibility.sql`  
+1. `20260906063905_b1_foundation_compatibility.sql`
    SHA-256 `97991bc7dcf62ba1c3cedd77c1d2a32025176a2d9377abcebcef543a3793dc62`
-2. `20260906075102_b1_security_compatibility.sql`  
+2. `20260906075102_b1_security_compatibility.sql`
    SHA-256 `7d450a8cdff1d5deeef9d66938def1e69b74e05df6daaef8cde3f9722d200db9`
-3. `20260906095820_b1_membership_workflow_compatibility.sql`  
+3. `20260906095820_b1_membership_workflow_compatibility.sql`
    SHA-256 `42d3488eefd2b65fee27be1e5ccf1d09baae2b5102c6df6ee06cfab3801658c2`
-4. `20260906114318_b1_administration_membership_compatibility.sql`  
+4. `20260906114318_b1_administration_membership_compatibility.sql`
    SHA-256 `9bb09d1dfc9dbe21f28f6efbbce3cfa53a49797504a58c4c07e4360311671758`
-5. `20260906123500_b1_administration_session_binding_hardening.sql`  
+5. `20260906123500_b1_administration_session_binding_hardening.sql`
    SHA-256 `e30f947446f48d6d18aa7054dee762bac9f3492ee90fd7573133917c1008e682`
-6. `20260906130000_b1_request_approval_scope_lock.sql`  
+6. `20260906130000_b1_request_approval_scope_lock.sql`
    SHA-256 `67c1c8aa5fb663fbaaa422ba1ee79b7de1d1b08beff7bb54e9ca8b133d12bd66`
 
 No existing migration may be edited, renamed or marked complete manually.
