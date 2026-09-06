@@ -20,11 +20,12 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - The public Production bundle contains `a1d23c7`, the Player MVP tally remains present and the
   bundle references only the Production Supabase project. The frozen verifier, negative control,
   release self-test, database after-state and separate Verify mode all pass.
-- Production database advisers returned no error-level finding. A manual owner smoke test is still
-  required before publishing a real player presentation. Aaron has confirmed the first two smoke
-  checks: all past-deadline sessions show only as **Closed** and every expected Pumas round is
-  present. Preview totals and round order remain to be checked. See the 6 September lifecycle
-  release packet for release, rollback and test evidence.
+- Production database advisers returned no error-level finding. Aaron confirmed all past-deadline
+  sessions show only as **Closed**, every expected Pumas round is present, and the tally-builder
+  preview otherwise behaves as expected. No real-player presentation has been published. A
+  high-priority builder-draft reset and identity/name correctness investigation, plus the requested
+  presentation enhancements, are recorded in the consolidated plan and known-issue register. See
+  the 6 September lifecycle release packet for release, rollback and test evidence.
 
 ## 5 September lean Dev-to-Production readiness result
 

@@ -201,10 +201,13 @@ Production base or future Production change requires a new review and approval.
    as **Closed**.
 2. [Passed — Aaron, 6 September] Confirm all expected closed Pumas rounds are available to the tally
    builder.
-3. Preview a tally without publishing it to real players.
-4. Confirm current vote totals and round order are unchanged.
-5. Confirm no new notification or Player MVP email-event row was queued by the migration.
-6. Observe at least one closure-job interval and confirm no new overdue `OPEN` session remains.
+3. [Passed — Aaron, 6 September] Preview a tally without publishing it to real players.
+4. [Passed — Aaron, 6 September] Confirm current vote totals and round order are unchanged; Aaron
+   reported that the preview otherwise acted as expected and supplied a separate improvement list.
+5. [Passed — release verification, 6 September] Confirm no new notification or Player MVP
+   email-event row was queued by the migration.
+6. [Passed — release verification, 6 September] Observe at least one closure-job interval and
+   confirm no new overdue `OPEN` session remains.
 7. If publication is approved separately, use the already nominated Grampians recipients, keep
    external email disabled, verify recipient access/unrelated denial, then withdraw the test tally
    with an audit reason.

@@ -17,9 +17,10 @@ release safety gates. Unrelated improvements stay on the backlog.
 
 **Current release position:** the one-migration lifecycle repair is live in Production at
 `a1d23c7`. Its backup, migration reconciliation, database objects, public bundle and separate
-verification passed. The next action is the owner smoke test before any real Player MVP presentation
-is published. The broad Main package remains blocked by historical migration drift and the actual
-Coordinator-role browser check is still unavailable.
+verification passed. Aaron's Production builder and preview smoke also behaved as expected, subject
+to the defects and enhancements recorded below. No real Player MVP presentation has been published.
+The broad Main package remains blocked by historical migration drift and the actual Coordinator-role
+browser check is still unavailable.
 
 1. Revalidate the Grampians/Pumas builder, closed-round data, preview and full-screen playback on
    current Dev; test the intended disposable recipient and unrelated-account denial. Keep external
@@ -50,9 +51,10 @@ Coordinator-role browser check is still unavailable.
 10. [Blocked] Complete the actual Coordinator permission-bundle browser test when an authenticated
     disposable Coordinator session is available. Other current role results may be reused only
     where their relevant code is unchanged.
-11. [Part complete] Aaron confirmed past-deadline sessions show only as **Closed** and all expected
-    Pumas rounds are present in the tally builder. Next, preview without publishing and confirm vote
-    totals and round order. Publish to real players only after this passes.
+11. [Complete through preview] Aaron confirmed past-deadline sessions show only as **Closed**, all
+    expected Pumas rounds are present, and the builder preview otherwise behaves as expected. The
+    high-priority draft-persistence and identity defects plus the presentation enhancements below
+    remain queued. Publishing a real presentation remains a separate owner action.
 12. [Later broad release] Reconcile Main's 115 added migration files against live Production and
     explicitly exclude the Production scraper workflow and Dev-only account helpers. The first
     proven sequence blocker is migration `20260801013000`, which assumes an absent
@@ -166,6 +168,9 @@ Complete these first because incorrect access or hidden data can affect every la
   unintended individual disclosure.
 - [ ] `PLAYER-MVP-UNMATCHED-001` — keep required unmatched scraped participants visible without
   creating false registered identities.
+- [ ] `PLAYER-MVP-DISPLAY-IDENTITY-001` — keep RevSports IDs for matching, but display the linked
+  SportStack first and last name on Player MVP ballots and presentation data. Do not use a stale
+  RevSports initial, player number or display name when a linked SportStack identity exists.
 
 Exit gate: each flow passes with a disposable actual-role Dev account, refresh and direct-link
 checks, and an audit trail where data changes.
@@ -195,6 +200,9 @@ Apply one consistent rule across the whole application.
 - [ ] Repair the confirmed persistence findings covering line-up, Profile, Roles & Permissions,
   Formation Library, Fixtures, Safety Hub, Player MVP tally setup/playback, Umpire Match ballot,
   Chat drafts and shared browser preferences.
+- [ ] `PLAYER-MVP-TALLY-PERSISTENCE-001` — preserve the tally builder's current step and unsaved
+  selections when its tab loses focus or another tab is opened. Restore the same scoped draft on
+  return, and clear it only after publish, explicit reset or deliberate discard.
 - [ ] Repair mobile Fixture Management overflow and the Association → Club → Division → Team
   cascade tap/overflow defects.
 
@@ -210,6 +218,9 @@ tablet and mobile sizes, with no unexplained reset or horizontal page overflow.
   reminder through notifications and reproduce the photo-change failure.
 - [ ] `ROSTER-MODEL-001` — verify Primary, Secondary and Fill-in behaviour, statistics, roster search,
   line-up inclusion and time-limited Fill-in access as one workflow.
+- [ ] `PLAYER-MVP-FILLIN-IDENTITY-001` — investigate why **Annabelle R** appears in Fill-ins when the
+  expected person may be Annabelle Heal. Trace the RevSports correction through scrape history,
+  quality scrape, mapping and import before changing any identity or historical vote data.
 - [ ] `COMMITTEE-CLOSURE-001` — add strong confirmation and preservation behaviour before closing a
   committee.
 - [ ] Remove the locked Dev-only `dev-auth-admin-smoke` helper when an account with Function-delete
@@ -257,6 +268,26 @@ Blocker or High defect remains for staging.
 - [ ] `PLAYER-MVP-FINALS-ROUND-LABEL-001` — investigate why the semi-final and grand final scrape
   and display without round numbers. Preserve their named stage and correct chronological order;
   do not invent numeric rounds until the RevSports source and importer behaviour are confirmed.
+- [ ] `PLAYER-MVP-TALLY-CONTROLS-001` — add a small, clearly labelled discard control to **Continue
+  draft**, with confirmation, and add **Skip round** alongside **Skip to end**. Skip round must finish
+  only the current round and show its closing caption before continuing.
+- [ ] `PLAYER-MVP-MANUAL-FILLIN-001` — add an **Additional person** option at the bottom of Fill-ins so
+  an administrator can enter a name that is not in the imported list. Keep manually entered people
+  visibly distinct and do not create or imply a linked SportStack account.
+- [ ] `PLAYER-MVP-SEASON-SUMMARY-001` — on the Appearance step, provide an on-demand season list of
+  every team player with games played and total Player MVP votes. Use it to inform the Top 5, 10, 20
+  or all display choice, including whether zero-vote players should be omitted.
+- [ ] `PLAYER-MVP-REVEAL-CARD-001` — remove the redundant point label beneath a revealed player's
+  name. Colour the vote-value marker using 3 = gold, 2 = silver and 1 = bronze.
+- [ ] `PLAYER-MVP-CAPTION-001` — replace the repeated generic round caption with varied,
+  data-grounded captions. Captions may use deterministic rules or reviewed AI output, but may refer
+  only to players inside the chosen displayed Top N and must not invent performance claims.
+- [ ] `PLAYER-MVP-MY-VOTES-001` — make the player's last presentation screen offer **Show my own
+  votes**, revealing their total and each included round in which they received votes without
+  exposing another player's private ballot choices.
+- [ ] `PLAYER-MVP-FINAL-WINNER-001` — strengthen the final result with a celebratory winner reveal
+  showing the winner's name and total, then the runner-up beneath. Use gold for first and silver for
+  second; do not include third place in this final panel.
 - [ ] `MEMBERSHIP-SELF-SERVICE-001` — define safe secondary-team removal with audit and confirmation.
 - [ ] `TEAM-ORDERING-001` — apply one documented ordering rule across every team list.
 - [ ] `EXPENSE-UX-001` — add upload progress and reusable partial/exact exclusions.

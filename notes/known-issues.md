@@ -7,7 +7,7 @@
 ## Player MVP overdue sessions are displayed as closed but remain OPEN
 
 **Logged:** 5 September 2026
-**Status:** Repaired in Production at `a1d23c7`; owner smoke pending
+**Status:** Repaired in Production at `a1d23c7`; lifecycle and preview smoke passed
 
 The Player MVP admin page derives a closed/expired label when an `OPEN` session is past its
 `closes_at` deadline. The tally builder does not use that label: it correctly accepts only database
@@ -37,8 +37,9 @@ Aaron approved the refreshed baseline and the repair was released to Production 
 6 September. The guarded release created and verified a fresh logical backup, closed the expected
 355 overdue sessions, produced the expected 396 audit rows, installed one closure job and two
 deadline triggers, and left notification/email-event counts unchanged. Separate Production bundle,
-database and adviser verification passed. Owner smoke is still required before a real presentation.
-See the 6 September Player MVP lifecycle Production release packet.
+database and adviser verification passed. Aaron subsequently confirmed the lifecycle, builder and
+preview behaved as expected. No real-player presentation has been published. See the 6 September
+Player MVP lifecycle Production release packet.
 
 ## Player MVP presentation gaps — zero-vote reason and finals labels
 
@@ -55,6 +56,38 @@ The semi-final and grand final fixtures are present but have blank round numbers
 RevSports source value, scraper output, import mapping, storage and UI label/ordering together.
 Prefer a real stage label such as **Semi-final** or **Grand final** when supplied by the source; do
 not assign made-up round numbers merely to fill the blank.
+
+## Player MVP Production preview follow-ups — persistence, identity and presentation
+
+**Logged:** 6 September 2026
+**Status:** Queued; persistence and identity correctness take priority over presentation polish
+
+Aaron completed the Production tally-builder preview and reported that its existing behaviour was
+otherwise as expected. The following follow-ups were identified without publishing a real-player
+presentation:
+
+- **High — draft persistence:** leaving the tally builder tab while on step 2 and returning reset
+  the wizard to the beginning. Preserve a team/account-scoped draft and current step until publish,
+  explicit reset or deliberate discard.
+- **High — displayed identity:** Player MVP voting still presents a RevSports-style initial/name and
+  player number. Continue using the RevSports ID for linkage, but show the linked SportStack first
+  and last name wherever that identity exists.
+- **High — Fill-in identity investigation:** **Annabelle R** appeared in Fill-ins although Aaron
+  expected Annabelle Heal. A source-side correction may not have flowed through the next quality
+  scrape. Trace source history, scrape output, mapping and import before correcting any record.
+- Add a confirmed discard-draft X/control to **Continue draft**, plus an **Additional person** entry
+  at the bottom of Fill-ins for a manually typed, visibly unlinked name.
+- Add an Appearance-step season summary showing each team player, games played and total votes so an
+  administrator can choose a sensible Top 5, 10, 20 or all display.
+- Simplify reveal cards by removing the repeated point text beneath the name and colour the visible
+  vote value 3 gold, 2 silver and 1 bronze.
+- Replace the repeated generic round caption with varied, data-grounded text restricted to players
+  inside the selected Top N. Add **Skip round**, which lands on the current round's caption, while
+  retaining **Skip to end**.
+- On a recipient's final screen, add **Show my own votes** for their total and the included rounds in
+  which they received votes, without exposing private ballot choices.
+- Replace the current three-place final podium panel with a celebratory winner reveal and runner-up
+  beneath: first in gold, second in silver, and no third-place row.
 
 ## Feedback log reconciliation — 5 September 2026
 
