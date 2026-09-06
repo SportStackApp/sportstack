@@ -772,10 +772,10 @@ const UsersManagement = () => {
     if (isSuperAdmin) return true;
     if (role === "SUPER_ADMIN") return false;
     if (scopedAssociationIds.length > 0) {
-      return ["PLAYER", "COACH", "TEAM_MANAGER", "CLUB_ADMIN"].includes(role);
+      return ["COACH", "TEAM_MANAGER", "CLUB_ADMIN"].includes(role);
     }
     if (scopedClubIds.length > 0) {
-      return ["PLAYER", "COACH", "TEAM_MANAGER"].includes(role);
+      return ["COACH", "TEAM_MANAGER"].includes(role);
     }
     return false;
   };
