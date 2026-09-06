@@ -15,7 +15,8 @@ param(
     [string]$MigrationVersion = "20260906095820",
     [string]$MigrationName = "b1_membership_workflow_compatibility",
     [string]$SuccessMarker = "B1_MEMBERSHIP_DEV_APPLY_OK",
-    [string]$RuntimeVerificationPath
+    [string]$RuntimeVerificationPath,
+    [switch]$VerificationOnly
 )
 
 Set-StrictMode -Version Latest
@@ -150,14 +151,16 @@ try {
     ) | Out-Null
 
     $before = Get-ProtectedCounts -Workdir $temporaryRoot
-    Invoke-Supabase -Arguments @(
-        "db", "query", "--linked", "--workdir", $temporaryRoot,
-        "--file", $MigrationPath
-    ) | Out-Null
-    Invoke-Supabase -Arguments @(
-        "migration", "repair", $MigrationVersion,
-        "--status", "applied", "--linked", "--workdir", $temporaryRoot, "--yes"
-    ) | Out-Null
+    if (-not $VerificationOnly) {
+        Invoke-Supabase -Arguments @(
+            "db", "query", "--linked", "--workdir", $temporaryRoot,
+            "--file", $MigrationPath
+        ) | Out-Null
+        Invoke-Supabase -Arguments @(
+            "migration", "repair", $MigrationVersion,
+            "--status", "applied", "--linked", "--workdir", $temporaryRoot, "--yes"
+        ) | Out-Null
+    }
     $after = Get-ProtectedCounts -Workdir $temporaryRoot
 
     if (($before | ConvertTo-Json -Compress) -ne ($after | ConvertTo-Json -Compress)) {

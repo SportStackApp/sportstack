@@ -116,10 +116,32 @@ begin
       'authenticated', 'public.admin_visible_profile_ids_unbound(text,uuid,uuid,uuid)', 'EXECUTE'
     ) or pg_catalog.has_function_privilege(
       'authenticated', 'public.admin_update_profile_details_unbound(uuid,jsonb,text)', 'EXECUTE'
-    ) or pg_catalog.has_function_privilege(
+  ) or pg_catalog.has_function_privilege(
       'authenticated', 'public.approve_membership_request_unbound(uuid,boolean)', 'EXECUTE'
     ) then
     raise exception 'An internal B1e helper remains browser-callable.';
+  end if;
+
+  if pg_catalog.has_function_privilege(
+      'authenticated',
+      'private.assert_account_wide_simple_roles_unchanged(uuid,text[],text)',
+      'EXECUTE'
+    ) or pg_catalog.has_function_privilege(
+      'authenticated',
+      'public.admin_save_user_roles_b1_core(uuid,text[],jsonb,jsonb,uuid[],jsonb,text)',
+      'EXECUTE'
+    ) then
+    raise exception 'An account-wide role helper remains browser-callable.';
+  end if;
+
+  if to_regprocedure(
+      'public.admin_save_user_access_b1_core(uuid,text[],jsonb,jsonb,uuid[],jsonb,uuid[],jsonb,text)'
+    ) is not null and pg_catalog.has_function_privilege(
+      'authenticated',
+      'public.admin_save_user_access_b1_core(uuid,text[],jsonb,jsonb,uuid[],jsonb,uuid[],jsonb,text)',
+      'EXECUTE'
+    ) then
+    raise exception 'The Dev access core remains browser-callable.';
   end if;
 end;
 $b1e_privileges$;
@@ -150,6 +172,9 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', 'b1e00000-0000-0000-0000-000000000002', true);
 select set_config('request.jwt.claims', '{"sub":"b1e00000-0000-0000-0000-000000000002","role":"authenticated","session_id":"b1e60000-0000-0000-0000-000000000002"}', true);
 do $b1e_association$
+declare
+  v_existing_simple_roles text[];
+  v_changed_simple_roles text[];
 begin
   if not exists (
     select 1 from public.admin_visible_profile_ids(
@@ -160,12 +185,73 @@ begin
     where profile_id = 'b1e00000-0000-0000-0000-000000000007'
   ) then raise exception 'Association visibility scope is incorrect.'; end if;
 
+  select coalesce(array_agg(role::text order by role::text), '{}'::text[])
+  into v_existing_simple_roles
+  from public.user_roles
+  where user_id = 'b1e00000-0000-0000-0000-000000000005'
+    and role::text in ('PLAYER', 'VOTER')
+    and association_id is null
+    and club_id is null
+    and team_id is null;
+
+  v_changed_simple_roles := case
+    when 'VOTER' = any(v_existing_simple_roles)
+      then array_remove(v_existing_simple_roles, 'VOTER')
+    else array_append(v_existing_simple_roles, 'VOTER')
+  end;
+
+  begin
+    perform public.admin_save_user_roles(
+      'b1e00000-0000-0000-0000-000000000005',
+      array_append(v_changed_simple_roles, 'COACH'),
+      '[{"association_id":"b1e10000-0000-0000-0000-000000000001","club_id":"b1e20000-0000-0000-0000-000000000001","team_id":"b1e30000-0000-0000-0000-000000000001"}]'::jsonb,
+      null, null, null, 'association'
+    );
+    raise exception 'Association Admin unexpectedly changed an account-wide simple role.';
+  exception when insufficient_privilege then
+    if sqlerrm <> 'Only a Super Admin can change account-wide Player or Voter roles.' then raise; end if;
+  end;
+
   perform public.admin_save_user_roles(
     'b1e00000-0000-0000-0000-000000000005',
-    array['PLAYER','COACH'],
+    array_append(v_existing_simple_roles, 'COACH'),
     '[{"association_id":"b1e10000-0000-0000-0000-000000000001","club_id":"b1e20000-0000-0000-0000-000000000001","team_id":"b1e30000-0000-0000-0000-000000000001"}]'::jsonb,
     null, null, null, 'association'
   );
+
+  -- Dev has a broader Coordination-aware save function. When present, its
+  -- browser wrapper must enforce the same account-wide boundary while still
+  -- accepting an unchanged simple-role set.
+  if to_regprocedure(
+    'public.admin_save_user_access(uuid,text[],jsonb,jsonb,uuid[],jsonb,uuid[],jsonb,text)'
+  ) is not null then
+    begin
+      execute $sql$
+        select public.admin_save_user_access(
+          $1, $2, $3, null, null, null, null, '[]'::jsonb, $4
+        )
+      $sql$
+      using
+        'b1e00000-0000-0000-0000-000000000005'::uuid,
+        array_append(v_changed_simple_roles, 'COACH'),
+        '[{"association_id":"b1e10000-0000-0000-0000-000000000001","club_id":"b1e20000-0000-0000-0000-000000000001","team_id":"b1e30000-0000-0000-0000-000000000001"}]'::jsonb,
+        'association';
+      raise exception 'Association Admin unexpectedly bypassed the Dev access wrapper.';
+    exception when insufficient_privilege then
+      if sqlerrm <> 'Only a Super Admin can change account-wide Player or Voter roles.' then raise; end if;
+    end;
+
+    execute $sql$
+      select public.admin_save_user_access(
+        $1, $2, $3, null, null, null, null, '[]'::jsonb, $4
+      )
+    $sql$
+    using
+      'b1e00000-0000-0000-0000-000000000005'::uuid,
+      array_append(v_existing_simple_roles, 'COACH'),
+      '[{"association_id":"b1e10000-0000-0000-0000-000000000001","club_id":"b1e20000-0000-0000-0000-000000000001","team_id":"b1e30000-0000-0000-0000-000000000001"}]'::jsonb,
+      'association';
+  end if;
 end;
 $b1e_association$;
 reset role;
