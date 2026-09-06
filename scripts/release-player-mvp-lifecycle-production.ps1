@@ -489,9 +489,9 @@ function Assert-PendingBaseline {
         closed = 5
         disputed = 0
         concernedOverdue = 0
-        audit = 40
+        audit = 41
         notifications = 24
-        emailEvents = 328
+        emailEvents = 341
         emailTeams = 96
         presentations = 1
         recipients = 26
@@ -790,19 +790,19 @@ if ($Mode -eq "SelfTest") {
     if (-not $unexpectedPathStopped) { throw "Unexpected-path self-test did not stop." }
 
     $before = [pscustomobject]@{
-        sessions = 647; overdueOpen = 355; closed = 5; disputed = 0; concernedOverdue = 0; audit = 40
-        notifications = 24; emailEvents = 328; emailTeams = 96; presentations = 1; recipients = 26
+        sessions = 647; overdueOpen = 355; closed = 5; disputed = 0; concernedOverdue = 0; audit = 41
+        notifications = 24; emailEvents = 341; emailTeams = 96; presentations = 1; recipients = 26
     }
     $after = [pscustomobject]@{
-        sessions = 647; overdueOpen = 0; closed = 360; disputed = 0; concernedOverdue = 0; audit = 395
-        notifications = 24; emailEvents = 328; emailTeams = 96; presentations = 1; recipients = 26
+        sessions = 647; overdueOpen = 0; closed = 360; disputed = 0; concernedOverdue = 0; audit = 396
+        notifications = 24; emailEvents = 341; emailTeams = 96; presentations = 1; recipients = 26
     }
     Assert-PendingBaseline -Snapshot $before
     Assert-ReleaseDelta -Before $before -After $after
 
     $changedEmail = [pscustomobject]@{
-        sessions = 647; overdueOpen = 0; closed = 360; disputed = 0; concernedOverdue = 0; audit = 395
-        notifications = 24; emailEvents = 329; emailTeams = 96; presentations = 1; recipients = 26
+        sessions = 647; overdueOpen = 0; closed = 360; disputed = 0; concernedOverdue = 0; audit = 396
+        notifications = 24; emailEvents = 342; emailTeams = 96; presentations = 1; recipients = 26
     }
     $emailChangeStopped = $false
     try { Assert-ReleaseDelta -Before $before -After $changedEmail } catch { $emailChangeStopped = $true }

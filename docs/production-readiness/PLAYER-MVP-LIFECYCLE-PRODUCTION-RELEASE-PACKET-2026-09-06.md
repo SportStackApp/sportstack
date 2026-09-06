@@ -2,8 +2,8 @@
 
 ## Decision
 
-**Status: frozen and safety-reviewed; ready for Aaron's separate exact approval. Production
-approval has not been requested or granted.**
+**Status: revalidated after safe live-data drift; fresh exact approval is required. The earlier
+approved attempt stopped before any Production change.**
 
 This is a one-migration follow-up to the Player MVP tally release already running in Production.
 It fixes the confirmed lifecycle defect where sessions past their voting deadline remain stored as
@@ -58,12 +58,22 @@ The guarded pre-flight passed on 6 September without creating a backup or changi
 - 5 `CLOSED` sessions;
 - 0 `RESULT_DISPUTED` sessions;
 - 0 overdue sessions with a current-round incorrect result check;
-- 40 Player MVP audit rows;
+- 41 Player MVP audit rows;
 - 24 notifications;
-- 328 Player MVP email-event rows;
+- 341 Player MVP email-event rows;
 - 96 teams with Player MVP email enabled;
 - one tally presentation and 26 tally recipients;
 - no lifecycle function, deadline function, lifecycle trigger or closure job currently exists.
+
+The guard detected the audit count moving from 40 to 41 before release and stopped before creating
+a backup or applying the migration. Read-only inspection confirmed the new row is a legitimate
+`AUTO_OPEN` for a Pumas session opened on 6 September Melbourne time, closing on 9 September and
+not overdue. All other protected counts remain unchanged. The reviewed baseline was therefore
+advanced only to 41 audit rows; the expected post-migration audit count is 396.
+The same session's normal opening sent 13 configured voting emails between 03:08:04 and 03:08:13
+Melbourne time, advancing the email-event baseline from 328 to 341. Those sends occurred before the
+release and are unrelated to the lifecycle migration; the guard still requires no email-event
+change while the migration is applied.
 
 Any count or object drift makes the release script stop for re-review.
 
@@ -149,7 +159,7 @@ Production base or pre-flight result requires a new review and approval.
 4. Run the guarded release script. It must create and hash a fresh roles, schema and data backup
    before applying the migration.
 5. Apply only migration `20260905131718`.
-6. Verify zero overdue `OPEN`, 360 `CLOSED`, 395 audit rows, one closure job, two triggers, unchanged
+6. Verify zero overdue `OPEN`, 360 `CLOSED`, 396 audit rows, one closure job, two triggers, unchanged
    notifications/email settings and the recorded migration version.
 7. Fast-forward `prod` from `15223e9` to `a1d23c7` without rewriting history.
 8. Verify the Production bundle contains `a1d23c7`, the tally UI remains present and only the

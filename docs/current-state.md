@@ -15,8 +15,12 @@ Update this file after every meaningful Codex task, pull request, schema change,
   closed 355 overdue `OPEN` sessions, added 355 audit rows, created the closure job and deadline
   guards, and left notifications, Player MVP email events and team email settings unchanged.
 - The read-only Production pre-flight passes against the current live state: 647 sessions, 355
-  overdue `OPEN`, 5 `CLOSED`, 40 audit rows, 24 notifications and 328 Player MVP email events. The
+  overdue `OPEN`, 5 `CLOSED`, 41 audit rows, 24 notifications and 341 Player MVP email events. The
   lifecycle functions, triggers, closure job and migration version are still absent, as expected.
+  The audit baseline increased from 40 to 41 when a legitimate future-dated Pumas session
+  automatically opened; it closes on 9 September Melbourne time and is not part of the overdue set.
+  That normal opening sent 13 configured voting emails, moving the email-event baseline from 328 to
+  341; the migration still requires that count to remain unchanged during release.
 - The frozen-patch safety assessment recommends proceeding only with human review because this is
   a high-impact persistent database change. Its exact-head checks, negative control, guarded-script
   self-test and rehearsal all pass. A fresh hashed logical backup is mandatory before application.
