@@ -2,6 +2,24 @@
 
 Last updated: 2026-09-06
 
+## 6 September — B1c membership workflow deployed to Development
+
+- Migration `20260906095820_b1_membership_workflow_compatibility.sql` is applied and recorded on
+  Development. It converges the Production and Dev primary-team request models on six hardened
+  lifecycle RPCs, two read-only RLS policies, no anonymous table access and authenticated SELECT
+  only. Browser mutation is RPC-only.
+- The exact final migration passed first apply, repeat apply, role allow/deny tests and rollback on
+  a fresh Production-derived B1a+B1b database. Protected counts remained 757 profiles, 1,260
+  memberships and six requests. Hosted Dev compatibility, apply, runtime and database lint pass.
+- The completed security review has zero reportable findings. A small request-state error side
+  channel was nevertheless removed before Dev, and runtime verification no longer emits selected
+  identifiers to logs.
+- Full verification passes: static migration checks, focused lint, 46 Vitest files/181 tests,
+  TypeScript and Production build. Full lint stays at its existing 346-error/77-warning baseline.
+- Production was inspected read-only and its canonical B1c inventory is unchanged. B1d application
+  allow-list reconciliation and a complete hosted B1 rehearsal are next. Evidence:
+  `docs/production-readiness/B1-MEMBERSHIP-REHEARSAL-2026-09-06.md`.
+
 ## 6 September — B1b security bridge rehearsed
 
 - New additive migration `20260906075102_b1_security_compatibility.sql` installs the curated B1

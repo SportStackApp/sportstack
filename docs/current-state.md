@@ -6,6 +6,27 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 6 September B1c membership workflow compatibility
+
+- Additive migration `20260906095820_b1_membership_workflow_compatibility.sql` is applied and
+  recorded on Development. Six hardened RPCs now own the primary-team change lifecycle; browser
+  roles cannot write the request table directly, anonymous access is removed, and authenticated
+  reads are limited to self or destination-scoped administrators.
+- The exact final migration passed fresh Production-derived first apply, repeat apply, runtime role
+  checks and transactional rollback. Protected counts remained 757 profiles, 1,260 memberships and
+  six primary-team requests. The hosted Dev rollback-only compatibility test, final apply, runtime
+  test and database error lint pass.
+- A complete security review found no reportable issue. One low-impact request-state error oracle
+  was reproduced and still hardened: unrelated callers now receive the same not-found response
+  before lifecycle state is checked. Verification logs no longer print selected profile, team or
+  request identifiers.
+- Development has six B1c functions, two SELECT policies, no anonymous request-table access and
+  authenticated SELECT only. The full 46-file/181-test suite, TypeScript, Production build and
+  focused lint pass. Full lint remains exactly 346 errors/77 warnings.
+- Production's canonical aggregate inventory is unchanged and Production was not modified. B1d
+  application allow-list reconciliation and the complete hosted B1 rehearsal remain open. Evidence:
+  `docs/production-readiness/B1-MEMBERSHIP-REHEARSAL-2026-09-06.md`.
+
 ## 6 September B1 security compatibility rehearsal
 
 - Additive migration `20260906075102_b1_security_compatibility.sql` curates the B1 security

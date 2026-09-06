@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "created_date": "2026-09-06",
+  "batch": "B1c primary-team membership workflow compatibility",
+  "source_branch": "fix/player-mvp-readiness-reconcile",
+  "source_base_commit": "bb963a8202c3cef68661dbd040bc049a45f5bc22",
+  "migration": {
+    "version": "20260906095820",
+    "path": "supabase/migrations/20260906095820_b1_membership_workflow_compatibility.sql",
+    "sha256": "42d3488eefd2b65fee27be1e5ccf1d09baae2b5102c6df6ee06cfab3801658c2",
+    "protected_row_change": 0
+  },
+  "production_derived_rehearsal": {
+    "backup": "C:/Users/mulla/AppData/Local/SportStack/backups/prod/2026-09-06-105953-pre-player-mvp-lifecycle-a1d23c7",
+    "backup_mount": "read-only",
+    "first_apply": "pass",
+    "repeat_apply": "pass",
+    "runtime_roles": "pass",
+    "transactional_rollback": "pass",
+    "profiles_before_after": [757, 757],
+    "team_memberships_before_after": [1260, 1260],
+    "primary_change_requests_before_after": [6, 6]
+  },
+  "development": {
+    "project_ref": "icqegnpjbizccjebjfhb",
+    "rollback_only_compatibility": "pass",
+    "migration_recorded_once": true,
+    "runtime_roles": "pass",
+    "database_error_lint": "pass",
+    "request_rows": 5,
+    "pending_requests": 0,
+    "admin_approved_requests": 0,
+    "invalid_status_rows": 0,
+    "workflow_functions": 6,
+    "request_policies": 2,
+    "anonymous_table_access": false,
+    "authenticated_table_access": "SELECT only"
+  },
+  "production_read_only_check": {
+    "project_ref": "svierarfcolhcfjpmwck",
+    "request_rows": 6,
+    "pending_requests": 0,
+    "admin_approved_requests": 1,
+    "invalid_status_rows": 0,
+    "workflow_functions": 0,
+    "request_policies": 4,
+    "canonical_inventory_unchanged": true,
+    "canonical_inventory_sha256": "2213652e56db7b7ea90c259c503ca141d3185203a546ecae5c95de31076887e9",
+    "changed": false
+  },
+  "security_review": {
+    "scan_id": "cc164646-da93-42bb-869f-965385e2a95b",
+    "reportable_findings": 0,
+    "reviewed_items": 101,
+    "status": "complete",
+    "report": "C:/Users/mulla/AppData/Local/Temp/codex-security-scans-1FgoEB/sportstack/bb963a8202c3cef68661dbd040bc049a45f5bc22_20260906T102000Z_6_aieyuv/report.md"
+  },
+  "quality": {
+    "static_migration_verifier": "pass",
+    "focused_lint": "pass",
+    "vitest_files": 46,
+    "vitest_tests": 181,
+    "vitest": "pass",
+    "typescript": "pass",
+    "production_build": "pass",
+    "full_lint_errors": 346,
+    "full_lint_warnings": 77,
+    "full_lint_baseline_delta": 0
+  },
+  "out_of_scope": [
+    "historical duplicate membership cleanup",
+    "B1d application allow-list",
+    "Main or Production promotion",
+    "Production database, functions, workflows, secrets and DNS"
+  ]
+}

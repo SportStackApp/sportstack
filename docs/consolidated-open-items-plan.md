@@ -55,15 +55,16 @@ browser check is still unavailable.
     expected Pumas rounds are present, and the builder preview otherwise behaves as expected. The
     high-priority draft-persistence and identity defects plus the presentation enhancements below
     remain queued. Publishing a real presentation remains a separate owner action.
-12. [Stage 1 complete; B1a deployed; B1b rehearsed] The 115 changed migration paths are now mapped: 114 are
+12. [Stage 1 complete; B1a-B1c deployed to Dev] The 115 changed migration paths are now mapped: 114 are
      Main-only and one is the Production-only tally baseline. Production history and Main migration
      files share only eight version names, so no historical file is approved for direct apply. Build
      and rehearse new additive B1 foundation/access compatibility bridges. The dormant B1a structure
      migration now passes Production-copy apply, repeat, rollback and Dev no-op checks. The B1b
      security bridge passes exact apply, repeat, runtime, rollback, live Dev rollback-only
-     compatibility and security review. Development records the migration; its hosted runtime,
-     lint, adviser, Dev Quality and deployment checks pass. B1c membership
-     workflows, B1d application allow-list and hosted rehearsal remain open. The latest six Production
+     compatibility and security review. The B1c membership bridge now also passes exact
+     Production-derived apply, repeat, runtime and rollback plus live Dev compatibility, apply,
+     runtime, security review and database lint. B1d application allow-list, the complete hosted
+     rehearsal, and B1c Dev Quality/deployment confirmation remain open. The latest six Production
      scraper schedules are green, but the named-final blank-round fix remains Dev-only and the
      workflow remains a separate approval package.
 
