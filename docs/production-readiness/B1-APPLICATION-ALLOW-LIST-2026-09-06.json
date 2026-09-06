@@ -1,14 +1,16 @@
 {
   "schemaVersion": 1,
-  "package": "B1d application allow-list",
-  "status": "BLOCKED_PENDING_B1E_AND_HOSTED_REHEARSAL",
-  "recordedAt": "2026-09-06",
+  "package": "B1 hosted Production-compatible candidate",
+  "status": "HOSTED_REHEARSAL_PASSED_PENDING_OWNER_AND_INDEPENDENT_REVIEW",
+  "recordedAt": "2026-09-07",
   "environmentPins": {
-    "devApplicationCommit": "916b5b9a4eada44f405678bfaafafefd4fd6cabc",
+    "devApplicationCommit": "cbadc776627030501f33c9b55a4079be1d8aef76",
     "mainCommit": "af21ae3c06a2d66d2eb9c4edf64bb2c185869927",
     "productionBaseCommit": "a1d23c741b79de02c32763a879597192a1c1ebd5",
     "historicalCleanB1Snapshot": "77422f1188eade9f45f36382462dca7849a1081a",
-    "primaryTeamRpcSnapshot": "3a52bd94c55b103509e599700b47b2cbf5577f5e"
+    "primaryTeamRpcSnapshot": "3a52bd94c55b103509e599700b47b2cbf5577f5e",
+    "hostedCandidateCommit": "5994385f403d4a8188de49e14762ac6097f018fa",
+    "hostedProjectRef": "fdkgcwacuqoswnatvubv"
   },
   "ownerConfirmation": {
     "status": "CONFIRMATION_REQUIRED",
@@ -24,12 +26,27 @@
     {
       "stage": "B1b",
       "path": "supabase/migrations/20260906075102_b1_security_compatibility.sql",
-      "sha256": "45960fb9e3b8661d22fac956ec4ae7cc0aab3afe9ec239e94fd6a6816465c74d"
+      "sha256": "7d450a8cdff1d5deeef9d66938def1e69b74e05df6daaef8cde3f9722d200db9"
     },
     {
       "stage": "B1c",
       "path": "supabase/migrations/20260906095820_b1_membership_workflow_compatibility.sql",
       "sha256": "42d3488eefd2b65fee27be1e5ccf1d09baae2b5102c6df6ee06cfab3801658c2"
+    },
+    {
+      "stage": "B1e",
+      "path": "supabase/migrations/20260906114318_b1_administration_membership_compatibility.sql",
+      "sha256": "9bb09d1dfc9dbe21f28f6efbbce3cfa53a49797504a58c4c07e4360311671758"
+    },
+    {
+      "stage": "B1e session binding",
+      "path": "supabase/migrations/20260906123500_b1_administration_session_binding_hardening.sql",
+      "sha256": "e30f947446f48d6d18aa7054dee762bac9f3492ee90fd7573133917c1008e682"
+    },
+    {
+      "stage": "B1e request lock",
+      "path": "supabase/migrations/20260906130000_b1_request_approval_scope_lock.sql",
+      "sha256": "67c1c8aa5fb663fbaaa422ba1ee79b7de1d1b08beff7bb54e9ca8b133d12bd66"
     }
   ],
   "exactSourceFiles": [
@@ -94,18 +111,6 @@
       "reason": "B1-era plain-language role summaries without later module roles."
     },
     {
-      "path": "tests/test_session_permission_context.py",
-      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
-      "blob": "c3c800967b2281c91300791f5425d8a6c57148f8",
-      "reason": "Static regression coverage for the B1 session and application boundary."
-    },
-    {
-      "path": "tests/test_voting_module_enforcement.py",
-      "sourceCommit": "77422f1188eade9f45f36382462dca7849a1081a",
-      "blob": "8009daab60e938c42cf5cd7a6ed556d8fb61832e",
-      "reason": "Static regression coverage for B1 voting-module gates."
-    },
-    {
       "path": "src/lib/primaryTeamChangeRpc.ts",
       "sourceCommit": "3a52bd94c55b103509e599700b47b2cbf5577f5e",
       "blob": "bd1006f0aa714b7c687cf76da2c5fa001b689b69",
@@ -116,6 +121,16 @@
       "sourceCommit": "3a52bd94c55b103509e599700b47b2cbf5577f5e",
       "blob": "568e420c3023ed1718e8a2a7f926e9b5058be202",
       "reason": "Focused regression coverage for every browser-used B1c lifecycle function."
+    }
+  ],
+  "verificationOnlyFiles": [
+    {
+      "path": "tests/test_session_permission_context.py",
+      "reason": "Dev-side static verification; not deployed because it requires later Dev-only migration history."
+    },
+    {
+      "path": "tests/test_voting_module_enforcement.py",
+      "reason": "Dev-side static verification; not deployed because it requires later Dev-only voting functions."
     }
   ],
   "patchOnlyFiles": [
@@ -204,7 +219,7 @@
     "decline_primary_team_change",
     "request_primary_team_change"
   ],
-  "deferredDatabaseDependencies": [
+  "reconciledB1eDatabaseDependencies": [
     "approve_membership_request",
     "admin_cancel_team_invite",
     "admin_create_team_invite",
@@ -234,19 +249,19 @@
       "requirement": "Complete and observe the B1c owner walkthrough; do not infer a pass."
     },
     {
-      "id": "B1E-ADMIN-MEMBERSHIP-COMPATIBILITY",
+      "id": "B1-PRIMARY-SEMANTICS-CONFIRMATION",
       "status": "OPEN",
-      "requirement": "Build an additive compatibility bridge for the deferred general Users/Requests functions, including removal of Production's legacy PUBLIC/anon admin_save_user_roles execution, then rehearse its data and denial paths."
-    },
-    {
-      "id": "B1-HOSTED-REHEARSAL",
-      "status": "OPEN",
-      "requirement": "Apply the complete package in a fresh Production-compatible hosted environment, regenerate types, build the exact app candidate and repeat actual-role allow/deny and membership smoke tests."
+      "requirement": "Confirm cross-organisation Primary-team demotion and consent semantics; current behaviour is unchanged."
     },
     {
       "id": "B1-INDEPENDENT-REVIEW",
       "status": "OPEN",
-      "requirement": "Independently review the frozen hosted candidate and release/rollback evidence before asking Aaron for Production approval."
+      "requirement": "Independently review candidate 5994385, hosted evidence and rollback packet before Production approval."
+    },
+    {
+      "id": "B1-PRODUCTION-APPROVAL",
+      "status": "OPEN",
+      "requirement": "Obtain a new explicit owner approval for the exact frozen package; this manifest does not authorise Production."
     }
   ],
   "productionChangesAuthorised": false

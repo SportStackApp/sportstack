@@ -1,10 +1,21 @@
 # SportStack Current State
 
-Last updated: 2026-09-06
+Last updated: 2026-09-07
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
+
+## 7 September B1 hosted rehearsal complete
+
+- The disposable hosted staging project was reset with Aaron's exact approval and rebuilt from the
+  Production schema backup plus all six additive B1 migrations. Apply, repeat, rollback and
+  actual-role allow/deny checks passed; all disposable users and application data were removed.
+- The exact Production-based application candidate is frozen locally at `5994385`. Generated hosted
+  types, 19 Vitest tests, TypeScript, Production build, focused lint and hosted browser smoke pass.
+- Main and Production remain unchanged. Production is not authorised. Remaining gates are the B1c
+  owner walkthrough, Primary-team semantics decisions, independent review and a new exact
+  Production approval. Evidence: `docs/production-readiness/B1-HOSTED-REHEARSAL-2026-09-07.md`.
 
 ## 6 September B1e administration and membership compatibility
 

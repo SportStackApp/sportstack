@@ -56,7 +56,17 @@ const run = (command, args, options = {}) => {
 
 const git = (...args) => run("git", args);
 const sourceAt = (commit, path) => git("show", `${commit}:${path}`);
-const sha256 = (path) => createHash("sha256").update(readRepoFile(path)).digest("hex");
+const sha256At = (commit, path) => {
+  const result = spawnSync("git", ["cat-file", "blob", `${commit}:${path}`], {
+    cwd: root,
+    encoding: null,
+    maxBuffer: 20 * 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) {
+    throw new Error(`Unable to read ${commit}:${path}`);
+  }
+  return createHash("sha256").update(result.stdout).digest("hex");
+};
 
 const b1bPath = "supabase/migrations/20260906075102_b1_security_compatibility.sql";
 const b1cPath = "supabase/migrations/20260906095820_b1_membership_workflow_compatibility.sql";
@@ -113,7 +123,10 @@ if (shouldRun("--check-inventory")) {
     assert(entry.forbiddenFeatures?.length > 0, `no forbidden features for ${entry.path}`);
   }
   for (const entry of manifest.databasePackage) {
-    assert(sha256(entry.path) === entry.sha256, `migration hash mismatch for ${entry.path}`);
+    assert(
+      sha256At(manifest.environmentPins.hostedCandidateCommit, entry.path) === entry.sha256,
+      `hosted candidate migration hash mismatch for ${entry.path}`,
+    );
   }
 
   const excluded = new Set(manifest.excludedPaths.map((entry) => entry.path));
@@ -183,7 +196,7 @@ if (shouldRun("--check-dependencies")) {
     }
   }
 
-  const deferred = new Set(manifest.deferredDatabaseDependencies);
+  const reconciled = new Set(manifest.reconciledB1eDatabaseDependencies);
   for (const name of [
     "approve_membership_request",
     "admin_save_user_roles",
@@ -193,8 +206,8 @@ if (shouldRun("--check-dependencies")) {
     "admin_visible_profile_ids",
     "admin_update_profile_details",
   ]) {
-    assert(deferred.has(name), `unreconciled administration dependency is not deferred: ${name}`);
-    assert(!manifest.requiredB1bRpcNames.includes(name), `deferred dependency leaked into B1b app RPCs: ${name}`);
+    assert(reconciled.has(name), `B1e administration dependency is not recorded: ${name}`);
+    assert(!manifest.requiredB1bRpcNames.includes(name), `B1e dependency leaked into the B1b RPC set: ${name}`);
   }
   if (failures.length === 0) console.log("B1_APPLICATION_DEPENDENCIES_OK");
 }
@@ -245,15 +258,15 @@ if (shouldRun("--check-regression")) {
 
 if (shouldRun("--check-release-manifest")) {
   assert(
-    manifest.status === "BLOCKED_PENDING_B1E_AND_HOSTED_REHEARSAL",
-    "manifest does not accurately state its blocked release status",
+    manifest.status === "HOSTED_REHEARSAL_PASSED_PENDING_OWNER_AND_INDEPENDENT_REVIEW",
+    "manifest does not accurately state its post-rehearsal release status",
   );
   const blockers = new Set(manifest.releaseBlockers.map((entry) => entry.id));
   for (const required of [
     "B1C-OWNER-CONFIRMATION",
-    "B1E-ADMIN-MEMBERSHIP-COMPATIBILITY",
-    "B1-HOSTED-REHEARSAL",
+    "B1-PRIMARY-SEMANTICS-CONFIRMATION",
     "B1-INDEPENDENT-REVIEW",
+    "B1-PRODUCTION-APPROVAL",
   ]) {
     assert(blockers.has(required), `release blocker is missing: ${required}`);
   }

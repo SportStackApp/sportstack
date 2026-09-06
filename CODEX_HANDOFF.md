@@ -1,6 +1,17 @@
 # Codex Handoff
 
-Last updated: 2026-09-06
+Last updated: 2026-09-07
+
+## 7 September — hosted B1 rehearsal passed
+
+- `SportStack-staging` was reset under exact owner approval, rebuilt from the Production schema-only
+  backup and all six B1 migrations, then tested with actual Auth roles. Candidate `5994385` passed
+  apply, repeat, rollback, allow/deny, quality and hosted application smoke checks.
+- Staging was cleaned to zero Auth users and zero test application rows. Main and Production were
+  unchanged.
+- B1c owner walkthrough and cross-organisation Primary-team semantics remain **CONFIRMATION
+  REQUIRED**. Independent review and a new exact Production approval are also required.
+- Evidence: `docs/production-readiness/B1-HOSTED-REHEARSAL-2026-09-07.md`.
 
 ## 6 September — B1e administration bridge deployed to Development
 

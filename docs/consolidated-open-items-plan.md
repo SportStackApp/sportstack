@@ -1,6 +1,6 @@
 # SportStack — Single Improvement and Production Readiness Plan
 
-**Updated:** 6 September 2026
+**Updated:** 7 September 2026
 
 **Active environment:** Development (`dev`)
 
@@ -66,8 +66,9 @@ browser check is still unavailable.
      runtime, security review and database lint. B1d freezes the safe application boundary. The
      required B1e general Users/Requests bridge now passes Production-derived apply, repeat,
      actual-role runtime and rollback plus hosted Dev apply, repeat, rollback-only runtime and
-     database lint. Its session-bound follow-up is additive. The complete hosted
-     rehearsal and the explicitly deferred B1c owner walkthrough remain open. The latest six Production
+     database lint. Its session-bound follow-up is additive. The complete Production-compatible
+     hosted rehearsal now passes with frozen local candidate `5994385`; the B1c owner walkthrough,
+     Primary-team semantics, independent review and exact Production approval remain open. The latest six Production
      scraper schedules are green, but the named-final blank-round fix remains Dev-only and the
      workflow remains a separate approval package.
 
