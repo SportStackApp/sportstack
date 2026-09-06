@@ -4,12 +4,20 @@
 
 **Status: not ready for Production approval.**
 
+**6 September addendum:** the current authoritative broad-release inventory is in
+`MAIN-PRODUCTION-RECONCILIATION-MAP-2026-09-06.md`. Production is now at the separately approved
+Player MVP lifecycle commit `a1d23c7`. The broad Main delta is 266 Main-only commits and 438 paths,
+including 115 changed migration paths: 114 Main-only and one Production-only. Stage 1 mapping is
+complete, but the compatibility bridge and full rehearsal are not.
+
 The Player MVP lifecycle repair is verified on Dev and staged on Main, but the whole Main branch
 cannot safely be merged directly to Production. Historical migration drift needs an explicit
 Production-baseline reconciliation, and the current Coordinator permission bundle still lacks an
 authenticated browser result.
 
-Production remains unchanged at `15223e9f72f36307c1e09d96a1b1bdb9472f6d72`.
+At the time of the 5 September run, Production remained at
+`15223e9f72f36307c1e09d96a1b1bdb9472f6d72`. It later received the separately approved lifecycle
+release recorded in the 6 September addendum above.
 
 ## Frozen environment evidence
 
@@ -91,7 +99,7 @@ Sanitised durable evidence is retained at
 
 ## Exact broad-package inventory
 
-Production is an ancestor of Main. The current Production-to-Main difference contains:
+At the time of this 5 September packet, the Production-to-Main difference contained:
 
 - 259 commits;
 - 434 changed paths;

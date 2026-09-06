@@ -4,6 +4,23 @@
 > priority, sequencing, next actions and parked work live only in
 > `docs/consolidated-open-items-plan.md`.
 
+## Main-to-Production migration and Edge Function history drift
+
+**Logged:** 6 September 2026
+**Status:** Stage 1 mapped; release compatibility and rehearsal open
+
+The current Main-to-Production delta is 266 Main-only commits and 438 paths. Its 115 changed
+migration paths are 114 Main-only files and the one Production-only tally baseline; they are not
+115 safe additions. Production records 159 migration versions, Main contains 186 migration files
+and only eight version names overlap. A direct Main migration push or bulk history repair could
+replay existing behaviour or mark missing objects as present.
+
+The complete 115-row register classifies the known Dev-only, superseded, baseline, broken and mixed
+migrations. Production also has 11 deployed Edge Functions, including several whose deployed source
+does not match either branch and one deployed-only legacy function. Preserve the live versions until
+each function is reconciled. The next repair is a new additive B1 foundation/access compatibility
+migration followed by Production-derived rollback and apply rehearsal. Production remains unchanged.
+
 ## Player MVP overdue sessions are displayed as closed but remain OPEN
 
 **Logged:** 5 September 2026

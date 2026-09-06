@@ -2,6 +2,31 @@
 
 Last updated: 2026-09-06
 
+## 6 September — Main-to-Production reconciliation Stage 1 complete
+
+- Production remains unchanged at `a1d23c7`. Read-only evidence was captured without table data or
+  credential output.
+- Main `af21ae3` is 266 commits and 438 paths ahead of the shared history with Production, while
+  Production has one unique commit. The 115 changed migration paths are 114 Main-only plus the
+  Production-only tally baseline, not 115 additions.
+- Remote Production history has 159 versions and Main has 186 migration files, with only eight
+  matching version names. A direct historical migration push or bulk history repair is unsafe.
+- The complete migration CSV classifies all 115 changed paths. The current direct-apply allow-list
+  is empty: the next deliverable is a new additive B1 compatibility bridge built from live schema
+  comparison and rehearsed against a fresh Production-derived copy.
+- Production's 11 deployed Edge Functions include eight source-drift cases or branch mismatches;
+  `bulk-import-players` is deployed but absent from Git. Preserve deployed versions until each
+  function is reconciled. No function deployment is currently approved.
+- GitHub's default branch is Main, so scheduled scraper workflows operate from Main rather than
+  Prod. The latest six Production scraper runs are green, but the named-final blank-round fix is
+  still Dev-only and the workflow remains a separate approval package.
+- Authoritative evidence: `docs/production-readiness/MAIN-PRODUCTION-RECONCILIATION-MAP-2026-09-06.md`
+  and its 115-row CSV register. The sanitised raw schema/function evidence remains uncommitted under
+  `outputs/production-reconciliation-2026-09-06-detail`.
+- Audit/map validation, 46 Vitest files/181 tests, TypeScript, Production build and focused lint
+  pass. Full lint is currently 346 errors/77 warnings, three errors above the older 343-error
+  baseline; the new audit scripts have no lint errors.
+
 ## 6 September — eligible Dev material promoted to Main
 
 - Main now contains the reviewed Player MVP lifecycle release tools, release evidence and current

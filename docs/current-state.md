@@ -6,6 +6,33 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 6 September Main-to-Production reconciliation — Stage 1
+
+- A read-only Production audit and complete 115-row migration register now exist. Production was
+  not changed and remains at `a1d23c7`.
+- The current Main-to-Production delta is 266 Main-only commits, one Production-only commit and 438
+  paths: 221 application paths, 115 migration paths (114 Main-only and one Production-only), 15
+  Edge Function files and three workflow files.
+- Production records 159 migration versions while Main contains 186 migration files. Only eight
+  version names overlap; 151 Production history versions have no same-named Main file and 178 Main
+  files are not recorded in Production. Do not bulk apply or bulk repair this history.
+- The first-pass register marks 103 migrations for live equivalence review and rehearsal, five as
+  superseded by the Production tally slice, four as Dev-only exclusions, one Production baseline
+  migration to preserve, one broken historical migration to replace with a compatibility bridge,
+  and one mixed migration to split.
+- Production has 11 deployed Edge Functions. Three exactly match both Git branches, two match Prod
+  but not Main, five differ from the available Git source, and `bulk-import-players` has no Git
+  source. No function is yet approved for deployment.
+- The latest six Production scraper schedules are now green. The named-final blank-round repair
+  remains Dev-only, so workflow reconciliation and approval stay separate from the app/database
+  release.
+- The next safe batch is B1 database foundation and access/identity compatibility. Historical
+  migrations will not be run directly; the exact additive bridge must be authored and rehearsed
+  against a fresh Production-derived environment first. See the 6 September reconciliation map.
+- Stage 1 checks pass for the audit/map scripts, 46 Vitest files/181 tests, TypeScript, Production
+  build and focused lint. Full lint is 346 errors/77 warnings, three errors above the older recorded
+  baseline; none is in the new audit scripts, but the whole-repository baseline needs reconciling.
+
 ## 6 September Dev-to-Main eligible alignment
 
 - Main received the five reviewed release/documentation commits through source Dev commit

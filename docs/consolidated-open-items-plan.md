@@ -55,11 +55,12 @@ browser check is still unavailable.
     expected Pumas rounds are present, and the builder preview otherwise behaves as expected. The
     high-priority draft-persistence and identity defects plus the presentation enhancements below
     remain queued. Publishing a real presentation remains a separate owner action.
-12. [Later broad release] Reconcile Main's 115 added migration files against live Production and
-    explicitly exclude the Production scraper workflow and Dev-only account helpers. The first
-    proven sequence blocker is migration `20260801013000`, which assumes an absent
-    `public.field_templates` relation. The latest four Production scraper runs are red due to blank
-    round numbers; the Dev fix is not yet eligible for that workflow.
+12. [Stage 1 complete; rehearsal open] The 115 changed migration paths are now mapped: 114 are
+    Main-only and one is the Production-only tally baseline. Production history and Main migration
+    files share only eight version names, so no historical file is approved for direct apply. Build
+    and rehearse a new additive B1 foundation/access compatibility bridge. The latest six Production
+    scraper schedules are green, but the named-final blank-round fix remains Dev-only and the
+    workflow remains a separate approval package.
 
 Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one
 reserved Player. Notification/deep link, unrelated-Voter denial, withdrawal, desktop/tablet/mobile,
@@ -70,10 +71,11 @@ follow-up migration was rehearsed, backed up and released at `a1d23c7`; all 355 
 now closed and no communication count changed during release. No real-player tally presentation
 has been published. See the 5 September tally packet and 6 September lifecycle packet.
 
-The broad Main-to-Production delta remains separately blocked: 266 commits and 438 paths, including
-115 added migrations, 15 Edge Function files and three workflows. Its migration reconciliation,
-Coordinator acceptance and scraper workflow decision remain later work; the narrow lifecycle
-release does not waive those gates.
+The broad Main-to-Production delta remains separately blocked: 266 Main-only commits and 438 paths,
+including 115 changed migration paths (114 Main-only and one Production-only), 15 Edge Function
+files and three workflows. Stage 1 migration/function/workflow mapping is complete, but the B1
+compatibility bridge and rehearsal, Coordinator acceptance and scraper workflow decision remain
+open; the narrow lifecycle release does not waive those gates.
 
 **Dev-to-Main alignment update:** the reviewed release tools and current evidence were promoted to
 Main through source Dev commit `2d7ed63` (promotion base `a5417f2`). Application source, migrations
