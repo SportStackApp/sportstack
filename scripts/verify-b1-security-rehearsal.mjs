@@ -43,9 +43,32 @@ requireValue(
   evidence.development.rollback_compatibility_check === "passed",
   "Development rollback compatibility check did not pass",
 );
+requireValue(evidence.development.database_applied === true, "Development application is not recorded");
+requireValue(
+  evidence.development.migration_version_recorded === true,
+  "Development migration history is not recorded",
+);
+requireValue(
+  evidence.development.runtime_verification === "passed",
+  "Hosted Development runtime verification did not pass",
+);
+requireValue(
+  evidence.development.database_lint_errors === 0 &&
+    evidence.development.security_adviser_errors === 0 &&
+    evidence.development.performance_adviser_errors === 0,
+  "Hosted Development database checks contain an error-level finding",
+);
 requireValue(
   evidence.production.changed === false,
   "Evidence must confirm Production was not changed",
+);
+requireValue(
+  evidence.quality.vitest_files_passed === 46 &&
+    evidence.quality.vitest_tests_passed === 181 &&
+    evidence.quality.typescript === "passed" &&
+    evidence.quality.production_build === "passed" &&
+    evidence.quality.focused_eslint === "passed",
+  "Frozen candidate quality evidence is incomplete",
 );
 
 const protectedCounts = evidence.local_rehearsal.protected_counts;

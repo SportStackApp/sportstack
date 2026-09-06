@@ -61,8 +61,9 @@ browser check is still unavailable.
      and rehearse new additive B1 foundation/access compatibility bridges. The dormant B1a structure
      migration now passes Production-copy apply, repeat, rollback and Dev no-op checks. The B1b
      security bridge passes exact apply, repeat, runtime, rollback, live Dev rollback-only
-     compatibility and security review; its Dev application is pending the frozen commit and final
-     checks. B1c membership workflows, B1d application allow-list and hosted rehearsal remain open. The latest six Production
+     compatibility and security review. Development records the migration and its hosted runtime,
+     lint and adviser checks pass; final Dev deployment verification remains. B1c membership
+     workflows, B1d application allow-list and hosted rehearsal remain open. The latest six Production
      scraper schedules are green, but the named-final blank-round fix remains Dev-only and the
      workflow remains a separate approval package.
 

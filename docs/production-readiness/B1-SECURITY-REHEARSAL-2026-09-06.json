@@ -1,7 +1,7 @@
 {
   "evidence_version": 1,
   "recorded_at": "2026-09-06",
-  "source_commit": "79ecba3f856f37f1d8726774245bfc845e8cbe4f",
+  "source_commit": "d27cb60789c8e58a5208593311c2809fe25bf2b4",
   "migration": {
     "version": "20260906075102",
     "path": "supabase/migrations/20260906075102_b1_security_compatibility.sql",
@@ -46,8 +46,26 @@
     "project_ref": "icqegnpjbizccjebjfhb",
     "rollback_compatibility_check": "passed",
     "check_result": "B1_SECURITY_DEV_COMPATIBILITY_OK",
-    "database_applied": false,
-    "application_status": "pending"
+    "database_applied": true,
+    "application_status": "applied",
+    "migration_version_recorded": true,
+    "runtime_verification": "passed",
+    "live_counts_before": {
+      "profiles": 755,
+      "team_memberships": 1259,
+      "primary_change_requests": 5,
+      "permission_catalogue": 22
+    },
+    "live_counts_after": {
+      "profiles": 755,
+      "team_memberships": 1259,
+      "primary_change_requests": 5,
+      "permission_catalogue": 22,
+      "b1_policies": 11
+    },
+    "database_lint_errors": 0,
+    "security_adviser_errors": 0,
+    "performance_adviser_errors": 0
   },
   "security_review": {
     "scan_id": "a74bf4c6-9855-496d-ba7d-509615c61722",
@@ -60,6 +78,16 @@
     },
     "finding_id": "csf_c7dab753a8bcbb6e6caf7112",
     "finding_status": "fixed_and_runtime_verified"
+  },
+  "quality": {
+    "vitest_files_passed": 46,
+    "vitest_tests_passed": 181,
+    "typescript": "passed",
+    "production_build": "passed",
+    "focused_eslint": "passed",
+    "full_lint_errors": 346,
+    "full_lint_warnings": 77,
+    "full_lint_result": "existing_baseline_debt_no_regression"
   },
   "production": {
     "project_ref": "svierarfcolhcfjpmwck",

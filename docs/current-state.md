@@ -19,8 +19,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - A complete security review found one low-severity cross-user administrator-scope probe. The
   candidate now binds authenticated calls to the signed-in user's ID, retains an explicit trusted
   service-role path and passes the isolated denial and legitimate Super Admin runtime tests.
-- Development database application and deployment are still pending the frozen commit and final
-  checks. B1c membership workflows, B1d application allow-list and a complete hosted
+- Development records migration `20260906075102`; hosted runtime verification, database lint and
+  error-level security/performance advisers pass. The final Dev deployment check is pending. B1c
+  membership workflows, B1d application allow-list and a complete hosted
   Production-compatible rehearsal remain open. Production is unchanged.
 - Evidence: `docs/production-readiness/B1-SECURITY-REHEARSAL-2026-09-06.md`.
 

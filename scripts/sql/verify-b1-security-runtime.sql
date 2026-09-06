@@ -1,5 +1,3 @@
-\set ON_ERROR_STOP on
-
 do $b1b_static$
 declare
   v_function_names text[] := array[
@@ -207,8 +205,7 @@ select set_config(
   'b1b.super_user_id',
   (select user_id::text from public.user_roles where role::text = 'SUPER_ADMIN' limit 1),
   true
-) as ignored
-\gset
+) as ignored;
 select set_config(
   'b1b.unrelated_user_id',
   (
@@ -219,17 +216,14 @@ select set_config(
     limit 1
   ),
   true
-) as ignored
-\gset
+) as ignored;
 select set_config(
   'b1b.association_id',
   (select association_row.id::text from public.associations association_row order by association_row.id limit 1),
   true
-) as ignored
-\gset
+) as ignored;
 
-select set_config('request.jwt.claim.sub', current_setting('b1b.super_user_id'), true) as ignored
-\gset
+select set_config('request.jwt.claim.sub', current_setting('b1b.super_user_id'), true) as ignored;
 set local role authenticated;
 do $b1b_super$
 declare
@@ -254,7 +248,8 @@ begin
   select count(*)
   into v_count
   from public.module_feature_flags
-  where scope_type = 'ASSOCIATION'
+  where module_key = 'player_mvp'
+    and scope_type = 'ASSOCIATION'
     and scope_id = current_setting('b1b.association_id')::uuid;
   if v_count <> 1 then
     raise exception 'The authorised scope could not read its feature flag.';
@@ -263,8 +258,7 @@ end;
 $b1b_super$;
 
 reset role;
-select set_config('request.jwt.claim.sub', current_setting('b1b.unrelated_user_id'), true) as ignored
-\gset
+select set_config('request.jwt.claim.sub', current_setting('b1b.unrelated_user_id'), true) as ignored;
 set local role authenticated;
 do $b1b_unrelated$
 declare
@@ -285,7 +279,8 @@ begin
   select count(*)
   into v_count
   from public.module_feature_flags
-  where scope_type = 'ASSOCIATION'
+  where module_key = 'player_mvp'
+    and scope_type = 'ASSOCIATION'
     and scope_id = current_setting('b1b.association_id')::uuid;
   if v_count <> 0 then
     raise exception 'An unrelated user could read the scoped feature flag.';

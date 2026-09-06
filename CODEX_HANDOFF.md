@@ -14,9 +14,11 @@ Last updated: 2026-09-06
 - The security review's only finding was a low-severity cross-user scope-status probe. The bridge
   now binds authenticated callers to their own user ID while retaining an explicit service-role
   path. Both the denial path and legitimate Super Admin path pass at runtime.
-- Development application is pending the frozen commit and final checks. B1c membership workflow,
-  B1d application allow-list and the complete hosted rehearsal remain required. Production was not
-  changed. Evidence: `docs/production-readiness/B1-SECURITY-REHEARSAL-2026-09-06.md`.
+- Development records migration `20260906075102`. Its hosted runtime denial and legitimate Super
+  Admin paths, database lint and error-level security/performance advisers pass; final Dev
+  deployment verification is pending. B1c membership workflow, B1d application allow-list and the
+  complete hosted rehearsal remain required. Production was not changed. Evidence:
+  `docs/production-readiness/B1-SECURITY-REHEARSAL-2026-09-06.md`.
 
 ## 6 September — B1a dormant foundation rehearsed
 

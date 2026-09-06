@@ -2,13 +2,22 @@
 
 ## Outcome
 
-The B1b security bridge is ready for Development application. The exact additive migration passed
+The B1b security bridge is deployed to Development. The exact additive migration passed
 first apply, repeat apply, runtime access checks and rollback against an isolated
 Production-derived database with the already deployed B1a foundation.
 
 A rollback-only check against the live Development database also passed. It confirmed that the
 only deliberate change to current Development behaviour is binding the authenticated
 `can_manage_module_scope` lookup to the signed-in user. Production was not changed.
+
+Development records migration version `20260906075102`. The hosted runtime denial and legitimate
+Super Admin paths pass. Profiles remained 755, memberships 1,259, primary-team requests five and
+permission catalogue rows 22 across the application. Database lint and the error-level security
+and performance advisers report no issues.
+
+The frozen candidate also passes 46 Vitest files/181 tests, TypeScript, the Production build and
+focused lint. Full lint remains the existing 346-error/77-warning repository baseline, with no
+finding in the new B1b scripts.
 
 ## Exact candidate
 
@@ -63,7 +72,6 @@ user path is denied and the valid Super Admin path still works.
 
 ## Release boundary
 
-This evidence does not authorise Production. B1b may move to Development after the final Git and
-quality checks. B1c membership workflows, B1d application allow-list, the complete hosted rehearsal
-and an independent review remain required before an exact Production package can be presented to
-Aaron for approval.
+This evidence does not authorise Production. B1c membership workflows, B1d application allow-list,
+the complete hosted rehearsal and an independent review remain required before an exact Production
+package can be presented to Aaron for approval.
