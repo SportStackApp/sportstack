@@ -258,14 +258,14 @@ if (shouldRun("--check-regression")) {
 
 if (shouldRun("--check-release-manifest")) {
   assert(
-    manifest.status === "HOSTED_REHEARSAL_PASSED_PENDING_OWNER_AND_INDEPENDENT_REVIEW",
-    "manifest does not accurately state its post-rehearsal release status",
+    manifest.status === "INDEPENDENT_REVIEW_COMPLETE_HOLD_FOR_OWNER_EVIDENCE",
+    "manifest does not accurately state its independent-review status",
   );
   const blockers = new Set(manifest.releaseBlockers.map((entry) => entry.id));
   for (const required of [
     "B1C-OWNER-CONFIRMATION",
     "B1-PRIMARY-SEMANTICS-CONFIRMATION",
-    "B1-INDEPENDENT-REVIEW",
+    "B1-PRODUCTION-PREFLIGHT",
     "B1-PRODUCTION-APPROVAL",
   ]) {
     assert(blockers.has(required), `release blocker is missing: ${required}`);

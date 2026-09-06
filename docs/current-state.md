@@ -13,9 +13,14 @@ Update this file after every meaningful Codex task, pull request, schema change,
   actual-role allow/deny checks passed; all disposable users and application data were removed.
 - The exact Production-based application candidate is frozen locally at `5994385`. Generated hosted
   types, 19 Vitest tests, TypeScript, Production build, focused lint and hosted browser smoke pass.
-- Main and Production remain unchanged. Production is not authorised. Remaining gates are the B1c
-  owner walkthrough, Primary-team semantics decisions, independent review and a new exact
-  Production approval. Evidence: `docs/production-readiness/B1-HOSTED-REHEARSAL-2026-09-07.md`.
+- Main and Production remain unchanged. Production is not authorised. Evidence:
+  `docs/production-readiness/B1-HOSTED-REHEARSAL-2026-09-07.md`.
+- Independent review is now complete with `hold_for_evidence`: high impact, moderate regression
+  likelihood, partial protection, managed recovery and moderate confidence. Exact Vercel preview
+  `dpl_GCghG7Hi2fHm6mF8UgqMxtDPzmbi` is READY and returns HTTP 200. The current Supabase connector
+  cannot perform the fresh Production read-only pre-flight, so owner confirmation, Primary-team
+  semantics, restored Production access/backup and exact approval remain open. Packet:
+  `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
 
 ## 6 September B1e administration and membership compatibility
 

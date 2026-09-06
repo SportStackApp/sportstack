@@ -68,7 +68,8 @@ browser check is still unavailable.
      actual-role runtime and rollback plus hosted Dev apply, repeat, rollback-only runtime and
      database lint. Its session-bound follow-up is additive. The complete Production-compatible
      hosted rehearsal now passes with frozen local candidate `5994385`; the B1c owner walkthrough,
-     Primary-team semantics, independent review and exact Production approval remain open. The latest six Production
+     Primary-team semantics, fresh Production pre-flight/backup and exact Production approval remain
+     open. Independent review is complete with `hold_for_evidence`. The latest six Production
      scraper schedules are green, but the named-final blank-round fix remains Dev-only and the
      workflow remains a separate approval package.
 

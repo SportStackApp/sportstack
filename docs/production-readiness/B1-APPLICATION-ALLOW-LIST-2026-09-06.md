@@ -5,8 +5,12 @@
 **7 September update:** the Production-compatible hosted rehearsal passed and the exact application
 candidate is frozen locally at `5994385`. B1e and hosted-rehearsal blockers are closed. Production
 remains unauthorised pending the B1c owner walkthrough, Primary-team semantics decisions,
-independent review and a new exact Production approval. See
+a fresh Production pre-flight and a new exact Production approval. See
 `B1-HOSTED-REHEARSAL-2026-09-07.md`. Later historical sections below describe the earlier freeze.
+
+The independent review is now complete with recommendation `hold_for_evidence`. The remaining
+release gates are the owner walkthrough, Primary-team semantics, a fresh Production drift
+check/verified backup and exact approval. See `B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
 
 The B1 application boundary is now explicit and reproducible. It is **not yet a Production release
 candidate**. The safe slice contains the session permission context, five-module controls, route

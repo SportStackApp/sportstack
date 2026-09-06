@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "package": "B1 hosted Production-compatible candidate",
-  "status": "HOSTED_REHEARSAL_PASSED_PENDING_OWNER_AND_INDEPENDENT_REVIEW",
+  "status": "INDEPENDENT_REVIEW_COMPLETE_HOLD_FOR_OWNER_EVIDENCE",
   "recordedAt": "2026-09-07",
   "environmentPins": {
     "devApplicationCommit": "cbadc776627030501f33c9b55a4079be1d8aef76",
@@ -11,6 +11,22 @@
     "primaryTeamRpcSnapshot": "3a52bd94c55b103509e599700b47b2cbf5577f5e",
     "hostedCandidateCommit": "5994385f403d4a8188de49e14762ac6097f018fa",
     "hostedProjectRef": "fdkgcwacuqoswnatvubv"
+  },
+  "patchIdentity": {
+    "base": "a1d23c741b79de02c32763a879597192a1c1ebd5",
+    "head": "5994385f403d4a8188de49e14762ac6097f018fa",
+    "changedFiles": 26,
+    "sha256": "41f618fff298ff287a2bffd44ed5d789fa90036c64c2d5a3214368184d13d0f3",
+    "vercelDeployment": "dpl_GCghG7Hi2fHm6mF8UgqMxtDPzmbi",
+    "vercelBundle": "index-DnPhkItZ.js"
+  },
+  "independentReview": {
+    "recommendation": "HOLD_FOR_EVIDENCE",
+    "impact": "HIGH",
+    "regressionLikelihood": "MODERATE",
+    "regressionProtection": "PARTIAL",
+    "recoverability": "MANAGED",
+    "confidence": "MODERATE"
   },
   "ownerConfirmation": {
     "status": "CONFIRMATION_REQUIRED",
@@ -254,9 +270,9 @@
       "requirement": "Confirm cross-organisation Primary-team demotion and consent semantics; current behaviour is unchanged."
     },
     {
-      "id": "B1-INDEPENDENT-REVIEW",
+      "id": "B1-PRODUCTION-PREFLIGHT",
       "status": "OPEN",
-      "requirement": "Independently review candidate 5994385, hosted evidence and rollback packet before Production approval."
+      "requirement": "Restore read-only Production access, confirm no drift and create a fresh verified backup immediately before release."
     },
     {
       "id": "B1-PRODUCTION-APPROVAL",
