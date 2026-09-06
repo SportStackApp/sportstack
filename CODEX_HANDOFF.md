@@ -5,14 +5,16 @@ Last updated: 2026-09-06
 ## 6 September — B1a dormant foundation rehearsed
 
 - Read-only live comparison confirmed Production lacks 12 B1-owned tables, one private sequence and
-  their later security layer. The corrected map now includes indexes and stable function-grant
-  identities; no table data or credential was captured.
+  their later security layer. The corrected 878-row map now includes collision-free constraints,
+  indexes and stable function-grant identities; no table data or credential was captured.
 - New additive migration `20260906063905_b1_foundation_compatibility.sql` creates only those dormant
   structures. It excludes functions, policies, triggers, catalogue/application data and browser
   grants, and it does not replace Production's existing primary-team policies or helper functions.
 - A Production-derived local restore passed first apply, repeat apply and transactional rollback.
   Profiles (757), memberships (1,260) and primary-team requests (6) remained unchanged. A local Dev
-  before/after comparison matched all 737 B1-owned records, so existing Dev behaviour is unchanged.
+  repeat comparison matched all 10,382 public/private catalogue entries, so existing Dev behaviour
+  is unchanged. Development now records migration `20260906063905`; Production's migration history
+  remains unchanged.
 - The backup has managed Auth/Storage restore limitations. The complete package still requires B1b
   security, B1c membership workflow, B1d application allow-list, a hosted Production-compatible
   rehearsal and independent review before a Production approval request. Production is unchanged.

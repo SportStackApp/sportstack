@@ -3,7 +3,7 @@
 with enum_inventory as (
   select
     n.nspname as schema_name,
-    t.typname as object_name,
+    t.typname::text as object_name,
     jsonb_agg(e.enumlabel order by e.enumsortorder) as definition
   from pg_type t
   join pg_namespace n on n.oid = t.typnamespace
@@ -14,7 +14,7 @@ with enum_inventory as (
 relation_inventory as (
   select
     n.nspname as schema_name,
-    c.relname as object_name,
+    c.relname::text as object_name,
     case c.relkind
       when 'r' then 'table'
       when 'p' then 'partitioned_table'
@@ -51,7 +51,7 @@ relation_inventory as (
 constraint_inventory as (
   select
     n.nspname as schema_name,
-    c.relname::text || '.' || con.conname::text as object_name,
+    format('%s.%s', c.relname::text, con.conname::text) as object_name,
     jsonb_build_object(
       'table', c.relname,
       'type', con.contype,
@@ -68,7 +68,7 @@ constraint_inventory as (
 index_inventory as (
   select
     n.nspname as schema_name,
-    i.relname as object_name,
+    i.relname::text as object_name,
     to_jsonb(pg_get_indexdef(i.oid)) as definition
   from pg_index x
   join pg_class i on i.oid = x.indexrelid
@@ -79,7 +79,7 @@ index_inventory as (
 function_inventory as (
   select
     n.nspname as schema_name,
-    p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' as object_name,
+    format('%s(%s)', p.proname::text, pg_get_function_identity_arguments(p.oid)) as object_name,
     jsonb_build_object(
       'result', pg_get_function_result(p.oid),
       'kind', p.prokind,
@@ -94,7 +94,7 @@ function_inventory as (
 trigger_inventory as (
   select
     n.nspname as schema_name,
-    c.relname::text || '.' || t.tgname::text as object_name,
+    format('%s.%s', c.relname::text, t.tgname::text) as object_name,
     to_jsonb(pg_get_triggerdef(t.oid, true)) as definition
   from pg_trigger t
   join pg_class c on c.oid = t.tgrelid
@@ -104,7 +104,7 @@ trigger_inventory as (
 policy_inventory as (
   select
     schemaname as schema_name,
-    tablename || '.' || policyname as object_name,
+    format('%s.%s', tablename, policyname) as object_name,
     jsonb_build_object(
       'table', tablename,
       'permissive', permissive,
@@ -119,7 +119,7 @@ policy_inventory as (
 table_grant_inventory as (
   select
     table_schema as schema_name,
-    table_name || '.' || grantee || '.' || privilege_type as object_name,
+    format('%s.%s.%s', table_name, grantee, privilege_type) as object_name,
     jsonb_build_object(
       'table', table_name,
       'grantee', grantee,
@@ -132,9 +132,13 @@ table_grant_inventory as (
 routine_grant_inventory as (
   select
     n.nspname as schema_name,
-    p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ').'
-      || case when access.grantee = 0 then 'PUBLIC' else pg_get_userbyid(access.grantee) end
-      || '.' || access.privilege_type as object_name,
+    format(
+      '%s(%s).%s.%s',
+      p.proname::text,
+      pg_get_function_identity_arguments(p.oid),
+      case when access.grantee = 0 then 'PUBLIC' else pg_get_userbyid(access.grantee) end,
+      access.privilege_type
+    ) as object_name,
     jsonb_build_object(
       'routine', p.proname,
       'identity_arguments', pg_get_function_identity_arguments(p.oid),

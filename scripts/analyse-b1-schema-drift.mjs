@@ -132,6 +132,18 @@ function key(row) {
   return `${row.object_type}|${row.schema_name}|${row.object_name}`;
 }
 
+function inventoryMap(rows, environmentName) {
+  const result = new Map();
+  for (const row of rows) {
+    const rowKey = key(row);
+    if (result.has(rowKey)) {
+      throw new Error(`Duplicate ${environmentName} inventory key: ${rowKey}`);
+    }
+    result.set(rowKey, row);
+  }
+  return result;
+}
+
 function objectBaseName(row) {
   if (row.object_type === "function") return row.object_name.split("(")[0];
   if (row.object_type === "routine_grant") return row.definition.routine;
@@ -178,8 +190,8 @@ function csv(value) {
 
 const devRows = loadInventory(resolve(evidenceDirectory, "dev/structural-inventory.json"));
 const productionRows = loadInventory(resolve(evidenceDirectory, "production/structural-inventory.json"));
-const devMap = new Map(devRows.map((row) => [key(row), row]));
-const productionMap = new Map(productionRows.map((row) => [key(row), row]));
+const devMap = inventoryMap(devRows, "Dev");
+const productionMap = inventoryMap(productionRows, "Production");
 const allKeys = new Set([...devMap.keys(), ...productionMap.keys()]);
 const rows = [];
 

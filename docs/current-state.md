@@ -17,8 +17,9 @@ Update this file after every meaningful Codex task, pull request, schema change,
   excludes Coordination, discipline, Umpire Match Voting, Player MVP notification and scraper work.
 - A Production-derived isolated rehearsal passed first apply, repeat apply and transactional
   rollback. Profiles remained 757, memberships 1,260 and primary-team requests six; newly created
-  B1a structures had zero browser grants and zero policies. The Development-schema before/after
-  comparison matched all 737 B1-owned rows.
+  B1a structures had zero browser grants and zero policies. The corrected Development repeat
+  comparison matched all 10,382 public/private catalogue entries. Development now records migration
+  `20260906063905`; Production's migration list remains unchanged.
 - The logical backup does not provide a faithful hosted Auth/Storage restore, so the complete B1
   package still needs a hosted Production-compatible rehearsal. B1b security functions/policies,
   B1c membership workflow and B1d application allow-list remain open. Production is unchanged.

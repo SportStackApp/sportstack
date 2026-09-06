@@ -13,14 +13,15 @@ Production was inspected read-only and was not changed.
 
 | Environment | Git commit | Supabase project | Recorded migrations | Edge Functions |
 |---|---|---|---:|---:|
-| Development | `f03e42a5b1165af78c996ed0792087e5518f8e06` | `icqegnpjbizccjebjfhb` | 143 | 19 |
+| Development | `72ca323268c9fbf50399b7e2f4f15632f2e7250c` | `icqegnpjbizccjebjfhb` | 144 | 19 |
 | Main/staging | `af21ae3c06a2d66d2eb9c4edf64bb2c185869927` | shares Development | n/a | n/a |
 | Production | `a1d23c741b79de02c32763a879597192a1c1ebd5` | `svierarfcolhcfjpmwck` | 159 | 11 |
 
-The refreshed structural comparison records 804 B1/dependency rows. The B1-owned Production gap
-contains 12 tables, one sequence, 25 indexes, 58 constraints, 54 functions, 12 policies and five
-triggers. Existing Production-only primary-team policies and its current `is_super_admin()` grants
-remain preserved for investigation; this foundation migration does not replace them.
+The refreshed structural comparison records 878 B1/dependency rows. The B1-owned Production gap
+contains 12 tables, one sequence, 25 indexes, 62 constraints, 55 functions, 12 policies, five
+triggers and their associated grants. Existing Production-only primary-team policies and its
+current `is_super_admin()` grants remain preserved for investigation; this foundation migration
+does not replace them.
 
 ## B1a exact scope
 
@@ -74,10 +75,15 @@ The three relevant public baselines did restore:
 
 The exact migration passed with `ON_ERROR_STOP`, passed a second apply, and passed a separate
 transactional rollback: the structure count returned from zero to zero. A Development-schema
-before/after comparison matched all 737 B1-owned definitions, privileges and policies, proving the
+before/after repeat comparison matched all 10,382 public/private catalogue entries, proving the
 migration is a structural no-op when the current Dev objects already exist. One unrelated GiST
 index could not be recreated in the local Dev schema copy because the extension operator class was
 not loaded; it is outside B1 and did not affect the comparison.
+
+The migration version is now recorded on Development. A fresh hosted comparison shows 144 Dev
+migration versions and the same 19 Edge Functions. Production remains at 159 migration versions and
+11 Edge Functions. The Production migration list is byte-for-byte unchanged from the pre-apply
+snapshot.
 
 ## Remaining B1 sub-batches
 
