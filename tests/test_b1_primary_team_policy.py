@@ -61,6 +61,8 @@ class PrimaryTeamPolicyTests(unittest.TestCase):
     def test_profile_displays_all_primary_teams(self) -> None:
         self.assertIn("const primaryMemberships = approvedMemberships.filter", self.profile)
         self.assertIn("primaryTeams={primaryTeams}", self.profile)
+        self.assertIn("primaryTeams.map((primaryTeam)", self.profile)
+        self.assertNotIn("{primaryTeam && (", self.profile)
         self.assertIn("primaryTeams.map", self.team_section)
 
     def test_request_screen_explains_approval_completion(self) -> None:
