@@ -18,25 +18,24 @@ import {
 import { Label } from "@/components/ui/label";
 import { Users, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { findPrimaryTeamForAssociation } from "@/lib/primaryTeamMemberships";
 
 interface SetPrimaryTeamDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentPrimaryTeamId?: string;
-  currentPrimaryTeamName?: string;
-  existingTeamIds?: string[];
+  currentPrimaryTeams?: Array<{
+    teamId: string;
+    teamName: string;
+    associationId: string;
+  }>;
   onConfirm: (teamId: string) => Promise<void>;
-  isChangingPrimary: boolean;
 }
 
 export const SetPrimaryTeamDialog = ({
   open,
   onOpenChange,
-  currentPrimaryTeamId,
-  currentPrimaryTeamName,
-  existingTeamIds = [],
+  currentPrimaryTeams = [],
   onConfirm,
-  isChangingPrimary,
 }: SetPrimaryTeamDialogProps) => {
   const [associations, setAssociations] = useState<{ id: string; name: string }[]>([]);
   const [clubs, setClubs] = useState<{ id: string; name: string }[]>([]);
@@ -50,6 +49,10 @@ export const SetPrimaryTeamDialog = ({
   const [isLoading, setIsLoading] = useState(false);
 
   type TeamOption = { id: string; name: string; division: string | null; division_id: string | null };
+
+  const currentPrimaryTeam = findPrimaryTeamForAssociation(currentPrimaryTeams, selectedAssociation);
+  const currentPrimaryTeamId = currentPrimaryTeam?.teamId;
+  const isChangingPrimary = Boolean(currentPrimaryTeam);
 
   // Fetch associations when dialog opens
   useEffect(() => {
@@ -73,7 +76,6 @@ export const SetPrimaryTeamDialog = ({
   useEffect(() => {
     if (!selectedClub) { setTeams([]); setSelectedTeam(""); setDivisions([]); setSelectedDivision(""); return; }
     supabase.from("teams").select("id, name, division, division_id").eq("club_id", selectedClub).order("name").then(async ({ data }) => {
-      // Exclude current primary team
       const filtered = ((data || []) as TeamOption[]).filter((t) => t.id !== currentPrimaryTeamId);
       setTeams(filtered);
       setSelectedTeam("");
@@ -118,20 +120,21 @@ export const SetPrimaryTeamDialog = ({
           </DialogTitle>
           <DialogDescription>
             {isChangingPrimary
-              ? "Select your new primary team. Your request will be sent to the team coach and club admin for approval."
+              ? "Select your new Primary team. Your request will be sent to the team manager and club admin for approval."
               : "Select a team to set as your primary team. Your request will need to be approved."}
           </DialogDescription>
         </DialogHeader>
 
         {/* Warning when changing existing primary team */}
-        {isChangingPrimary && currentPrimaryTeamName && (
+        {isChangingPrimary && currentPrimaryTeam && (
           <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
             <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
             <div>
               <p className="text-sm font-semibold text-amber-500">Warning</p>
               <p className="text-sm text-amber-500/90">
                 If approved, your current primary team{" "}
-                <span className="font-semibold">{currentPrimaryTeamName}</span> will be removed.
+                <span className="font-semibold">{currentPrimaryTeam.teamName}</span> will become Secondary.
+                Primary teams in other associations will not change.
               </p>
             </div>
           </div>

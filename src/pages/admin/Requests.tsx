@@ -211,7 +211,7 @@ export default function Requests() {
 
     if (request.source !== "primary_change" && request.team_id && request.membership_type === "PRIMARY") {
       const confirmed = window.confirm(
-        `${request.target_user_name} may already have a primary team. Approving this will make "${request.team_name}" their new primary team and downgrade any existing primary team to secondary. Continue?`
+        `${request.target_user_name} may already have a Primary team in this association. Approving this will make "${request.team_name}" Primary and downgrade only the existing Primary in the same association. Continue?`
       );
       if (!confirmed) return;
     }
@@ -223,7 +223,10 @@ export default function Requests() {
 
         if (primaryError) throw primaryError;
 
-        toast({ title: "Approved", description: "Primary team change approved. User must confirm." });
+        toast({
+          title: "Primary team updated",
+          description: "The player requested this change, so approval completed it immediately.",
+        });
         loadData();
         return;
       }
@@ -394,7 +397,7 @@ export default function Requests() {
     if (status === "ADMIN_APPROVED") {
       return (
         <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 pointer-events-none">
-          <Clock className="w-3 h-3 mr-1" /> Awaiting player
+          <Clock className="w-3 h-3 mr-1" /> Legacy approval
         </Badge>
       );
     }
@@ -538,7 +541,7 @@ export default function Requests() {
                                 >
                                   <CheckCircle2 className="h-3 w-3 mr-1" /> Approve
                                 </Button>
-                                {request.team_id && (
+                                {request.source !== "primary_change" && request.team_id && (
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -573,7 +576,7 @@ export default function Requests() {
                             )}
                             {request.status === "ADMIN_APPROVED" && (
                               <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">
-                                Waiting for player
+                                Legacy — player can complete
                               </Badge>
                             )}
                             {request.status === "CANCELLED" && (

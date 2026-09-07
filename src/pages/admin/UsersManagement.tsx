@@ -946,7 +946,10 @@ const UsersManagement = () => {
     if (error) {
       toast({ title: "Error", description: "Failed to approve request.", variant: "destructive" });
     } else {
-      toast({ title: "Approved", description: "Primary team change approved. User must confirm." });
+      toast({
+        title: "Primary team updated",
+        description: "The player requested this change, so approval completed it immediately.",
+      });
       fetchPrimaryRequests();
     }
   };
@@ -1315,7 +1318,8 @@ const UsersManagement = () => {
           .select("id")
           .eq("target_user_id", selectedUser.id)
           .eq("membership_type", "PRIMARY")
-          .eq("status", "PENDING");
+          .eq("status", "PENDING")
+          .eq("association_id", assignAssociationId);
 
         if (checkError) throw checkError;
 
@@ -1329,21 +1333,21 @@ const UsersManagement = () => {
           return;
         }
 
-        // Warn if this player already has an active primary team elsewhere —
-        // approving this new invite later will replace it.
+        // Warn only about the Primary team in the selected association.
         const { data: existingActivePrimary, error: activeCheckError } = await supabase
           .from("team_memberships")
-          .select("id, teams(name)")
+          .select("id, teams!inner(name, clubs!inner(association_id))")
           .eq("user_id", selectedUser.id)
           .eq("membership_type", "PRIMARY")
-          .eq("status", "ACTIVE");
+          .eq("status", "ACTIVE")
+          .eq("teams.clubs.association_id", assignAssociationId);
 
         if (activeCheckError) throw activeCheckError;
 
         if ((existingActivePrimary || []).length > 0) {
           const currentPrimaryName = (existingActivePrimary[0] as unknown as { teams: { name: string } | null })?.teams?.name || "their current team";
           const confirmed = window.confirm(
-            `${selectedUser.first_name} ${selectedUser.last_name} is currently primary for ${currentPrimaryName}. If this new invite is approved, it will replace that as their primary team. Continue?`
+            `${selectedUser.first_name} ${selectedUser.last_name} is currently Primary for ${currentPrimaryName} in this association. If this invite is approved, that membership will become Secondary. Primaries in other associations will not change. Continue?`
           );
           if (!confirmed) {
             setAssignSaving(false);

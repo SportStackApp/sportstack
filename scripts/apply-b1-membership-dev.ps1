@@ -16,6 +16,8 @@ param(
     [string]$MigrationName = "b1_membership_workflow_compatibility",
     [string]$SuccessMarker = "B1_MEMBERSHIP_DEV_APPLY_OK",
     [string]$RuntimeVerificationPath,
+    [string]$RuntimeSuccessMarker = "B1_ADMIN_MEMBERSHIP_RUNTIME_OK",
+    [string]$RuntimeLeakEmailPattern = "b1e-%@example.invalid",
     [switch]$VerificationOnly
 )
 
@@ -35,6 +37,12 @@ if ($MigrationName -notmatch '^[a-z0-9_]+$') {
 }
 if ($SuccessMarker -notmatch '^[A-Z0-9_]+$') {
     throw "SuccessMarker may contain only upper-case letters, digits and underscores."
+}
+if ($RuntimeSuccessMarker -notmatch '^[A-Z0-9_]+$') {
+    throw "RuntimeSuccessMarker may contain only upper-case letters, digits and underscores."
+}
+if ($RuntimeLeakEmailPattern -notmatch '^[a-z0-9@._%+-]+$') {
+    throw "RuntimeLeakEmailPattern contains unsupported characters."
 }
 
 $MigrationPath = [IO.Path]::GetFullPath((
@@ -191,13 +199,13 @@ try {
             "db", "query", "--linked", "--workdir", $temporaryRoot,
             "--file", $ResolvedRuntimeVerificationPath
         )
-        if ($verificationOutput -notmatch 'B1_ADMIN_MEMBERSHIP_RUNTIME_OK') {
+        if ($verificationOutput -notmatch [regex]::Escape($RuntimeSuccessMarker)) {
             throw "The Development runtime verification marker was not returned."
         }
 
         $rollbackOutput = Invoke-Supabase -Arguments @(
             "db", "query", "--linked", "--workdir", $temporaryRoot,
-            "select count(*)::int as leaked from auth.users where email like 'b1e-%@example.invalid';",
+            "select count(*)::int as leaked from auth.users where email like '$RuntimeLeakEmailPattern';",
             "--output-format", "json"
         )
         $rollbackMatch = [regex]::Match($rollbackOutput, '(?s)(\{.*\})\s*$')

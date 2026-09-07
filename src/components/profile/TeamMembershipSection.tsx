@@ -36,85 +36,79 @@ interface PendingChangeRequest {
 }
 
 interface TeamMembershipSectionProps {
-  primaryTeam: TeamMembership | null;
+  primaryTeams: TeamMembership[];
   extraTeams: TeamMembership[];
   pendingChangeRequest: PendingChangeRequest | null;
   pendingPrimaryRequest?: { id: string; teamId: string; teamName: string; clubName: string; type: string; };
   onRequestChange: () => void;
   onCancelRequest?: () => void;
-  onSetPrimaryTeam?: () => void;
   pendingAdditionalTeams?: Array<{id: string; teamId: string; teamName: string; clubName: string; type: string;}>;
   onCancelAdditionalRequest?: (id: string) => void;
   onRequestAdditionalTeam?: () => void;
   onConfirmChange?: () => void;
-  hasApprovedTeams: boolean;
 }
 
 export const TeamMembershipSection = ({
-  primaryTeam,
+  primaryTeams,
   extraTeams,
   pendingChangeRequest,
   pendingPrimaryRequest,
   onRequestChange,
   onCancelRequest,
-  onSetPrimaryTeam,
   pendingAdditionalTeams = [],
   onCancelAdditionalRequest,
   onRequestAdditionalTeam,
   onConfirmChange,
-  hasApprovedTeams,
 }: TeamMembershipSectionProps) => {
   return (
     <div className="space-y-4">
       {/* Primary Team */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-lg">Primary Team</CardTitle>
-          {primaryTeam && !pendingChangeRequest && (
+          <CardTitle className="text-lg">Primary Teams</CardTitle>
+          {!pendingChangeRequest && (
             <Button variant="outline" size="sm" onClick={onRequestChange}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Request Change
-            </Button>
-          )}
-          {!primaryTeam && !pendingChangeRequest && onSetPrimaryTeam && (
-            <Button variant="outline" size="sm" onClick={onSetPrimaryTeam}>
               <Plus className="h-4 w-4 mr-2" />
-              Set Primary Team
+              Request Primary Team
             </Button>
           )}
         </CardHeader>
         <CardContent>
-          {primaryTeam ? (
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-foreground">{primaryTeam.teamName}</p>
-                <p className="text-sm text-muted-foreground">
-                  {primaryTeam.clubName} • {primaryTeam.associationName}
-                </p>
-                <div className="flex items-center gap-3 mt-1">
-                  {primaryTeam.position && (
-                    <Badge variant="secondary" className="text-xs">
-                      {primaryTeam.position}
-                    </Badge>
-                  )}
-                  {primaryTeam.jerseyNumber && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Shirt className="h-3 w-3" />#{primaryTeam.jerseyNumber}
+          {primaryTeams.length > 0 ? (
+            <div className="space-y-3">
+              {primaryTeams.map((primaryTeam) => (
+                <div key={primaryTeam.teamId} className="flex items-center gap-4 rounded-lg bg-muted/50 p-3">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground">{primaryTeam.teamName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {primaryTeam.clubName} • {primaryTeam.associationName}
+                    </p>
+                    <div className="flex items-center gap-3 mt-1">
+                      {primaryTeam.position && (
+                        <Badge variant="secondary" className="text-xs">
+                          {primaryTeam.position}
+                        </Badge>
+                      )}
+                      {primaryTeam.jerseyNumber && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Shirt className="h-3 w-3" />#{primaryTeam.jerseyNumber}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
+                  <MembershipTypeBadge membershipType="PRIMARY" />
                 </div>
-              </div>
-              <MembershipTypeBadge membershipType="PRIMARY" />
+              ))}
             </div>
           ) : (
             <div className="text-center py-6">
               <Users className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
               <p className="text-muted-foreground">No primary team</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {"Click \u0027Set Primary Team\u0027 above to choose your main team"}
+                Request a Primary team for any association you play in.
               </p>
             </div>
           )}
@@ -127,7 +121,7 @@ export const TeamMembershipSection = ({
                   <RefreshCw className="h-4 w-4 text-accent" />
                   <span className="text-sm font-medium text-foreground">
                     {pendingChangeRequest.status === "ADMIN_APPROVED"
-                      ? "Change Approved — Confirm to Complete"
+                      ? "Previously Approved — Confirm to Complete"
                       : "Change Request Pending"}
                   </span>
                 </div>
