@@ -7,6 +7,7 @@ import unittest
 ROOT = Path(__file__).parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "20260907103000_b1_primary_team_per_association.sql"
 LINT_FIX = ROOT / "supabase" / "migrations" / "20260907104500_b1_primary_team_per_association_lint_fix.sql"
+REGISTERED_CLUB_FIX = ROOT / "supabase" / "migrations" / "20260907131500_allow_derived_registered_club_sync.sql"
 PROFILE = ROOT / "src" / "pages" / "Profile.tsx"
 REQUESTS = ROOT / "src" / "pages" / "admin" / "Requests.tsx"
 APP = ROOT / "src" / "App.tsx"
@@ -19,6 +20,7 @@ class PrimaryTeamPolicyTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.sql = MIGRATION.read_text(encoding="utf-8")
         cls.lint_fix = LINT_FIX.read_text(encoding="utf-8")
+        cls.registered_club_fix = REGISTERED_CLUB_FIX.read_text(encoding="utf-8")
         cls.profile = PROFILE.read_text(encoding="utf-8")
         cls.requests = REQUESTS.read_text(encoding="utf-8")
         cls.app = APP.read_text(encoding="utf-8")
@@ -62,6 +64,16 @@ class PrimaryTeamPolicyTests(unittest.TestCase):
         self.assertIn("pg_catalog.btrim", self.lint_fix)
         self.assertNotIn("pg_catalog.trim", self.lint_fix)
 
+    def test_registered_club_sync_allows_only_a_matching_nested_primary(self) -> None:
+        self.assertIn("pg_catalog.pg_trigger_depth() > 1", self.registered_club_fix)
+        self.assertIn("team.club_id = new.registered_club_id", self.registered_club_fix)
+        self.assertIn("membership.membership_type::text = 'PRIMARY'", self.registered_club_fix)
+        self.assertIn("REGISTERED_CLUB_CHANGE_NOT_AUTHORISED", self.registered_club_fix)
+        self.assertIn(
+            "from public, anon, authenticated",
+            self.registered_club_fix,
+        )
+
     def test_profile_displays_all_primary_teams(self) -> None:
         self.assertIn("const primaryMemberships = approvedMemberships.filter", self.profile)
         self.assertIn("primaryTeams={primaryTeams}", self.profile)
@@ -82,6 +94,8 @@ class PrimaryTeamPolicyTests(unittest.TestCase):
         team_manager_nav = self.app_layout.split("  team_manager: [", 1)[1].split("  coach: [", 1)[0]
         self.assertIn('{ path: "/admin/requests", label: "Requests"', team_manager_nav)
         self.assertIn('|| activeMode === "team_manager";', self.app_layout)
+        self.assertIn('window.addEventListener("sportstack:requests-changed"', self.app_layout)
+        self.assertIn('window.dispatchEvent(new Event("sportstack:requests-changed"))', self.requests)
 
 
 if __name__ == "__main__":

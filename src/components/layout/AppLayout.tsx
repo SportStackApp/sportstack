@@ -798,7 +798,15 @@ const AppLayout = () => {
       ]);
       setPendingRequestCount((membershipRequests.count || 0) + (primaryRequests.count || 0));
     };
-    fetchCount();
+    const handleRequestsChanged = () => {
+      void fetchCount();
+    };
+
+    void fetchCount();
+    window.addEventListener("sportstack:requests-changed", handleRequestsChanged);
+    return () => {
+      window.removeEventListener("sportstack:requests-changed", handleRequestsChanged);
+    };
   }, [user, activeMode]);
 
   // Fetch user avatar

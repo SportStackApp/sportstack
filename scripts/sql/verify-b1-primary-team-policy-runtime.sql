@@ -26,12 +26,13 @@ values
 insert into public.clubs (id, association_id, name)
 values
   ('00000000-0000-0000-0000-000000000301', '00000000-0000-0000-0000-000000000201', 'B1 Club A'),
-  ('00000000-0000-0000-0000-000000000302', '00000000-0000-0000-0000-000000000202', 'B1 Club B');
+  ('00000000-0000-0000-0000-000000000302', '00000000-0000-0000-0000-000000000202', 'B1 Club B'),
+  ('00000000-0000-0000-0000-000000000303', '00000000-0000-0000-0000-000000000201', 'B1 Club A2');
 
 insert into public.teams (id, club_id, name, mvp_enabled, mvp_notifications_enabled)
 values
   ('00000000-0000-0000-0000-000000000401', '00000000-0000-0000-0000-000000000301', 'B1 Old A', false, true),
-  ('00000000-0000-0000-0000-000000000402', '00000000-0000-0000-0000-000000000301', 'B1 New A', false, true),
+  ('00000000-0000-0000-0000-000000000402', '00000000-0000-0000-0000-000000000303', 'B1 New A', false, true),
   ('00000000-0000-0000-0000-000000000403', '00000000-0000-0000-0000-000000000302', 'B1 Primary B', false, true);
 
 insert into public.team_memberships (user_id, team_id, membership_type, status)
@@ -42,7 +43,9 @@ values
 insert into public.user_roles (user_id, role, team_id)
 values ('00000000-0000-0000-0000-000000000102', 'TEAM_MANAGER', '00000000-0000-0000-0000-000000000402');
 insert into public.user_roles (user_id, role, club_id)
-values ('00000000-0000-0000-0000-000000000103', 'CLUB_ADMIN', '00000000-0000-0000-0000-000000000301');
+values
+  ('00000000-0000-0000-0000-000000000103', 'CLUB_ADMIN', '00000000-0000-0000-0000-000000000301'),
+  ('00000000-0000-0000-0000-000000000103', 'CLUB_ADMIN', '00000000-0000-0000-0000-000000000303');
 
 do $same_association_guard$
 begin
@@ -121,6 +124,15 @@ begin
 
   if v_old_a_type <> 'SECONDARY' or v_new_a_type <> 'PRIMARY' or v_b_type <> 'PRIMARY' then
     raise exception 'Association-scoped Primary result was %, %, %.', v_old_a_type, v_new_a_type, v_b_type;
+  end if;
+
+  if not exists (
+    select 1
+    from public.profiles profile
+    where profile.id = '00000000-0000-0000-0000-000000000101'
+      and profile.registered_club_id = '00000000-0000-0000-0000-000000000303'
+  ) then
+    raise exception 'The legacy registered club did not follow the new same-association Primary team.';
   end if;
 end;
 $membership_result$;
