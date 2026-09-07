@@ -188,6 +188,11 @@ export default function Requests() {
     loadData();
   }, [user, scopeLoading]);
 
+  const refreshRequestViews = () => {
+    window.dispatchEvent(new Event("sportstack:requests-changed"));
+    void loadData();
+  };
+
   const handleApprove = async (request: Request) => {
     try {
       if (request.source === "primary_change") {
@@ -199,7 +204,7 @@ export default function Requests() {
           title: "Primary team updated",
           description: "The player requested this change, so approval completed it immediately.",
         });
-        loadData();
+        refreshRequestViews();
         return;
       }
 
@@ -216,7 +221,7 @@ export default function Requests() {
         if (updateError) throw updateError;
 
         toast({ title: "Success", description: "Request approved without a team assignment." });
-        loadData();
+        refreshRequestViews();
         return;
       }
 
@@ -263,7 +268,7 @@ export default function Requests() {
       await ensurePlayerRoleForTeam(request.target_user_id, request.team_id);
 
       toast({ title: "Success", description: "Request approved and membership created." });
-      loadData();
+      refreshRequestViews();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
@@ -302,7 +307,7 @@ export default function Requests() {
         title: "Success",
         description: "Request approved at club level. No team was assigned.",
       });
-      loadData();
+      refreshRequestViews();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
@@ -315,7 +320,7 @@ export default function Requests() {
         if (error) throw error;
 
         toast({ title: "Success", description: "Request declined." });
-        loadData();
+        refreshRequestViews();
         return;
       }
 
@@ -331,7 +336,7 @@ export default function Requests() {
       if (error) throw error;
 
       toast({ title: "Success", description: "Request declined." });
-      loadData();
+      refreshRequestViews();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
@@ -345,7 +350,7 @@ export default function Requests() {
         if (error) throw error;
 
         toast({ title: "Success", description: "Request cancelled." });
-        loadData();
+        refreshRequestViews();
         return;
       }
 
@@ -361,7 +366,7 @@ export default function Requests() {
       if (error) throw error;
 
       toast({ title: "Success", description: "Request cancelled." });
-      loadData();
+      refreshRequestViews();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
