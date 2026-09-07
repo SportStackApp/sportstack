@@ -1,12 +1,40 @@
 # SportStack Current State
 
-Last updated: 2026-09-07
+Last updated: 2026-09-08
 
 This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
-## Current verified standing — 7 September 2026
+## Current verified standing — 8 September 2026
+
+- The tested Dev repair commit is `4bdc5c2`. At that commit, Dev/Main divergence is 39/8.
+  Main remains `af21ae3c06a2d66d2eb9c4edf64bb2c185869927` and Production remains
+  `3d9bc530b04ada938da751d68b1fea908371c5b0`. A later documentation-only Dev commit may sit above
+  `4bdc5c2`; fetch `origin/dev` when an exact tip is required.
+- The named-finals defect is fixed on Dev. Schedule extraction now accepts a date/time only from
+  the exact fixture card containing the target match and rejects shared or multi-match context.
+  Eight focused tests pass, and all five previously affected public Hockey Ballarat finals fixtures
+  resolved to their own expected start. No scraper workflow or Production system was run or changed.
+- B1 evidence is corrected rather than reconstructed. The original rehearsal SHA-256 cannot be
+  reconciled with the source migration under LF or CRLF, so exact-artifact rehearsal proof remains
+  **UNKNOWN**. The source and released commits do contain the same immutable Git blob. The verifier
+  now enforces that distinction.
+- High-risk B1 verification tools now fail closed: runtime SQL stops at the first error; the Dev
+  compatibility runner generates only its fixed reviewed rollback check; and the historical tool
+  that converted database inventory into executable SQL is disabled.
+- A previous clean trial merge joined Dev and Main locally, produced five documentation conflicts,
+  and resulted in the same final file tree as Dev after current documentation won. Nothing was
+  pushed. The remaining material difference for a Main update is the one-line Production scraper
+  workflow input. Because Main schedules that workflow with Production secrets, Aaron must approve
+  that exact effect before Main changes.
+- Quality at `4bdc5c2`: 175 Python tests, 47 Vitest files/183 tests, TypeScript and Production build
+  pass. Full lint remains the known 346-error/77-warning repository baseline; the changed files add
+  no lint finding. Dev Quality run `34133621868` passed, Vercel deployment `6310831491` succeeded
+  and `https://dev.sportstackapp.com.au` returned HTTP 200. Production and its database remain
+  untouched.
+
+### Superseded 7 September audit snapshot
 
 - The fresh GitHub audit base is Development `c0090a221e807be0de6326b72f593f4be43a9610`, Main
   `af21ae3c06a2d66d2eb9c4edf64bb2c185869927` and Production

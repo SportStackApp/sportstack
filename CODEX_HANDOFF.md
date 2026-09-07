@@ -1,6 +1,27 @@
 # Codex Handoff
 
-Last updated: 2026-09-07
+Last updated: 2026-09-08
+
+## 8 September — alignment blockers repaired on Dev
+
+- Tested repair commit `4bdc5c2` is pushed to Dev. Dev Quality run `34133621868` passed, Vercel
+  deployment `6310831491` succeeded and the public Dev address returned HTTP 200. The commit fixes
+  the named-finals schedule parser, amends the unreconciled B1 rehearsal fingerprint and makes the
+  B1 verification utilities fail closed.
+- The parser now requires the target match's exact fixture card. Eight focused tests and all five
+  previously affected public Hockey Ballarat finals fixtures pass. No live database write or
+  workflow execution occurred.
+- The original B1 rehearsal SHA-256 does not match the named source migration under LF or CRLF and
+  remains **UNKNOWN — cannot be reconciled**. Source commit `d27cb60` and released Production commit
+  `3d9bc53` contain the same immutable migration blob; that is the narrower claim now verified.
+- Full verification passes: 175 Python tests, 47 Vitest files/183 tests, TypeScript and Production
+  build. Full lint remains at the established 346-error/77-warning baseline.
+- At the repair commit, Dev/Main divergence is 39/8. Main is still `af21ae3`; Production is still
+  `3d9bc53`. A prior clean local merge produced five documentation conflicts and a final tree equal
+  to Dev after current documentation was retained.
+- The next controlled step is to publish the current documentation and rebuild the clean local
+  reconciliation candidate. Do not change Main until Aaron approves the one-line Production-scraper
+  workflow input. Production remains separately approval-gated.
 
 ## 7 September — current standing and documentation review
 

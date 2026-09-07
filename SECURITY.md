@@ -31,4 +31,6 @@ Confirm with the owner before:
 
 ## Data safety
 
-The same Supabase project is used for development and production data. Treat all data as real, keep admin scope checks intact, and avoid exposing private player, team, token, or admin-only data.
+Development and Main share the SportStack Dev Supabase project. Production uses a separate SportStack
+Production Supabase project. Treat data in both projects as real, keep admin scope checks intact, and
+avoid exposing private player, team, token, or admin-only data.

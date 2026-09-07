@@ -1,5 +1,9 @@
 # SportStack Production readiness packet — 5 September 2026
 
+> **Historical packet:** the Player MVP lifecycle and narrow B1 access packages were subsequently
+> approved and released. Use `docs/current-state.md`, `docs/consolidated-open-items-plan.md` and the
+> dated release records for current standing. The broad Main-to-Production gate remains open.
+
 ## Decision
 
 **Status: not ready for Production approval.**

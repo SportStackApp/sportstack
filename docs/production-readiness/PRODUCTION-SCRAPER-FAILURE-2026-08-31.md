@@ -1,6 +1,11 @@
 # Production scraper failure diagnosis — 31 August 2026
 
-Status: **confirmed High operational defect; repair is approval-gated**
+Status: **repaired and verified on Dev; Main workflow update remains approval-gated**
+
+**8 September update:** Dev repair `4bdc5c2` binds schedule timing to the target match's exact
+fixture card and rejects ambiguous context. Eight focused tests and all five affected public fixtures
+pass. Main `af21ae3` does not yet carry the home-team URL workflow input, so the Production schedule
+has not changed. See `NAMED-FINALS-PARSER-VERIFICATION-2026-09-08.json`.
 
 This was a read-only diagnosis. No workflow, Production system, database or secret was changed.
 

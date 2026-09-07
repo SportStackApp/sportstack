@@ -1,6 +1,6 @@
 # SportStack — Single Improvement and Production Readiness Plan
 
-**Updated:** 7 September 2026
+**Updated:** 8 September 2026
 
 **Active environment:** Development (`dev`)
 
@@ -11,39 +11,37 @@ artifacts provide evidence. They do not create separate competing work plans.
 
 ## Immediate decision — reconcile Dev and Main
 
-The B1 access package is released to Production at `3d9bc53`. The immediate repository decision is
-now how to reconnect Dev and Main without losing either branch's evidence or accidentally changing
-the Production scraper schedule.
+The B1 access package is released to Production at `3d9bc53`. Dev repair commit `4bdc5c2` is pushed,
+Dev Quality run `34133621868` passed and the hosted Dev deployment is healthy. It closes the two
+proven review blockers without changing Main or Production:
 
-Verified 7 September audit base (the later review commits change documentation only):
-
-- Dev's audit base is `c0090a2`, Main is `af21ae3` and Production is `3d9bc53`. Re-fetch GitHub for
-  Dev's exact current documentation commit before reconciliation.
-- Dev and Main have diverged by 36 Dev-only and eight Main-only commits. Seven ordinary Main patches
-  are already patch-equivalent in Dev and the eighth Main-only commit is history-only. Dev still has
-  36 newer commits, including the B1 work; reconnecting the histories also requires shared-document
-  reconciliation.
-- A trial merge predicts conflicts in `CODEX_HANDOFF.md`, this plan, `docs/current-state.md`,
-  `docs/production-readiness/GATES.md`, the 5 September readiness packet and
-  `notes/known-issues.md`.
-- One Dev-only package adds a Production scraper workflow input that Main does not have. Its helper
-  and two focused tests are also Dev-only. A Main workflow change is separately approval-gated
-  because Main's scheduled workflow uses Production secrets.
-- Do not merge or push either release branch during the documentation review. Preserve the current
-  untracked evidence/data folders and perform reconciliation in a clean worktree.
+- Named-finals schedule extraction is bound to the target fixture's exact card. Eight focused tests
+  and the five previously affected public Hockey Ballarat fixtures pass.
+- The unreconciled B1 rehearsal fingerprint is now explicitly **UNKNOWN**. The source and released
+  migration are linked by their identical immutable Git blob, without claiming that the lost exact
+  rehearsal artifact was recovered.
+- Rollback verification is fail-closed, and the historical database-inventory-to-SQL generator is
+  disabled.
+- At `4bdc5c2`, Dev/Main divergence is 39/8. Main remains `af21ae3`; Production remains `3d9bc53`.
+  Seven normal Main patches are already represented in Dev and one Main-only commit is history-only.
+- The pre-repair clean trial candidate `18ed99c` merged Dev `12ab710` with Main and produced five
+  documentation conflicts. After keeping current canonical documentation, its final file tree
+  matched that Dev base. It must now be rebuilt from the repaired Dev tip; no remote release branch
+  changed during the trial.
+- The remaining consequential Main difference is one workflow input that supplies the selected
+  fixture's home-team URL to the Production scraper schedule. Main uses Production secrets, so this
+  exact workflow effect still requires Aaron's approval.
 
 Recommended next sequence:
 
-1. Freeze a reconciliation candidate from current `origin/dev` in a clean worktree.
-2. Merge current `origin/main` into that candidate, retaining the verified Dev application state and
-   manually combining the six evidence-document conflicts.
-3. Prove that no feature, migration, Edge Function or workflow was silently removed or duplicated.
-4. Run focused tests, full Vitest, Python regressions, lint comparison, TypeScript and Production build,
-   followed by a deployed Dev smoke test.
-5. Present the exact workflow difference and candidate result to Aaron. Do not update Main until its
-   Production-targeting workflow effect is understood and approved.
-6. If approved, update Dev first and then fast-forward Main to the tested Dev commit. Keep Production
-   at `3d9bc53` until a separate exact release is prepared and approved.
+1. Publish this current documentation to Dev.
+2. Rebuild the clean Dev/Main reconciliation candidate from the resulting `origin/dev` tip.
+3. Prove the candidate file tree equals Dev and that no feature, migration, Edge Function or
+   workflow was silently removed or duplicated.
+4. Present the exact one-line workflow effect and candidate commit to Aaron.
+5. Only if Aaron approves that Production-capable workflow effect, update Main to the tested
+   candidate and verify staging plus the scheduled-workflow definition.
+6. Keep Production at `3d9bc53`. Any later Production release remains a new, separate approval.
 
 ## Historical owner priority — Player MVP presentation for Grampians (5 September)
 

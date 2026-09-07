@@ -29,7 +29,7 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
 - [x] R9: focused regression tests and the complete Vitest suite pass
   CHECK: npx vitest run
   EXPECT: Test Files
-  EVIDENCE: The 5 September frozen Dev candidate passed 46 files and 181 tests; Dev Quality run `33969370123` also passed.
+  EVIDENCE: The 8 September Dev repair passed 47 files and 183 tests. The earlier Dev Quality run `33969370123` also passed for the 5 September frozen candidate.
 
 - [x] R10: TypeScript validates the complete application
   CHECK: npx tsc --noEmit
@@ -42,7 +42,7 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
   EVIDENCE: npm run build passed on the 5 September frozen candidate. The known large-bundle/dynamic-import and stale Browserslist warnings remain non-blocking debt.
 
 - [x] R12: full lint is measured and no new error exists beyond the documented legacy baseline
-  EVIDENCE: Full lint is 343 errors/77 warnings, exactly at and not above the accepted current baseline. The locked baseline verifier passed.
+  EVIDENCE: Full lint is 346 errors/77 warnings, matching the established current repository baseline. The changed 8 September repair files introduce no lint finding.
 
 - [ ] R13: at least one complete read-only walk-away cycle has current evidence and no unresolved Blocker or High finding
   EVIDENCE: The 30 August Dev UI cycle found no new Blocker or High application defect, but READY-009 remains an unresolved High operational scraper item.
@@ -50,20 +50,20 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
 - [x] R14: any authorised disposable-data cycle proves create, save, reopen and recoverable cleanup without retained test damage
   EVIDENCE: Two labelled Vote Tally presentations were created in Dev, published to one reserved Player, reopened through the deep link, denied to an unrelated Voter, then withdrawn with audit reasons. The required withdrawn audit rows remain retained.
 
-- [x] R15: the reviewed Dev package is integrated into Main and passes staging deployment plus proportionate smoke testing
-  EVIDENCE: Main was integrated by merge commit e6fda0f. The earlier signed-in Main Player presentation result is reused because the playback runtime files are unchanged; it covered Axe, overflow, replay, pause/resume and skip before withdrawal. The new candidate passed focused tally tests and signed-out direct-route checks. Coordinator remains separately open under R6.
+- [ ] R15: the reviewed Dev package is integrated into Main and passes staging deployment plus proportionate smoke testing
+  EVIDENCE: An earlier 5 September package passed this gate at merge `e6fda0f`, but the current Dev package is not integrated. At repair commit `4bdc5c2`, Dev is 39 commits ahead and eight behind Main. The new reconciliation candidate and Main staging checks remain pending.
 
 - [ ] R16: the exact frozen Main-to-Production application, migration, function, job and workflow package is independently reconciled against live Production
-  EVIDENCE: Stage 1 maps the current 266 Main-only commits, one Production-only commit and 438 paths. The 115 migration paths are 114 Main-only plus one Production-only baseline, and all are classified in the CSV register. Production history has 159 versions, Main has 186 files and only eight names overlap. Production's 11 deployed Edge Functions are also mapped, including eight drift/mismatch cases. The dormant B1a structural migration now passes Production-copy apply, repeat, rollback and Dev no-op checks. B1b security, B1c membership workflow, B1d application allow-list and the complete hosted rehearsal remain open, so this gate does not pass.
+  EVIDENCE: The narrow B1 package was separately reconciled, approved and released at `3d9bc53`; that does not close this whole-branch gate. Main still has 266 commits not in Production and the historical migration/Edge Function map remains required for any broad release. A Dev/Main reconciliation is being prepared separately and is not Production authority.
 
 - [ ] R17: Production backup, migration dry-run, rollback and post-release smoke procedures are proven without exposing secrets
-  EVIDENCE: The Player MVP lifecycle migration passed a Production-derived transactional rollback and isolated real apply, closing the expected 355 sessions without changing notification/email counts. The new B1a foundation also passed isolated apply, repeat and rollback without changing the three checked application-table counts. The logical backup is not a faithful hosted Auth/Storage restore and B1b-B1d remain unbuilt, so the whole-release rehearsal is not complete.
+  EVIDENCE: The narrow Player MVP and B1 releases each have their own verified backup, rehearsal and rollback evidence. Those completed packages do not prove recovery for a future whole Main-to-Production release, so this gate remains open for that future exact package.
 
 - [ ] R18: required Dev, Main and Production-capable workflow checks, including scrapers, are green or have an explicitly accepted operational exception
-  EVIDENCE: The latest six Production Supabase Scrapers schedules are green, including run 34015450755 at Main af21ae3. The named-final blank-round repair passed focused tests on Dev but remains deliberately absent from Main, so the previously reproduced edge case is not proven fixed in the operational workflow. GitHub schedules use default branch Main. Production workflow changes remain a separate review and approval package, so this gate stays open.
+  EVIDENCE: Recent Production scraper schedules are green at Main `af21ae3`. Dev repair `4bdc5c2` binds named-final timing to the exact fixture card; eight focused tests, the five previously affected public fixtures and Dev Quality run `34133621868` pass. Main still lacks the required home-team URL workflow input. Because scheduled workflows run from Main with Production secrets, Aaron's exact approval and post-update observation are still required.
 
 - [ ] R19: Aaron explicitly approves the exact frozen Production package after reviewing risks, accepted debt and rollback evidence
-  EVIDENCE: pending
+  EVIDENCE: Aaron approved the narrow B1 package released at `3d9bc53`. That approval is complete for B1 only and does not approve a future broad Main-to-Production package.
 
 - [ ] R20: the approved Production release passes signed-out and signed-in smoke tests, diagnostics and scheduled-job observation within the rollback window
-  EVIDENCE: pending
+  EVIDENCE: The narrow B1 release passed technical post-release checks; Aaron's authenticated B1 role/scope smoke remains open. Any future broad release requires its own complete evidence.
