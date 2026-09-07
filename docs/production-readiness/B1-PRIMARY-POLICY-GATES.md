@@ -26,7 +26,7 @@ Scope: Allow one Primary team per association and complete a player-submitted Pr
   EXPECT: built in
   EVIDENCE: the frozen candidate passed npx tsc --noEmit and npm run build, five Vitest files/21 tests, 13 focused Python policy tests and 96 tracked Python tests. Dev Quality also passed at deployed commit ed68664. Full lint remains baseline debt.
 
-- [ ] P7: the frozen candidate, release packet and Big Brain mirror record the confirmed policy and verified evidence
+- [x] P7: the frozen candidate, release packet and Big Brain mirror record the confirmed policy and verified evidence
   CHECK: pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check
   EXPECT: CHECK_OK
-  EVIDENCE: pending
+  EVIDENCE: SYNC_OK and CHECK_OK passed for origin/dev commit 858207a69f51cd93c3e520b41b3355e494bfa3bb, publishing 82 files to D:\AI-Workspace\Memory\Big Brain.
