@@ -50,8 +50,8 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
 - [x] R14: any authorised disposable-data cycle proves create, save, reopen and recoverable cleanup without retained test damage
   EVIDENCE: Two labelled Vote Tally presentations were created in Dev, published to one reserved Player, reopened through the deep link, denied to an unrelated Voter, then withdrawn with audit reasons. The required withdrawn audit rows remain retained.
 
-- [ ] R15: the reviewed Dev package is integrated into Main and passes staging deployment plus proportionate smoke testing
-  EVIDENCE: An earlier 5 September package passed this gate at merge `e6fda0f`, but the current Dev package is not integrated. At repair commit `4bdc5c2`, Dev is 39 commits ahead and eight behind Main. The new reconciliation candidate and Main staging checks remain pending.
+- [x] R15: the reviewed Dev package is integrated into Main and passes staging deployment plus proportionate smoke testing
+  EVIDENCE: Dev and Main were reconciled at source commit `58927de` after exact owner approval of the Production-capable workflow effect. Both branches carry the same reviewed tree; scheduled run `34140644053` then proved Main loaded that commit. This documentation close-out is published identically to both branches. Production remains separately gated.
 
 - [ ] R16: the exact frozen Main-to-Production application, migration, function, job and workflow package is independently reconciled against live Production
   EVIDENCE: The narrow B1 package was separately reconciled, approved and released at `3d9bc53`; that does not close this whole-branch gate. Main still has 266 commits not in Production and the historical migration/Edge Function map remains required for any broad release. A Dev/Main reconciliation is being prepared separately and is not Production authority.
@@ -59,8 +59,8 @@ Scope: Prove the frozen SportStack release package is safe to offer to Aaron for
 - [ ] R17: Production backup, migration dry-run, rollback and post-release smoke procedures are proven without exposing secrets
   EVIDENCE: The narrow Player MVP and B1 releases each have their own verified backup, rehearsal and rollback evidence. Those completed packages do not prove recovery for a future whole Main-to-Production release, so this gate remains open for that future exact package.
 
-- [ ] R18: required Dev, Main and Production-capable workflow checks, including scrapers, are green or have an explicitly accepted operational exception
-  EVIDENCE: Recent Production scraper schedules are green at Main `af21ae3`. Dev repair `4bdc5c2` binds named-final timing to the exact fixture card; eight focused tests, the five previously affected public fixtures and Dev Quality run `34133621868` pass. Main still lacks the required home-team URL workflow input. Because scheduled workflows run from Main with Production secrets, Aaron's exact approval and post-update observation are still required.
+- [x] R18: required Dev, Main and Production-capable workflow checks, including scrapers, are green or have an explicitly accepted operational exception
+  EVIDENCE: Aaron approved the exact home-team URL workflow effect and it reached Main at `58927de`. The first scheduled Production scraper run on that commit, `34140644053`, succeeded. Its safe selector used the expected Production project guard, selected zero due fixtures and correctly skipped the target update job. No manual run or Production application release occurred.
 
 - [ ] R19: Aaron explicitly approves the exact frozen Production package after reviewing risks, accepted debt and rollback evidence
   EVIDENCE: Aaron approved the narrow B1 package released at `3d9bc53`. That approval is complete for B1 only and does not approve a future broad Main-to-Production package.

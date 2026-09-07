@@ -9,11 +9,12 @@
 `docs/current-state.md`, `CODEX_HANDOFF.md`, `notes/known-issues.md`, feedback records and test
 artifacts provide evidence. They do not create separate competing work plans.
 
-## Immediate decision — reconcile Dev and Main
+## Completed — reconcile Dev and Main
 
-The B1 access package is released to Production at `3d9bc53`. Dev repair commit `4bdc5c2` is pushed,
-Dev Quality run `34133621868` passed and the hosted Dev deployment is healthy. It closes the two
-proven review blockers without changing Main or Production:
+The B1 access package remains released to Production at `3d9bc53`. Aaron approved the exact
+Production-capable workflow effect and Dev/Main were reconciled at source commit `58927de`. The
+first scheduled Production scraper run on that commit, `34140644053`, succeeded: the safe selector
+found zero due fixtures, so the target update job was correctly skipped.
 
 - Named-finals schedule extraction is bound to the target fixture's exact card. Eight focused tests
   and the five previously affected public Hockey Ballarat fixtures pass.
@@ -22,26 +23,17 @@ proven review blockers without changing Main or Production:
   rehearsal artifact was recovered.
 - Rollback verification is fail-closed, and the historical database-inventory-to-SQL generator is
   disabled.
-- At `4bdc5c2`, Dev/Main divergence is 39/8. Main remains `af21ae3`; Production remains `3d9bc53`.
-  Seven normal Main patches are already represented in Dev and one Main-only commit is history-only.
-- The pre-repair clean trial candidate `18ed99c` merged Dev `12ab710` with Main and produced five
-  documentation conflicts. After keeping current canonical documentation, its final file tree
-  matched that Dev base. It must now be rebuilt from the repaired Dev tip; no remote release branch
-  changed during the trial.
-- The remaining consequential Main difference is one workflow input that supplies the selected
-  fixture's home-team URL to the Production scraper schedule. Main uses Production secrets, so this
-  exact workflow effect still requires Aaron's approval.
+- Dev and Main now share the same reconciled history and are published with this same documentation
+  close-out. Production remains `3d9bc53`; no Main-to-Production merge or Production application
+  deployment was authorised.
 
-Recommended next sequence:
+Next sequence:
 
-1. Publish this current documentation to Dev.
-2. Rebuild the clean Dev/Main reconciliation candidate from the resulting `origin/dev` tip.
-3. Prove the candidate file tree equals Dev and that no feature, migration, Edge Function or
-   workflow was silently removed or duplicated.
-4. Present the exact one-line workflow effect and candidate commit to Aaron.
-5. Only if Aaron approves that Production-capable workflow effect, update Main to the tested
-   candidate and verify staging plus the scheduled-workflow definition.
-6. Keep Production at `3d9bc53`. Any later Production release remains a new, separate approval.
+1. Complete Aaron's authenticated Production B1 role/scope and labelled-request smoke test.
+2. Reconcile access to the Vercel project that owns the custom Production domain.
+3. Continue the outstanding Dev quality, actual-role, responsive and workflow acceptance tasks
+   below, using the now-aligned Dev/Main base.
+4. Keep Production at `3d9bc53`. Any later Production release remains a new, separate approval.
 
 ## Historical owner priority — Player MVP presentation for Grampians (5 September)
 
@@ -131,16 +123,15 @@ released as a narrow Production-based compatibility package, not by merging Main
 diverge by 266 Main-only and eight Production-only commits. A fresh full-delta inventory is required
 before any later Main-to-Production proposal; the previous path counts must not be reused as current.
 
-**Dev-to-Main alignment update:** the 6 September promotion through source Dev commit `2d7ed63` was
-valid at that time. Dev subsequently received the B1 compatibility work and release evidence, so it
-no longer matches Main. Use the immediate reconciliation decision above as the current branch plan.
+**Dev-to-Main alignment update:** Dev and Main were reconciled at source commit `58927de`, including
+the specifically approved home-team URL workflow input. Scheduled run `34140644053` then passed and
+safely found zero due fixtures. This supersedes the earlier divergent-branch wording.
 
 ## Current position
 
-- Dev's audit base is `c0090a2`; its Dev Quality run passed and later review commits are
-  documentation-only. Main is `af21ae3`; the latest twelve inspected
-  Production Supabase Scraper runs from Main passed. Production is the approved B1 release
-  `3d9bc53`. All three public addresses return HTTP 200 and serve their matching version labels.
+- Dev and Main are aligned from source commit `58927de` and this shared documentation close-out.
+  The first scheduled Production Supabase Scraper run on that source commit passed with zero due
+  fixtures. Production is the separately approved B1 release `3d9bc53` and was not advanced.
 - The latest feedback snapshot, recorded 5 September, contains 88 retained records: 0 OPEN,
   53 REVIEWED and 35 CLOSED. It has not been re-queried during this documentation review.
 - That 5 September reviewed queue was 5 P0, 16 P1, 18 P2, 5 P3 and 9 parked items.

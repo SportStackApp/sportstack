@@ -8,10 +8,12 @@ Update this file after every meaningful Codex task, pull request, schema change,
 
 ## Current verified standing — 8 September 2026
 
-- The tested Dev repair commit is `4bdc5c2`. At that commit, Dev/Main divergence is 39/8.
-  Main remains `af21ae3c06a2d66d2eb9c4edf64bb2c185869927` and Production remains
-  `3d9bc530b04ada938da751d68b1fea908371c5b0`. A later documentation-only Dev commit may sit above
-  `4bdc5c2`; fetch `origin/dev` when an exact tip is required.
+- Dev and Main were reconciled at source commit
+  `58927de39daa230fce59342f1f1a0c4ef47ab9a7`. The reconciliation retained the tested Dev tree,
+  joined Main's history without duplicating its patch-equivalent changes, and carried the approved
+  home-team URL input into Main's scheduled Production scraper definition. This documentation
+  close-out is published identically to both branches, so fetch the remotes for their exact shared
+  documentation tip. Production remains `3d9bc530b04ada938da751d68b1fea908371c5b0`.
 - The named-finals defect is fixed on Dev. Schedule extraction now accepts a date/time only from
   the exact fixture card containing the target match and rejects shared or multi-match context.
   Eight focused tests pass, and all five previously affected public Hockey Ballarat finals fixtures
@@ -23,16 +25,17 @@ Update this file after every meaningful Codex task, pull request, schema change,
 - High-risk B1 verification tools now fail closed: runtime SQL stops at the first error; the Dev
   compatibility runner generates only its fixed reviewed rollback check; and the historical tool
   that converted database inventory into executable SQL is disabled.
-- A previous clean trial merge joined Dev and Main locally, produced five documentation conflicts,
-  and resulted in the same final file tree as Dev after current documentation won. Nothing was
-  pushed. The remaining material difference for a Main update is the one-line Production scraper
-  workflow input. Because Main schedules that workflow with Production secrets, Aaron must approve
-  that exact effect before Main changes.
+- Aaron approved the exact Main workflow alignment with approval token `58927de`. The first
+  scheduled `Production Supabase Scrapers` run on that commit, run `34140644053`, succeeded. Its
+  safe due-fixture selector ran against the expected Production project, selected zero due fixtures
+  and therefore skipped the target update job; no manual workflow or Production application release
+  occurred.
 - Quality at `4bdc5c2`: 175 Python tests, 47 Vitest files/183 tests, TypeScript and Production build
   pass. Full lint remains the known 346-error/77-warning repository baseline; the changed files add
   no lint finding. Dev Quality run `34133621868` passed, Vercel deployment `6310831491` succeeded
-  and `https://dev.sportstackapp.com.au` returned HTTP 200. Production and its database remain
-  untouched.
+  and `https://dev.sportstackapp.com.au` returned HTTP 200. The later alignment and scheduled
+  no-due-fixture observation close the Dev-to-Main workflow blocker. Production application branch
+  `prod` remains untouched.
 
 ### Superseded 7 September audit snapshot
 

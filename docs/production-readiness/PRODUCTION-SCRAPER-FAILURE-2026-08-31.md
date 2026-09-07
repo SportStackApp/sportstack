@@ -1,11 +1,17 @@
 # Production scraper failure diagnosis — 31 August 2026
 
-Status: **repaired and verified on Dev; Main workflow update remains approval-gated**
+Status: **repaired, aligned to Main and verified by the first scheduled run**
+
+**8 September close-out:** Aaron approved the exact workflow alignment at source commit `58927de`.
+Scheduled run `34140644053` succeeded on that commit. The `Select completed fixture windows` job ran
+the guarded due-fixture selector, found zero due fixtures and safely skipped the target-game update
+job. No manual Production run was started and no Production application, branch, secret or migration
+was changed.
 
 **8 September update:** Dev repair `4bdc5c2` binds schedule timing to the target match's exact
 fixture card and rejects ambiguous context. Eight focused tests and all five affected public fixtures
-pass. Main `af21ae3` does not yet carry the home-team URL workflow input, so the Production schedule
-has not changed. See `NAMED-FINALS-PARSER-VERIFICATION-2026-09-08.json`.
+pass. The approved home-team URL workflow input is now in Main through source alignment commit
+`58927de`. See `NAMED-FINALS-PARSER-VERIFICATION-2026-09-08.json`.
 
 This was a read-only diagnosis. No workflow, Production system, database or secret was changed.
 
@@ -35,6 +41,6 @@ identifier. That happens to work for labels containing a number and fails for fi
 3. Add regression tests for Semi Finals and other non-numeric labels.
 4. Run a full Hockey Ballarat refresh, then a controlled target verification.
 
-The repair includes a Production-capable workflow path and therefore requires Aaron's separate
-approval before implementation or rollout. Until it is repaired and a controlled rerun passes,
-Production readiness gates R13 and R18 remain open.
+The repair's Production-capable workflow path received Aaron's separate approval and its first
+scheduled run passed. Production readiness gate R18 is closed. R13 remains open only for the broader
+read-only walk-away evidence requirement recorded in the central gate register.

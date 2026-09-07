@@ -2,6 +2,21 @@
 
 Last updated: 2026-09-08
 
+## 8 September — Dev/Main alignment completed and observed
+
+- Aaron approved the exact Main workflow alignment using token `58927de`. Dev and Main were
+  reconciled at source commit `58927de39daa230fce59342f1f1a0c4ef47ab9a7`; the approved workflow
+  input supplies the selected fixture's home-team URL to the Production schedule.
+- The first scheduled `Production Supabase Scrapers` run on that commit was run `34140644053`. It
+  completed successfully. The `Select completed fixture windows` job used the expected Production
+  project guard, selected zero due fixtures and the target-game update job was correctly skipped.
+- No manual Production workflow was run. No migration, secret, database, Production application or
+  `prod` branch change was made. Production remains
+  `3d9bc530b04ada938da751d68b1fea908371c5b0`.
+- This documentation close-out is published as the same commit on Dev and Main. The next work is the
+  remaining Dev acceptance and quality backlog; any Main-to-Production release remains separately
+  approval-gated.
+
 ## 8 September — alignment blockers repaired on Dev
 
 - Tested repair commit `4bdc5c2` is pushed to Dev. Dev Quality run `34133621868` passed, Vercel
