@@ -2,13 +2,14 @@
 
 ## Current decision
 
-**HOLD FOR PRODUCTION PRE-FLIGHT. Do not deploy yet.**
+**READY FOR EXACT OWNER APPROVAL. Do not deploy without it.**
 
 The candidate is technically reproducible, the hosted rehearsal passed and the actual-role
 Player-to-Team-Manager Primary-team walkthrough passed on Development. Aaron confirmed all open
 Primary-team and account-wide Player/Voter policy questions. Production approval remains blocked
-until Production access supports a fresh read-only drift check, a verified backup is taken and
-Aaron gives exact approval for this frozen candidate.
+until Aaron gives exact approval for this frozen candidate. The fresh read-only Production drift
+check and encrypted logical backup completed successfully on 7 September; evidence is in
+`B1-PRODUCTION-PREFLIGHT-2026-09-07.md`.
 
 ## Exact package identity
 
@@ -61,23 +62,23 @@ Apply only in this order and stop on the first discrepancy:
 
 No existing migration may be edited, renamed or marked complete manually.
 
-## Required pre-flight
+## Completed pre-flight
 
 1. Confirm Git identity `Aaron Mullane <admin@sportstackapp.com.au>` and GitHub account
    `SportStackApp`.
 2. Fetch all branches and confirm Production is still exactly `a1d23c7`, the candidate is exactly
    `3d9bc53`, and the candidate is a direct descendant of Production.
-3. Restore read-only Production database access. The current Supabase connector returned a
-   permission error, so current database drift is **not confirmed**.
-4. Capture the current migration list, schema fingerprint, grants, policies, scheduled jobs and
-   protected row counts. The ten B1 versions must be absent.
-5. Create a fresh encrypted logical backup of the affected Production schema and data, record its
-   SHA-256, and prove it can be read or restored in isolation. Confirm the platform backup position.
-6. Confirm no external email, notification or scraper job can be triggered by the migration run.
+3. Read-only Production database access passed through the Windows-encrypted, Production-pinned
+   Supabase profile.
+4. The fresh migration list, schema fingerprint, grants, policies, scheduled jobs and protected
+   row counts match the reviewed baseline. All ten B1 versions are absent.
+5. A fresh encrypted logical backup was created, hash-verified and read successfully in isolation.
+   The retained path and non-secret manifest evidence are recorded in the pre-flight report.
+6. The migration sources contain no cron, outbound email/notification, HTTP or scraper effect.
 
-Last verified reference counts were 159 Production migration versions, 757 profiles, 1,260 team
-memberships and six primary-team requests. These are references only: fresh pre-flight counts become
-the actual baseline. After migration, all three protected row counts must equal that fresh baseline.
+Fresh Production counts are 159 migration versions, 757 profiles, 1,260 team memberships and six
+primary-team requests. These are now the release baseline. After migration, all three protected row
+counts must equal that fresh baseline.
 If Production still has 159 versions, the expected final count is 169. The foundation adds 12 tables
 and one sequence without adding application users or membership rows.
 
@@ -120,7 +121,7 @@ made after it. Never delete migration-history rows or rewrite an applied migrati
 
 ## Independent risk review
 
-- Recommendation: `hold_for_production_preflight`
+- Recommendation: `ready_for_exact_owner_approval`
 - Impact if wrong: high
 - Regression likelihood: moderate
 - Regression protection: substantial
@@ -151,7 +152,7 @@ A separate read-only source review raised four hypotheses:
 - [x] Cross-association Primary-team demotion policy confirmed.
 - [x] Player-submitted Primary request as consent confirmed.
 - [x] Account-wide Player/Voter changes restricted to Super Admin and retested on staging and Dev.
-- [ ] Fresh Production drift check and verified backup complete.
+- [x] Fresh Production drift check and verified encrypted backup complete.
 - [ ] Exact package approval received.
 
 When every earlier box is complete, the required approval is:

@@ -28,10 +28,17 @@ Update this file after every meaningful Codex task, pull request, schema change,
   and Production remain unchanged. Final exact-range security scan
   `e155580f-c97f-4134-99bb-ff4bd6bcce17` completed with zero findings across all six reviewed
   surfaces. Its limitations were the unavailable TAC advisory connector and the intentionally
-  separate fresh Production pre-flight. The remaining release gates are a fresh Production drift
-  check, verified backup and Aaron's exact approval of candidate `3d9bc53`.
+  separate fresh Production pre-flight.
+- The Production pre-flight now passes. Production remains exactly `a1d23c7`; its schema fingerprint
+  matches the rehearsed baseline, all ten B1 migrations are absent, and fresh protected counts are
+  757 profiles, 1,260 memberships and six requests. The three existing schedules were inventoried;
+  the candidate adds or invokes no cron, outbound delivery or scraper job.
+- A fresh AES-256 encrypted roles/schema/data backup was created outside the repository, authenticated,
+  decrypted and read successfully in isolation. No plaintext SQL remains. The only release gate left
+  is Aaron's exact approval of candidate `3d9bc53`; Production is still unchanged.
 - Evidence: `docs/production-readiness/B1-PRIMARY-POLICY-WALKTHROUGH-2026-09-07.md` and
-  `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
+  `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md` plus
+  `docs/production-readiness/B1-PRODUCTION-PREFLIGHT-2026-09-07.md`.
 
 ## 7 September B1 hosted rehearsal complete
 

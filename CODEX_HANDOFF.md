@@ -22,10 +22,16 @@ Last updated: 2026-09-07
 - Final exact-range security scan `e155580f-c97f-4134-99bb-ff4bd6bcce17` completed with zero
   findings across six reviewed surfaces. Delegated reviewers and the TAC advisory connector were
   unavailable, so the parent completed the review sequentially and recorded those limitations.
-- Production remains unchanged and unauthorised. Complete a fresh Production drift check and
-  verified backup, then obtain the exact approval for `3d9bc53`.
+- Production remains unchanged and unauthorised. The fresh read-only Production pre-flight passes:
+  159 migrations, zero B1 versions, schema fingerprint unchanged, protected counts 757/1,260/6,
+  and the three existing schedules inventoried with no B1 outbound or scraper effect.
+- A fresh encrypted roles/schema/data backup is retained outside the repository at
+  `C:\Users\mulla\AppData\Local\SportStack\backups\prod\2026-09-07-141416-pre-b1-3d9bc53`.
+  Authentication, decryption, isolated extraction, file hashes and readable SQL all passed; no
+  plaintext SQL remains. The only remaining gate is Aaron's exact approval for `3d9bc53`.
 - Evidence: `docs/production-readiness/B1-PRIMARY-POLICY-WALKTHROUGH-2026-09-07.md` and
-  `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
+  `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md` plus
+  `docs/production-readiness/B1-PRODUCTION-PREFLIGHT-2026-09-07.md`.
 
 ## 7 September — hosted B1 rehearsal passed
 
