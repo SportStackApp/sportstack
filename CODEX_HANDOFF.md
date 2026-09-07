@@ -4,8 +4,9 @@ Last updated: 2026-09-07
 
 ## 7 September — current standing and documentation review
 
-- Fresh remote refs are Dev `c0090a2`, Main `af21ae3` and Production `3d9bc53`. They are not aligned:
-  Dev/Main diverge 36/8, Main/Production 266/8 and Dev/Production 294/8.
+- The fresh audit base was Dev `c0090a2`, Main `af21ae3` and Production `3d9bc53`. They were not
+  aligned: Dev/Main diverged 36/8, Main/Production 266/8 and Dev/Production 294/8. The commits after
+  `c0090a2` from this review change documentation only; re-fetch GitHub for the exact Dev tip.
 - Dev Quality run `34084562761` passed at the current Dev tip. The latest twelve inspected Production
   Supabase Scraper runs from Main passed. Dev, Main and Production return HTTP 200 and serve matching
   version labels for their current commits.

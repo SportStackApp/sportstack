@@ -15,9 +15,10 @@ The B1 access package is released to Production at `3d9bc53`. The immediate repo
 now how to reconnect Dev and Main without losing either branch's evidence or accidentally changing
 the Production scraper schedule.
 
-Verified 7 September position:
+Verified 7 September audit base (the later review commits change documentation only):
 
-- Dev is `c0090a2`, Main is `af21ae3` and Production is `3d9bc53`.
+- Dev's audit base is `c0090a2`, Main is `af21ae3` and Production is `3d9bc53`. Re-fetch GitHub for
+  Dev's exact current documentation commit before reconciliation.
 - Dev and Main have diverged by 36 Dev-only and eight Main-only commits. Seven ordinary Main patches
   are already patch-equivalent in Dev and the eighth Main-only commit is history-only. Dev still has
   36 newer commits, including the B1 work; reconnecting the histories also requires shared-document
@@ -138,7 +139,8 @@ no longer matches Main. Use the immediate reconciliation decision above as the c
 
 ## Current position
 
-- Dev is `c0090a2`; its current Dev Quality run passed. Main is `af21ae3`; the latest twelve inspected
+- Dev's audit base is `c0090a2`; its Dev Quality run passed and later review commits are
+  documentation-only. Main is `af21ae3`; the latest twelve inspected
   Production Supabase Scraper runs from Main passed. Production is the approved B1 release
   `3d9bc53`. All three public addresses return HTTP 200 and serve their matching version labels.
 - The latest feedback snapshot, recorded 5 September, contains 88 retained records: 0 OPEN,

@@ -8,11 +8,12 @@ Update this file after every meaningful Codex task, pull request, schema change,
 
 ## Current verified standing — 7 September 2026
 
-- Fresh GitHub refs are Development `c0090a221e807be0de6326b72f593f4be43a9610`, Main
+- The fresh GitHub audit base is Development `c0090a221e807be0de6326b72f593f4be43a9610`, Main
   `af21ae3c06a2d66d2eb9c4edf64bb2c185869927` and Production
-  `3d9bc530b04ada938da751d68b1fea908371c5b0`.
-- The branches are not aligned. Counts below mean commits only on the first branch / commits only
-  on the second branch:
+  `3d9bc530b04ada938da751d68b1fea908371c5b0`. Dev's later commits from this review change
+  documentation only; re-fetch GitHub for the exact self-referential Dev tip.
+- The branches are not aligned. Counts at the audit base below mean commits only on the first
+  branch / commits only on the second branch:
   - Dev and Main: 36 / 8
   - Main and Production: 266 / 8
   - Dev and Production: 294 / 8
@@ -22,7 +23,7 @@ Update this file after every meaningful Codex task, pull request, schema change,
   Production scraper workflow input plus its helper and tests. Because scheduled workflows run from
   Main with Production secrets, that package needs an exact review and owner confirmation before a
   Main push that changes its behaviour.
-- Current hosted evidence is healthy: Dev Quality run `34084562761` passed at `c0090a2`; the latest
+- Hosted evidence at the audit base is healthy: Dev Quality run `34084562761` passed at `c0090a2`; the latest
   twelve inspected Production Supabase Scraper runs from Main passed; Dev, Main and Production each
   return HTTP 200. Their served versions are respectively `v2026.09.07+c0090a2`,
   `v2026.09.06+af21ae3` and `v2026.09.07+3d9bc53`.
