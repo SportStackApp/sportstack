@@ -82,14 +82,14 @@ const rpcNames = (source) => new Set(
 if (shouldRun("--check-owner-flag")) {
   const currentState = readRepoFile("docs/current-state.md");
   const allowList = readRepoFile("docs/production-readiness/B1-APPLICATION-ALLOW-LIST-2026-09-06.md");
-  assert(manifest.ownerConfirmation?.status === "CONFIRMATION_REQUIRED", "manifest owner confirmation is not open");
+  assert(manifest.ownerConfirmation?.status === "OBSERVED_PASSED", "manifest owner confirmation is not recorded as passed");
   assert(
-    currentState.includes("B1c owner walkthrough: CONFIRMATION REQUIRED"),
-    "current state does not retain the B1c owner confirmation gate",
+    currentState.includes("The complete Player-to-Team-Manager Primary-team change was observed"),
+    "current state does not record the observed B1c walkthrough",
   );
   assert(
-    allowList.includes("B1c owner walkthrough: CONFIRMATION REQUIRED"),
-    "allow-list handoff does not retain the B1c owner confirmation gate",
+    allowList.includes("The actual Player-to-Team-Manager walkthrough passed"),
+    "allow-list handoff does not record the observed B1c walkthrough",
   );
   if (failures.length === 0) console.log("B1_OWNER_CONFIRMATION_FLAG_OK");
 }
@@ -258,8 +258,8 @@ if (shouldRun("--check-regression")) {
 
 if (shouldRun("--check-release-manifest")) {
   assert(
-    manifest.status === "INDEPENDENT_REVIEW_COMPLETE_HOLD_FOR_OWNER_EVIDENCE",
-    "manifest does not accurately state its independent-review status",
+    manifest.status === "ACTUAL_ROLE_COMPLETE_HOLD_FOR_PRODUCTION_PREFLIGHT",
+    "manifest does not accurately state its current release status",
   );
   const blockers = new Set(manifest.releaseBlockers.map((entry) => entry.id));
   for (const required of [
@@ -270,7 +270,12 @@ if (shouldRun("--check-release-manifest")) {
   ]) {
     assert(blockers.has(required), `release blocker is missing: ${required}`);
   }
-  assert(manifest.releaseBlockers.every((entry) => entry.status === "OPEN"), "a release blocker was prematurely closed");
+  const statuses = new Map(manifest.releaseBlockers.map((entry) => [entry.id, entry.status]));
+  assert(statuses.get("B1C-OWNER-CONFIRMATION") === "RESOLVED", "owner walkthrough is not resolved");
+  assert(statuses.get("B1-PRIMARY-SEMANTICS-CONFIRMATION") === "RESOLVED", "Primary semantics are not resolved");
+  assert(statuses.get("B1-SIMPLE-ROLE-SEMANTICS-CONFIRMATION") === "RESOLVED", "simple-role semantics are not resolved");
+  assert(statuses.get("B1-PRODUCTION-PREFLIGHT") === "OPEN", "Production pre-flight must remain open");
+  assert(statuses.get("B1-PRODUCTION-APPROVAL") === "OPEN", "Production approval must remain open");
   assert(manifest.productionChangesAuthorised === false, "Production is incorrectly authorised");
   if (failures.length === 0) console.log("B1_APPLICATION_RELEASE_MANIFEST_OK");
 }

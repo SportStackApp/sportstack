@@ -48,5 +48,19 @@ Before Production, take a fresh backup and independently review the exact candid
 order and rollback points. Application rollback is to Production commit `a1d23c7`; database
 recovery uses the fresh backup because migration history must not be rewritten.
 
-Still required: the B1c owner walkthrough, Aaron's decision on cross-organisation Primary-team
-semantics, fresh Production pre-flight and backup, and a new exact Production approval.
+## Actual-role Primary-team follow-up
+
+The later Development walkthrough completed the deferred Player-to-Team-Manager flow. Aaron
+confirmed one Primary per association, multiple Primaries across different associations, player
+request as consent and immediate completion after destination Team Manager or Club Admin approval.
+
+The walkthrough exposed and closed two issues: Team Manager Requests route access and a legacy
+registered-club guard blocking the trusted cross-club membership sync. The final Production-based
+candidate is `3d9bc530b04ada938da751d68b1fea908371c5b0`, with binary patch SHA-256
+`c51d468e2015189488b4689acc691acf725f021a51b64ffbce51556cf5fd0216`. Candidate deployment
+`6301360025` is successful and returns HTTP 200. Staging and Dev runtime verification, 13 focused
+Python tests, 96 tracked Python tests, five Vitest files/21 tests, TypeScript and Production build
+pass.
+
+Still required: fresh Production pre-flight and verified backup, and a new exact Production
+approval for candidate `3d9bc53`.

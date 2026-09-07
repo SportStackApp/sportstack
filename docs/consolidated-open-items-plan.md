@@ -68,8 +68,11 @@ browser check is still unavailable.
      actual-role runtime and rollback plus hosted Dev apply, repeat, rollback-only runtime and
      database lint. Its session-bound follow-up is additive. The complete Production-compatible
       hosted rehearsal now passes, and the seventh additive simple-role boundary is verified on
-      staging and Dev with frozen candidate `a076174`; the B1c owner walkthrough, Primary-team semantics, fresh Production
-     pre-flight/backup and exact Production approval remain open. Independent review is complete
+      staging and Dev. The actual Player-to-Team-Manager walkthrough then passed and Aaron confirmed
+      the Primary-team semantics. Two defects found by that walkthrough were repaired and deployed
+      to Dev at `ed68664`. Final candidate `3d9bc53` contains ten additive migrations and passes its
+      focused/full candidate gates and hosted deployment. Fresh Production pre-flight/backup and
+      exact Production approval remain open. Independent review is complete
      with `hold_for_evidence`; its request-approval race hypothesis is already closed by the sixth
       migration. Aaron confirmed account-wide Player/Voter changes are Super Admin only; that rule
       is now enforced and independently reviewed. The latest six

@@ -1,37 +1,37 @@
 {
   "schemaVersion": 1,
   "package": "B1 hosted Production-compatible candidate",
-  "status": "INDEPENDENT_REVIEW_COMPLETE_HOLD_FOR_OWNER_EVIDENCE",
+  "status": "ACTUAL_ROLE_COMPLETE_HOLD_FOR_PRODUCTION_PREFLIGHT",
   "recordedAt": "2026-09-07",
   "environmentPins": {
-    "devApplicationCommit": "35ded5a238ac59f9a99291d1b9053f2e89f83f3a",
+    "devApplicationCommit": "ed68664de8ec84566411309dd38c06d8caabb9f0",
     "mainCommit": "af21ae3c06a2d66d2eb9c4edf64bb2c185869927",
     "productionBaseCommit": "a1d23c741b79de02c32763a879597192a1c1ebd5",
     "historicalCleanB1Snapshot": "77422f1188eade9f45f36382462dca7849a1081a",
     "primaryTeamRpcSnapshot": "3a52bd94c55b103509e599700b47b2cbf5577f5e",
-    "hostedCandidateCommit": "a076174f317a4fbdc66c50e312b7257624ad33b0",
+    "hostedCandidateCommit": "3d9bc530b04ada938da751d68b1fea908371c5b0",
     "hostedProjectRef": "fdkgcwacuqoswnatvubv"
   },
   "patchIdentity": {
     "base": "a1d23c741b79de02c32763a879597192a1c1ebd5",
-    "head": "a076174f317a4fbdc66c50e312b7257624ad33b0",
-    "changedFiles": 28,
-    "sha256": "c58dc1ed7020f0cf67806f33bc58b6450bd9b4be2f9bf44bc30e54c2db0293af",
-    "vercelDeployment": "GYqrVj6kNfD9y4qWsbp9JGByZYAR",
-    "vercelBundle": "verified by successful candidate deployment"
+    "head": "3d9bc530b04ada938da751d68b1fea908371c5b0",
+    "changedFiles": 38,
+    "sha256": "c51d468e2015189488b4689acc691acf725f021a51b64ffbce51556cf5fd0216",
+    "vercelDeployment": "6301360025",
+    "vercelBundle": "verified by successful candidate deployment and HTTP 200"
   },
   "independentReview": {
-    "recommendation": "HOLD_FOR_EVIDENCE",
+    "recommendation": "HOLD_FOR_PRODUCTION_PREFLIGHT",
     "impact": "HIGH",
     "regressionLikelihood": "MODERATE",
-    "regressionProtection": "PARTIAL",
+    "regressionProtection": "SUBSTANTIAL",
     "recoverability": "MANAGED",
-    "confidence": "MODERATE"
+    "confidence": "HIGH"
   },
   "ownerConfirmation": {
-    "status": "CONFIRMATION_REQUIRED",
-    "scope": "B1c primary-team membership request, approval, decline, cancellation and player confirmation walkthrough",
-    "note": "Aaron explicitly said the walkthrough had not been performed. It must not be recorded as passed and must be completed before Production approval."
+    "status": "OBSERVED_PASSED",
+    "scope": "B1c player request and destination Team Manager approval walkthrough",
+    "note": "Observed on Development with disposable actual-role accounts. Approval completed immediately, updated only the same-association Primary and persisted after refresh."
   },
   "databasePackage": [
     {
@@ -68,6 +68,21 @@
       "stage": "B1e simple-role boundary",
       "path": "supabase/migrations/20260907101500_b1_restrict_account_wide_simple_roles.sql",
       "sha256": "d93e7c51e566e9769b17c5074554c1216514801dc20367c810bd1b220c8809ed"
+    },
+    {
+      "stage": "B1c primary per association",
+      "path": "supabase/migrations/20260907103000_b1_primary_team_per_association.sql",
+      "sha256": "3630c10db02bac03478e5567434489e444a4cec3f51e5581757b10e1180c0543"
+    },
+    {
+      "stage": "B1c primary per association lint fix",
+      "path": "supabase/migrations/20260907104500_b1_primary_team_per_association_lint_fix.sql",
+      "sha256": "47e7d445732f11bf7545109bfa886e0b74485b4764e6af98dd32d479c14884df"
+    },
+    {
+      "stage": "B1c trusted registered-club sync",
+      "path": "supabase/migrations/20260907131500_allow_derived_registered_club_sync.sql",
+      "sha256": "f460e8fcd2e22cd9c91a4d21a5bce1201406be059609f65221231cb1a5d2f852"
     }
   ],
   "exactSourceFiles": [
@@ -164,7 +179,8 @@
       "allowedChanges": [
         "Place TeamProvider outside AppModeProvider so server mode can use the selected scope.",
         "Add ModeRouteGate and ModuleGate only to routes already present at the Production base.",
-        "Add only the B1-era ADMIN_MODES, ASSOCIATION_ADMIN_MODES, SUPER_ADMIN_MODES, MVP_ADMIN_MODES and UMPIRE_BALLOT_MODES constants."
+        "Add only the B1-era ADMIN_MODES, ASSOCIATION_ADMIN_MODES, SUPER_ADMIN_MODES, MVP_ADMIN_MODES and UMPIRE_BALLOT_MODES constants.",
+        "Permit team_manager on the existing Requests route only."
       ],
       "forbiddenFeatures": ["coordination", "incident-discipline", "expense-hub", "public-umpire-match-voting", "new route creation"]
     },
@@ -173,7 +189,8 @@
       "allowedChanges": [
         "Use the server-confirmed active mode for navigation and scope selectors.",
         "Filter existing Production navigation by the five B1 module keys.",
-        "Fail closed and show the existing mode synchronisation error."
+        "Fail closed and show the existing mode synchronisation error.",
+        "Show the existing Requests destination for Team Manager and refresh its pending count after supported request actions."
       ],
       "forbiddenFeatures": ["coordination navigation", "incident or discipline navigation", "Expense Hub navigation", "unrelated layout redesign"]
     },
@@ -196,7 +213,8 @@
     {
       "path": "src/pages/Profile.tsx",
       "allowedChanges": [
-        "Replace only direct primary_change_requests mutations and multi-step membership confirmation with the B1c RPC wrapper."
+        "Replace only direct primary_change_requests mutations and multi-step membership confirmation with the B1c RPC wrapper.",
+        "Render every association-scoped Primary team and use the current association Primary when describing a request."
       ],
       "forbiddenFeatures": ["unrelated profile fields", "preferred-name or nickname work", "position or coaching changes"]
     },
@@ -204,7 +222,8 @@
       "path": "src/pages/admin/Requests.tsx",
       "allowedChanges": [
         "Replace only primary-team approval, decline and cancellation mutations with the B1c RPC wrapper.",
-        "Retain the Production general request approval behaviour until B1e is reconciled."
+        "Retain the Production general request approval behaviour until B1e is reconciled.",
+        "Notify the existing navigation badge after a supported request action."
       ],
       "forbiddenFeatures": ["general membership workflow replacement", "coordination", "incident or discipline"]
     },
@@ -273,13 +292,13 @@
   "releaseBlockers": [
     {
       "id": "B1C-OWNER-CONFIRMATION",
-      "status": "OPEN",
-      "requirement": "Complete and observe the B1c owner walkthrough; do not infer a pass."
+      "status": "RESOLVED",
+      "requirement": "Observed actual-role Player request and destination Team Manager approval on Development."
     },
     {
       "id": "B1-PRIMARY-SEMANTICS-CONFIRMATION",
-      "status": "OPEN",
-      "requirement": "Confirm cross-organisation Primary-team demotion and consent semantics; current behaviour is unchanged."
+      "status": "RESOLVED",
+      "requirement": "Aaron confirmed one Primary per association, multiple associations allowed, player request as consent and destination approval as completion."
     },
     {
       "id": "B1-SIMPLE-ROLE-SEMANTICS-CONFIRMATION",

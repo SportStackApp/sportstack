@@ -2,15 +2,14 @@
 
 ## Outcome
 
-**7 September update:** the Production-compatible hosted rehearsal passed and the exact application
-candidate is frozen locally at `5994385`. B1e and hosted-rehearsal blockers are closed. Production
-remains unauthorised pending the B1c owner walkthrough, Primary-team semantics decisions,
-a fresh Production pre-flight and a new exact Production approval. See
+**7 September update:** the Production-compatible hosted rehearsal and actual-role Primary-team
+walkthrough passed. The final candidate is `3d9bc53`; B1e, hosted rehearsal, owner walkthrough and
+Primary-team semantics gates are closed. Production remains unauthorised pending a fresh
+Production pre-flight, verified backup and a new exact Production approval. See
 `B1-HOSTED-REHEARSAL-2026-09-07.md`. Later historical sections below describe the earlier freeze.
 
-The independent review is now complete with recommendation `hold_for_evidence`. The remaining
-release gates are the owner walkthrough, Primary-team semantics, a fresh Production drift
-check/verified backup and exact approval. See `B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
+The independent review is complete. The remaining release gates are a fresh Production drift
+check, verified backup and exact approval. See `B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
 
 The B1 application boundary is now explicit and reproducible. It is **not yet a Production release
 candidate**. The safe slice contains the session permission context, five-module controls, route
@@ -75,12 +74,12 @@ Until B1e has been curated, rehearsed and denial-tested:
 - No hand edit or broad Dev copy of generated Supabase types. Types must be regenerated from the
   hosted rehearsal database.
 
-## Confirmation still required
+## Confirmation completed
 
-**B1c owner walkthrough: CONFIRMATION REQUIRED.** Aaron explicitly said he had not performed the
-manual walkthrough. His instruction to continue is not evidence that the request, approval,
-decline, cancellation and player confirmation flow passed. This gate remains open until it is
-observed and recorded.
+The actual Player-to-Team-Manager walkthrough passed on Development. Aaron confirmed that a player
+request supplies consent, destination approval completes the change, one Primary is allowed per
+association and a person may be Primary in multiple associations. See
+`B1-PRIMARY-POLICY-WALKTHROUGH-2026-09-07.md`.
 
 ## Local verification
 
@@ -103,7 +102,8 @@ deployment; the pinned application source remains `916b5b9`.
 4. Restore and test the complete B1 package in a fresh Production-compatible hosted environment.
 5. Regenerate Supabase types, run the complete quality suite and perform actual-role application
    smoke tests.
-6. Complete the deferred B1c owner walkthrough and independent review.
-7. Ask Aaron for separate approval of the exact frozen Production package.
+6. Complete the B1c actual-role walkthrough and independent review. **Complete.**
+7. Run a fresh Production drift check and verified backup.
+8. Ask Aaron for separate approval of the exact frozen Production package.
 
-Production remains unchanged until all seven steps pass.
+Production remains unchanged until all eight steps pass.

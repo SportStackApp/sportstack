@@ -6,6 +6,33 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 7 September B1 actual-role walkthrough and final candidate
+
+- The complete Player-to-Team-Manager Primary-team change was observed on Development using the
+  disposable Codex Player and Codex Team Manager accounts. The player requested Lucas HC, the
+  destination Team Manager approved it, the request completed immediately without a second player
+  action, Lucas HC became Primary, Pumas became Secondary and refresh preserved the result.
+- Aaron confirmed the policy: a person may have one Primary team per association and may be Primary
+  in multiple associations; a player-submitted request is consent; destination Team Manager or Club
+  Admin approval completes it. Legacy `ADMIN_APPROVED` requests may still require player confirmation.
+- The walkthrough found and closed two Development blockers: Team Managers could not open Requests,
+  and the registered-club guard rejected a trusted cross-club Primary sync. Commits `fde9a93` and
+  `ed68664` are deployed on Dev; Dev Quality runs `34078570755` and `34079182660` passed.
+- The final Production-based candidate is `3d9bc53` on
+  `fix/b1-global-simple-role-boundary`. It is seven commits and 38 paths above Production base
+  `a1d23c7`, with binary patch SHA-256
+  `c51d468e2015189488b4689acc691acf725f021a51b64ffbce51556cf5fd0216`. Candidate deployment
+  `6301360025` is successful and returns HTTP 200.
+- The candidate contains ten additive migrations, no Edge Function, no workflow and no scraper
+  change. Staging and Dev runtime tests passed, including the cross-club registered-club sync. Main
+  and Production remain unchanged. Final exact-range security scan
+  `e155580f-c97f-4134-99bb-ff4bd6bcce17` completed with zero findings across all six reviewed
+  surfaces. Its limitations were the unavailable TAC advisory connector and the intentionally
+  separate fresh Production pre-flight. The remaining release gates are a fresh Production drift
+  check, verified backup and Aaron's exact approval of candidate `3d9bc53`.
+- Evidence: `docs/production-readiness/B1-PRIMARY-POLICY-WALKTHROUGH-2026-09-07.md` and
+  `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
+
 ## 7 September B1 hosted rehearsal complete
 
 - The disposable hosted staging project was reset with Aaron's exact approval and rebuilt from the
@@ -15,18 +42,15 @@ Update this file after every meaningful Codex task, pull request, schema change,
   Aaron's confirmed rule that only Super Admin may add or remove account-wide Player/Voter roles,
   while preserving team-scoped Player membership. Lower-admin denial, unchanged-save and Super
   Admin add/remove runtime tests pass with test data rolled back.
-- The exact Production-based application candidate is frozen at `a076174`. The original 19 Vitest
-  tests plus 87 tracked Python tests, four focused boundary tests, TypeScript, Production build,
-  focused lint and hosted application checks pass.
+- The initial Production-based application candidate was frozen at `a076174`. Later actual-role
+  testing produced the final candidate recorded in the newer section above.
 - Main and Production remain unchanged. Production is not authorised. Evidence:
   `docs/production-readiness/B1-HOSTED-REHEARSAL-2026-09-07.md`.
-- Independent review is now complete with `hold_for_evidence`: high impact, moderate regression
+- Independent review completed with `hold_for_evidence`: high impact, moderate regression
   likelihood, partial protection, managed recovery and moderate confidence. Exact Vercel preview
-  candidate deployment `GYqrVj6kNfD9y4qWsbp9JGByZYAR` succeeded. The current Supabase connector
-  cannot perform the fresh Production read-only pre-flight, so owner confirmation, Primary-team
-  semantics, restored Production access/backup and exact approval remain open. The account-wide
-  Player/Voter policy is resolved and enforced. A fresh independent post-fix review found no
-  confirmed issue. Packet:
+  candidate deployment `GYqrVj6kNfD9y4qWsbp9JGByZYAR` succeeded. The later actual-role walkthrough
+  and Primary-team semantics are now resolved. Fresh Production access/backup and exact approval
+  remain open. The account-wide Player/Voter policy is resolved and enforced. Packet:
   `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
 
 ## 6 September B1e administration and membership compatibility

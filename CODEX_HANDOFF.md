@@ -2,16 +2,41 @@
 
 Last updated: 2026-09-07
 
+## 7 September — B1 actual-role walkthrough passed and candidate frozen
+
+- The disposable Player requested Lucas HC as Primary and the actual destination Team Manager
+  approved it on Development. Lucas HC became Primary, Pumas became Secondary, no second player
+  action was required and refresh preserved the result.
+- Aaron confirmed one Primary per association, multiple Primaries across different associations,
+  player request as consent and immediate completion after destination Team Manager or Club Admin
+  approval. Account-wide Player/Voter changes remain Super Admin only.
+- The walkthrough exposed and closed two blockers: Team Manager Requests route access (`fde9a93`)
+  and trusted cross-club registered-club synchronisation (`ed68664`). Both Dev Quality runs passed;
+  Dev serves `ed68664`.
+- Final Production-based candidate `3d9bc53` contains seven commits, 38 changed paths and ten
+  additive migrations above Production `a1d23c7`. Binary patch SHA-256 is
+  `c51d468e2015189488b4689acc691acf725f021a51b64ffbce51556cf5fd0216`; candidate deployment
+  `6301360025` is successful and HTTP 200.
+- Candidate checks pass: 13 focused Python tests, 96 tracked Python tests, five Vitest files/21
+  tests, TypeScript, Production build and diff validation. No Edge Function or workflow is included.
+- Final exact-range security scan `e155580f-c97f-4134-99bb-ff4bd6bcce17` completed with zero
+  findings across six reviewed surfaces. Delegated reviewers and the TAC advisory connector were
+  unavailable, so the parent completed the review sequentially and recorded those limitations.
+- Production remains unchanged and unauthorised. Complete a fresh Production drift check and
+  verified backup, then obtain the exact approval for `3d9bc53`.
+- Evidence: `docs/production-readiness/B1-PRIMARY-POLICY-WALKTHROUGH-2026-09-07.md` and
+  `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md`.
+
 ## 7 September — hosted B1 rehearsal passed
 
 - `SportStack-staging` was reset under exact owner approval, rebuilt from the Production schema-only
   backup and the first six B1 migrations, then tested with actual Auth roles. The seventh additive
-  simple-role boundary migration was subsequently applied and tested on staging and Dev. Candidate
-  `a076174` passes the focused boundary, tracked Python, TypeScript, build and deployment checks.
+  simple-role boundary migration was subsequently applied and tested on staging and Dev. Initial
+  candidate `a076174` passed its checks and was superseded by the final candidate above.
 - Staging was cleaned to zero Auth users and zero test application rows. Main and Production were
   unchanged.
-- B1c owner walkthrough and cross-organisation Primary-team semantics remain **CONFIRMATION
-  REQUIRED**. Aaron confirmed that account-wide Player/Voter role changes are Super Admin only;
+- The B1c owner walkthrough and cross-association Primary-team semantics were later confirmed as
+  recorded above. Aaron confirmed that account-wide Player/Voter role changes are Super Admin only;
   the database and lower-admin UI now enforce that rule while preserving team-scoped Players.
   A fresh Production pre-flight and new exact Production approval are also required.
 - Evidence: `docs/production-readiness/B1-HOSTED-REHEARSAL-2026-09-07.md`.

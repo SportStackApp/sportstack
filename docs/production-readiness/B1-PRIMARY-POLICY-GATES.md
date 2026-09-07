@@ -24,7 +24,7 @@ Scope: Allow one Primary team per association and complete a player-submitted Pr
 - [x] P6: TypeScript and the Production application build pass
   CHECK: npx tsc --noEmit && npm run build
   EXPECT: built in
-  EVIDENCE: npx tsc --noEmit and npm run build passed; full Vitest passed 47 files/183 tests; Python passed 165 tests. Full lint remains baseline debt at 346 errors/77 warnings.
+  EVIDENCE: the frozen candidate passed npx tsc --noEmit and npm run build, five Vitest files/21 tests, 13 focused Python policy tests and 96 tracked Python tests. Dev Quality also passed at deployed commit ed68664. Full lint remains baseline debt.
 
 - [ ] P7: the frozen candidate, release packet and Big Brain mirror record the confirmed policy and verified evidence
   CHECK: pwsh -NoProfile -File scripts/sync-sportstack-notes-to-obsidian.ps1 -Check
