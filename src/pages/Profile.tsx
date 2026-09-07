@@ -512,7 +512,7 @@ const Profile = () => {
     // Notify coach/manager of destination team and club admin
     if (teamData) {
       const [{ data: teamAdmins }, { data: clubAdmins }] = await Promise.all([
-        supabase.from("user_roles").select("user_id").eq("team_id", teamId).in("role", ["COACH", "TEAM_MANAGER"]),
+        supabase.from("user_roles").select("user_id").eq("team_id", teamId).eq("role", "TEAM_MANAGER"),
         supabase.from("user_roles").select("user_id").eq("club_id", teamData.club_id).eq("role", "CLUB_ADMIN"),
       ]);
       const recipientIds = [...(teamAdmins?.map((r: any) => r.user_id) ?? []), ...(clubAdmins?.map((r: any) => r.user_id) ?? [])].filter((id, i, arr) => arr.indexOf(id) === i);
@@ -697,12 +697,11 @@ const Profile = () => {
 
   // Transform memberships for TeamMembershipSection
   const approvedMemberships = memberships.filter((m) => m.status === "ACTIVE");
-  const primaryMembership = approvedMemberships.find((m) => m.membership_type === "PRIMARY");
+  const primaryMemberships = approvedMemberships.filter((m) => m.membership_type === "PRIMARY");
   const extraMemberships = approvedMemberships.filter((m) => m.membership_type !== "PRIMARY");
   const pendingMemberships = memberships.filter((m) => m.status === "PENDING");
 
-  const primaryTeam = primaryMembership
-    ? {
+  const primaryTeams = primaryMemberships.map((primaryMembership) => ({
         teamId: primaryMembership.team_id,
         teamName: primaryMembership.team.name,
         clubId: primaryMembership.team.club.id,
@@ -712,8 +711,7 @@ const Profile = () => {
         type: "PRIMARY" as const,
         position: primaryMembership.position || undefined,
         jerseyNumber: primaryMembership.jersey_number || undefined,
-      }
-    : null;
+      }));
 
   const extraTeams = extraMemberships.map((m) => ({
     teamId: m.team_id,
@@ -897,15 +895,13 @@ const Profile = () => {
 
       {/* Team Memberships */}
       <TeamMembershipSection
-        primaryTeam={primaryTeam}
+        primaryTeams={primaryTeams}
         extraTeams={extraTeams}
         pendingChangeRequest={pendingChangeRequestForDisplay}
         pendingPrimaryRequest={pendingPrimaryRequest[0]}
         onRequestChange={handleRequestPrimaryChange}
         onCancelRequest={handleCancelChangeRequest}
         onConfirmChange={handleConfirmChange}
-        onSetPrimaryTeam={() => setSetPrimaryDialogOpen(true)}
-        hasApprovedTeams={approvedMemberships.length > 0}
         onRequestAdditionalTeam={() => setRequestAdditionalDialogOpen(true)}
         pendingAdditionalTeams={pendingAdditionalTeams}
         onCancelAdditionalRequest={async (id) => {
@@ -1064,7 +1060,11 @@ const Profile = () => {
         open={setPrimaryDialogOpen}
         onOpenChange={setSetPrimaryDialogOpen}
         onConfirm={handleSetPrimaryTeam}
-        isChangingPrimary={!!primaryMembership}
+        currentPrimaryTeams={primaryTeams.map((team) => ({
+          teamId: team.teamId,
+          teamName: team.teamName,
+          associationId: team.associationId,
+        }))}
       />
 
       {/* Request Additional Team Dialog */}
