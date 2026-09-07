@@ -87,6 +87,7 @@ const ADMIN_MODES = ["super_admin", "association", "club"] as const;
 const ASSOCIATION_ADMIN_MODES = ["super_admin", "association"] as const;
 const SUPER_ADMIN_MODES = ["super_admin"] as const;
 const MVP_ADMIN_MODES = ["super_admin", "association", "club", "team_manager"] as const;
+const REQUEST_REVIEW_MODES = ["super_admin", "association", "club", "team_manager"] as const;
 const UMPIRE_BALLOT_MODES = ["super_admin", "association", "player"] as const;
 
 const RetiredMvpTokenRoute = () => (
@@ -177,7 +178,7 @@ const App = () => (
                       <Route path="/admin/fixtures" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><FixturesManagement /></ModeRouteGate>} />
                       <Route path="/admin/fixture-import" element={<ModeRouteGate allowedModes={SUPER_ADMIN_MODES}><FixtureImport /></ModeRouteGate>} />
                       <Route path="/admin/venues" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><VenuesManagement /></ModeRouteGate>} />
-                      <Route path="/admin/requests" element={<ModeRouteGate allowedModes={ADMIN_MODES}><Requests /></ModeRouteGate>} />
+                      <Route path="/admin/requests" element={<ModeRouteGate allowedModes={REQUEST_REVIEW_MODES}><Requests /></ModeRouteGate>} />
                       <Route path="/admin/mvp-voting" element={<ModeRouteGate allowedModes={MVP_ADMIN_MODES}><ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpVotingAdmin /></ModuleGate></ModeRouteGate>} />
                       <Route path="/admin/mvp-voting/tallies" element={<ModeRouteGate allowedModes={MVP_ADMIN_MODES}><ModuleGate moduleKey="player_mvp" moduleLabel="Player MVP Voting"><MvpTallyAdmin /></ModuleGate></ModeRouteGate>} />
                       <Route path="/admin/umpire-voting" element={<ModeRouteGate allowedModes={ASSOCIATION_ADMIN_MODES}><ModuleGate moduleKey="umpire_match_voting" moduleLabel="Umpire Match Voting"><UmpireVotingModule /></ModuleGate></ModeRouteGate>} />
