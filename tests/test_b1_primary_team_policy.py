@@ -9,6 +9,8 @@ MIGRATION = ROOT / "supabase" / "migrations" / "20260907103000_b1_primary_team_p
 LINT_FIX = ROOT / "supabase" / "migrations" / "20260907104500_b1_primary_team_per_association_lint_fix.sql"
 PROFILE = ROOT / "src" / "pages" / "Profile.tsx"
 REQUESTS = ROOT / "src" / "pages" / "admin" / "Requests.tsx"
+APP = ROOT / "src" / "App.tsx"
+APP_LAYOUT = ROOT / "src" / "components" / "layout" / "AppLayout.tsx"
 TEAM_SECTION = ROOT / "src" / "components" / "profile" / "TeamMembershipSection.tsx"
 
 
@@ -19,6 +21,8 @@ class PrimaryTeamPolicyTests(unittest.TestCase):
         cls.lint_fix = LINT_FIX.read_text(encoding="utf-8")
         cls.profile = PROFILE.read_text(encoding="utf-8")
         cls.requests = REQUESTS.read_text(encoding="utf-8")
+        cls.app = APP.read_text(encoding="utf-8")
+        cls.app_layout = APP_LAYOUT.read_text(encoding="utf-8")
         cls.team_section = TEAM_SECTION.read_text(encoding="utf-8")
 
     @classmethod
@@ -68,6 +72,16 @@ class PrimaryTeamPolicyTests(unittest.TestCase):
     def test_request_screen_explains_approval_completion(self) -> None:
         self.assertIn("approval completed it immediately", self.requests)
         self.assertNotIn("User must confirm", self.requests)
+
+    def test_team_manager_can_open_and_find_scoped_requests(self) -> None:
+        self.assertIn(
+            'const REQUEST_REVIEW_MODES = ["super_admin", "association", "club", "team_manager"]',
+            self.app,
+        )
+        self.assertIn('allowedModes={REQUEST_REVIEW_MODES}', self.app)
+        team_manager_nav = self.app_layout.split("  team_manager: [", 1)[1].split("  coach: [", 1)[0]
+        self.assertIn('{ path: "/admin/requests", label: "Requests"', team_manager_nav)
+        self.assertIn('|| activeMode === "team_manager";', self.app_layout)
 
 
 if __name__ == "__main__":

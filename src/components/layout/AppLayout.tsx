@@ -310,6 +310,7 @@ const NAV_SETS: Record<AppMode, NavSection[]> = {
       heading: "Team data",
       items: [
         { path: "/admin/player-explorer", label: "Player Explorer", icon: UserSearch },
+        { path: "/admin/requests", label: "Requests", icon: ClipboardList },
       ],
     },
     {
@@ -775,11 +776,14 @@ const AppLayout = () => {
     };
   }, [selectedAssociationId, selectedClubId, selectedTeamId, user]);
 
-  // Fetch pending request count for admin badge
+  // Fetch the pending request count for roles that can review requests.
   useEffect(() => {
     if (!user) return;
-    const isAdmin = activeMode === "super_admin" || activeMode === "association" || activeMode === "club";
-    if (!isAdmin) { setPendingRequestCount(0); return; }
+    const canReviewRequests = activeMode === "super_admin"
+      || activeMode === "association"
+      || activeMode === "club"
+      || activeMode === "team_manager";
+    if (!canReviewRequests) { setPendingRequestCount(0); return; }
     const fetchCount = async () => {
       const requestCountClient = supabase as unknown as RequestCountClient;
       const [membershipRequests, primaryRequests] = await Promise.all([
