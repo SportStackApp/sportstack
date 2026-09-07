@@ -2,6 +2,25 @@
 
 Last updated: 2026-09-07
 
+## 7 September — B1 access package released to Production
+
+- Aaron supplied the exact approval sentence for candidate `3d9bc53`. Remote `prod` is now exactly
+  `3d9bc530b04ada938da751d68b1fea908371c5b0`; Main and Dev were not merged into Production.
+- The ten frozen additive migrations were applied in order. The runner stopped safely after the
+  first migration when it detected differing current working-tree sources, then resumed only after
+  extracting and hash-verifying the immutable candidate files. Migration history is now 169.
+- Protected Production counts remained 757 profiles, 1,260 memberships and six requests. Fresh
+  schema and membership inventories pass; all six B1 functions deny anonymous execution and
+  database advisers have no error-level findings.
+- The live Vercel-served bundle is `index-BjjGD6cn.js`, identifies `v2026.09.07+3d9bc53`, targets
+  Production Supabase only, and the three checked routes return HTTP 200.
+- The verified encrypted pre-release backup remains outside the repository. No Edge Function,
+  workflow, scraper, secret or DNS change was made.
+- Remaining confirmation: authenticated Production role/scope and labelled request smoke tests.
+  Also reconcile access to the Vercel team/project owning the custom Production domain; the current
+  CLI account can verify the live alias but cannot inspect that deployment directly.
+- Evidence: `docs/production-readiness/B1-PRODUCTION-RELEASE-2026-09-07.md`.
+
 ## 7 September — B1 actual-role walkthrough passed and candidate frozen
 
 - The disposable Player requested Lucas HC as Primary and the actual destination Team Manager
@@ -22,13 +41,13 @@ Last updated: 2026-09-07
 - Final exact-range security scan `e155580f-c97f-4134-99bb-ff4bd6bcce17` completed with zero
   findings across six reviewed surfaces. Delegated reviewers and the TAC advisory connector were
   unavailable, so the parent completed the review sequentially and recorded those limitations.
-- Production remains unchanged and unauthorised. The fresh read-only Production pre-flight passes:
+- This paragraph records the pre-release state. The fresh read-only Production pre-flight passed:
   159 migrations, zero B1 versions, schema fingerprint unchanged, protected counts 757/1,260/6,
   and the three existing schedules inventoried with no B1 outbound or scraper effect.
 - A fresh encrypted roles/schema/data backup is retained outside the repository at
   `C:\Users\mulla\AppData\Local\SportStack\backups\prod\2026-09-07-141416-pre-b1-3d9bc53`.
   Authentication, decryption, isolated extraction, file hashes and readable SQL all passed; no
-  plaintext SQL remains. The only remaining gate is Aaron's exact approval for `3d9bc53`.
+  plaintext SQL remains. Aaron later approved and released `3d9bc53` as recorded above.
 - Evidence: `docs/production-readiness/B1-PRIMARY-POLICY-WALKTHROUGH-2026-09-07.md` and
   `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md` plus
   `docs/production-readiness/B1-PRODUCTION-PREFLIGHT-2026-09-07.md`.

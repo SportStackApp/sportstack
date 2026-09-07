@@ -6,6 +6,24 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## 7 September B1 access package released to Production
+
+- Aaron approved exactly `RELEASE B1 ACCESS PACKAGE 3d9bc53 TO PRODUCTION`. Production is now
+  `3d9bc530b04ada938da751d68b1fea908371c5b0`; Main and Dev were not merged into Production.
+- All ten approved additive migrations are recorded. Production moved from 159 to 169 migration
+  versions while protected counts remained 757 profiles, 1,260 memberships and six requests.
+- Fresh independent schema, membership and adviser checks pass. All six B1 lifecycle functions deny
+  anonymous execution, use empty search paths and retain the intended authenticated/service grants.
+  There are zero duplicate active Primary user/team pairs.
+- The live Vercel-served bundle is `index-BjjGD6cn.js`, identifies `v2026.09.07+3d9bc53`, contains
+  only the Production Supabase reference and returns HTTP 200 on the three checked public routes.
+- The encrypted pre-release backup remains verified outside the repository. No Edge Function,
+  workflow, scraper, secret or DNS change was included.
+- Follow-up: the authenticated Production role/scope smoke test still needs Aaron's observed
+  confirmation. The current Vercel CLI account also lacks access to the custom domain's owning
+  project, so that ownership/access should be reconciled before the next Production release.
+- Evidence: `docs/production-readiness/B1-PRODUCTION-RELEASE-2026-09-07.md`.
+
 ## 7 September B1 actual-role walkthrough and final candidate
 
 - The complete Player-to-Team-Manager Primary-team change was observed on Development using the
@@ -24,18 +42,19 @@ Update this file after every meaningful Codex task, pull request, schema change,
   `c51d468e2015189488b4689acc691acf725f021a51b64ffbce51556cf5fd0216`. Candidate deployment
   `6301360025` is successful and returns HTTP 200.
 - The candidate contains ten additive migrations, no Edge Function, no workflow and no scraper
-  change. Staging and Dev runtime tests passed, including the cross-club registered-club sync. Main
-  and Production remain unchanged. Final exact-range security scan
+  change. Staging and Dev runtime tests passed, including the cross-club registered-club sync. This
+  section records the pre-release state; the newer release section above supersedes its Production
+  status. Final exact-range security scan
   `e155580f-c97f-4134-99bb-ff4bd6bcce17` completed with zero findings across all six reviewed
   surfaces. Its limitations were the unavailable TAC advisory connector and the intentionally
   separate fresh Production pre-flight.
-- The Production pre-flight now passes. Production remains exactly `a1d23c7`; its schema fingerprint
+- The Production pre-flight passed while Production was exactly `a1d23c7`; its schema fingerprint
   matches the rehearsed baseline, all ten B1 migrations are absent, and fresh protected counts are
   757 profiles, 1,260 memberships and six requests. The three existing schedules were inventoried;
   the candidate adds or invokes no cron, outbound delivery or scraper job.
 - A fresh AES-256 encrypted roles/schema/data backup was created outside the repository, authenticated,
-  decrypted and read successfully in isolation. No plaintext SQL remains. The only release gate left
-  is Aaron's exact approval of candidate `3d9bc53`; Production is still unchanged.
+  decrypted and read successfully in isolation. No plaintext SQL remains. Aaron later supplied the
+  exact approval and the package was released as recorded above.
 - Evidence: `docs/production-readiness/B1-PRIMARY-POLICY-WALKTHROUGH-2026-09-07.md` and
   `docs/production-readiness/B1-PRODUCTION-APPROVAL-PACKET-2026-09-07.md` plus
   `docs/production-readiness/B1-PRODUCTION-PREFLIGHT-2026-09-07.md`.

@@ -2,14 +2,13 @@
 
 ## Current decision
 
-**READY FOR EXACT OWNER APPROVAL. Do not deploy without it.**
+**RELEASED TO PRODUCTION at `3d9bc53` on 7 September 2026.**
 
-The candidate is technically reproducible, the hosted rehearsal passed and the actual-role
-Player-to-Team-Manager Primary-team walkthrough passed on Development. Aaron confirmed all open
-Primary-team and account-wide Player/Voter policy questions. Production approval remains blocked
-until Aaron gives exact approval for this frozen candidate. The fresh read-only Production drift
-check and encrypted logical backup completed successfully on 7 September; evidence is in
-`B1-PRODUCTION-PREFLIGHT-2026-09-07.md`.
+Aaron supplied the exact approval sentence for this frozen candidate. The ten additive migrations
+were applied in order, the protected counts remained unchanged, and only `prod` was fast-forwarded
+to the candidate. Independent post-release schema, membership, adviser and public-route checks pass.
+The authenticated Production role/scope walkthrough remains flagged for owner confirmation; it is
+not silently counted as passed. Release evidence is in `B1-PRODUCTION-RELEASE-2026-09-07.md`.
 
 ## Exact package identity
 
@@ -153,7 +152,7 @@ A separate read-only source review raised four hypotheses:
 - [x] Player-submitted Primary request as consent confirmed.
 - [x] Account-wide Player/Voter changes restricted to Super Admin and retested on staging and Dev.
 - [x] Fresh Production drift check and verified encrypted backup complete.
-- [ ] Exact package approval received.
+- [x] Exact package approval received.
 
 When every earlier box is complete, the required approval is:
 
