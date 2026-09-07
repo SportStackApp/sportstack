@@ -868,10 +868,14 @@ const Profile = () => {
         <h1 className="font-display text-3xl text-foreground">
           {displayName}
         </h1>
-        {primaryTeam && (
-          <p className="text-muted-foreground mt-2">
-            {primaryTeam.clubName} • {primaryTeam.associationName}
-          </p>
+        {primaryTeams.length > 0 && (
+          <div className="mt-2 space-y-1 text-muted-foreground">
+            {primaryTeams.map((primaryTeam) => (
+              <p key={primaryTeam.teamId}>
+                {primaryTeam.teamName} • {primaryTeam.clubName} • {primaryTeam.associationName}
+              </p>
+            ))}
+          </div>
         )}
         
         
