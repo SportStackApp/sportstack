@@ -101,10 +101,12 @@ python -m pip install --requirement scraper/requirements-supabase.txt
 ## Test / quality commands (run ALL before completing work)
 ```bash
 npm run lint
+npx vitest run
 npx tsc --noEmit
 npm run build
 ```
-There is no automated test suite yet. Do the relevant manual smoke test and say what to test next.
+Vitest and Python regression suites exist. Run the relevant focused Python tests as well as the
+commands above, complete the relevant manual smoke test, and say what to test next.
 
 ## Coding style
 - Reuse existing shadcn/ui components and established app patterns. Keep changes small and scoped.
@@ -167,7 +169,7 @@ There is no automated test suite yet. Do the relevant manual smoke test and say 
 
 ## Obsidian / Big Brain vault notes
 
-- The active Obsidian vault is `C:\Users\mulla\OneDrive\Documents\Big Brain`. The committed
+- The active Obsidian vault is `D:\AI-Workspace\Memory\Big Brain`. The committed
   repository notes remain the source of truth. Big Brain contains a generated,
   read-only mirror plus four curated SportStack notes.
 - At the start of meaningful work, run
@@ -183,7 +185,7 @@ There is no automated test suite yet. Do the relevant manual smoke test and say 
   documentation as complete unless both commands pass.
 - Update a curated Big Brain note directly only when its owned boundary, priority or action status
   changes. Do not duplicate changing release detail there; link to the generated repository mirror.
-- If the Vault or OneDrive is unavailable, report `OBSIDIAN SYNC PENDING` in the handoff instead of
+- If the vault is unavailable, report `OBSIDIAN SYNC PENDING` in the handoff instead of
   silently treating the notes as current.
 - The sync whitelist contains only root Markdown and Markdown under `docs/` and `notes/`, plus the
   extensionless Planner note. Never add `.env`, secrets, database dumps, SQL backups, `data/`, logs

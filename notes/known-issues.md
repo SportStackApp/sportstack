@@ -7,19 +7,21 @@
 ## Main-to-Production migration and Edge Function history drift
 
 **Logged:** 6 September 2026
-**Status:** Stage 1 mapped; release compatibility and rehearsal open
+**Status:** B1 compatibility released to Production; broad alignment remains open
 
-The current Main-to-Production delta is 266 Main-only commits and 438 paths. Its 115 changed
-migration paths are 114 Main-only files and the one Production-only tally baseline; they are not
-115 safe additions. Production records 159 migration versions, Main contains 186 migration files
-and only eight version names overlap. A direct Main migration push or bulk history repair could
-replay existing behaviour or mark missing objects as present.
+The 6 September Stage 1 snapshot found 266 Main-only commits and 438 changed paths. Its 115 changed
+migration paths were 114 Main-only files and the one Production-only tally baseline; they were not
+115 safe additions. Production then recorded 159 migration versions, Main contained 186 migration
+files and only eight version names overlapped. Those measurements are historical and must not be
+reused as the current full-delta inventory.
 
-The complete 115-row register classifies the known Dev-only, superseded, baseline, broken and mixed
-migrations. Production also has 11 deployed Edge Functions, including several whose deployed source
-does not match either branch and one deployed-only legacy function. Preserve the live versions until
-each function is reconciled. The next repair is a new additive B1 foundation/access compatibility
-migration followed by Production-derived rollback and apply rehearsal. Production remains unchanged.
+The resulting B1 work created and rehearsed ten new additive compatibility migrations. Aaron
+approved the frozen package and Production is now `3d9bc53` with 169 recorded migration versions;
+protected profile, membership and request counts remained unchanged. No Edge Function, workflow,
+scraper, secret or DNS change was included. Current refs diverge by 266 Main-only and eight
+Production-only commits, so direct Main migration application or a bulk history repair remains
+unsafe. Re-inventory application code, migrations, deployed Edge Functions and workflows before the
+next full release; preserve deployed function versions until each is reconciled.
 
 ## Player MVP overdue sessions are displayed as closed but remain OPEN
 

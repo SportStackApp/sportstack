@@ -9,13 +9,51 @@
 `docs/current-state.md`, `CODEX_HANDOFF.md`, `notes/known-issues.md`, feedback records and test
 artifacts provide evidence. They do not create separate competing work plans.
 
-## Owner priority — Player MVP presentation for Grampians (5 September)
+## Immediate decision — reconcile Dev and Main
+
+The B1 access package is released to Production at `3d9bc53`. The immediate repository decision is
+now how to reconnect Dev and Main without losing either branch's evidence or accidentally changing
+the Production scraper schedule.
+
+Verified 7 September position:
+
+- Dev is `c0090a2`, Main is `af21ae3` and Production is `3d9bc53`.
+- Dev and Main have diverged by 36 Dev-only and eight Main-only commits. Seven ordinary Main patches
+  are already patch-equivalent in Dev and the eighth Main-only commit is history-only. Dev still has
+  36 newer commits, including the B1 work; reconnecting the histories also requires shared-document
+  reconciliation.
+- A trial merge predicts conflicts in `CODEX_HANDOFF.md`, this plan, `docs/current-state.md`,
+  `docs/production-readiness/GATES.md`, the 5 September readiness packet and
+  `notes/known-issues.md`.
+- One Dev-only package adds a Production scraper workflow input that Main does not have. Its helper
+  and two focused tests are also Dev-only. A Main workflow change is separately approval-gated
+  because Main's scheduled workflow uses Production secrets.
+- Do not merge or push either release branch during the documentation review. Preserve the current
+  untracked evidence/data folders and perform reconciliation in a clean worktree.
+
+Recommended next sequence:
+
+1. Freeze a reconciliation candidate from current `origin/dev` in a clean worktree.
+2. Merge current `origin/main` into that candidate, retaining the verified Dev application state and
+   manually combining the six evidence-document conflicts.
+3. Prove that no feature, migration, Edge Function or workflow was silently removed or duplicated.
+4. Run focused tests, full Vitest, Python regressions, lint comparison, TypeScript and Production build,
+   followed by a deployed Dev smoke test.
+5. Present the exact workflow difference and candidate result to Aaron. Do not update Main until its
+   Production-targeting workflow effect is understood and approved.
+6. If approved, update Dev first and then fast-forward Main to the tested Dev commit. Keep Production
+   at `3d9bc53` until a separate exact release is prepared and approved.
+
+## Historical owner priority — Player MVP presentation for Grampians (5 September)
+
+This section preserves the release sequence that led to the Player MVP lifecycle release and the B1
+access release. Its pre-release wording is historical; the immediate decision above now controls.
 
 Aaron's immediate outcome is to make the Player MVP tally presentation safely available to the
 Grampians team in Production. This overrides the next general form/sorting repair batch, not the
 release safety gates. Unrelated improvements stay on the backlog.
 
-**Current release position:** the one-migration lifecycle repair is live in Production at
+**Release position at the start of this 5 September sequence:** the one-migration lifecycle repair is live in Production at
 `a1d23c7`. Its backup, migration reconciliation, database objects, public bundle and separate
 verification passed. Aaron's Production builder and preview smoke also behaved as expected, subject
 to the defects and enhancements recorded below. No real Player MVP presentation has been published.
@@ -55,7 +93,7 @@ browser check is still unavailable.
     expected Pumas rounds are present, and the builder preview otherwise behaves as expected. The
     high-priority draft-persistence and identity defects plus the presentation enhancements below
     remain queued. Publishing a real presentation remains a separate owner action.
-12. [Stage 1 complete; B1a-B1e deployed to Dev; B1d boundary frozen] The 115 changed migration paths are now mapped: 114 are
+12. [Released] The 115 changed migration paths were mapped: 114 were
      Main-only and one is the Production-only tally baseline. Production history and Main migration
      files share only eight version names, so no historical file is approved for direct apply. Build
      and rehearse new additive B1 foundation/access compatibility bridges. The dormant B1a structure
@@ -70,14 +108,15 @@ browser check is still unavailable.
       hosted rehearsal now passes, and the seventh additive simple-role boundary is verified on
       staging and Dev. The actual Player-to-Team-Manager walkthrough then passed and Aaron confirmed
       the Primary-team semantics. Two defects found by that walkthrough were repaired and deployed
-      to Dev at `ed68664`. Final candidate `3d9bc53` contains ten additive migrations and passes its
-      focused/full candidate gates and hosted deployment. Fresh Production pre-flight/backup and
-      exact Production approval remain open. Independent review is complete
-     with `hold_for_evidence`; its request-approval race hypothesis is already closed by the sixth
+      to Dev at `ed68664`. Final candidate `3d9bc53` contained ten additive migrations and passed its
+      focused/full candidate gates and hosted deployment. The fresh Production pre-flight and backup
+      passed, Aaron approved the exact package, and Production is now `3d9bc53` with 169 recorded
+      migration versions and unchanged protected counts. Independent pre-release review completed
+     with `hold_for_evidence`; its request-approval race hypothesis was closed by the sixth
       migration. Aaron confirmed account-wide Player/Voter changes are Super Admin only; that rule
       is now enforced and independently reviewed. The latest six
-     Production scraper schedules are green, but the named-final blank-round fix remains Dev-only
-     and the workflow remains a separate approval package.
+     Production scraper schedules are green. Aaron's authenticated Production role/scope smoke test,
+     Vercel project-access reconciliation and the Dev-only named-final workflow package remain open.
 
 Current evidence: the full Dev cycle now passes for a labelled 9-round Pumas presentation and one
 reserved Player. Notification/deep link, unrelated-Voter denial, withdrawal, desktop/tablet/mobile,
@@ -88,25 +127,29 @@ follow-up migration was rehearsed, backed up and released at `a1d23c7`; all 355 
 now closed and no communication count changed during release. No real-player tally presentation
 has been published. See the 5 September tally packet and 6 September lifecycle packet.
 
-The broad Main-to-Production delta remains separately blocked: 266 Main-only commits and 438 paths,
-including 115 changed migration paths (114 Main-only and one Production-only), 15 Edge Function
-files and three workflows. Stage 1 migration/function/workflow mapping is complete, but the B1
-hosted B1 rehearsal, Coordinator acceptance and scraper workflow decision remain open; the narrow
-lifecycle release does not waive those gates.
+The former 266-commit/438-path Main-to-Production comparison was the pre-B1 Stage 1 snapshot. B1 was
+released as a narrow Production-based compatibility package, not by merging Main. Current refs now
+diverge by 266 Main-only and eight Production-only commits. A fresh full-delta inventory is required
+before any later Main-to-Production proposal; the previous path counts must not be reused as current.
 
-**Dev-to-Main alignment update:** the reviewed release tools and current evidence were promoted to
-Main through source Dev commit `2d7ed63` (promotion base `a5417f2`). Application source, migrations
-and Edge Functions now match. Only the Production scraper workflow, its named-finals schedule
-helper and two focused tests remain deliberately Dev-only pending separate workflow approval.
+**Dev-to-Main alignment update:** the 6 September promotion through source Dev commit `2d7ed63` was
+valid at that time. Dev subsequently received the B1 compatibility work and release evidence, so it
+no longer matches Main. Use the immediate reconciliation decision above as the current branch plan.
 
 ## Current position
 
-- Dev feedback contains 88 retained records: 0 OPEN, 53 REVIEWED and 35 CLOSED.
-- The reviewed feedback queue is 5 P0, 16 P1, 18 P2, 5 P3 and 9 parked items.
+- Dev is `c0090a2`; its current Dev Quality run passed. Main is `af21ae3`; the latest twelve inspected
+  Production Supabase Scraper runs from Main passed. Production is the approved B1 release
+  `3d9bc53`. All three public addresses return HTTP 200 and serve their matching version labels.
+- The latest feedback snapshot, recorded 5 September, contains 88 retained records: 0 OPEN,
+  53 REVIEWED and 35 CLOSED. It has not been re-queried during this documentation review.
+- That 5 September reviewed queue was 5 P0, 16 P1, 18 P2, 5 P3 and 9 parked items.
 - The whole-site persistence review has 18 findings: 1 High, 13 Medium and 4 Low.
 - The form audit found 42 date controls across 16 files, with 36 px, 40 px and 44 px variants.
 - The latest recorded automated code gates pass, but complete actual-role, responsive and workflow
   acceptance evidence is still missing.
+- The 7 September documentation review passed 47 Vitest files/183 tests, TypeScript and the
+  Production build. Full lint reproduced the established 346-error/77-warning legacy baseline.
 - Dev and Main may be updated through the normal reviewed path. Production remains separately
   approval-gated.
 
@@ -352,6 +395,10 @@ approval where records could be changed or removed.
 
 ### 8. Dev → Main staging
 
+- [ ] Reconnect the diverged histories in a clean worktree and manually reconcile the six shared
+  evidence-document conflicts without removing current Dev behaviour.
+- [ ] Review the named-finals Production scraper workflow package separately. Do not change its Main
+  behaviour without Aaron's confirmation because the scheduled Main workflow targets Production.
 - [ ] Run focused tests, full Vitest, TypeScript, Production build and lint-baseline comparison.
 - [ ] Review every Dev → Main commit, migration, Edge Function and workflow change.
 - [ ] Fast-forward Main only after Dev checks pass and confirm Main uses the Dev database.
@@ -359,6 +406,9 @@ approval where records could be changed or removed.
 
 ### 9. Main → Production approval packet
 
+- [x] Release the narrow B1 compatibility package at `3d9bc53`; backup, migrations, deployment and
+  immediate technical verification passed.
+- [ ] Complete Aaron's authenticated B1 role/scope and labelled-request Production smoke test.
 - [ ] Freeze the exact Main commit and reconcile all application, migration, Edge Function, job and
   workflow differences against live Production.
 - [ ] Prove backup, migration order, deployment order, rollback points and post-release smoke steps.

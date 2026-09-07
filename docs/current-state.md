@@ -6,6 +6,43 @@ This file is the short, current project status for ChatGPT, Codex, and Aaron.
 
 Update this file after every meaningful Codex task, pull request, schema change, deployment, or confirmed live-data check. If this file conflicts with older handoff documents, this file wins unless Aaron says otherwise.
 
+## Current verified standing — 7 September 2026
+
+- Fresh GitHub refs are Development `c0090a221e807be0de6326b72f593f4be43a9610`, Main
+  `af21ae3c06a2d66d2eb9c4edf64bb2c185869927` and Production
+  `3d9bc530b04ada938da751d68b1fea908371c5b0`.
+- The branches are not aligned. Counts below mean commits only on the first branch / commits only
+  on the second branch:
+  - Dev and Main: 36 / 8
+  - Main and Production: 266 / 8
+  - Dev and Production: 294 / 8
+- Main's seven ordinary unique patches are already patch-equivalent in Dev; its eighth unique commit
+  is history-only. Dev still contains 36 newer commits, including the B1 work. Reconnecting the
+  histories predicts conflicts in six shared evidence documents. One Dev-only package also changes a
+  Production scraper workflow input plus its helper and tests. Because scheduled workflows run from
+  Main with Production secrets, that package needs an exact review and owner confirmation before a
+  Main push that changes its behaviour.
+- Current hosted evidence is healthy: Dev Quality run `34084562761` passed at `c0090a2`; the latest
+  twelve inspected Production Supabase Scraper runs from Main passed; Dev, Main and Production each
+  return HTTP 200. Their served versions are respectively `v2026.09.07+c0090a2`,
+  `v2026.09.06+af21ae3` and `v2026.09.07+3d9bc53`.
+- The B1 access package is released to Production at `3d9bc53`. The remaining B1 follow-up is Aaron's
+  authenticated Production role/scope and labelled-request smoke test. Access to the Vercel project
+  that owns the custom Production domain also needs reconciliation before the next Production release.
+- Production remains separately approval-gated. Do not treat Dev/Main reconciliation as authority to
+  merge Main into Production or to change Production systems.
+
+### Current versus stale
+
+- This section and the B1 release section immediately below are the current release summary.
+- Older dated sections remain useful evidence, but statements such as **Production unchanged**,
+  **approval required**, **candidate**, or **current priority** describe their date and are superseded
+  where they conflict with this section.
+- `docs/consolidated-open-items-plan.md` owns current sequencing. `notes/known-issues.md` preserves
+  evidence and must not be read as a second active plan.
+- The active Big Brain vault is `D:\AI-Workspace\Memory\Big Brain`; older OneDrive vault references
+  are stale.
+
 ## 7 September B1 access package released to Production
 
 - Aaron approved exactly `RELEASE B1 ACCESS PACKAGE 3d9bc53 TO PRODUCTION`. Production is now
@@ -1120,7 +1157,7 @@ Update this file after every meaningful Codex task, pull request, schema change,
   starts, but this PC is missing the installed browser-verification skill's `agent-browser`
   executable, so automated visual verification could not run. Production was not changed.
 
-## Current priority
+## Historical implementation priority — August snapshot
 
 - **Incident & Discipline Phase 1 is implemented on Dev and awaiting owner acceptance:** the hidden
   `/discipline` portal provides assigned cases, atomic case/person/multi-allegation intake, verified
@@ -1491,7 +1528,8 @@ The backend is Supabase: Postgres, Auth, Storage, Row Level Security, and Edge F
 | Main/staging | `main` | `https://main.sportstackapp.com.au` | SportStack Dev `icqegnpjbizccjebjfhb` |
 | Production | `prod` | `https://sportstack.grampianshockey.com.au` | SportStack Production `svierarfcolhcfjpmwck` |
 
-- All three addresses are public and returned HTTP 200 on 22 July 2026.
+- All three addresses are public and returned HTTP 200 on 7 September 2026. Their served version
+  labels matched the current Dev, Main and Production refs recorded at the top of this file.
 - `dev` and `main` deliberately share the Dev database. Production is separate.
 - `prod` is the Vercel Production Branch. `main` is a staging/preview branch and does not publish
   the production domain.
@@ -1529,7 +1567,7 @@ The backend is Supabase: Postgres, Auth, Storage, Row Level Security, and Edge F
 - Use Australian English in user-facing text.
 - Use `DD/MM/YYYY` dates and respect the association timezone where relevant.
 
-## Recently changed
+## Historical change summary — August snapshot
 
 The Owner-Test remediation package now includes its complete Dev-only additive migration set and
 matching frontend workflows. The 2 August extension adds reusable permission groups, module-access
@@ -4788,8 +4826,9 @@ Unknowns still needing confirmation:
 
 What changed:
 
-- Changed SportStack's default Obsidian target to
-  `C:\Users\mulla\OneDrive\Documents\Big Brain`.
+- Changed SportStack's default Obsidian target at that time to
+  `C:\Users\mulla\OneDrive\Documents\Big Brain`. The D-drive path recorded at the top of this file
+  later superseded it.
 - Updated the four required curated-note paths to Big Brain's current Projects and Areas layout.
 - Kept the generated, read-only repository mirror at `Projects/SportStack Repository` so the
   cutover did not create a duplicate mirror or remove existing notes.

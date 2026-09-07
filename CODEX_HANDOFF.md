@@ -2,6 +2,31 @@
 
 Last updated: 2026-09-07
 
+## 7 September — current standing and documentation review
+
+- Fresh remote refs are Dev `c0090a2`, Main `af21ae3` and Production `3d9bc53`. They are not aligned:
+  Dev/Main diverge 36/8, Main/Production 266/8 and Dev/Production 294/8.
+- Dev Quality run `34084562761` passed at the current Dev tip. The latest twelve inspected Production
+  Supabase Scraper runs from Main passed. Dev, Main and Production return HTTP 200 and serve matching
+  version labels for their current commits.
+- B1 is released. Remaining Production follow-up is Aaron's authenticated role/scope and labelled-
+  request smoke test plus access reconciliation for the Vercel project owning the custom domain.
+- Main's seven ordinary patches are patch-equivalent in Dev and its eighth unique commit is
+  history-only. Dev still has 36 newer commits, including B1, and a Dev/Main merge predicts six
+  shared-document conflicts. The Dev-only named-finals workflow input, helper and tests require a
+  separate exact review because Main schedules the Production scraper with Production secrets.
+- Canonical documentation now separates the current standing from dated evidence. The consolidated
+  plan owns the next Dev/Main decision; the known-issue register preserves evidence only.
+- Documentation verification, 47 Vitest files/183 tests, TypeScript and the Production build pass.
+  Full lint reproduces the established 346-error/77-warning legacy baseline; no documentation file
+  introduces a lint finding. The build retains its known stale Browserslist and large-chunk warnings.
+- No branch was merged or pushed and no application, database, workflow or Production system changed
+  during this review.
+
+Older entries below are dated evidence. Where an older entry says Production was unchanged, approval
+was pending, a candidate was unreleased, or an August priority was current, the newer standing above
+supersedes it.
+
 ## 7 September — B1 access package released to Production
 
 - Aaron supplied the exact approval sentence for candidate `3d9bc53`. Remote `prod` is now exactly
@@ -1726,7 +1751,7 @@ with the 8 August snapshot above, the newer snapshot and current Git evidence wi
 
 - Committed repository Markdown is authoritative. Its generated, read-only Big Brain mirror is
   `Projects/SportStack Repository`, with `_Index.md` as the entry point.
-- The active vault is `C:\Users\mulla\OneDrive\Documents\Big Brain`.
+- The active vault is `D:\AI-Workspace\Memory\Big Brain`. The older OneDrive location is stale.
 - The curated Vault notes own only the project boundary, priorities, action register and operating
   procedure. They link back to the generated mirror for changing implementation and release detail.
 - `AGENTS.md` requires a refresh/read at the start of meaningful work and a sync plus `-Check` after
@@ -1735,7 +1760,7 @@ with the 8 August snapshot above, the newer snapshot and current Git evidence wi
   catches up after missed runs. It reads `origin/dev`, so feature branches and uncommitted files
   cannot become the published record.
 
-## Active development order
+## Historical development order — July/August snapshot
 
 - The locked 14-block order is recorded in `docs/development-plan.md`.
 - Block 1 is complete: the unfinished RevSports importer was safely recovered and verified.
@@ -1803,7 +1828,7 @@ with the 8 August snapshot above, the newer snapshot and current Git evidence wi
   `C:\Users\mulla\AppData\Local\SportStack\backups\local-git\sportstack-stashes-20260730-144716.bundle`.
 - The live stash list was then cleared. Keep the bundle until the scraper-routine work is accepted.
 
-## Best next owner test
+## Historical best next owner test — superseded
 
 1. Use the prepared isolated Dev accounts to follow `docs/owner-test-matrix.md` one line at a time.
 2. Start with the new permission groups, module sets, role/group/user assignments and direct exceptions,
