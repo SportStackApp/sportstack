@@ -4,27 +4,22 @@ Run the exact B1c migration against live Dev inside a rolled-back transaction.
 
 .DESCRIPTION
 The script uses the existing Windows-encrypted release token without printing
-it. It links only to the pinned Development project, executes the supplied
-pure-SQL transaction and removes its temporary link directory.
+it. It links only to the pinned Development project, generates the fixed
+rollback-only SQL from the reviewed repository migration and removes its
+temporary link directory.
 #>
 
 [CmdletBinding()]
-param(
-    [Parameter(Mandatory)]
-    [string]$SqlPath,
-
-    [string]$ExpectedMarker = "B1_MEMBERSHIP_DEV_COMPATIBILITY_OK"
-)
+param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepositoryRoot = Split-Path $PSScriptRoot -Parent
 $CredentialPath = Join-Path $env:LOCALAPPDATA "SportStack\release\player-mvp-tally-production-access.json"
-$SqlPath = [IO.Path]::GetFullPath($SqlPath)
-if (-not (Test-Path -LiteralPath $SqlPath)) {
-    throw "The compatibility SQL file is missing: $SqlPath"
-}
+$BuilderPath = Join-Path $PSScriptRoot "build-b1-membership-dev-compatibility-check.mjs"
+$ExpectedMarker = "B1_MEMBERSHIP_DEV_COMPATIBILITY_OK"
+$BuilderMarker = "B1_MEMBERSHIP_DEV_COMPATIBILITY_CHECK_BUILT"
 
 function ConvertTo-PlainText {
     param([Security.SecureString]$SecureValue)
@@ -55,10 +50,6 @@ function Remove-VerifiedTemporaryDirectory {
 if (-not (Test-Path -LiteralPath $CredentialPath)) {
     throw "Encrypted Supabase access is not configured."
 }
-if ((Get-Item -LiteralPath $SqlPath).Length -eq 0) {
-    throw "The compatibility SQL is empty."
-}
-
 $configuration = Get-Content -Raw -LiteralPath $CredentialPath | ConvertFrom-Json
 if ($configuration.version -ne 1 -or $configuration.expectedProductionProjectRef -ne "svierarfcolhcfjpmwck") {
     throw "The encrypted access file is not pinned to SportStack Production."
@@ -74,6 +65,15 @@ try {
     $env:SUPABASE_ACCESS_TOKEN = $token
     New-Item -ItemType Directory -Path (Join-Path $temporaryRoot "supabase\migrations") -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $RepositoryRoot "supabase\config.toml") -Destination (Join-Path $temporaryRoot "supabase\config.toml")
+
+    $SqlPath = Join-Path $temporaryRoot "b1-membership-dev-compatibility.sql"
+    $buildOutput = & node $BuilderPath $SqlPath 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0 -or $buildOutput -notmatch [regex]::Escape($BuilderMarker)) {
+        throw "Could not build the fixed Development compatibility check.`n$buildOutput"
+    }
+    if (-not (Test-Path -LiteralPath $SqlPath) -or (Get-Item -LiteralPath $SqlPath).Length -eq 0) {
+        throw "The generated Development compatibility SQL is missing or empty."
+    }
 
     $linkOutput = supabase link --project-ref "icqegnpjbizccjebjfhb" --workdir $temporaryRoot --yes 2>&1 | Out-String
     if ($LASTEXITCODE -ne 0 -or $linkOutput -match '"_tag"\s*:\s*"Error"') {

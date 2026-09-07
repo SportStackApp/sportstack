@@ -166,21 +166,49 @@ def extract_fixture_context(html: str, round_url: str, match_url: str) -> dict[s
 
     scraper = _load_scraper_module()
     soup = BeautifulSoup(html, "html.parser")
-    matching_link = next(
-        (
-            anchor
-            for anchor in soup.find_all("a", href=True)
-            if scraper.normalize_url(anchor["href"], round_url) == match_url
-        ),
-        None,
-    )
-    if matching_link is None:
+    matching_links = [
+        anchor
+        for anchor in soup.find_all("a", href=True)
+        if scraper.normalize_url(anchor["href"], round_url) == match_url
+    ]
+    if not matching_links:
         raise RuntimeError("Fixture is missing from its current RevSports round page")
-    card = scraper.find_fixture_card(matching_link, match_url, round_url)
-    details = scraper.extract_round_card_details(card, round_url)
-    if not details.get("round_date") or not details.get("round_time"):
-        raise RuntimeError("Could not verify the fixture start from its RevSports round card")
-    return details
+
+    for matching_link in matching_links:
+        node = matching_link
+        for _ in range(12):
+            node = node.parent
+            if node is None or not hasattr(node, "find_all"):
+                break
+
+            classes = {
+                str(value).lower()
+                for value in (node.get("class") or [])
+            }
+            is_fixture_card = "card" in classes or any(
+                value.endswith("-card") for value in classes
+            )
+            if not is_fixture_card:
+                continue
+
+            game_urls = {
+                scraper.normalize_url(anchor["href"], round_url)
+                for anchor in node.find_all("a", href=True)
+                if scraper.path_matches(
+                    scraper.normalize_url(anchor["href"], round_url),
+                    r"/game/[0-9]+$",
+                )
+            }
+            if game_urls != {match_url}:
+                continue
+
+            details = scraper.extract_round_card_details(node, round_url)
+            if details.get("round_date") and details.get("round_time"):
+                return details
+
+    raise RuntimeError(
+        "Could not bind the fixture start to one exact RevSports fixture card"
+    )
 
 
 def _write_output(name: str, value: str) -> None:

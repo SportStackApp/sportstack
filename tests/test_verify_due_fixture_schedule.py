@@ -98,6 +98,65 @@ class FixtureSchedulePreflightTests(unittest.TestCase):
                 f"{self.portal_url}/game/99999",
             )
 
+    def test_team_page_uses_only_the_target_fixtures_own_card(self) -> None:
+        html = f"""
+        <main>
+          <div class="card">
+            <div>Sat 01 Aug 2026</div><div>09:00</div>
+            <a href="/hockeyballarat/games/team/26298/999">Other</a>
+            <a href="/hockeyballarat/game/11111">Other details</a>
+          </div>
+          <div class="card">
+            <div>Sun 02 Aug 2026</div><div>14:30</div>
+            <a href="/hockeyballarat/games/team/26298/100">Home</a>
+            <a href="/hockeyballarat/game/12345">Target details</a>
+          </div>
+        </main>
+        """
+
+        details = self.preflight.extract_fixture_context(
+            html,
+            f"{self.portal_url}/games/team/26298/100",
+            self.match_url,
+        )
+
+        self.assertEqual("2026-08-02", details["round_date"])
+        self.assertEqual("14:30", details["round_time"])
+
+    def test_team_page_rejects_context_from_a_shared_ancestor(self) -> None:
+        html = """
+        <main>
+          <div>
+            <span>Sat 01 Aug 2026</span><span>09:00</span>
+            <a href="/hockeyballarat/games/team/26298/999">Other</a>
+          </div>
+          <div><a href="/hockeyballarat/game/12345">Target</a></div>
+        </main>
+        """
+
+        with self.assertRaisesRegex(RuntimeError, "one exact RevSports fixture card"):
+            self.preflight.extract_fixture_context(
+                html,
+                f"{self.portal_url}/games/team/26298/100",
+                self.match_url,
+            )
+
+    def test_team_page_rejects_a_card_with_multiple_game_links(self) -> None:
+        html = """
+        <div class="card">
+          <div>Sat 01 Aug 2026</div><div>09:00</div>
+          <a href="/hockeyballarat/game/11111">Other details</a>
+          <a href="/hockeyballarat/game/12345">Target details</a>
+        </div>
+        """
+
+        with self.assertRaisesRegex(RuntimeError, "one exact RevSports fixture card"):
+            self.preflight.extract_fixture_context(
+                html,
+                f"{self.portal_url}/games/team/26298/100",
+                self.match_url,
+            )
+
     def test_moved_later_preserves_an_existing_exact_duration(self) -> None:
         current_start = datetime(2026, 8, 1, 2, 0, tzinfo=timezone.utc)
         exact_end = current_start + timedelta(minutes=70)

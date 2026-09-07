@@ -1,0 +1,16 @@
+{
+  "amendment_version": 1,
+  "recorded_at": "2026-09-08",
+  "amends": "docs/production-readiness/B1-SECURITY-REHEARSAL-2026-09-06.json",
+  "reason": "The original recorded migration SHA-256 does not match the migration at its named source commit under either repository LF bytes or the Windows CRLF checkout.",
+  "original_recorded_sha256": "45960fb9e3b8661d22fac956ec4ae7cc0aab3afe9ec239e94fd6a6816465c74d",
+  "exact_rehearsed_artifact_status": "UNKNOWN - original fingerprint cannot be reconciled",
+  "repository_migration": {
+    "path": "supabase/migrations/20260906075102_b1_security_compatibility.sql",
+    "source_commit": "d27cb60789c8e58a5208593311c2809fe25bf2b4",
+    "released_commit": "3d9bc530b04ada938da751d68b1fea908371c5b0",
+    "git_blob_sha1": "b0eb029d63209eec71b76a66ff0064f6b591bcc6",
+    "canonical_lf_sha256": "7d450a8cdff1d5deeef9d66938def1e69b74e05df6daaef8cde3f9722d200db9"
+  },
+  "interpretation": "The functional rehearsal results remain historical observations. They must not be described as exact-artifact proof for the released migration. The source and released commits contain the same immutable Git blob."
+}

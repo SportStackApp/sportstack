@@ -1,3 +1,5 @@
+\set ON_ERROR_STOP on
+
 do $b1c_static$
 declare
   v_function_names text[] := array[

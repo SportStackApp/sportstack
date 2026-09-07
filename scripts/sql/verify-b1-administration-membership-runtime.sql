@@ -1,3 +1,4 @@
+\set ON_ERROR_STOP on
 begin;
 
 -- Fixture creation is rollback-only. Allow the test teams to use their live

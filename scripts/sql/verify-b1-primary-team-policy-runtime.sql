@@ -1,3 +1,5 @@
+\set ON_ERROR_STOP on
+
 -- Transaction-only proof for association-scoped Primary team membership.
 -- The fixed test IDs exist only until the final ROLLBACK.
 

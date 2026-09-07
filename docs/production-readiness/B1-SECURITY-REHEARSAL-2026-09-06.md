@@ -1,5 +1,12 @@
 # B1 security compatibility rehearsal — 6 September 2026
 
+> **8 September evidence amendment:** the SHA-256 recorded below does not match the migration at
+> source commit `d27cb60`, either as repository LF bytes or as the Windows CRLF checkout. The
+> original exact rehearsal artifact is therefore **UNKNOWN — cannot be reconciled**. The functional
+> results below remain historical observations, but they are not exact-artifact proof for the
+> released migration. Dev and released Production commit `3d9bc53` contain the same immutable Git
+> blob. See `B1-SECURITY-REHEARSAL-FINGERPRINT-AMENDMENT-2026-09-08.json`.
+
 ## Outcome
 
 The B1b security bridge is deployed to Development. The exact additive migration passed
@@ -23,10 +30,14 @@ Dev Quality run `34024930224` passed at `4647165c22cd6889778b860bc6d89e57e4bb08a
 GitHub deployment `6291396626` completed successfully, and its Vercel URL and the public Dev alias
 returned the same app-shell hash.
 
-## Exact candidate
+## Originally recorded candidate fingerprint — superseded
 
 - Migration: `20260906075102_b1_security_compatibility.sql`
-- SHA-256: `45960fb9e3b8661d22fac956ec4ae7cc0aab3afe9ec239e94fd6a6816465c74d`
+- Original unreconciled SHA-256:
+  `45960fb9e3b8661d22fac956ec4ae7cc0aab3afe9ec239e94fd6a6816465c74d`
+- Repository Git blob: `b0eb029d63209eec71b76a66ff0064f6b591bcc6`
+- Canonical repository LF SHA-256:
+  `7d450a8cdff1d5deeef9d66938def1e69b74e05df6daaef8cde3f9722d200db9`
 - Functions checked: 38
 - RLS policies checked: 11
 - Tables directly readable by authenticated users: 5
